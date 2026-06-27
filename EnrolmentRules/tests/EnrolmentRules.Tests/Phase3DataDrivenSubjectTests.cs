@@ -7,7 +7,7 @@ using Prediction;
 
 /// <summary>
 ///     Phase 3 follow-on — prove that adding a subject is an end-to-end data exercise, not just a catalogue
-///     parse trick: a workflow/catalogue fixture introducing Drama must produce both a prediction and a final
+///     parse trick: a workflow/catalogue fixture introducing Philosophy must produce both a prediction and a final
 ///     recommendation for it.
 /// </summary>
 public sealed class Phase3DataDrivenSubjectTests
@@ -43,9 +43,9 @@ public sealed class Phase3DataDrivenSubjectTests
 					new("facts", new RatingFacts(probeProfile, probeGcses, new(thresholds), catalogue, QualificationScale.Current)),
 				]);
 
-			var subject = new Subject("drama");
+			var subject = new Subject("philosophy");
 			var student = new StudentInput(
-				"S-DRAMA",
+				"S-PHILOSOPHY",
 				new Dictionary<string, int> {
 					["english_language"] = 8,
 					["maths"] = 8,
@@ -85,7 +85,7 @@ public sealed class Phase3DataDrivenSubjectTests
 			File.ReadAllText(Path.Combine(Harness.DataDir, CatalogueStore.CatalogueFileName))
 			+ """
 
-			    - subject: drama
+			    - subject: philosophy
 			      ucas_weight: 60
 			      regression: { slope: 0.90, intercept: -1.00 }
 			  """);
@@ -95,15 +95,15 @@ public sealed class Phase3DataDrivenSubjectTests
 			File.ReadAllText(Path.Combine(Harness.WorkflowsDir, "subject-ratings.yaml"))
 			+ """
 
-			    - RuleName: 'drama:green'
+			    - RuleName: 'philosophy:green'
 			      SuccessEvent: 'Entry met; predicted A-level grade at or above the green threshold'
 			      Expression: >-
-			        facts.Average >= facts.HumanitiesAverageEntry && facts.Predicted("drama") >= ALevelGrade.B
-			    - RuleName: 'drama:amber'
+			        facts.Average >= facts.HumanitiesAverageEntry && facts.Predicted("philosophy") >= ALevelGrade.B
+			    - RuleName: 'philosophy:amber'
 			      SuccessEvent: 'Entry met; predicted A-level grade at or above the amber threshold'
 			      Expression: >-
-			        facts.Average >= facts.HumanitiesAverageEntry && facts.Predicted("drama") >= ALevelGrade.C
-			    - RuleName: 'drama:red'
+			        facts.Average >= facts.HumanitiesAverageEntry && facts.Predicted("philosophy") >= ALevelGrade.C
+			    - RuleName: 'philosophy:red'
 			      SuccessEvent: 'Entry requirement unmet or predicted grade below the amber threshold'
 			      Expression: >-
 			        true

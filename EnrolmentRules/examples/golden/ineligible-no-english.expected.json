@@ -11,7 +11,37 @@
       "reason": "GCSE English Language below the pass grade (4)"
     },
     {
+      "subject": "design_technology",
+      "rating": "red",
+      "reason": "GCSE English Language below the pass grade (4)"
+    },
+    {
+      "subject": "spanish",
+      "rating": "red",
+      "reason": "GCSE English Language below the pass grade (4)"
+    },
+    {
+      "subject": "law",
+      "rating": "red",
+      "reason": "GCSE English Language below the pass grade (4)"
+    },
+    {
+      "subject": "religious_studies",
+      "rating": "red",
+      "reason": "GCSE English Language below the pass grade (4)"
+    },
+    {
+      "subject": "politics",
+      "rating": "red",
+      "reason": "GCSE English Language below the pass grade (4)"
+    },
+    {
       "subject": "maths",
+      "rating": "red",
+      "reason": "GCSE English Language below the pass grade (4)"
+    },
+    {
+      "subject": "geography",
       "rating": "red",
       "reason": "GCSE English Language below the pass grade (4)"
     },
@@ -21,7 +51,17 @@
       "reason": "GCSE English Language below the pass grade (4)"
     },
     {
+      "subject": "psychology",
+      "rating": "red",
+      "reason": "GCSE English Language below the pass grade (4)"
+    },
+    {
       "subject": "chemistry",
+      "rating": "red",
+      "reason": "GCSE English Language below the pass grade (4)"
+    },
+    {
+      "subject": "economics",
       "rating": "red",
       "reason": "GCSE English Language below the pass grade (4)"
     },
@@ -72,6 +112,26 @@
     },
     {
       "subject": "physical_education",
+      "rating": "red",
+      "reason": "GCSE English Language below the pass grade (4)"
+    },
+    {
+      "subject": "business_studies",
+      "rating": "red",
+      "reason": "GCSE English Language below the pass grade (4)"
+    },
+    {
+      "subject": "sociology",
+      "rating": "red",
+      "reason": "GCSE English Language below the pass grade (4)"
+    },
+    {
+      "subject": "media_studies",
+      "rating": "red",
+      "reason": "GCSE English Language below the pass grade (4)"
+    },
+    {
+      "subject": "drama",
       "rating": "red",
       "reason": "GCSE English Language below the pass grade (4)"
     }

@@ -81,3 +81,46 @@ subjects:
     regression: { slope: 0.80, intercept: -1.40 }
     exclusions:
       - { other: history, severity: amber }
+  - subject: economics
+    ucas_weight: 45
+    regression: { slope: 0.90, intercept: -2.10 }
+    prerequisites:
+      - any_of: [ maths ]
+        severity: amber
+    exclusions:
+      - { other: business_studies, severity: amber }
+  - subject: geography
+    ucas_weight: 49
+    regression: { slope: 0.85, intercept: -1.85 }
+  - subject: psychology
+    ucas_weight: 47
+    regression: { slope: 0.85, intercept: -1.90 }
+  - subject: sociology
+    ucas_weight: 33
+    regression: { slope: 0.82, intercept: -1.55 }
+  - subject: business_studies
+    ucas_weight: 34
+    regression: { slope: 0.83, intercept: -1.65 }
+    exclusions:
+      - { other: economics, severity: amber }
+  - subject: politics
+    ucas_weight: 51
+    regression: { slope: 0.85, intercept: -1.90 }
+  - subject: religious_studies
+    ucas_weight: 52
+    regression: { slope: 0.85, intercept: -1.80 }
+  - subject: drama
+    ucas_weight: 30
+    regression: { slope: 0.80, intercept: -1.40 }
+  - subject: media_studies
+    ucas_weight: 31
+    regression: { slope: 0.80, intercept: -1.35 }
+  - subject: law
+    ucas_weight: 53
+    regression: { slope: 0.86, intercept: -1.95 }
+  - subject: spanish
+    ucas_weight: 54
+    regression: { slope: 0.85, intercept: -1.80 }
+  - subject: design_technology
+    ucas_weight: 55
+    regression: { slope: 0.82, intercept: -1.55 }

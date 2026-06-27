@@ -279,7 +279,7 @@ public sealed class WorkflowLinterTests
 			File.ReadAllText(Path.Combine(Harness.DataDir, CatalogueStore.CatalogueFileName))
 			+ """
 
-			    - subject: drama
+			    - subject: philosophy
 			      ucas_weight: 60
 			      regression: { slope: 0.90, intercept: -1.00 }
 			  """);
@@ -289,15 +289,15 @@ public sealed class WorkflowLinterTests
 			File.ReadAllText(Path.Combine(Harness.WorkflowsDir, "subject-ratings.yaml"))
 			+ """
 
-			    - RuleName: 'drama:green'
+			    - RuleName: 'philosophy:green'
 			      SuccessEvent: 'Entry met; predicted A-level grade at or above the green threshold'
 			      Expression: >-
-			        facts.Average >= facts.HumanitiesAverageEntry && facts.Predicted("drama") >= ALevelGrade.B
-			    - RuleName: 'drama:amber'
+			        facts.Average >= facts.HumanitiesAverageEntry && facts.Predicted("philosophy") >= ALevelGrade.B
+			    - RuleName: 'philosophy:amber'
 			      SuccessEvent: 'Entry met; predicted A-level grade at or above the amber threshold'
 			      Expression: >-
-			        facts.Average >= facts.HumanitiesAverageEntry && facts.Predicted("drama") >= ALevelGrade.C
-			    - RuleName: 'drama:red'
+			        facts.Average >= facts.HumanitiesAverageEntry && facts.Predicted("philosophy") >= ALevelGrade.C
+			    - RuleName: 'philosophy:red'
 			      SuccessEvent: 'Entry requirement unmet or predicted grade below the amber threshold'
 			      Expression: >-
 			        true

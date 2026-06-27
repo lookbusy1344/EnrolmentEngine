@@ -1,10 +1,14 @@
 # EnrolmentRules - A monotonic, rules-as-data engine for A-Level enrolment decisions
 
-This is a recreation of a proprietary project I developed about a decade ago, to assist in enrolment decision-making and ensure policies were consistently followed. The real system was also capable of writing the complete enrolment package into the management information system, and printing forms for signature.
+This is a recreation of a proprietary project I developed about a decade ago, to assist in enrolment decision-making and ensure policies were
+consistently followed. The real system was also capable of writing the complete enrolment package into the management information system, and printing
+forms for signature.
 
-Here we show the core ideas in an open-source (MIT licence) project using modern idiomatic .NET 10. The code is designed as a library, so can be connected to ASP.NET, a language-agnostic REST API, MVC, or just used from the command line (as demonstrated here).
+Here we show the core ideas in an open-source (MIT licence) project using modern idiomatic .NET 10. The code is designed as a library, so can be
+connected to ASP.NET, a language-agnostic REST API, MVC, or just used from the command line (as demonstrated here).
 
-The system is a simple monotonic expert system using [Microsoft RulesEngine](https://microsoft.github.io/RulesEngine). It evaluates one student at a time through a stateless pipeline:
+The system is a simple monotonic expert system using [Microsoft RulesEngine](https://microsoft.github.io/RulesEngine). It evaluates one student at a
+time through a stateless pipeline:
 
 1. GCSE results are normalised into a predicted A-level profile.
 2. Microsoft RulesEngine evaluates the rules-as-data eligibility and subject rating tables.
@@ -78,13 +82,13 @@ since they define the grade scale rather than policy.
 
 ### Where Policy Lives
 
-| If you are changing... | Edit |
-|------------------------|------|
-| Whole-student eligibility or a subject's green/amber/red base tier | `workflows/*.yaml` |
-| Numeric thresholds read by workflows or host code | `data/thresholds.yaml` |
-| Qualification grade ordering and A-level-points equivalence | `data/qualifications.yaml` |
-| Subject relationships, UCAS weights, regression coefficients, entry equivalents, or restudy bars | `data/catalogue.yaml` |
-| A new relationship *type* or scale invariant | compiled C# in `src/` |
+| If you are changing...                                                                           | Edit                       |
+|--------------------------------------------------------------------------------------------------|----------------------------|
+| Whole-student eligibility or a subject's green/amber/red base tier                               | `workflows/*.yaml`         |
+| Numeric thresholds read by workflows or host code                                                | `data/thresholds.yaml`     |
+| Qualification grade ordering and A-level-points equivalence                                      | `data/qualifications.yaml` |
+| Subject relationships, UCAS weights, regression coefficients, entry equivalents, or restudy bars | `data/catalogue.yaml`      |
+| A new relationship *type* or scale invariant                                                     | compiled C# in `src/`      |
 
 Routine policy changes are YAML changes. C# changes are reserved for new evaluator shapes, such as
 introducing a relationship type that does not already exist.

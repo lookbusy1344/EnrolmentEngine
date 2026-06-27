@@ -226,7 +226,8 @@ The DfE source is real, local, and narrow:
 - `data/dfe-transition-matrices/SOURCE.md` records the GOV.UK page, attachment URL, source
   sheet, and extraction scope.
 - The full workbook is not committed. Runtime code reads only the compact CSV rows required by
-  this project's fourteen subjects.
+  this project's twenty-six subjects. See `docs/dfe-matrix-extraction.md` for the column mapping
+  and the small-cell suppression rule applied to the noisy top (`>=9`) band.
 
 The DfE matrix is probability evidence, not another regression. A transition matrix says, for
 example, "among students nationally in prior-attainment band `7 to < 8` taking A-level
@@ -317,7 +318,7 @@ which can never satisfy a threshold.
 
 ### Step 2b — Per-subject ratings (engine, `workflows/subject-ratings.yaml`)
 
-For each of the fourteen subjects there are **three ordered rules**: `:green`, `:amber`, `:red`.
+For each of the twenty-six subjects there are **three ordered rules**: `:green`, `:amber`, `:red`.
 Each green/amber rule combines an **entry requirement** (the right GCSEs) with two pieces of
 evidence about likely A-level performance: the simulated ALIS-style point prediction and the
 DfE national transition-matrix probability at the same grade threshold. The `:red` rule is

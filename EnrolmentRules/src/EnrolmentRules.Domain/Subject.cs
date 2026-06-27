@@ -25,6 +25,18 @@ public readonly record struct Subject(string Value) : IComparable<Subject>
 	public static Subject History { get; } = new("history");
 	public static Subject Music { get; } = new("music");
 	public static Subject Art { get; } = new("art");
+	public static Subject Economics { get; } = new("economics");
+	public static Subject Geography { get; } = new("geography");
+	public static Subject Psychology { get; } = new("psychology");
+	public static Subject Sociology { get; } = new("sociology");
+	public static Subject BusinessStudies { get; } = new("business_studies");
+	public static Subject Politics { get; } = new("politics");
+	public static Subject ReligiousStudies { get; } = new("religious_studies");
+	public static Subject Drama { get; } = new("drama");
+	public static Subject MediaStudies { get; } = new("media_studies");
+	public static Subject Law { get; } = new("law");
+	public static Subject Spanish { get; } = new("spanish");
+	public static Subject DesignTechnology { get; } = new("design_technology");
 
 	public int CompareTo(Subject other) => StringComparer.Ordinal.Compare(Value, other.Value);
 

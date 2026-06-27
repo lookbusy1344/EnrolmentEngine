@@ -32,13 +32,48 @@ internal static class Harness
 	/// <summary>The shipped catalogue snapshot, loaded once for the host-side tests to pin against.</summary>
 	public static CatalogueData Catalogue { get; } = CatalogueStore.LoadAndValidate(DataDir);
 
+	/// <summary>
+	///     The shipped engine, built once and memoised for the whole suite. Loading + JSON-schema
+	///     validation + RulesEngine construction + probe-compilation of every lambda (Roslyn) is the
+	///     dominant cost; it is identical on every call and the engine is read-only after build, so a
+	///     single cached instance is reused across all tests — including the parallel ones. Held behind a
+	///     reference-typed field (reference writes are atomic, so the lock-free fast path can never read a
+	///     torn value) and built under <see cref="buildGate" /> so the build runs exactly once even when
+	///     several test classes race the first call. After the build, RulesEngine's compiled-lambda cache
+	///     is fully warm, so the concurrent evaluations the parallel suite drives are pure reads.
+	/// </summary>
+	private static Built? shipped;
+
+	private static readonly SemaphoreSlim buildGate = new(1, 1);
+
+	private sealed class Built(IReadOnlyList<Workflow> workflows, IRulesEngine engine)
+	{
+		public IReadOnlyList<Workflow> Workflows { get; } = workflows;
+		public IRulesEngine Engine { get; } = engine;
+	}
+
 	/// <summary>Load + validate + probe-compile the shipped workflows and construct the engine over them.</summary>
 	public static async Task<(IReadOnlyList<Workflow> Workflows, IRulesEngine Engine)> BuildFromShippedWorkflowsAsync()
 	{
-		var workflows = WorkflowStore.LoadAndValidate(WorkflowsDir, SchemaPath);
-		var engine = WorkflowStore.BuildEngine(workflows);
-		await WorkflowStore.ProbeCompileAsync(engine, workflows, CanonicalProbe());
-		return (workflows, engine);
+		if (shipped is { } cached) {
+			return (cached.Workflows, cached.Engine);
+		}
+
+		await buildGate.WaitAsync().ConfigureAwait(false);
+		try {
+			if (shipped is { } raced) {
+				return (raced.Workflows, raced.Engine);
+			}
+
+			var workflows = WorkflowStore.LoadAndValidate(WorkflowsDir, SchemaPath);
+			var engine = WorkflowStore.BuildEngine(workflows);
+			await WorkflowStore.ProbeCompileAsync(engine, workflows, CanonicalProbe()).ConfigureAwait(false);
+			shipped = new(workflows, engine);
+			return (workflows, engine);
+		}
+		finally {
+			_ = buildGate.Release();
+		}
 	}
 
 	/// <summary>A <see cref="RatingEvaluator" /> over the shipped workflows for the host-side verdict tests.</summary>

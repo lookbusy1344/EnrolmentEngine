@@ -47,9 +47,10 @@ public sealed class CatalogueTests
 	{
 		var data = CatalogueStore.LoadAndValidate(DataDir);
 
-		// Lower enum value first: French (7) < German (8); History (11) < Art (13).
+		// Lower catalogue-order value first: French < German; History < Art; Economics < Business Studies.
 		data.ExclusionPairs.Should().BeEquivalentTo(new[] {
 			(A: Subject.French, B: Subject.German, Severity: Rating.Red), (A: Subject.History, B: Subject.Art, Severity: Rating.Amber),
+			(A: Subject.Economics, B: Subject.BusinessStudies, Severity: Rating.Amber),
 		});
 	}
 

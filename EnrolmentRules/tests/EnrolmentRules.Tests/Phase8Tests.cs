@@ -108,13 +108,13 @@ public sealed class Phase8Tests
 	public void an_unknown_chosen_a_level_value_is_rejected()
 	{
 		var student = new StudentInput("S-BAD", new Dictionary<string, int> { ["maths"] = 6 }, []) {
-			ChosenALevels = [new("drama")],
+			ChosenALevels = [new("philosophy")],
 			DateOfBirth = ValidDob,
 		};
 
 		StudentValidator.Validate(student)
 			.Should().ContainSingle()
-			.Which.Should().Contain("chosen_a_levels").And.Contain("drama");
+			.Which.Should().Contain("chosen_a_levels").And.Contain("philosophy");
 	}
 
 	[Fact]
@@ -173,7 +173,7 @@ public sealed class Phase8Tests
 	[Fact]
 	public async Task cli_rejects_an_unknown_chosen_a_level_value_with_an_input_error()
 	{
-		var path = WriteTemp("""{"student":{"id":"S-BAD","gcses":{"maths":6},"hobbies":[],"chosen_a_levels":["drama"]}}""", ".json");
+		var path = WriteTemp("""{"student":{"id":"S-BAD","gcses":{"maths":6},"hobbies":[],"chosen_a_levels":["philosophy"]}}""", ".json");
 		using var stdout = new StringWriter();
 		using var stderr = new StringWriter();
 
@@ -181,7 +181,7 @@ public sealed class Phase8Tests
 
 		exit.Should().Be(CliRunner.ExitInput);
 		stdout.ToString().Should().BeEmpty();
-		stderr.ToString().Should().Contain("chosen_a_levels").And.Contain("drama");
+		stderr.ToString().Should().Contain("chosen_a_levels").And.Contain("philosophy");
 	}
 
 	// ---- ineligible exit code (single-student modes) -----------------------------------------
@@ -308,7 +308,7 @@ public sealed class Phase8Tests
 	{
 		var jsonl = string.Join('\n',
 			EligibleLine("S-A"),
-			"""{"student":{"id":"S-BAD","gcses":{"maths":6},"hobbies":[],"chosen_a_levels":["drama"]}}""",
+			"""{"student":{"id":"S-BAD","gcses":{"maths":6},"hobbies":[],"chosen_a_levels":["philosophy"]}}""",
 			EligibleLine("S-C"));
 		var path = WriteTemp(jsonl, ".jsonl");
 		using var stdout = new StringWriter();
@@ -322,7 +322,7 @@ public sealed class Phase8Tests
 		outcomes.Select(o => o.Id).Should().Equal("S-A", "S-BAD", "S-C");
 		outcomes[0].Error.Should().BeNull();
 		outcomes[1].Result.Should().BeNull();
-		outcomes[1].Error.Should().Contain("chosen_a_levels").And.Contain("drama");
+		outcomes[1].Error.Should().Contain("chosen_a_levels").And.Contain("philosophy");
 		outcomes[2].Error.Should().BeNull();
 	}
 

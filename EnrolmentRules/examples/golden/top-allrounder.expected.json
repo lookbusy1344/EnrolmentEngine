@@ -3,6 +3,11 @@
   "eligibility_reasons": [],
   "recommendations": [
     {
+      "subject": "design_technology",
+      "rating": "green",
+      "reason": "Entry met (Maths and Art at standard entry); predicted A-level grade at or above the green threshold"
+    },
+    {
       "subject": "english_language",
       "rating": "green",
       "reason": "Entry met; predicted A-level grade at or above the green threshold"
@@ -13,9 +18,44 @@
       "reason": "Entry met (age-gated GCSE threshold); predicted A-level grade at or above the green threshold"
     },
     {
+      "subject": "sociology",
+      "rating": "green",
+      "reason": "Entry met (humanities average and English at standard entry); predicted A-level grade at or above the green threshold"
+    },
+    {
+      "subject": "media_studies",
+      "rating": "green",
+      "reason": "Entry met (English at standard entry); predicted A-level grade at or above the green threshold"
+    },
+    {
+      "subject": "drama",
+      "rating": "green",
+      "reason": "Entry met (English at standard entry); predicted A-level grade at or above the green threshold"
+    },
+    {
+      "subject": "law",
+      "rating": "amber",
+      "reason": "Entry met (English at strong entry and humanities average); predicted A-level grade at or above the amber threshold"
+    },
+    {
+      "subject": "religious_studies",
+      "rating": "amber",
+      "reason": "Entry met (English at standard entry and humanities average); predicted A-level grade at or above the amber threshold"
+    },
+    {
+      "subject": "politics",
+      "rating": "amber",
+      "reason": "Entry met (English at strong entry and humanities average); predicted A-level grade at or above the amber threshold"
+    },
+    {
       "subject": "maths",
       "rating": "amber",
       "reason": "Entry met; predicted A-level grade at or above the amber threshold"
+    },
+    {
+      "subject": "geography",
+      "rating": "amber",
+      "reason": "Entry met (humanities average and English at standard entry); predicted A-level grade at or above the amber threshold"
     },
     {
       "subject": "physics",
@@ -23,9 +63,19 @@
       "reason": "Entry met; predicted A-level grade at or above the amber threshold"
     },
     {
+      "subject": "psychology",
+      "rating": "amber",
+      "reason": "Entry met (Biology, Maths and English at standard entry); predicted A-level grade at or above the amber threshold"
+    },
+    {
       "subject": "chemistry",
       "rating": "amber",
       "reason": "Entry met; predicted A-level grade at or above the amber threshold"
+    },
+    {
+      "subject": "economics",
+      "rating": "amber",
+      "reason": "Entry met (Maths at strong entry and English at standard entry); predicted A-level grade at or above the amber threshold"
     },
     {
       "subject": "biology",
@@ -48,7 +98,17 @@
       "reason": "Entry met; predicted A-level grade at or above the amber threshold"
     },
     {
+      "subject": "business_studies",
+      "rating": "amber",
+      "reason": "Entry met (Maths and English at standard entry); predicted A-level grade at or above the amber threshold"
+    },
+    {
       "subject": "further_maths",
+      "rating": "red",
+      "reason": "Entry requirement unmet or predicted grade below the amber threshold"
+    },
+    {
+      "subject": "spanish",
       "rating": "red",
       "reason": "Entry requirement unmet or predicted grade below the amber threshold"
     },
@@ -74,9 +134,9 @@
     }
   ],
   "summary": {
-    "green_count": 2,
-    "amber_count": 7,
-    "projected_tariff": 232
+    "green_count": 6,
+    "amber_count": 14,
+    "projected_tariff": 546.5
   },
   "adjustments": []
 }

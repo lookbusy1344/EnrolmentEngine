@@ -6,9 +6,9 @@
     </PropertyGroup>
 
     <ItemGroup>
-        <ProjectReference Include="..\EnrolmentRules.Domain\EnrolmentRules.Domain.csproj" />
-        <ProjectReference Include="..\EnrolmentRules.Prediction\EnrolmentRules.Prediction.csproj" />
-        <ProjectReference Include="..\EnrolmentRules.Engine\EnrolmentRules.Engine.csproj" />
+        <ProjectReference Include="..\EnrolmentRules.Domain\EnrolmentRules.Domain.csproj"/>
+        <ProjectReference Include="..\EnrolmentRules.Prediction\EnrolmentRules.Prediction.csproj"/>
+        <ProjectReference Include="..\EnrolmentRules.Engine\EnrolmentRules.Engine.csproj"/>
     </ItemGroup>
 
     <ItemGroup>
@@ -40,7 +40,7 @@
     </ItemGroup>
 
     <ItemGroup>
-        <PackageReference Include="Spectre.Console" Version="0.57.1" />
+        <PackageReference Include="Spectre.Console" Version="0.57.1"/>
     </ItemGroup>
 
 </Project>

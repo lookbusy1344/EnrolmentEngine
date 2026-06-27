@@ -10,5 +10,6 @@ This directory contains a narrow CSV extract from the official Department for Ed
 - Sheet extracted: All Data - Percentages
 - Qualification extracted: 111, GCE A level
 
-The full workbook is intentionally not committed. The CSV keeps only the 14 subjects modelled by this project, one row per subject and
-prior-attainment band, with probabilities for A-level grades U, E, D, C, B, A and A*.
+The full workbook is intentionally not committed. The CSV keeps only the 26 subjects modelled by this project, one row per subject and
+prior-attainment band, with probabilities for A-level grades U, E, D, C, B, A and A*. See `docs/dfe-matrix-extraction.md` for the
+column mapping and extraction recipe used to regenerate or extend this file.

@@ -13,11 +13,11 @@
     </PropertyGroup>
 
     <ItemGroup>
-        <ProjectReference Include="..\EnrolmentRules.Engine\EnrolmentRules.Engine.csproj" />
+        <ProjectReference Include="..\EnrolmentRules.Engine\EnrolmentRules.Engine.csproj"/>
     </ItemGroup>
 
     <ItemGroup>
-        <PackageReference Include="Microsoft.Extensions.DependencyInjection.Abstractions" Version="10.0.9" />
+        <PackageReference Include="Microsoft.Extensions.DependencyInjection.Abstractions" Version="10.0.9"/>
     </ItemGroup>
 
 </Project>
