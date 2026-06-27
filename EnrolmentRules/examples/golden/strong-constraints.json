@@ -1,0 +1,24 @@
+{
+  "student": {
+    "id": "S-4004",
+    "gcses": {
+      "maths": 8,
+      "english_language": 8,
+      "english_literature": 8,
+      "physics": 8,
+      "chemistry": 8,
+      "biology": 8,
+      "french": 8,
+      "german": 8,
+      "physical_education": 8,
+      "computer_studies": 8,
+      "history": 8,
+      "music": 8,
+      "art": 8
+    },
+    "hobbies": [
+      "chess_club"
+    ],
+    "date_of_birth": "2009-09-01"
+  }
+}

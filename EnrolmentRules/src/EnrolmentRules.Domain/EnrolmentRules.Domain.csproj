@@ -1,0 +1,20 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+    <PropertyGroup>
+        <PackageId>EnrolmentRules.Domain</PackageId>
+        <Description>Domain types, validation, catalogue modelling, and source-generated JSON contracts for EnrolmentRules.</Description>
+        <GenerateDocumentationFile>true</GenerateDocumentationFile>
+        <!-- GenerateDocumentationFile ships XML docs for package consumers. CS1591 (missing doc on a
+             public member) is suppressed because most of the public surface is value-equality
+             boilerplate, enum-like members, and types forced public only for RulesEngine lambda
+             binding, not consumer-facing API. Blanket enforcement would generate filler, not
+             value; genuine entry points are documented by hand. -->
+        <NoWarn>$(NoWarn);CS1591</NoWarn>
+    </PropertyGroup>
+
+    <ItemGroup>
+        <PackageReference Include="JsonSchema.Net" Version="9.2.2"/>
+        <PackageReference Include="YamlDotNet" Version="18.0.0"/>
+    </ItemGroup>
+
+</Project>

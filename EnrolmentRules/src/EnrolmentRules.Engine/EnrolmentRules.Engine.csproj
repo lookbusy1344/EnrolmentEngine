@@ -1,0 +1,38 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+    <PropertyGroup>
+        <PackageId>EnrolmentRules.Engine</PackageId>
+        <Description>Workflow loading, probe compilation, evaluation, and the reusable enrolment engine facade.</Description>
+        <GenerateDocumentationFile>true</GenerateDocumentationFile>
+        <!-- GenerateDocumentationFile ships XML docs for package consumers. CS1591 (missing doc on a
+             public member) is suppressed because most of the public surface is value-equality
+             boilerplate, enum-like members, and types forced public only for RulesEngine lambda
+             binding, not consumer-facing API. Blanket enforcement would generate filler, not
+             value; genuine entry points are documented by hand. -->
+        <NoWarn>$(NoWarn);CS1591</NoWarn>
+    </PropertyGroup>
+
+    <ItemGroup>
+        <ProjectReference Include="..\EnrolmentRules.Domain\EnrolmentRules.Domain.csproj"/>
+        <ProjectReference Include="..\EnrolmentRules.Prediction\EnrolmentRules.Prediction.csproj"/>
+    </ItemGroup>
+
+    <ItemGroup>
+        <None Include="..\..\workflows\**\*"
+              Pack="true"
+              PackagePath="contentFiles/any/any/enrolment-reference/workflows/%(RecursiveDir)%(Filename)%(Extension)"/>
+        <None Include="..\..\data\catalogue.yaml;..\..\data\catalogue.schema.json;..\..\data\qualifications.yaml;..\..\data\qualifications.schema.json;..\..\data\thresholds.yaml;..\..\data\thresholds.schema.json"
+              Pack="true"
+              PackagePath="contentFiles/any/any/enrolment-reference/data/%(Filename)%(Extension)"/>
+        <None Include="..\..\data\dfe-transition-matrices\**\*"
+              Pack="true"
+              PackagePath="contentFiles/any/any/enrolment-reference/data/dfe-transition-matrices/%(RecursiveDir)%(Filename)%(Extension)"/>
+    </ItemGroup>
+
+    <ItemGroup>
+        <PackageReference Include="JsonSchema.Net" Version="9.2.2"/>
+        <PackageReference Include="RulesEngine" Version="6.0.0"/>
+        <PackageReference Include="YamlDotNet" Version="18.0.0"/>
+    </ItemGroup>
+
+</Project>

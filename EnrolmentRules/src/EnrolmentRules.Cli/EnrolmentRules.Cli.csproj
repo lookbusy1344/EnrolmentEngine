@@ -1,0 +1,46 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+    <PropertyGroup>
+        <OutputType>Exe</OutputType>
+        <IsPackable>false</IsPackable>
+    </PropertyGroup>
+
+    <ItemGroup>
+        <ProjectReference Include="..\EnrolmentRules.Domain\EnrolmentRules.Domain.csproj" />
+        <ProjectReference Include="..\EnrolmentRules.Prediction\EnrolmentRules.Prediction.csproj" />
+        <ProjectReference Include="..\EnrolmentRules.Engine\EnrolmentRules.Engine.csproj" />
+    </ItemGroup>
+
+    <ItemGroup>
+        <Content Include="..\..\workflows\**\*">
+            <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+            <CopyToPublishDirectory>PreserveNewest</CopyToPublishDirectory>
+            <TargetPath>workflows\%(RecursiveDir)%(Filename)%(Extension)</TargetPath>
+        </Content>
+        <Content Include="..\..\data\dfe-transition-matrices\**\*">
+            <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+            <CopyToPublishDirectory>PreserveNewest</CopyToPublishDirectory>
+            <TargetPath>data\dfe-transition-matrices\%(RecursiveDir)%(Filename)%(Extension)</TargetPath>
+        </Content>
+        <Content Include="..\..\data\catalogue.yaml;..\..\data\catalogue.schema.json">
+            <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+            <CopyToPublishDirectory>PreserveNewest</CopyToPublishDirectory>
+            <TargetPath>data\%(Filename)%(Extension)</TargetPath>
+        </Content>
+        <Content Include="..\..\data\qualifications.yaml;..\..\data\qualifications.schema.json">
+            <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+            <CopyToPublishDirectory>PreserveNewest</CopyToPublishDirectory>
+            <TargetPath>data\%(Filename)%(Extension)</TargetPath>
+        </Content>
+        <Content Include="..\..\data\thresholds.yaml;..\..\data\thresholds.schema.json">
+            <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+            <CopyToPublishDirectory>PreserveNewest</CopyToPublishDirectory>
+            <TargetPath>data\%(Filename)%(Extension)</TargetPath>
+        </Content>
+    </ItemGroup>
+
+    <ItemGroup>
+        <PackageReference Include="Spectre.Console" Version="0.57.1" />
+    </ItemGroup>
+
+</Project>

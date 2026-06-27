@@ -1,0 +1,119 @@
+namespace EnrolmentRules.Tests;
+
+using System.Text.Json;
+using Domain;
+using Engine;
+using FluentAssertions;
+
+/// <summary>
+///     Phase 7 — the golden-file end-to-end suite: a handful of representative students whose expected
+///     <see cref="EnrolmentResult" /> JSON is committed alongside the input. Each fixture is evaluated
+///     through the whole pipeline (predict → engine → constraint pass → cap → aggregate) and compared
+///     byte-for-byte against its golden. This is the primary defence against the untyped-rule risk
+///     (Reservation 1): a silent rule error breaks a golden file. Hand-checked invariants per fixture sit
+///     beside the byte-match so the goldens are not merely self-consistent.
+/// </summary>
+public sealed class GoldenFileTests
+{
+	private const string ExpectedSuffix = ".expected.json";
+	private static string GoldenDir => Path.Combine(Harness.RepoRoot, "examples", "golden");
+
+	public static TheoryData<string> Fixtures()
+	{
+		var data = new TheoryData<string>();
+		foreach (var file in Directory.EnumerateFiles(GoldenDir, "*.json").OrderBy(static f => f, StringComparer.Ordinal)) {
+			if (!file.EndsWith(ExpectedSuffix, StringComparison.Ordinal) && !file.Contains("advise-counterfactual", StringComparison.Ordinal)) {
+				data.Add(Path.GetFileNameWithoutExtension(file));
+			}
+		}
+
+		return data;
+	}
+
+	private static async Task<EnrolmentResult> EvaluateFixtureAsync(string fixture)
+	{
+		await using var stream = File.OpenRead(Path.Combine(GoldenDir, fixture + ".json"));
+		var document = JsonSerializer.Deserialize(stream, EnrolmentJsonContext.Default.StudentDocument)!;
+		var engine = await Harness.ShippedEngineAsync();
+		return await engine.EvaluateAsync(document.Student);
+	}
+
+	[Theory]
+	[MemberData(nameof(Fixtures))]
+	public async Task fixture_evaluates_to_its_committed_golden(string fixture)
+	{
+		var result = await EvaluateFixtureAsync(fixture);
+		var actual = JsonSerializer.Serialize(result, EnrolmentJsonContext.Default.EnrolmentResult);
+
+		var expectedPath = Path.Combine(GoldenDir, fixture + ExpectedSuffix);
+		File.Exists(expectedPath).Should().BeTrue($"golden file '{fixture}{ExpectedSuffix}' must be committed");
+
+		var expected = await File.ReadAllTextAsync(expectedPath);
+		actual.ReplaceLineEndings().TrimEnd().Should().Be(expected.ReplaceLineEndings().TrimEnd());
+	}
+
+	[Fact]
+	public async Task top_allrounder_is_eligible_with_no_constraint_downgrades()
+	{
+		// The realistic mid-strong student (avg ≈ 6.78): a few greens, several ambers, Further Maths
+		// red on its own avg ≥ 7 entry rule, and untaken added subjects red. No both-green clash, so the
+		// host-code pass makes no adjustments.
+		var result = await EvaluateFixtureAsync("top-allrounder");
+
+		result.Eligible.Should().BeTrue();
+		result.Recommendations.Single(r => r.Subject == Subject.FurtherMaths).Rating.Should().Be(Rating.Red);
+		result.Adjustments.Should().BeEmpty();
+	}
+
+	[Fact]
+	public async Task ineligible_fixture_is_red_everywhere_with_the_gate_reason()
+	{
+		var result = await EvaluateFixtureAsync("ineligible-no-english");
+
+		result.Eligible.Should().BeFalse();
+		result.Recommendations.Should().OnlyContain(r => r.Rating == Rating.Red);
+		result.Recommendations.Should().OnlyContain(r => r.Reason.Contains("English", StringComparison.Ordinal));
+		result.Summary.Should().Be(new EnrolmentSummary(0, 0, 0.0));
+		result.Adjustments.Should().BeEmpty();
+	}
+
+	[Fact]
+	public async Task strong_constraints_fixture_exercises_exclusion_and_own_time()
+	{
+		// All eights ⇒ every subject green at base; the host-code pass then fires the exclusion, own-time and
+		// prerequisite (Further Maths needs a committed Maths) downgrades. The green cap is disabled in the
+		// shipped config, so the surviving greens are NOT clamped — every legitimate green stays green.
+		var result = await EvaluateFixtureAsync("strong-constraints");
+
+		result.Eligible.Should().BeTrue();
+		Harness.Thresholds.MaxGreenChoices.Should().BeNull();
+		result.Adjustments.Should().NotContain(a => a.Reason == Aggregator.ExceedsCapReason);
+
+		var art = result.Recommendations.Single(r => r.Subject == Subject.Art);
+		art.Rating.Should().Be(Rating.Amber);
+		art.Reason.Should().Contain("Mutual exclusion").And.Contain(EnumNames.NameOf(Subject.History));
+
+		var music = result.Recommendations.Single(r => r.Subject == Subject.Music);
+		music.Rating.Should().Be(Rating.Amber);
+		music.Reason.Should().Be(ConstraintPass.OwnTimeReason);
+	}
+
+	[Fact]
+	public async Task green_cap_when_enabled_clamps_the_strong_constraints_fixture_end_to_end()
+	{
+		// The optional green cap is off in the shipped config. Opting it in (a one-line data change, no
+		// rebuild) must clamp the surviving greens end-to-end: the all-eights student keeps exactly the cap
+		// many greens, the lowest-weight surplus demoted to amber with the cap reason.
+		const int cap = 4;
+		await using var stream = File.OpenRead(Path.Combine(GoldenDir, "strong-constraints.json"));
+		var document = JsonSerializer.Deserialize(stream, EnrolmentJsonContext.Default.StudentDocument)!;
+		var rules = (await Harness.BuildFromShippedWorkflowsAsync()).Engine;
+		var cappedEngine = new EnrolmentEngine(rules, Harness.Thresholds with { MaxGreenChoices = cap }, Harness.Catalogue, Harness.AsOf);
+
+		var result = await cappedEngine.EvaluateAsync(document.Student);
+
+		result.Eligible.Should().BeTrue();
+		result.Summary.GreenCount.Should().Be(cap);
+		result.Adjustments.Should().Contain(a => a.Reason == Aggregator.ExceedsCapReason);
+	}
+}

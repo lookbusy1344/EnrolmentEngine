@@ -1,0 +1,40 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+    <PropertyGroup>
+        <IsPackable>false</IsPackable>
+        <!-- Test method names use underscores by convention (Method_does_thing). CA1707 covers that.
+             IDE0058 is suppressed only here: FluentAssertions .Should()... chains are expression
+             statements whose value is intentionally discarded, and that's noise in tests. Source
+             projects deliberately do NOT suppress IDE0058 — they use explicit discards instead. -->
+        <NoWarn>$(NoWarn);CA1707;IDE0058</NoWarn>
+    </PropertyGroup>
+
+    <ItemGroup>
+        <PackageReference Include="coverlet.collector" Version="10.0.1">
+            <PrivateAssets>all</PrivateAssets>
+            <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
+        </PackageReference>
+        <PackageReference Include="FsCheck.Xunit" Version="3.3.3" />
+        <PackageReference Include="FluentAssertions" Version="8.10.0" />
+        <PackageReference Include="Microsoft.Extensions.DependencyInjection" Version="10.0.9" />
+        <PackageReference Include="Microsoft.NET.Test.Sdk" Version="18.7.0" />
+        <PackageReference Include="xunit" Version="2.9.3" />
+        <PackageReference Include="xunit.runner.visualstudio" Version="3.1.5">
+            <PrivateAssets>all</PrivateAssets>
+            <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
+        </PackageReference>
+    </ItemGroup>
+
+    <ItemGroup>
+        <Using Include="Xunit" />
+    </ItemGroup>
+
+    <ItemGroup>
+        <ProjectReference Include="..\..\src\EnrolmentRules.Engine\EnrolmentRules.Engine.csproj" />
+        <ProjectReference Include="..\..\src\EnrolmentRules.Domain\EnrolmentRules.Domain.csproj" />
+        <ProjectReference Include="..\..\src\EnrolmentRules.Prediction\EnrolmentRules.Prediction.csproj" />
+        <ProjectReference Include="..\..\src\EnrolmentRules.Cli\EnrolmentRules.Cli.csproj" />
+        <ProjectReference Include="..\..\src\EnrolmentRules.Extensions.DependencyInjection\EnrolmentRules.Extensions.DependencyInjection.csproj" />
+    </ItemGroup>
+
+</Project>

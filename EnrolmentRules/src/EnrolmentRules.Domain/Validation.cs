@@ -1,0 +1,144 @@
+namespace EnrolmentRules.Domain;
+
+using System.Collections.Frozen;
+using System.Globalization;
+
+/// <summary>
+///     The recognised GCSE subject keys (§1.1). This is the GCSE-side vocabulary, distinct from the
+///     A-level <see cref="Subject" /> enum: it carries <c>english_language</c> (a GCSE that gates
+///     eligibility and the English subject entry rules) and omits
+///     <c>further_maths</c> (an A-level with no GCSE of its own). It is the single source of truth the
+///     input validator checks an incoming document's GCSE keys against, so an unknown key is rejected at
+///     the boundary rather than silently treated as "not taken".
+/// </summary>
+public static class GcseSubjects
+{
+	/// <summary>The recognised GCSE subject keys (snake_case, matching the document and workflow lambdas).</summary>
+	public static IReadOnlySet<string> Known { get; } = new[] {
+		"maths", "english_language", "english_literature", "physics", "chemistry", "biology", "french", "german", "physical_education",
+		"computer_studies", "history", "music", "art",
+	}.ToFrozenSet(StringComparer.Ordinal);
+
+	/// <summary>Whether <paramref name="subject" /> is a recognised GCSE subject key.</summary>
+	public static bool IsKnown(string subject) => Known.Contains(subject);
+}
+
+/// <summary>
+///     The input boundary guard (Phase 8): validates a raw <see cref="StudentInput" /> document
+///     <em>before</em> it reaches prediction or the engine, so a malformed grade or an unknown subject
+///     fails fast with a clear message rather than producing a silent, wrong red rating. This is the guard
+///     RulesEngine does not provide for the input <em>document</em> — the workflow schema guards the
+///     <em>rules</em>; this guards the facts. Pure and total: it returns the list of problems (empty ⇒
+///     valid) and never throws.
+/// </summary>
+public static class StudentValidator
+{
+	/// <summary>
+	///     Validate one student document. Each required object member must be present, each GCSE grade must
+	///     be an integer on the [<see cref="Thresholds.MinGcseGrade" />, <see cref="Thresholds.MaxGcseGrade" />]
+	///     scale, each GCSE subject key must be <see cref="GcseSubjects.Known">recognised</see>, the date of
+	///     birth must be present, and every hobby tag must be non-blank. Returns one message per problem, in
+	///     document order; an empty list means valid.
+	/// </summary>
+	public static IReadOnlyList<string> Validate(StudentInput? student)
+		=> Validate(student, Catalogue.Current, QualificationScale.Current);
+
+	/// <summary>
+	///     Validate one student document against a specific catalogue. This is the host-safe path for
+	///     long-running processes and library consumers that may hold more than one catalogue in memory.
+	/// </summary>
+	public static IReadOnlyList<string> Validate(StudentInput? student, CatalogueData catalogue)
+		=> Validate(student, catalogue, QualificationScale.Current);
+
+	/// <summary>
+	///     Validate one student document against explicit catalogue and qualification-scale snapshots. This
+	///     is the host-safe path for long-running processes and tests that hold more than one table in memory.
+	/// </summary>
+	public static IReadOnlyList<string> Validate(StudentInput? student, CatalogueData catalogue, QualificationScale scale)
+	{
+		if (student is null) {
+			return ["student is required"];
+		}
+
+		return [
+			.. RequiredText(student.Id, "student id"),
+			.. student.Gcses is { } gcses ? gcses.SelectMany(ValidateGcse) : ["gcses is required"],
+			.. student.Hobbies is { } hobbies
+				? hobbies
+					.Index()
+					.Where(static h => string.IsNullOrWhiteSpace(h.Item))
+					.Select(static h => $"hobby tag at position {h.Index} is blank")
+				: ["hobbies is required"],
+			.. ValidateDateOfBirth(student.DateOfBirth),
+			.. ValidateChosenALevels(student.ChosenALevels, catalogue),
+			.. ValidatePriorQualifications(student.PriorQualifications, scale),
+		];
+	}
+
+	private static IEnumerable<string> RequiredText(string? value, string fieldName)
+	{
+		if (string.IsNullOrWhiteSpace(value)) {
+			yield return $"{fieldName} is required";
+		}
+	}
+
+	private static IEnumerable<string> ValidateDateOfBirth(DateOnly? dateOfBirth)
+	{
+		if (dateOfBirth is null) {
+			yield return "date_of_birth is required";
+		}
+	}
+
+	private static IEnumerable<string> ValidateGcse(KeyValuePair<string, int> gcse)
+	{
+		if (!GcseSubjects.IsKnown(gcse.Key)) {
+			yield return $"unknown GCSE subject '{gcse.Key}'";
+		}
+
+		if (gcse.Value is < Thresholds.MinGcseGrade or > Thresholds.MaxGcseGrade) {
+			yield return string.Create(
+				CultureInfo.InvariantCulture,
+				$"GCSE '{gcse.Key}' grade {gcse.Value} is out of range ({Thresholds.MinGcseGrade}–{Thresholds.MaxGcseGrade})");
+		}
+	}
+
+	private static IEnumerable<string> ValidateChosenALevels(IReadOnlyList<Subject> chosenALevels, CatalogueData catalogue)
+	{
+		var seen = new HashSet<Subject>();
+		foreach (var (index, subject) in chosenALevels.Index()) {
+			if (!catalogue.Subjects.Contains(subject)) {
+				yield return $"chosen_a_levels entry at position {index} is invalid: {subject.Value}";
+				continue;
+			}
+
+			if (seen.Add(subject)) {
+				continue;
+			}
+
+			yield return $"chosen_a_levels entry at position {index} duplicates '{EnumNames.NameOf(subject)}'";
+		}
+	}
+
+	private static IEnumerable<string> ValidatePriorQualifications(
+		IReadOnlyList<Qualification> priorQualifications,
+		QualificationScale scale)
+	{
+		foreach (var (index, qualification) in priorQualifications.Index()) {
+			if (string.IsNullOrWhiteSpace(qualification.Subject)) {
+				yield return $"prior_qualifications entry at position {index} subject is blank";
+			}
+
+			string? error = null;
+			try {
+				_ = scale.Ordinal(qualification.Type, qualification.Grade);
+			}
+			catch (InvalidDataException ex) {
+				error = $"prior_qualifications entry at position {index} subject '{qualification.Subject}' is invalid: {ex.Message}";
+			}
+
+			if (error is not null) {
+				yield return error;
+			}
+		}
+	}
+}

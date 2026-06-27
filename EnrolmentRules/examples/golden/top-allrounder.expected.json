@@ -1,0 +1,82 @@
+{
+  "eligible": true,
+  "eligibility_reasons": [],
+  "recommendations": [
+    {
+      "subject": "english_language",
+      "rating": "green",
+      "reason": "Entry met; predicted A-level grade at or above the green threshold"
+    },
+    {
+      "subject": "art",
+      "rating": "green",
+      "reason": "Entry met (age-gated GCSE threshold); predicted A-level grade at or above the green threshold"
+    },
+    {
+      "subject": "maths",
+      "rating": "amber",
+      "reason": "Entry met; predicted A-level grade at or above the amber threshold"
+    },
+    {
+      "subject": "physics",
+      "rating": "amber",
+      "reason": "Entry met; predicted A-level grade at or above the amber threshold"
+    },
+    {
+      "subject": "chemistry",
+      "rating": "amber",
+      "reason": "Entry met; predicted A-level grade at or above the amber threshold"
+    },
+    {
+      "subject": "biology",
+      "rating": "amber",
+      "reason": "Entry met; predicted A-level grade at or above the amber threshold"
+    },
+    {
+      "subject": "english_literature",
+      "rating": "amber",
+      "reason": "Entry met (English Language and Maths at a top GCSE score); predicted A-level grade at or above the amber threshold"
+    },
+    {
+      "subject": "history",
+      "rating": "amber",
+      "reason": "Entry met; predicted A-level grade at or above the amber threshold"
+    },
+    {
+      "subject": "music",
+      "rating": "amber",
+      "reason": "Entry met; predicted A-level grade at or above the amber threshold"
+    },
+    {
+      "subject": "further_maths",
+      "rating": "red",
+      "reason": "Entry requirement unmet or predicted grade below the amber threshold"
+    },
+    {
+      "subject": "computer_studies",
+      "rating": "red",
+      "reason": "Entry requirement unmet or predicted grade below the amber threshold"
+    },
+    {
+      "subject": "french",
+      "rating": "red",
+      "reason": "Entry requirement unmet or predicted grade below the amber threshold"
+    },
+    {
+      "subject": "german",
+      "rating": "red",
+      "reason": "Entry requirement unmet or predicted grade below the amber threshold"
+    },
+    {
+      "subject": "physical_education",
+      "rating": "red",
+      "reason": "Entry requirement unmet or predicted grade below the amber threshold"
+    }
+  ],
+  "summary": {
+    "green_count": 2,
+    "amber_count": 7,
+    "projected_tariff": 232
+  },
+  "adjustments": []
+}

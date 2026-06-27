@@ -1,0 +1,15 @@
+{
+  "student": {
+    "id": "S-DRAMA",
+    "gcses": {
+      "english_language": 8,
+      "maths": 8,
+      "history": 8,
+      "art": 8,
+      "physics": 8
+    },
+    "chosen_a_levels": [],
+    "hobbies": [],
+    "date_of_birth": "2009-09-01"
+  }
+}

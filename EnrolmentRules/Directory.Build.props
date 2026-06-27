@@ -1,0 +1,50 @@
+<Project>
+
+    <PropertyGroup>
+        <TargetFramework>net10.0</TargetFramework>
+        <LangVersion>latest</LangVersion>
+        <Nullable>enable</Nullable>
+        <ImplicitUsings>enable</ImplicitUsings>
+        <TreatWarningsAsErrors>true</TreatWarningsAsErrors>
+        <EnableNETAnalyzers>true</EnableNETAnalyzers>
+        <AnalysisLevel>latest-recommended</AnalysisLevel>
+        <EnforceCodeStyleInBuild>true</EnforceCodeStyleInBuild>
+        <GenerateDocumentationFile>false</GenerateDocumentationFile>
+        <Version>0.1.0</Version>
+        <Authors>lookbusy1344</Authors>
+        <PackageLicenseFile>LICENSE</PackageLicenseFile>
+        <RepositoryUrl>https://github.com/lookbusy1344/EnrolmentEngine.git</RepositoryUrl>
+        <PackageProjectUrl>https://github.com/lookbusy1344/EnrolmentEngine/tree/main/EnrolmentRules</PackageProjectUrl>
+        <PackageReadmeFile>README.md</PackageReadmeFile>
+        <PackageTags>enrolment;rulesengine;dotnet;education</PackageTags>
+        <!-- Strict analysis for a contestable-decision system. Globalization and Naming are
+             deliberately left at the recommended level (Globalization=All re-enables CA1303
+             localization noise; Naming=All fights the snake_case test convention). -->
+        <AnalysisModeDesign>All</AnalysisModeDesign>
+        <AnalysisModeSecurity>All</AnalysisModeSecurity>
+        <AnalysisModePerformance>All</AnalysisModePerformance>
+        <AnalysisModeReliability>All</AnalysisModeReliability>
+        <AnalysisModeUsage>All</AnalysisModeUsage>
+    </PropertyGroup>
+
+    <ItemGroup>
+        <PackageReference Include="Roslynator.Analyzers" Version="4.15.0">
+            <PrivateAssets>all</PrivateAssets>
+            <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
+        </PackageReference>
+        <PackageReference Include="Microsoft.VisualStudio.Threading.Analyzers" Version="18.7.23">
+            <PrivateAssets>all</PrivateAssets>
+            <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
+        </PackageReference>
+        <PackageReference Include="lookbusy1344.RecordValueAnalyser" Version="1.3.1">
+            <PrivateAssets>all</PrivateAssets>
+            <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
+        </PackageReference>
+    </ItemGroup>
+
+    <ItemGroup Condition="'$(IsPackable)' != 'false'">
+        <None Include="$(MSBuildThisFileDirectory)README.md" Pack="true" PackagePath="\" Visible="false"/>
+        <None Include="$(MSBuildThisFileDirectory)LICENSE" Pack="true" PackagePath="\" Visible="false"/>
+    </ItemGroup>
+
+</Project>

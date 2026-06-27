@@ -1,0 +1,281 @@
+namespace EnrolmentRules.Engine;
+
+using System.Collections.Concurrent;
+using Domain;
+
+/// <summary>
+///     Counterfactual grade search over the same engine-backed pipeline. The search stays host-side and
+///     evaluates perturbed students through the existing façade, so it inherits the workflow rules
+///     without reimplementing them.
+/// </summary>
+internal static class CounterfactualAdvisor
+{
+	private const string BudgetExhaustedReason = "budget exhausted";
+
+	public static async Task<AdviceResult> AdviseAsync(EnrolmentEngine engine, StudentInput student, PolicyThresholds thresholds, DateOnly asOf)
+	{
+		var explained = await engine.ExplainAsync(student, asOf).ConfigureAwait(false);
+		if (!explained.Eligible) {
+			return new(
+				false,
+				[.. explained.EligibilityReasons],
+				[],
+				new(BuildGateClearingAdvice(student, thresholds)));
+		}
+
+		// One evaluation cache shared across every subject's search: the searches all perturb the same
+		// student and explore heavily overlapping grade vectors, and a full EnrolmentResult is a pure
+		// function of the (fixed-hobbies) grade vector, so a vector evaluated for one subject is reused by
+		// the rest. Concurrent because the per-subject searches run in parallel below.
+		var evaluations = new ConcurrentDictionary<string, EnrolmentResult>(StringComparer.Ordinal);
+
+		return new(
+			true,
+			[.. explained.EligibilityReasons],
+			[
+				.. await Task.WhenAll(
+					explained.Explanations
+						.Where(static explanation => explanation.Rating is Rating.Red or Rating.Amber)
+						.Select(explanation => BuildSubjectAdviceAsync(engine, student, explanation, evaluations, asOf))).ConfigureAwait(false),
+			],
+			null);
+	}
+
+	private static async Task<SubjectAdvice> BuildSubjectAdviceAsync(
+		EnrolmentEngine engine,
+		StudentInput student,
+		Explanation explanation,
+		ConcurrentDictionary<string, EnrolmentResult> evaluations,
+		DateOnly asOf)
+	{
+		var target = explanation.Rating == Rating.Red ? Rating.Amber : Rating.Green;
+		var search = await SearchAsync(
+			engine,
+			student,
+			evaluations,
+			finalResult => finalResult.Recommendations.Single(r => r.Subject == explanation.Subject).Rating == target,
+			asOf).ConfigureAwait(false);
+
+		var blockedReason = search.Reachable
+			? null
+			: await ClassifyBlockedReasonAsync(engine, student, explanation, target, evaluations, asOf).ConfigureAwait(false);
+
+		return new(
+			explanation.Subject,
+			explanation.Rating,
+			target,
+			search.Changes,
+			search.Reachable,
+			blockedReason);
+	}
+
+	// When the search fails, decide why by probing the student with every candidate GCSE maxed: entry
+	// requirements are then certainly met, so if the subject still falls short of the target it is held
+	// there by a non-grade adjustment grades can never undo (prerequisite, cap, veto, mutual or prior-choice
+	// exclusion) — surface that adjustment's own reason. Only when even maxed grades reach the target was
+	// the block merely the grade budget. This catches a prerequisite that activates only once grades lift
+	// the subject into qualifying (e.g. Further Maths' chosen-Maths rule), which the original rating cannot
+	// reveal because the subject was still red on entry.
+	private static async Task<string> ClassifyBlockedReasonAsync(
+		EnrolmentEngine engine,
+		StudentInput student,
+		Explanation explanation,
+		Rating target,
+		ConcurrentDictionary<string, EnrolmentResult> evaluations,
+		DateOnly asOf)
+	{
+		var restudyReason = explanation.Overrides
+			.FirstOrDefault(static override_ =>
+				override_.Reason.StartsWith(ConstraintPass.RestudyBarReasonPrefix, StringComparison.Ordinal))
+			?.Reason;
+		if (restudyReason is not null) {
+			return restudyReason;
+		}
+
+		var maxed = AdvisorCandidates.AllSubjects.ToDictionary(
+			static gcse => gcse, static _ => Thresholds.MaxGcseGrade, StringComparer.OrdinalIgnoreCase);
+		var result = await EvaluateCachedAsync(engine, student, maxed, evaluations, asOf).ConfigureAwait(false);
+		var recommendation = result.Recommendations.Single(r => r.Subject == explanation.Subject);
+
+		// Ratings ascend in severity (green < amber < red), so "at least as good as target" is <=.
+		return (int)recommendation.Rating <= (int)target
+			? BudgetExhaustedReason
+			: recommendation.Reason;
+	}
+
+	private static async Task<SearchResult> SearchAsync(
+		EnrolmentEngine engine,
+		StudentInput student,
+		ConcurrentDictionary<string, EnrolmentResult> evaluations,
+		Func<EnrolmentResult, bool> predicate,
+		DateOnly asOf)
+	{
+		var original = GradeMap(student);
+		var queue = new PriorityQueue<SearchState, (int Cost, int TouchedSubjects, int Sequence)>();
+		var visited = new HashSet<string>(StringComparer.Ordinal);
+		var sequence = 0;
+
+		var start = new SearchState(original, original, [], 0);
+		queue.Enqueue(start, (0, 0, sequence++));
+		_ = visited.Add(Fingerprint(original));
+
+		while (queue.Count > 0) {
+			var state = queue.Dequeue();
+			var result = await EvaluateCachedAsync(engine, student, state.Grades, evaluations, asOf).ConfigureAwait(false);
+			if (predicate(result)) {
+				return new(true, [.. state.Changes]);
+			}
+
+			if (state.Cost >= AdvisorBudget.MaxCost) {
+				continue;
+			}
+
+			foreach (var subject in AdvisorCandidates.AllSubjects) {
+				var current = state.Grades.GetValueOrDefault(subject, 0);
+				if (current >= Thresholds.MaxGcseGrade) {
+					continue;
+				}
+
+				var nextValue = current + 1;
+				var originalGrade = original.GetValueOrDefault(subject, 0);
+
+				var nextGrades = new Dictionary<string, int>(state.Grades, StringComparer.OrdinalIgnoreCase) { [subject] = nextValue };
+				var nextChanged = new HashSet<string>(state.ChangedSubjects, StringComparer.OrdinalIgnoreCase);
+				if (originalGrade != nextValue) {
+					_ = nextChanged.Add(subject);
+				}
+
+				if (nextChanged.Count > AdvisorBudget.MaxSubjects) {
+					continue;
+				}
+
+				var fingerprint = Fingerprint(nextGrades);
+				if (!visited.Add(fingerprint)) {
+					continue;
+				}
+
+				var nextState = new SearchState(nextGrades, state.OriginalGrades, nextChanged, state.Cost + 1);
+				queue.Enqueue(nextState, (nextState.Cost, nextChanged.Count, sequence++));
+			}
+		}
+
+		return new(false, []);
+	}
+
+	private static EquatableArray<GradeChange> BuildGateClearingAdvice(StudentInput student, PolicyThresholds thresholds)
+	{
+		var grades = GradeMap(student);
+		var changes = new List<GradeChange>();
+		var passes = grades.Values.Count(grade => grade >= thresholds.PassGrade);
+
+		void RaiseToPass(string subject)
+		{
+			var current = grades.GetValueOrDefault(subject, 0);
+			if (current >= thresholds.PassGrade) {
+				return;
+			}
+
+			grades[subject] = thresholds.PassGrade;
+			changes.Add(new(subject, current, thresholds.PassGrade));
+			passes++;
+		}
+
+		RaiseToPass("english_language");
+		RaiseToPass("maths");
+
+		if (passes >= thresholds.MinPasses) {
+			return [.. changes];
+		}
+
+		foreach (var subject in AdvisorCandidates.AllSubjects
+					 .Where(static subject => subject is not "english_language" and not "maths")
+					 .Select(subject => new
+					 {
+						 Subject = subject,
+						 Current = grades.GetValueOrDefault(subject, 0),
+						 Cost = Math.Max(0, thresholds.PassGrade - grades.GetValueOrDefault(subject, 0)),
+					 })
+					 .Where(candidate => candidate.Current < thresholds.PassGrade)
+					 .OrderBy(static candidate => candidate.Cost)
+					 .ThenBy(static candidate => candidate.Subject, StringComparer.Ordinal)) {
+			grades[subject.Subject] = thresholds.PassGrade;
+			changes.Add(new(subject.Subject, subject.Current, thresholds.PassGrade));
+			passes++;
+
+			if (passes >= thresholds.MinPasses) {
+				break;
+			}
+		}
+
+		return [.. changes];
+	}
+
+	// Evaluate the student with these grades, reusing a prior result for the same grade vector. The race
+	// between two parallel searches missing the same key is benign: both compute the same result and the
+	// second write replaces an identical value.
+	private static async Task<EnrolmentResult> EvaluateCachedAsync(
+		EnrolmentEngine engine,
+		StudentInput student,
+		Dictionary<string, int> grades,
+		ConcurrentDictionary<string, EnrolmentResult> evaluations,
+		DateOnly asOf)
+	{
+		var fingerprint = Fingerprint(grades);
+		if (evaluations.TryGetValue(fingerprint, out var cached)) {
+			return cached;
+		}
+
+		var result = await engine.EvaluateAsync(Apply(student, grades), asOf).ConfigureAwait(false);
+		evaluations[fingerprint] = result;
+		return result;
+	}
+
+	private static StudentInput Apply(StudentInput student, IReadOnlyDictionary<string, int> grades) =>
+		new(student.Id, GradeMap(grades), student.Hobbies) { ChosenALevels = student.ChosenALevels };
+
+	private static Dictionary<string, int> GradeMap(StudentInput student) => GradeMap(student.Gcses);
+
+	// A fresh case-insensitive grade map, the shape the search perturbs and the engine input binds to.
+	// Shared by the student-seed and the per-state copy: both need an independent, comparer-stable dictionary.
+	private static Dictionary<string, int> GradeMap(IReadOnlyDictionary<string, int>? grades) =>
+		grades is null ? new(StringComparer.OrdinalIgnoreCase) : new(grades, StringComparer.OrdinalIgnoreCase);
+
+	private static string Fingerprint(IReadOnlyDictionary<string, int> grades) =>
+		string.Join('|', AdvisorCandidates.AllSubjects.Select(subject => $"{subject}:{grades.GetValueOrDefault(subject, 0)}"));
+
+	private sealed class SearchState(
+		Dictionary<string, int> grades,
+		Dictionary<string, int> originalGrades,
+		HashSet<string> changedSubjects,
+		int cost)
+	{
+		public Dictionary<string, int> Grades { get; } = grades;
+		public Dictionary<string, int> OriginalGrades { get; } = originalGrades;
+		public HashSet<string> ChangedSubjects { get; } = changedSubjects;
+		public int Cost { get; } = cost;
+
+		public EquatableArray<GradeChange> Changes => [
+			.. ChangedSubjects
+				.OrderBy(static subject => subject, StringComparer.Ordinal)
+				.Select(subject => new GradeChange(
+					subject,
+					OriginalGrades.GetValueOrDefault(subject, 0),
+					Grades.GetValueOrDefault(subject, OriginalGrades.GetValueOrDefault(subject, 0)))),
+		];
+	}
+
+	private readonly record struct SearchResult(bool Reachable, EquatableArray<GradeChange> Changes);
+
+	private static class AdvisorCandidates
+	{
+		public static IReadOnlyList<string> AllSubjects { get; } =
+			[.. GcseSubjects.Known.OrderBy(static subject => subject, StringComparer.Ordinal)];
+	}
+}
+
+/// <summary>Named advisor budgets, kept separate from the search so the limits are not magic numbers.</summary>
+public static class AdvisorBudget
+{
+	public const int MaxCost = 12;
+	public const int MaxSubjects = 3;
+}

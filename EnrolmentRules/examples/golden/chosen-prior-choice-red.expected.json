@@ -1,0 +1,107 @@
+{
+  "eligible": true,
+  "eligibility_reasons": [],
+  "recommendations": [
+    {
+      "subject": "physics",
+      "rating": "green",
+      "reason": "Entry met; predicted A-level grade at or above the green threshold"
+    },
+    {
+      "subject": "chemistry",
+      "rating": "green",
+      "reason": "Entry met; predicted A-level grade at or above the green threshold"
+    },
+    {
+      "subject": "biology",
+      "rating": "green",
+      "reason": "Entry met; predicted A-level grade at or above the green threshold"
+    },
+    {
+      "subject": "computer_studies",
+      "rating": "green",
+      "reason": "Entry met; predicted A-level grade at or above the green threshold"
+    },
+    {
+      "subject": "english_literature",
+      "rating": "green",
+      "reason": "Entry met (English Language and Maths at a top GCSE score); predicted A-level grade at or above the green threshold"
+    },
+    {
+      "subject": "english_language",
+      "rating": "green",
+      "reason": "Entry met; predicted A-level grade at or above the green threshold"
+    },
+    {
+      "subject": "history",
+      "rating": "green",
+      "reason": "Entry met; predicted A-level grade at or above the green threshold"
+    },
+    {
+      "subject": "physical_education",
+      "rating": "green",
+      "reason": "Entry met; predicted A-level grade at or above the green threshold"
+    },
+    {
+      "subject": "maths",
+      "rating": "amber",
+      "reason": "Entry met; predicted A-level grade at or above the amber threshold"
+    },
+    {
+      "subject": "art",
+      "rating": "amber",
+      "reason": "Mutual exclusion with history \u2014 authorisation required"
+    },
+    {
+      "subject": "music",
+      "rating": "amber",
+      "reason": "requires own-time practice \u2014 authorisation required"
+    },
+    {
+      "subject": "further_maths",
+      "rating": "red",
+      "reason": "maths prerequisite not met"
+    },
+    {
+      "subject": "french",
+      "rating": "red",
+      "reason": "Cannot be combined with chosen german"
+    },
+    {
+      "subject": "german",
+      "rating": "red",
+      "reason": "Entry requirement unmet or predicted grade below the amber threshold"
+    }
+  ],
+  "summary": {
+    "green_count": 8,
+    "amber_count": 3,
+    "projected_tariff": 401
+  },
+  "adjustments": [
+    {
+      "subject": "further_maths",
+      "from": "amber",
+      "to": "red",
+      "reason": "maths prerequisite not met"
+    },
+    {
+      "subject": "art",
+      "from": "green",
+      "to": "amber",
+      "reason": "Mutual exclusion with history \u2014 authorisation required"
+    },
+    {
+      "subject": "french",
+      "from": "green",
+      "to": "red",
+      "reason": "Cannot be combined with chosen german"
+    },
+    {
+      "subject": "music",
+      "from": "green",
+      "to": "amber",
+      "reason": "requires own-time practice \u2014 authorisation required"
+    }
+  ]
+}

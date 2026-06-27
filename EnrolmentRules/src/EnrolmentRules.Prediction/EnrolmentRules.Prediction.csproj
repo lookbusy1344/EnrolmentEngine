@@ -1,0 +1,19 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+    <PropertyGroup>
+        <PackageId>EnrolmentRules.Prediction</PackageId>
+        <Description>GCSE averaging, DfE transition evidence, and A-level grade prediction for EnrolmentRules.</Description>
+        <GenerateDocumentationFile>true</GenerateDocumentationFile>
+        <!-- GenerateDocumentationFile ships XML docs for package consumers. This project's public
+             members are currently all documented, so CS1591 (missing doc on a public member) fires
+             nothing today; the suppression is a forward-guard kept consistent with the sibling
+             packages, where the bulk of the public surface is value-equality boilerplate and
+             types forced public only for RulesEngine lambda binding. -->
+        <NoWarn>$(NoWarn);CS1591</NoWarn>
+    </PropertyGroup>
+
+    <ItemGroup>
+        <ProjectReference Include="..\EnrolmentRules.Domain\EnrolmentRules.Domain.csproj"/>
+    </ItemGroup>
+
+</Project>

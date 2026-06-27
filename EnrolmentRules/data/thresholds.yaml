@@ -1,0 +1,18 @@
+# Runtime policy thresholds for eligibility and subject rating. The shipped values mirror the
+# historical constants so first release behavior is unchanged; admins may retune this file at startup.
+pass_grade: 4
+min_passes: 5
+top_entry: 7
+strong_entry: 6
+standard_entry: 5
+further_maths_average_entry: 7.0
+humanities_average_entry: 5.0
+min_dfe_green_probability_at_or_above: 0.60
+min_dfe_amber_probability_at_or_above: 0.50
+adult_age: 19
+# max_green_choices is an optional, normally-unused feature: when omitted (as here) the green cap is
+# disabled and every subject rated green stays green — the engine reports what a student is allowed to
+# study, it does not force an "optimal" shortlist. Set it to a positive integer only if policy demands
+# an auto-enrol ceiling, in which case the lowest-UCAS-weight surplus greens are demoted to amber.
+# max_green_choices: 4
+amber_tariff_factor: 0.5

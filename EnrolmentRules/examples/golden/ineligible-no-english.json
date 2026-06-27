@@ -1,0 +1,12 @@
+{
+  "student": {
+    "id": "S-2002",
+    "gcses": {
+      "maths": 8,
+      "physics": 7,
+      "chemistry": 6
+    },
+    "hobbies": [],
+    "date_of_birth": "2009-09-01"
+  }
+}

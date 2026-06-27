@@ -1,0 +1,21 @@
+{
+  "student": {
+    "id": "S-1001",
+    "gcses": {
+      "maths": 9,
+      "english_language": 7,
+      "english_literature": 7,
+      "physics": 7,
+      "chemistry": 6,
+      "biology": 6,
+      "history": 5,
+      "music": 6,
+      "art": 8
+    },
+    "hobbies": [
+      "plays_piano",
+      "chess_club"
+    ],
+    "date_of_birth": "2009-09-01"
+  }
+}

@@ -1,0 +1,21 @@
+WorkflowName: 'eligibility'
+Rules:
+  - RuleName: 'EnglishLanguagePass'
+    SuccessEvent: 'GCSE English Language at pass grade or above'
+    ErrorMessage: 'GCSE English Language below the pass grade (4)'
+    Expression: >-
+      lookup.Grade("english_language") >= policy.PassGrade
+  - RuleName: 'MathsPass'
+    SuccessEvent: 'GCSE Maths at pass grade or above'
+    ErrorMessage: 'GCSE Maths below the pass grade (4)'
+    Expression: >-
+      lookup.Grade("maths") >= policy.PassGrade
+  - RuleName: 'EnoughPasses'
+    SuccessEvent: 'Enough GCSE passes for eligibility'
+    ErrorMessage: 'Fewer than the required number of GCSE passes (5 at grade 4 or above)'
+    LocalParams:
+      - Name: 'passCount'
+        Expression: >-
+          gcses.Count(g => g.Grade >= policy.PassGrade)
+    Expression: >-
+      passCount >= policy.MinPasses

@@ -1,0 +1,212 @@
+{
+  "eligible": true,
+  "eligibility_reasons": [],
+  "advice": [
+    {
+      "subject": "further_maths",
+      "current": "red",
+      "target": "amber",
+      "changes": [],
+      "reachable": false,
+      "blocked_reason": "maths prerequisite not met"
+    },
+    {
+      "subject": "maths",
+      "current": "red",
+      "target": "amber",
+      "changes": [
+        {
+          "gcse_subject": "biology",
+          "from": 5,
+          "to": 6
+        },
+        {
+          "gcse_subject": "maths",
+          "from": 5,
+          "to": 9
+        }
+      ],
+      "reachable": true,
+      "blocked_reason": null
+    },
+    {
+      "subject": "physics",
+      "current": "red",
+      "target": "amber",
+      "changes": [
+        {
+          "gcse_subject": "maths",
+          "from": 5,
+          "to": 7
+        },
+        {
+          "gcse_subject": "physics",
+          "from": 5,
+          "to": 6
+        }
+      ],
+      "reachable": true,
+      "blocked_reason": null
+    },
+    {
+      "subject": "chemistry",
+      "current": "red",
+      "target": "amber",
+      "changes": [
+        {
+          "gcse_subject": "chemistry",
+          "from": 5,
+          "to": 8
+        }
+      ],
+      "reachable": true,
+      "blocked_reason": null
+    },
+    {
+      "subject": "biology",
+      "current": "red",
+      "target": "amber",
+      "changes": [
+        {
+          "gcse_subject": "biology",
+          "from": 5,
+          "to": 8
+        }
+      ],
+      "reachable": true,
+      "blocked_reason": null
+    },
+    {
+      "subject": "computer_studies",
+      "current": "red",
+      "target": "amber",
+      "changes": [
+        {
+          "gcse_subject": "computer_studies",
+          "from": 0,
+          "to": 6
+        },
+        {
+          "gcse_subject": "maths",
+          "from": 5,
+          "to": 7
+        }
+      ],
+      "reachable": true,
+      "blocked_reason": null
+    },
+    {
+      "subject": "english_literature",
+      "current": "red",
+      "target": "amber",
+      "changes": [
+        {
+          "gcse_subject": "maths",
+          "from": 5,
+          "to": 7
+        }
+      ],
+      "reachable": true,
+      "blocked_reason": null
+    },
+    {
+      "subject": "english_language",
+      "current": "red",
+      "target": "amber",
+      "changes": [
+        {
+          "gcse_subject": "biology",
+          "from": 5,
+          "to": 6
+        }
+      ],
+      "reachable": true,
+      "blocked_reason": null
+    },
+    {
+      "subject": "history",
+      "current": "red",
+      "target": "amber",
+      "changes": [
+        {
+          "gcse_subject": "biology",
+          "from": 5,
+          "to": 7
+        }
+      ],
+      "reachable": true,
+      "blocked_reason": null
+    },
+    {
+      "subject": "french",
+      "current": "red",
+      "target": "amber",
+      "changes": [
+        {
+          "gcse_subject": "french",
+          "from": 0,
+          "to": 8
+        }
+      ],
+      "reachable": true,
+      "blocked_reason": null
+    },
+    {
+      "subject": "art",
+      "current": "red",
+      "target": "amber",
+      "changes": [
+        {
+          "gcse_subject": "art",
+          "from": 0,
+          "to": 6
+        }
+      ],
+      "reachable": true,
+      "blocked_reason": null
+    },
+    {
+      "subject": "german",
+      "current": "red",
+      "target": "amber",
+      "changes": [
+        {
+          "gcse_subject": "german",
+          "from": 0,
+          "to": 8
+        }
+      ],
+      "reachable": true,
+      "blocked_reason": null
+    },
+    {
+      "subject": "music",
+      "current": "red",
+      "target": "amber",
+      "changes": [
+        {
+          "gcse_subject": "music",
+          "from": 0,
+          "to": 7
+        }
+      ],
+      "reachable": true,
+      "blocked_reason": null
+    },
+    {
+      "subject": "physical_education",
+      "current": "red",
+      "target": "amber",
+      "changes": [
+        {
+          "gcse_subject": "physical_education",
+          "from": 0,
+          "to": 7
+        }
+      ],
+      "reachable": true,
+      "blocked_reason": null
+    }
+  ],
+  "gate": null
+}

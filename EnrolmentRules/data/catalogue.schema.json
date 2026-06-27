@@ -1,0 +1,189 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://enrolmentrules/catalogue.schema.json",
+  "title": "Subject catalogue",
+  "description": "Structural validation for the subject catalogue data file (the cross-subject constraint policy, §1.5–1.6). Catches structural defects only; coverage (every subject present) and exclusion symmetry are enforced as load-time invariants in code.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "subjects"
+  ],
+  "properties": {
+    "subjects": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "$ref": "#/$defs/entry"
+      }
+    }
+  },
+  "$defs": {
+    "subject": {
+      "type": "string",
+      "pattern": "^[a-z]+(?:_[a-z]+)*$"
+    },
+    "severity": {
+      "type": "string",
+      "enum": [
+        "amber",
+        "red"
+      ]
+    },
+    "qualification_type": {
+      "type": "string",
+      "enum": [
+        "gcse",
+        "a_level",
+        "btec_extended_certificate",
+        "btec_diploma",
+        "nvq"
+      ]
+    },
+    "entry_equivalent": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "subject",
+        "type",
+        "min_grade"
+      ],
+      "properties": {
+        "subject": {
+          "type": "string",
+          "minLength": 1
+        },
+        "type": {
+          "$ref": "#/$defs/qualification_type"
+        },
+        "min_grade": {
+          "type": "string",
+          "minLength": 1
+        }
+      }
+    },
+    "restudy_bar": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "types"
+      ],
+      "properties": {
+        "types": {
+          "type": "array",
+          "minItems": 1,
+          "items": {
+            "$ref": "#/$defs/qualification_type"
+          }
+        },
+        "severity": {
+          "$ref": "#/$defs/severity"
+        }
+      }
+    },
+    "entry": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "subject",
+        "ucas_weight",
+        "regression"
+      ],
+      "properties": {
+        "subject": {
+          "$ref": "#/$defs/subject"
+        },
+        "ucas_weight": {
+          "type": "integer",
+          "exclusiveMinimum": 0
+        },
+        "regression": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "slope",
+            "intercept"
+          ],
+          "properties": {
+            "slope": {
+              "type": "number"
+            },
+            "intercept": {
+              "type": "number"
+            }
+          }
+        },
+        "exclusions": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": [
+              "other",
+              "severity"
+            ],
+            "properties": {
+              "other": {
+                "$ref": "#/$defs/subject"
+              },
+              "severity": {
+                "$ref": "#/$defs/severity"
+              }
+            }
+          }
+        },
+        "required_activities": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "minLength": 1
+          }
+        },
+        "blocking_activities": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "minLength": 1
+          }
+        },
+        "prerequisites": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": [
+              "any_of"
+            ],
+            "properties": {
+              "any_of": {
+                "type": "array",
+                "minItems": 1,
+                "items": {
+                  "$ref": "#/$defs/subject"
+                }
+              },
+              "severity": {
+                "$ref": "#/$defs/severity"
+              },
+              "requires": {
+                "type": "string",
+                "enum": [
+                  "qualifying",
+                  "chosen"
+                ]
+              }
+            }
+          }
+        },
+        "entry_equivalents": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/entry_equivalent"
+          }
+        },
+        "restudy_bar": {
+          "$ref": "#/$defs/restudy_bar"
+        }
+      }
+    }
+  }
+}

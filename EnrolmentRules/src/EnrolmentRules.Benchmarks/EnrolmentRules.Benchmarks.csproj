@@ -1,0 +1,18 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+    <PropertyGroup>
+        <OutputType>Exe</OutputType>
+        <IsPackable>false</IsPackable>
+    </PropertyGroup>
+
+    <ItemGroup>
+        <ProjectReference Include="..\EnrolmentRules.Domain\EnrolmentRules.Domain.csproj"/>
+        <ProjectReference Include="..\EnrolmentRules.Prediction\EnrolmentRules.Prediction.csproj"/>
+        <ProjectReference Include="..\EnrolmentRules.Engine\EnrolmentRules.Engine.csproj"/>
+    </ItemGroup>
+
+    <ItemGroup>
+        <PackageReference Include="BenchmarkDotNet" Version="0.15.8"/>
+    </ItemGroup>
+
+</Project>

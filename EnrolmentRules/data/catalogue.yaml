@@ -1,0 +1,83 @@
+# Subject catalogue — the single source of truth for the cross-subject constraint pass and aggregation
+# (§1.5–1.6). Host code loads and schema-validates this file at startup (see CatalogueStore); editing it,
+# not the constraint-pass code, is how cross-subject policy changes. Per subject:
+#   ucas_weight          — the UCAS tariff a green contributes (deliberately distinct so the exclusion
+#                          loser and the green-cap surplus are decided without ties).
+#   exclusions           — symmetric timetable-clash edges to other subjects, each with a downgrade
+#                          severity (amber or red). Must be declared on both sides.
+#   required_activities  — own-time activity-tag prefixes the subject requires (absence ⇒ amber).
+#   blocking_activities  — activity-tag prefixes that bar the subject outright (presence ⇒ red veto).
+#   prerequisites        — dependency groups; each group lists alternatives under `any_of` and an optional
+#                          `severity` (defaults to red — a hard requirement; amber is advisory) and an
+#                          optional `requires` (how a group is satisfied: `qualifying` (default) — any
+#                          alternative rating green/amber this run OR being a committed A-level; `chosen` —
+#                          only a committed `chosen_a_levels` entry counts). Multiple groups are all
+#                          required (AND).
+#   entry_equivalents    — typed prior qualifications that satisfy or strengthen subject entry.
+#   restudy_bar          — a subject-specific bar on re-studying when the student already holds a prior
+#                          qualification of one of the listed types in the same subject.
+#
+# Illustrative sample policy: French ↔ German is a hard clash (red); History ↔ Art is a soft clash
+# (amber). Music carries the only own-time requirement (plays_) and an illustrative veto (a trombone
+# player is barred even though that hobby satisfies the own-time prefix). Further Maths needs Maths.
+subjects:
+  - subject: maths
+    ucas_weight: 50
+    regression: { slope: 0.80, intercept: -1.00 }
+  - subject: further_maths
+    ucas_weight: 56
+    regression: { slope: 1.00, intercept: -2.00 }
+    prerequisites:
+      - any_of: [ maths ]
+        requires: chosen
+  - subject: physics
+    ucas_weight: 48
+    regression: { slope: 0.90, intercept: -2.20 }
+  - subject: chemistry
+    ucas_weight: 46
+    regression: { slope: 0.90, intercept: -2.30 }
+  - subject: biology
+    ucas_weight: 44
+    regression: { slope: 0.90, intercept: -2.30 }
+    entry_equivalents:
+      - { subject: applied_science, type: btec_diploma, min_grade: distinction }
+    restudy_bar:
+      types: [ a_level ]
+      severity: red
+  - subject: english_language
+    ucas_weight: 41
+    regression: { slope: 0.85, intercept: -1.75 }
+  - subject: english_literature
+    ucas_weight: 42
+    regression: { slope: 0.85, intercept: -1.80 }
+  - subject: french
+    ucas_weight: 39
+    regression: { slope: 0.85, intercept: -1.85 }
+    exclusions:
+      - { other: german, severity: red }
+  - subject: german
+    ucas_weight: 37
+    regression: { slope: 0.85, intercept: -1.85 }
+    exclusions:
+      - { other: french, severity: red }
+  - subject: physical_education
+    ucas_weight: 35
+    regression: { slope: 0.80, intercept: -1.45 }
+  - subject: computer_studies
+    ucas_weight: 43
+    regression: { slope: 0.90, intercept: -2.10 }
+  - subject: history
+    ucas_weight: 40
+    regression: { slope: 0.85, intercept: -1.90 }
+    exclusions:
+      - { other: art, severity: amber }
+  - subject: music
+    ucas_weight: 36
+    regression: { slope: 0.85, intercept: -1.70 }
+    required_activities: [ plays_ ]
+    blocking_activities: [ plays_trombone ]
+  - subject: art
+    ucas_weight: 38
+    regression: { slope: 0.80, intercept: -1.40 }
+    exclusions:
+      - { other: history, severity: amber }

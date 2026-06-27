@@ -1,0 +1,13 @@
+<Solution>
+    <Folder Name="/src/">
+        <Project Path="src/EnrolmentRules.Benchmarks/EnrolmentRules.Benchmarks.csproj"/>
+        <Project Path="src/EnrolmentRules.Cli/EnrolmentRules.Cli.csproj"/>
+        <Project Path="src/EnrolmentRules.Domain/EnrolmentRules.Domain.csproj"/>
+        <Project Path="src/EnrolmentRules.Engine/EnrolmentRules.Engine.csproj"/>
+        <Project Path="src/EnrolmentRules.Extensions.DependencyInjection/EnrolmentRules.Extensions.DependencyInjection.csproj"/>
+        <Project Path="src/EnrolmentRules.Prediction/EnrolmentRules.Prediction.csproj"/>
+    </Folder>
+    <Folder Name="/tests/">
+        <Project Path="tests/EnrolmentRules.Tests/EnrolmentRules.Tests.csproj"/>
+    </Folder>
+</Solution>

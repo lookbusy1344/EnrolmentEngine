@@ -1,0 +1,23 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+    <PropertyGroup>
+        <PackageId>EnrolmentRules.Extensions.DependencyInjection</PackageId>
+        <Description>Dependency-injection registration extensions for EnrolmentRules hosts.</Description>
+        <GenerateDocumentationFile>true</GenerateDocumentationFile>
+        <!-- GenerateDocumentationFile ships XML docs for package consumers. CS1591 (missing doc on a
+             public member) is suppressed because most of the public surface is value-equality
+             boilerplate, enum-like members, and types forced public only for RulesEngine lambda
+             binding, not consumer-facing API. Blanket enforcement would generate filler, not
+             value; genuine entry points are documented by hand. -->
+        <NoWarn>$(NoWarn);CS1591</NoWarn>
+    </PropertyGroup>
+
+    <ItemGroup>
+        <ProjectReference Include="..\EnrolmentRules.Engine\EnrolmentRules.Engine.csproj" />
+    </ItemGroup>
+
+    <ItemGroup>
+        <PackageReference Include="Microsoft.Extensions.DependencyInjection.Abstractions" Version="10.0.9" />
+    </ItemGroup>
+
+</Project>
