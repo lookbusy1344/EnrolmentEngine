@@ -17,6 +17,9 @@ concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
   cancel-in-progress: true
 
+permissions:
+  contents: read
+
 env:
   SOLUTION: EnrolmentRules/EnrolmentRules.slnx
   DOTNET_NOLOGO: 'true'
