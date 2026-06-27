@@ -4,4 +4,4 @@ This is a recreation of a proprietary project I developed about a decade ago, to
 
 Here we show the core ideas in an open-source (MIT licence) project using modern idiomatic .NET 10. The code is designed as a library, so can be connected to ASP.NET, a language-agnostic REST API, MVC, or just used from the command line (as demonstrated here).
 
-https://github.com/lookbusy1344/EnrolmentEngine/EnrolmentRules
+https://github.com/lookbusy1344/EnrolmentEngine/tree/main/EnrolmentRules
