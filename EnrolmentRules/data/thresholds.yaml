@@ -16,3 +16,8 @@ adult_age: 19
 # an auto-enrol ceiling, in which case the lowest-UCAS-weight surplus greens are demoted to amber.
 # max_green_choices: 4
 amber_tariff_factor: 0.5
+# advice_considers_unsat_gcses is a diagnostic knob, off by default. When false the counterfactual
+# advisor (--advise) only proposes raising GCSEs the student already sat — actionable advice, and a far
+# cheaper search. Set it to true to revert to the old behaviour, which may also propose sitting a brand
+# new GCSE; useful for diagnosing why a subject is reachable or unreachable, not for normal operation.
+advice_considers_unsat_gcses: false

@@ -32,4 +32,13 @@ public interface IEnrolmentEngine
 
 	/// <summary>Counterfactual guidance as of an explicit reference date.</summary>
 	Task<AdviceResult> AdviseAsync(StudentInput student, DateOnly asOf);
+
+	/// <summary>
+	///     Counterfactual guidance with an explicit override of the loaded
+	///     <see cref="PolicyThresholds.AdviceConsidersUnsatGcses" /> diagnostic default, as of the bound date.
+	/// </summary>
+	Task<AdviceResult> AdviseAsync(StudentInput student, bool considerUnsatGcses);
+
+	/// <summary>Counterfactual guidance with an explicit diagnostic override, as of an explicit reference date.</summary>
+	Task<AdviceResult> AdviseAsync(StudentInput student, DateOnly asOf, bool considerUnsatGcses);
 }

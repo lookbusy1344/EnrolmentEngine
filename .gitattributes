@@ -2,6 +2,10 @@
 # Others, leave as-is (dont treat them as text)
 * -text
 
+# To exclude from github stats:
+# *.XX text eol=lf
+# *.XX linguist-detectable=false
+
 # General text files
 *.txt text eol=lf
 *.md text eol=lf

@@ -9,6 +9,13 @@ namespace EnrolmentRules.Domain;
 ///     <see cref="MaxGreenChoices" /> is optional and normally unset: when it is <c>null</c> the green
 ///     cap is disabled and every green stays green. A positive value opts the cap in (see
 ///     <c>Aggregator.CapGreens</c>).
+///     <para>
+///         <see cref="AdviceConsidersUnsatGcses" /> is a diagnostic knob, off by default: when
+///         <c>false</c> the counterfactual advisor only proposes raising GCSEs the student already sat;
+///         when <c>true</c> it reverts to the old, much heavier search that may also propose sitting a
+///         brand-new GCSE. Retained for diagnosing why a subject is reachable/unreachable, not for normal
+///         operation.
+///     </para>
 /// </remarks>
 public sealed record PolicyThresholds(
 	int PassGrade,
@@ -22,4 +29,5 @@ public sealed record PolicyThresholds(
 	double MinDfeAmberProbabilityAtOrAbove,
 	int AdultAge,
 	int? MaxGreenChoices,
-	double AmberTariffFactor);
+	double AmberTariffFactor,
+	bool AdviceConsidersUnsatGcses = false);

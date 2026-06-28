@@ -317,6 +317,15 @@ Get counterfactual advice for the same student:
 dotnet run --project src/EnrolmentRules.Cli -- --advise examples/student.json
 ```
 
+By default the advisor only proposes raising GCSEs the student already sat. Add `--all-gcses` to run
+the heavier diagnostic search that may also propose sitting a brand-new GCSE — useful for working out
+why a subject is reachable or unreachable. The same default can be flipped persistently via
+`advice_considers_unsat_gcses` in `data/thresholds.yaml`; the flag overrides it for a single run.
+
+```bash
+dotnet run --project src/EnrolmentRules.Cli -- --advise --all-gcses examples/student.json
+```
+
 Statically lint the shipped workflows for structural faults (missing/duplicate tiers, tier
 ordering, off-vocabulary field references, eligibility shape) — input-independent, so it catches a
 typo before any student exercises it:

@@ -615,9 +615,19 @@ advisors who want something readable in a terminal or pipe. Both views are pure 
 a *single* evaluation — nothing is re-run.
 
 `--advise` uses the same engine-backed pipeline to propose the smallest GCSE grade changes that
-would lift each amber/red subject, or clear the eligibility gate for an ineligible student. A
-restudy bar is treated as a hard non-GCSE blocker, so the advisor reports it rather than
-suggesting grade changes that cannot remove it.
+would lift each amber/red subject, or clear the eligibility gate for an ineligible student. The
+per-subject search only ever raises GCSEs the student *already sat* — a grade bump is actionable
+advice, "go and take another GCSE from scratch" is not — so a subject gated on a qualification the
+student never took (e.g. French A-level wanting a French GCSE) is reported unreachable for that entry
+reason rather than by inventing a new qualification. (The eligibility gate-clearing bundle is the one
+exception: English, Maths and any extra passes needed to clear the gate are genuinely required, so it
+may propose sitting them.) A restudy bar is likewise a hard non-GCSE blocker the advisor reports
+rather than suggesting grade changes that cannot remove it.
+
+The held-only restriction can be lifted for diagnosis: the `advice_considers_unsat_gcses` knob in
+`data/thresholds.yaml` (off by default), or the per-call `considerUnsatGcses` argument / CLI
+`--advise --all-gcses` flag, reverts to the old, much heavier search that also proposes sitting
+brand-new GCSEs — handy for understanding *why* a subject is unreachable, not for normal operation.
 
 ---
 

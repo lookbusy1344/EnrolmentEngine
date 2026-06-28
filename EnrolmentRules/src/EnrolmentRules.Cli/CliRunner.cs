@@ -47,6 +47,8 @@ public static class CliRunner
 			["--explain", var path] => RunEvaluationAsync(path, Output.Explain, stdout, stderr),
 			["--explain-text", var path] => RunEvaluationAsync(path, Output.ExplainText, stdout, stderr),
 			["--advise", var path] => RunEvaluationAsync(path, Output.Advise, stdout, stderr),
+			["--advise", "--all-gcses", var path] =>
+				RunEvaluationAsync(path, Output.Advise, stdout, stderr, considerUnsatGcses: true),
 			["--batch", var path] => RunBatchAsync(path, stdout, stderr),
 			_ => Task.FromResult(Usage(stderr)),
 		};
@@ -54,6 +56,7 @@ public static class CliRunner
 	private static int Usage(TextWriter stderr)
 	{
 		stderr.WriteLine("usage: enrolment [--table|--json|--explain|--explain-text|--advise] <student.json|.yaml>");
+		stderr.WriteLine("       enrolment --advise [--all-gcses] <student.json|.yaml>");
 		stderr.WriteLine("       enrolment --batch <students.jsonl>");
 		stderr.WriteLine("       enrolment --lint-workflows [workflows-dir]");
 		return ExitUsage;
@@ -108,7 +111,10 @@ public static class CliRunner
 		return ExitOk;
 	}
 
-	private static async Task<int> RunEvaluationAsync(string path, Output output, TextWriter stdout, TextWriter stderr)
+	// considerUnsatGcses is null in normal use so --advise honours the loaded thresholds default; the
+	// --all-gcses flag passes true to force the diagnostic search over every known GCSE for this run only.
+	private static async Task<int> RunEvaluationAsync(
+		string path, Output output, TextWriter stdout, TextWriter stderr, bool? considerUnsatGcses = null)
 	{
 		if (await BuildEngineAsync(stderr) is not { } engine) {
 			return ExitInput;
@@ -121,7 +127,9 @@ public static class CliRunner
 		var useExplanation = output is Output.Explain or Output.ExplainText;
 		var useAdvice = output == Output.Advise;
 		var explanation = useExplanation ? await engine.ExplainAsync(student) : null;
-		var advice = useAdvice ? await engine.AdviseAsync(student) : null;
+		var advice = useAdvice
+			? considerUnsatGcses is { } flag ? await engine.AdviseAsync(student, flag) : await engine.AdviseAsync(student)
+			: null;
 		var result = explanation is null ? await engine.EvaluateAsync(student) : null;
 		switch (output) {
 			case Output.Json:

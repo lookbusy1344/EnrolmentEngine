@@ -12,7 +12,8 @@ internal static class CounterfactualAdvisor
 {
 	private const string BudgetExhaustedReason = "budget exhausted";
 
-	public static async Task<AdviceResult> AdviseAsync(EnrolmentEngine engine, StudentInput student, PolicyThresholds thresholds, DateOnly asOf)
+	public static async Task<AdviceResult> AdviseAsync(
+		EnrolmentEngine engine, StudentInput student, PolicyThresholds thresholds, DateOnly asOf, bool considerUnsatGcses)
 	{
 		var explained = await engine.ExplainAsync(student, asOf).ConfigureAwait(false);
 		if (!explained.Eligible) {
@@ -29,6 +30,14 @@ internal static class CounterfactualAdvisor
 		// the rest. Concurrent because the per-subject searches run in parallel below.
 		var evaluations = new ConcurrentDictionary<string, EnrolmentResult>(StringComparer.Ordinal);
 
+		// The per-subject reachability search only ever raises GCSEs the student already sat: a grade bump is
+		// actionable advice, "sit another GCSE from scratch" is not. Restricting the candidate set to the held
+		// subjects is also what keeps the search tractable — its state space is exponential in the number of
+		// candidates. A subject gated on a GCSE the student never took is then unreachable by grade changes
+		// alone, which ClassifyBlockedReasonAsync surfaces as that entry rule's own reason. The
+		// considerUnsatGcses diagnostic knob reverts to the old, heavier search over every known GCSE.
+		var candidates = considerUnsatGcses ? AdvisorCandidates.AllSubjects : HeldSubjects(student);
+
 		return new(
 			true,
 			[.. explained.EligibilityReasons],
@@ -36,7 +45,7 @@ internal static class CounterfactualAdvisor
 				.. await Task.WhenAll(
 					explained.Explanations
 						.Where(static explanation => explanation.Rating is Rating.Red or Rating.Amber)
-						.Select(explanation => BuildSubjectAdviceAsync(engine, student, explanation, evaluations, asOf))).ConfigureAwait(false),
+						.Select(explanation => BuildSubjectAdviceAsync(engine, student, explanation, candidates, evaluations, asOf))).ConfigureAwait(false),
 			],
 			null);
 	}
@@ -45,6 +54,7 @@ internal static class CounterfactualAdvisor
 		EnrolmentEngine engine,
 		StudentInput student,
 		Explanation explanation,
+		IReadOnlyList<string> candidates,
 		ConcurrentDictionary<string, EnrolmentResult> evaluations,
 		DateOnly asOf)
 	{
@@ -52,13 +62,14 @@ internal static class CounterfactualAdvisor
 		var search = await SearchAsync(
 			engine,
 			student,
+			candidates,
 			evaluations,
 			finalResult => finalResult.Recommendations.Single(r => r.Subject == explanation.Subject).Rating == target,
 			asOf).ConfigureAwait(false);
 
 		var blockedReason = search.Reachable
 			? null
-			: await ClassifyBlockedReasonAsync(engine, student, explanation, target, evaluations, asOf).ConfigureAwait(false);
+			: await ClassifyBlockedReasonAsync(engine, student, explanation, target, candidates, evaluations, asOf).ConfigureAwait(false);
 
 		return new(
 			explanation.Subject,
@@ -69,18 +80,20 @@ internal static class CounterfactualAdvisor
 			blockedReason);
 	}
 
-	// When the search fails, decide why by probing the student with every candidate GCSE maxed: entry
-	// requirements are then certainly met, so if the subject still falls short of the target it is held
-	// there by a non-grade adjustment grades can never undo (prerequisite, cap, veto, mutual or prior-choice
-	// exclusion) — surface that adjustment's own reason. Only when even maxed grades reach the target was
-	// the block merely the grade budget. This catches a prerequisite that activates only once grades lift
-	// the subject into qualifying (e.g. Further Maths' chosen-Maths rule), which the original rating cannot
-	// reveal because the subject was still red on entry.
+	// When the search fails, decide why by probing the student with every candidate (held) GCSE maxed: the
+	// entry requirements those grades can reach are then certainly met, so if the subject still falls short of
+	// the target it is held there by something grades can never undo — a non-grade adjustment (prerequisite,
+	// cap, veto, mutual or prior-choice exclusion) or an entry rule gated on a GCSE the student never sat —
+	// so surface that rule's own reason. Only when even maxed held grades reach the target was the block
+	// merely the grade budget. This catches a prerequisite that activates only once grades lift the subject
+	// into qualifying (e.g. Further Maths' chosen-Maths rule), which the original rating cannot reveal because
+	// the subject was still red on entry.
 	private static async Task<string> ClassifyBlockedReasonAsync(
 		EnrolmentEngine engine,
 		StudentInput student,
 		Explanation explanation,
 		Rating target,
+		IReadOnlyList<string> candidates,
 		ConcurrentDictionary<string, EnrolmentResult> evaluations,
 		DateOnly asOf)
 	{
@@ -92,9 +105,9 @@ internal static class CounterfactualAdvisor
 			return restudyReason;
 		}
 
-		var maxed = AdvisorCandidates.AllSubjects.ToDictionary(
+		var maxed = candidates.ToDictionary(
 			static gcse => gcse, static _ => Thresholds.MaxGcseGrade, StringComparer.OrdinalIgnoreCase);
-		var result = await EvaluateCachedAsync(engine, student, maxed, evaluations, asOf).ConfigureAwait(false);
+		var result = await EvaluateCachedAsync(engine, student, maxed, candidates, evaluations, asOf).ConfigureAwait(false);
 		var recommendation = result.Recommendations.Single(r => r.Subject == explanation.Subject);
 
 		// Ratings ascend in severity (green < amber < red), so "at least as good as target" is <=.
@@ -106,6 +119,7 @@ internal static class CounterfactualAdvisor
 	private static async Task<SearchResult> SearchAsync(
 		EnrolmentEngine engine,
 		StudentInput student,
+		IReadOnlyList<string> candidates,
 		ConcurrentDictionary<string, EnrolmentResult> evaluations,
 		Func<EnrolmentResult, bool> predicate,
 		DateOnly asOf)
@@ -117,11 +131,11 @@ internal static class CounterfactualAdvisor
 
 		var start = new SearchState(original, original, [], 0);
 		queue.Enqueue(start, (0, 0, sequence++));
-		_ = visited.Add(Fingerprint(original));
+		_ = visited.Add(Fingerprint(original, candidates));
 
 		while (queue.Count > 0) {
 			var state = queue.Dequeue();
-			var result = await EvaluateCachedAsync(engine, student, state.Grades, evaluations, asOf).ConfigureAwait(false);
+			var result = await EvaluateCachedAsync(engine, student, state.Grades, candidates, evaluations, asOf).ConfigureAwait(false);
 			if (predicate(result)) {
 				return new(true, [.. state.Changes]);
 			}
@@ -130,7 +144,7 @@ internal static class CounterfactualAdvisor
 				continue;
 			}
 
-			foreach (var subject in AdvisorCandidates.AllSubjects) {
+			foreach (var subject in candidates) {
 				var current = state.Grades.GetValueOrDefault(subject, 0);
 				if (current >= Thresholds.MaxGcseGrade) {
 					continue;
@@ -149,7 +163,7 @@ internal static class CounterfactualAdvisor
 					continue;
 				}
 
-				var fingerprint = Fingerprint(nextGrades);
+				var fingerprint = Fingerprint(nextGrades, candidates);
 				if (!visited.Add(fingerprint)) {
 					continue;
 				}
@@ -217,10 +231,11 @@ internal static class CounterfactualAdvisor
 		EnrolmentEngine engine,
 		StudentInput student,
 		Dictionary<string, int> grades,
+		IReadOnlyList<string> candidates,
 		ConcurrentDictionary<string, EnrolmentResult> evaluations,
 		DateOnly asOf)
 	{
-		var fingerprint = Fingerprint(grades);
+		var fingerprint = Fingerprint(grades, candidates);
 		if (evaluations.TryGetValue(fingerprint, out var cached)) {
 			return cached;
 		}
@@ -240,8 +255,14 @@ internal static class CounterfactualAdvisor
 	private static Dictionary<string, int> GradeMap(IReadOnlyDictionary<string, int>? grades) =>
 		grades is null ? new(StringComparer.OrdinalIgnoreCase) : new(grades, StringComparer.OrdinalIgnoreCase);
 
-	private static string Fingerprint(IReadOnlyDictionary<string, int> grades) =>
-		string.Join('|', AdvisorCandidates.AllSubjects.Select(subject => $"{subject}:{grades.GetValueOrDefault(subject, 0)}"));
+	// The search only ever perturbs the candidate subjects, so a fingerprint over those keys fully identifies
+	// a state. Keying on the per-call candidate set (not the full GCSE list) keeps the key compact.
+	private static string Fingerprint(IReadOnlyDictionary<string, int> grades, IReadOnlyList<string> candidates) =>
+		string.Join('|', candidates.Select(subject => $"{subject}:{grades.GetValueOrDefault(subject, 0)}"));
+
+	// The GCSEs the student actually sat, in a stable order — the candidate set the per-subject search raises.
+	private static IReadOnlyList<string> HeldSubjects(StudentInput student) =>
+		[.. GradeMap(student).Keys.OrderBy(static subject => subject, StringComparer.Ordinal)];
 
 	private sealed class SearchState(
 		Dictionary<string, int> grades,

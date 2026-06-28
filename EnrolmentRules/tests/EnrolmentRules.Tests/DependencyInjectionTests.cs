@@ -144,9 +144,15 @@ public sealed class DependencyInjectionTests
 		public Task<ExplainedResult> ExplainAsync(StudentInput student, DateOnly asOf) =>
 			Task.FromResult(new ExplainedResult(false, [], [], new(0, 0, 0.0)));
 
-		public Task<AdviceResult> AdviseAsync(StudentInput student) => AdviseAsync(student, default);
+		public Task<AdviceResult> AdviseAsync(StudentInput student) => AdviseAsync(student, default(DateOnly));
 
 		public Task<AdviceResult> AdviseAsync(StudentInput student, DateOnly asOf) =>
 			Task.FromResult(new AdviceResult(false, [], [], null));
+
+		public Task<AdviceResult> AdviseAsync(StudentInput student, bool considerUnsatGcses) =>
+			AdviseAsync(student, default(DateOnly));
+
+		public Task<AdviceResult> AdviseAsync(StudentInput student, DateOnly asOf, bool considerUnsatGcses) =>
+			AdviseAsync(student, asOf);
 	}
 }

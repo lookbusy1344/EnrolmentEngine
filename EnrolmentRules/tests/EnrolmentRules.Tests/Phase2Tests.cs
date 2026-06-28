@@ -42,6 +42,35 @@ public sealed class Phase2Tests
 		thresholds.AdultAge.Should().Be(19);
 		thresholds.MaxGreenChoices.Should().BeNull(); // green cap is an optional feature, disabled in the shipped config
 		thresholds.AmberTariffFactor.Should().BeApproximately(0.5, 1e-9);
+		thresholds.AdviceConsidersUnsatGcses.Should().BeFalse(); // diagnostic advisor knob, off in the shipped config
+	}
+
+	[Fact]
+	public void advice_considers_unsat_gcses_is_optional_and_defaults_off_when_absent()
+	{
+		var schema = File.ReadAllText(Path.Combine(DataDir, PolicyThresholdsStore.SchemaFileName));
+
+		// A thresholds document that omits the optional knob entirely must still validate and default to off.
+		const string withoutKnob = """
+			pass_grade: 4
+			min_passes: 5
+			top_entry: 7
+			strong_entry: 6
+			standard_entry: 5
+			further_maths_average_entry: 7.0
+			humanities_average_entry: 5.0
+			min_dfe_green_probability_at_or_above: 0.60
+			min_dfe_amber_probability_at_or_above: 0.50
+			adult_age: 19
+			amber_tariff_factor: 0.5
+			""";
+
+		var defaulted = PolicyThresholdsStore.LoadAndValidate(new StringReader(withoutKnob), new StringReader(schema));
+		defaulted.AdviceConsidersUnsatGcses.Should().BeFalse();
+
+		var enabled = PolicyThresholdsStore.LoadAndValidate(
+			new StringReader(withoutKnob + "\nadvice_considers_unsat_gcses: true"), new StringReader(schema));
+		enabled.AdviceConsidersUnsatGcses.Should().BeTrue();
 	}
 
 	[Fact]

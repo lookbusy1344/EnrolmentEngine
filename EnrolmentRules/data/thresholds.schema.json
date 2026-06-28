@@ -76,6 +76,10 @@
       "type": "number",
       "minimum": 0,
       "maximum": 1
+    },
+    "advice_considers_unsat_gcses": {
+      "description": "Optional, off by default. When true the counterfactual advisor reverts to the old, heavier search that may propose sitting a brand-new GCSE; a diagnostic knob, not for normal operation.",
+      "type": "boolean"
     }
   }
 }

@@ -60,6 +60,78 @@ public sealed class AdvisorTests
 	}
 
 	[Fact]
+	public async Task advice_never_proposes_sitting_a_gcse_the_student_has_not_taken()
+	{
+		var engine = await Harness.ShippedEngineAsync();
+		var student = new StudentInput("S-HELD-ONLY", new Dictionary<string, int> {
+			["english_language"] = 7,
+			["maths"] = 5,
+			["physics"] = 5,
+			["chemistry"] = 5,
+			["biology"] = 5,
+		}, []);
+
+		var advice = await engine.AdviseAsync(student);
+
+		// The counterfactual search proposes raising GCSEs the student already holds, never sitting a brand
+		// new one: a grade bump is actionable advice, "go and take another GCSE from scratch" is not.
+		var held = student.Gcses!.Value;
+		advice.Advice
+			.SelectMany(static a => a.Changes)
+			.Select(static c => c.GcseSubject)
+			.Should().OnlyContain(subject => held.ContainsKey(subject));
+
+		// Spanish A-level is gated on a French or German GCSE the student never sat, so with new GCSEs off
+		// the table it is unreachable by grade changes alone rather than reached by inventing a qualification.
+		advice.Advice.Single(a => a.Subject == Subject.Spanish).Reachable.Should().BeFalse();
+	}
+
+	[Fact]
+	public async Task advisor_considers_unsat_gcses_when_asked_for_diagnosis()
+	{
+		var engine = await Harness.ShippedEngineAsync();
+		// Maths is committed so Further Maths' prerequisite is met and its search returns early rather than
+		// exhausting the (now 13-wide) diagnostic candidate space — keeps this slow-by-design path quick here.
+		var student = new StudentInput("S-HELD-ONLY", new Dictionary<string, int> {
+			["english_language"] = 7,
+			["maths"] = 5,
+			["physics"] = 5,
+			["chemistry"] = 5,
+			["biology"] = 5,
+		}, []) { ChosenALevels = [Subject.Maths] };
+
+		var advice = await engine.AdviseAsync(student, considerUnsatGcses: true);
+
+		// Diagnostic mode reverts to the old, heavier behaviour: Spanish, gated on a French or German GCSE
+		// the student never sat, becomes reachable by proposing those brand-new GCSEs.
+		advice.Advice.Single(a => a.Subject == Subject.Spanish).Reachable.Should().BeTrue();
+		advice.Advice
+			.SelectMany(static a => a.Changes)
+			.Select(static c => c.GcseSubject)
+			.Should().Contain("french");
+	}
+
+	[Fact]
+	public async Task advice_unsat_gcse_behaviour_defaults_from_thresholds()
+	{
+		var (_, rules) = await Harness.BuildFromShippedWorkflowsAsync();
+		var engine = new EnrolmentEngine(
+			rules, Harness.Thresholds with { AdviceConsidersUnsatGcses = true }, Harness.Catalogue, Harness.AsOf);
+		var student = new StudentInput("S-HELD-ONLY", new Dictionary<string, int> {
+			["english_language"] = 7,
+			["maths"] = 5,
+			["physics"] = 5,
+			["chemistry"] = 5,
+			["biology"] = 5,
+		}, []) { ChosenALevels = [Subject.Maths] };
+
+		// No per-call override: the diagnostic knob is read from the loaded thresholds, so Spanish is reachable.
+		var advice = await engine.AdviseAsync(student);
+
+		advice.Advice.Single(a => a.Subject == Subject.Spanish).Reachable.Should().BeTrue();
+	}
+
+	[Fact]
 	public async Task advisor_reports_a_veto_blocked_subject_as_unreachable()
 	{
 		var engine = await Harness.ShippedEngineAsync();
@@ -223,6 +295,31 @@ public sealed class AdvisorTests
 		var parsed = JsonSerializer.Deserialize(stdout.ToString(), EnrolmentJsonContext.Default.AdviceResult);
 		parsed.Should().NotBeNull();
 		parsed!.Advice.Should().NotBeEmpty();
+	}
+
+	[Fact]
+	public async Task cli_advise_all_gcses_flag_enables_the_diagnostic_search()
+	{
+		var dir = Path.Combine(Path.GetTempPath(), "enrolmentrules-tests", Guid.NewGuid().ToString("N"));
+		Directory.CreateDirectory(dir);
+		var path = Path.Combine(dir, "student.json");
+		await File.WriteAllTextAsync(path, """
+			{ "student": { "id": "S-CLI-DIAG",
+			  "gcses": {"english_language":7,"maths":5,"physics":5,"chemistry":5,"biology":5},
+			  "hobbies": [], "chosen_a_levels": ["maths"], "date_of_birth": "2009-09-01" } }
+			""");
+
+		using var stdout = new StringWriter();
+		using var stderr = new StringWriter();
+
+		var exit = await CliRunner.RunAsync(["--advise", "--all-gcses", path], stdout, stderr);
+
+		exit.Should().Be(CliRunner.ExitOk);
+		stderr.ToString().Should().BeEmpty();
+		var parsed = JsonSerializer.Deserialize(stdout.ToString(), EnrolmentJsonContext.Default.AdviceResult);
+		// Diagnostic mode: Spanish, gated on a French/German GCSE the student never sat, is reachable by
+		// proposing one — the flag flipped the candidate set on through the CLI.
+		parsed!.Advice.Single(a => a.Subject == Subject.Spanish).Reachable.Should().BeTrue();
 	}
 
 	private static StudentInput ApplyChanges(StudentInput original, EquatableArray<GradeChange> changes)

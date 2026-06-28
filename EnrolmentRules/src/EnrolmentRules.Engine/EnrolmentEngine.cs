@@ -95,7 +95,19 @@ public sealed class EnrolmentEngine : IEnrolmentEngine
 
 	/// <summary>Counterfactual guidance as of an explicit reference date.</summary>
 	public Task<AdviceResult> AdviseAsync(StudentInput student, DateOnly asOf) =>
-		CounterfactualAdvisor.AdviseAsync(this, student, evaluator.Thresholds, asOf);
+		AdviseAsync(student, asOf, evaluator.Thresholds.AdviceConsidersUnsatGcses);
+
+	/// <summary>
+	///     Counterfactual guidance with an explicit <paramref name="considerUnsatGcses" /> override of the
+	///     loaded <see cref="PolicyThresholds.AdviceConsidersUnsatGcses" /> default — the diagnostic mode that
+	///     lets the search also propose sitting GCSEs the student never took. As of the bound reference date.
+	/// </summary>
+	public Task<AdviceResult> AdviseAsync(StudentInput student, bool considerUnsatGcses) =>
+		AdviseAsync(student, asOf(), considerUnsatGcses);
+
+	/// <summary>Counterfactual guidance with an explicit diagnostic override, as of an explicit reference date.</summary>
+	public Task<AdviceResult> AdviseAsync(StudentInput student, DateOnly asOf, bool considerUnsatGcses) =>
+		CounterfactualAdvisor.AdviseAsync(this, student, evaluator.Thresholds, asOf, considerUnsatGcses);
 
 	/// <summary>
 	///     Create a fully bootstrapped engine from the shipped layout: thresholds, catalogue, workflows,

@@ -14,29 +14,17 @@
       "subject": "design_technology",
       "current": "red",
       "target": "amber",
-      "changes": [
-        {
-          "gcse_subject": "art",
-          "from": 0,
-          "to": 7
-        }
-      ],
-      "reachable": true,
-      "blocked_reason": null
+      "changes": [],
+      "reachable": false,
+      "blocked_reason": "Entry requirement unmet or predicted grade below the amber threshold"
     },
     {
       "subject": "spanish",
       "current": "red",
       "target": "amber",
-      "changes": [
-        {
-          "gcse_subject": "french",
-          "from": 0,
-          "to": 7
-        }
-      ],
-      "reachable": true,
-      "blocked_reason": null
+      "changes": [],
+      "reachable": false,
+      "blocked_reason": "Entry requirement unmet or predicted grade below the amber threshold"
     },
     {
       "subject": "law",
@@ -192,20 +180,9 @@
       "subject": "computer_studies",
       "current": "red",
       "target": "amber",
-      "changes": [
-        {
-          "gcse_subject": "computer_studies",
-          "from": 0,
-          "to": 6
-        },
-        {
-          "gcse_subject": "maths",
-          "from": 5,
-          "to": 7
-        }
-      ],
-      "reachable": true,
-      "blocked_reason": null
+      "changes": [],
+      "reachable": false,
+      "blocked_reason": "Entry requirement unmet or predicted grade below the amber threshold"
     },
     {
       "subject": "english_literature",
@@ -253,71 +230,41 @@
       "subject": "french",
       "current": "red",
       "target": "amber",
-      "changes": [
-        {
-          "gcse_subject": "french",
-          "from": 0,
-          "to": 8
-        }
-      ],
-      "reachable": true,
-      "blocked_reason": null
+      "changes": [],
+      "reachable": false,
+      "blocked_reason": "Entry requirement unmet or predicted grade below the amber threshold"
     },
     {
       "subject": "art",
       "current": "red",
       "target": "amber",
-      "changes": [
-        {
-          "gcse_subject": "art",
-          "from": 0,
-          "to": 6
-        }
-      ],
-      "reachable": true,
-      "blocked_reason": null
+      "changes": [],
+      "reachable": false,
+      "blocked_reason": "Entry requirement unmet or predicted grade below the amber threshold"
     },
     {
       "subject": "german",
       "current": "red",
       "target": "amber",
-      "changes": [
-        {
-          "gcse_subject": "german",
-          "from": 0,
-          "to": 8
-        }
-      ],
-      "reachable": true,
-      "blocked_reason": null
+      "changes": [],
+      "reachable": false,
+      "blocked_reason": "Entry requirement unmet or predicted grade below the amber threshold"
     },
     {
       "subject": "music",
       "current": "red",
       "target": "amber",
-      "changes": [
-        {
-          "gcse_subject": "music",
-          "from": 0,
-          "to": 7
-        }
-      ],
-      "reachable": true,
-      "blocked_reason": null
+      "changes": [],
+      "reachable": false,
+      "blocked_reason": "Entry requirement unmet or predicted grade below the amber threshold"
     },
     {
       "subject": "physical_education",
       "current": "red",
       "target": "amber",
-      "changes": [
-        {
-          "gcse_subject": "physical_education",
-          "from": 0,
-          "to": 7
-        }
-      ],
-      "reachable": true,
-      "blocked_reason": null
+      "changes": [],
+      "reachable": false,
+      "blocked_reason": "Entry requirement unmet or predicted grade below the amber threshold"
     },
     {
       "subject": "business_studies",
