@@ -1,6 +1,4 @@
-using System.Runtime.CompilerServices;
 using System.Runtime.InteropServices;
 
-[assembly: InternalsVisibleTo("EnrolmentRules.Tests")]
 [assembly: CLSCompliant(true)]
 [assembly: ComVisible(false)]

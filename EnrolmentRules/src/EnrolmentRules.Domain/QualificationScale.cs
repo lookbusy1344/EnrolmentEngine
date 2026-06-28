@@ -25,8 +25,7 @@ public sealed class QualificationScale
 {
 	public const string DefaultRelativePath = "data/qualifications.yaml";
 
-	private static readonly Lazy<QualificationScale> Fallback = new(static () => LoadFromFile(FindDefaultPath()));
-	private static volatile QualificationScale? installed;
+	private static readonly Lazy<QualificationScale> Shipped = new(static () => LoadFromFile(FindDefaultPath()));
 
 	private readonly FrozenDictionary<QualificationType, FrozenDictionary<string, QualificationScaleEntry>> byType;
 
@@ -42,7 +41,7 @@ public sealed class QualificationScale
 
 			if (!grades.TryAdd(entry.Grade, entry)) {
 				throw new InvalidDataException(
-					$"qualification scale has a duplicate entry for {EnumNames.NameOf(entry.Type)} grade '{entry.Grade}'");
+					$"Qualification scale has a duplicate entry for {EnumNames.NameOf(entry.Type)} grade '{entry.Grade}'.");
 			}
 		}
 
@@ -52,11 +51,13 @@ public sealed class QualificationScale
 			static kv => kv.Value.ToFrozenDictionary(static g => g.Key, static g => g.Value));
 	}
 
-	/// <summary>The active scale snapshot: installed by the host, or the shipped fallback.</summary>
-	public static QualificationScale Current => installed ?? Fallback.Value;
-
-	/// <summary>Install a scale as the active table.</summary>
-	public static void Use(QualificationScale scale) => installed = scale;
+	/// <summary>
+	///     The immutable shipped qualification scale, read once from <c>data/qualifications.yaml</c> on first
+	///     access. A read-only convenience default; constructed engine paths thread an explicit
+	///     <see cref="QualificationScale" /> and do not consult it. It is never swapped, so reading it is
+	///     reading fixed data, not ambient mutable state.
+	/// </summary>
+	public static QualificationScale Default => Shipped.Value;
 
 	/// <summary>Parse a YAML qualification scale document into the runtime table.</summary>
 	public static QualificationScale Load(string yaml) => Build(YamlConverter.ToJsonNode(yaml));
@@ -77,7 +78,22 @@ public sealed class QualificationScale
 	}
 
 	/// <summary>The ordinal of <paramref name="grade" /> within <paramref name="type" />.</summary>
-	public int Ordinal(QualificationType type, string grade) => Lookup(type, grade).Ordinal;
+	public int Ordinal(QualificationType type, string grade) =>
+		TryOrdinal(type, grade, out var ordinal)
+			? ordinal
+			: throw new InvalidDataException($"Unknown qualification {EnumNames.NameOf(type)} grade '{grade}'.");
+
+	/// <summary>Try to resolve the ordinal of <paramref name="grade" /> within <paramref name="type" />.</summary>
+	public bool TryOrdinal(QualificationType type, string grade, out int ordinal)
+	{
+		if (byType.TryGetValue(type, out var grades) && grades.TryGetValue(grade, out var entry)) {
+			ordinal = entry.Ordinal;
+			return true;
+		}
+
+		ordinal = default;
+		return false;
+	}
 
 	/// <summary>The A-level-points equivalence of <paramref name="grade" /> within <paramref name="type" />.</summary>
 	public double Equivalence(QualificationType type, string grade) => Lookup(type, grade).Equivalence;
@@ -92,17 +108,17 @@ public sealed class QualificationScale
 	{
 		if (string.IsNullOrWhiteSpace(entry.Grade)) {
 			throw new InvalidDataException(
-				$"qualification scale entry for {EnumNames.NameOf(entry.Type)} has a blank grade");
+				$"Qualification scale entry for {EnumNames.NameOf(entry.Type)} has a blank grade.");
 		}
 
 		if (entry.Ordinal < 0) {
 			throw new InvalidDataException(
-				$"qualification scale entry for {EnumNames.NameOf(entry.Type)} grade '{entry.Grade}' has a negative ordinal");
+				$"Qualification scale entry for {EnumNames.NameOf(entry.Type)} grade '{entry.Grade}' has a negative ordinal.");
 		}
 
 		if (entry.Equivalence is < ALevelGrade.Min or > ALevelGrade.Max) {
 			throw new InvalidDataException(
-				$"qualification scale entry for {EnumNames.NameOf(entry.Type)} grade '{entry.Grade}' has an out-of-range equivalence");
+				$"Qualification scale entry for {EnumNames.NameOf(entry.Type)} grade '{entry.Grade}' has an out-of-range equivalence.");
 		}
 	}
 
@@ -111,7 +127,7 @@ public sealed class QualificationScale
 		foreach (var (type, grades) in grouped) {
 			if (grades.Count == 0) {
 				throw new InvalidDataException(
-					$"qualification scale type {EnumNames.NameOf(type)} has no grades");
+					$"Qualification scale type {EnumNames.NameOf(type)} has no grades.");
 			}
 
 			var duplicateOrdinal = grades.Values
@@ -119,7 +135,7 @@ public sealed class QualificationScale
 				.FirstOrDefault(static group => group.Count() > 1);
 			if (duplicateOrdinal is not null) {
 				throw new InvalidDataException(
-					$"qualification scale type {EnumNames.NameOf(type)} has a duplicate ordinal {duplicateOrdinal.Key}");
+					$"Qualification scale type {EnumNames.NameOf(type)} has a duplicate ordinal {duplicateOrdinal.Key}.");
 			}
 		}
 	}
@@ -131,7 +147,7 @@ public sealed class QualificationScale
 		}
 
 		throw new InvalidDataException(
-			$"unknown qualification {EnumNames.NameOf(type)} grade '{grade}'");
+			$"Unknown qualification {EnumNames.NameOf(type)} grade '{grade}'.");
 	}
 
 	private static string FindDefaultPath()
@@ -159,7 +175,7 @@ internal sealed record QualificationScaleFile(EquatableArray<QualificationTypeEn
 {
 	public static QualificationScaleFile From(JsonNode node) =>
 		node.Deserialize(QualificationScaleJsonContext.Default.QualificationScaleFile)
-		?? throw new InvalidDataException("qualification scale document deserialized to null");
+		?? throw new InvalidDataException("Qualification scale document deserialized to null.");
 }
 
 internal sealed record QualificationTypeEntry

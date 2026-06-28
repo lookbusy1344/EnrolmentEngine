@@ -50,4 +50,16 @@ public sealed class EnrolmentEngineOptions
 		var provider = TimeProvider ?? TimeProvider.System;
 		return () => DateOnly.FromDateTime(provider.GetLocalNow().DateTime);
 	}
+
+	/// <summary>Validate the configured directories before container build, so misconfiguration fails at the boundary.</summary>
+	internal void Validate()
+	{
+		if (string.IsNullOrWhiteSpace(WorkflowsDirectory)) {
+			throw new ArgumentException("Workflows directory must not be empty.", nameof(WorkflowsDirectory));
+		}
+
+		if (string.IsNullOrWhiteSpace(DataDirectory)) {
+			throw new ArgumentException("Data directory must not be empty.", nameof(DataDirectory));
+		}
+	}
 }

@@ -70,7 +70,7 @@ public sealed class DfeTransitionMatrix
 
 	/// <summary>Return one transition-evidence row per modelled subject for <paramref name="averageGcseScore" />.</summary>
 	public IReadOnlyList<TransitionEvidence> EvidenceFor(double averageGcseScore)
-		=> EvidenceFor(averageGcseScore, Catalogue.Current);
+		=> EvidenceFor(averageGcseScore, Catalogue.Default);
 
 	/// <summary>Return one transition-evidence row per subject in <paramref name="catalogue" />.</summary>
 	public IReadOnlyList<TransitionEvidence> EvidenceFor(double averageGcseScore, CatalogueData catalogue)

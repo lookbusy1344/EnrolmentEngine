@@ -9,6 +9,7 @@ using RulesEngine.Models;
 ///     expressions invoke (e.g. <see cref="GcseFacts" />) must be registered as custom types. Built once
 ///     and shared across the reusable engine.
 /// </summary>
+[CLSCompliant(false)]
 public static class RuleSettings
 {
 	public static ReSettings Default { get; } = new() {

@@ -19,6 +19,7 @@ public static class ServiceCollectionExtensions
 
 		var options = new EnrolmentEngineOptions();
 		configure(options);
+		options.Validate();
 
 		// Service registration is synchronous; this one-time bootstrap intentionally blocks at container build.
 		// CreateAsync's awaits use ConfigureAwait(false), so this blocking resolve does not deadlock a host that

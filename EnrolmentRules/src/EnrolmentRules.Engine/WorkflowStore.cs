@@ -18,6 +18,7 @@ using RulesEngine.Models;
 ///     (reusable, stateless) RulesEngine. All three guards run at startup so a bad workflow — structural
 ///     or lambda-level — fails loud at boot rather than silently mis-enrolling a student (Reservation 1).
 /// </summary>
+[CLSCompliant(false)]
 public static class WorkflowStore
 {
 	public const string SchemaFileName = "workflow.schema.json";
@@ -134,7 +135,7 @@ public static class WorkflowStore
 	///     problem must fail at startup rather than on the first real student evaluation.
 	/// </summary>
 	public static async Task<IRulesEngine> LoadValidateBuildAndProbeAsync(string directory, string? schemaPath = null)
-		=> await LoadValidateBuildAndProbeAsync(directory, Catalogue.Current, schemaPath).ConfigureAwait(false);
+		=> await LoadValidateBuildAndProbeAsync(directory, Catalogue.Default, schemaPath).ConfigureAwait(false);
 
 	/// <summary>
 	///     The production startup path with an explicit catalogue: load, schema-validate, build the
@@ -169,7 +170,7 @@ public static class WorkflowStore
 		var workflows = LoadAndValidate(directory, schemaPath);
 		var engine = BuildEngine(workflows);
 		await ProbeCompileAsync(engine, workflows,
-				CanonicalProbe(thresholds, catalogue, matrix ?? DfeTransitionMatrix.LoadDefault(), scale ?? QualificationScale.Current))
+				CanonicalProbe(thresholds, catalogue, matrix ?? DfeTransitionMatrix.LoadDefault(), scale ?? QualificationScale.Default))
 			.ConfigureAwait(false);
 		return engine;
 	}
@@ -190,7 +191,7 @@ public static class WorkflowStore
 		var workflows = LoadAndValidate(files, schemaStream);
 		var engine = BuildEngine(workflows);
 		await ProbeCompileAsync(engine, workflows,
-				CanonicalProbe(thresholds, catalogue, matrix ?? DfeTransitionMatrix.LoadDefault(), scale ?? QualificationScale.Current))
+				CanonicalProbe(thresholds, catalogue, matrix ?? DfeTransitionMatrix.LoadDefault(), scale ?? QualificationScale.Default))
 			.ConfigureAwait(false);
 		return engine;
 	}
@@ -328,7 +329,7 @@ public static class WorkflowStore
 	private static PolicyThresholds LoadDefaultThresholds(string workflowsDirectory)
 	{
 		var root = Directory.GetParent(Path.GetFullPath(workflowsDirectory))?.FullName
-				   ?? throw new DirectoryNotFoundException($"could not resolve repository root from '{workflowsDirectory}'");
+				   ?? throw new DirectoryNotFoundException($"Could not resolve repository root from '{workflowsDirectory}'.");
 
 		return PolicyThresholdsStore.LoadAndValidate(Path.Combine(root, "data"));
 	}

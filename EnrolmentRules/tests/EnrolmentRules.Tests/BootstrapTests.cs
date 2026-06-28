@@ -28,13 +28,16 @@ public sealed class BootstrapTests
 	}
 
 	[Fact]
-	public async Task create_async_does_not_mutate_the_process_global_scale()
+	public async Task create_async_threads_its_own_scale_and_leaves_the_shipped_default_untouched()
 	{
-		// The factory threads the loaded scale explicitly through the engine, so it must not also clobber
-		// the process-global table — otherwise two engines built with different scales race in one process.
-		var before = QualificationScale.Current;
-		_ = await EnrolmentEngine.CreateAsync(Harness.WorkflowsDir, DataDir, Harness.AsOf);
-		QualificationScale.Current.Should().BeSameAs(before);
+		// The factory threads the loaded scale explicitly through the engine. The shipped default is an
+		// immutable snapshot with no installer, so building an engine cannot swap it — the same instance is
+		// observed before and after, and the engine's own scale is what it loaded, not the ambient default.
+		var before = QualificationScale.Default;
+		var created = await EnrolmentEngine.CreateAsync(Harness.WorkflowsDir, DataDir, Harness.AsOf);
+
+		QualificationScale.Default.Should().BeSameAs(before);
+		created.Scale.Should().NotBeNull();
 	}
 
 	[Fact]

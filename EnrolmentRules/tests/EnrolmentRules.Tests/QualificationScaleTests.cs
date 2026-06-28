@@ -75,6 +75,17 @@ public sealed class QualificationScaleTests
 	}
 
 	[Fact]
+	public void qualification_scale_try_ordinal_returns_false_for_an_unknown_type_grade_pair()
+	{
+		var scale = new QualificationScale([
+			new(QualificationType.ALevel, "u", 0, ALevelGrade.U),
+		]);
+
+		scale.TryOrdinal(QualificationType.ALevel, "x", out var ordinal).Should().BeFalse();
+		ordinal.Should().Be(0);
+	}
+
+	[Fact]
 	public void student_validator_rejects_an_unresolvable_prior_qualification_grade()
 	{
 		var student = new StudentInput(
@@ -89,6 +100,6 @@ public sealed class QualificationScaleTests
 		StudentValidator.Validate(student, Harness.Catalogue, scale)
 			.Should()
 			.ContainSingle()
-			.Which.Should().Contain("prior_qualifications").And.Contain("biology");
+			.Which.Should().Contain("prior_qualifications").And.Contain("biology").And.Contain("not-a-grade");
 	}
 }

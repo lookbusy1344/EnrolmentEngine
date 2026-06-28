@@ -46,6 +46,32 @@ public sealed class DependencyInjectionTests
 	}
 
 	[Fact]
+	public void add_enrolment_engine_rejects_an_empty_workflows_directory()
+	{
+		var services = new ServiceCollection();
+
+		var act = () => services.AddEnrolmentEngine(options => {
+			options.WorkflowsDirectory = string.Empty;
+			options.DataDirectory = Harness.DataDir;
+		});
+
+		act.Should().Throw<ArgumentException>().WithParameterName("WorkflowsDirectory");
+	}
+
+	[Fact]
+	public void add_enrolment_engine_rejects_an_empty_data_directory()
+	{
+		var services = new ServiceCollection();
+
+		var act = () => services.AddEnrolmentEngine(options => {
+			options.WorkflowsDirectory = Harness.WorkflowsDir;
+			options.DataDirectory = string.Empty;
+		});
+
+		act.Should().Throw<ArgumentException>().WithParameterName("DataDirectory");
+	}
+
+	[Fact]
 	public async Task registers_the_interface_against_the_same_singleton()
 	{
 		var services = new ServiceCollection();
@@ -132,27 +158,31 @@ public sealed class DependencyInjectionTests
 	{
 		public CatalogueData Catalogue => catalogue;
 
-		public QualificationScale Scale => QualificationScale.Current;
+		public QualificationScale Scale => QualificationScale.Default;
 
-		public Task<EnrolmentResult> EvaluateAsync(StudentInput student) => EvaluateAsync(student, default);
+		public Task<EnrolmentResult> EvaluateAsync(StudentInput student, CancellationToken cancellationToken = default) =>
+			EvaluateAsync(student, default, CancellationToken.None);
 
-		public Task<EnrolmentResult> EvaluateAsync(StudentInput student, DateOnly asOf) =>
+		public Task<EnrolmentResult> EvaluateAsync(StudentInput student, DateOnly asOf, CancellationToken cancellationToken = default) =>
 			Task.FromResult(new EnrolmentResult(false, [], [], new(0, 0, 0.0), []));
 
-		public Task<ExplainedResult> ExplainAsync(StudentInput student) => ExplainAsync(student, default);
+		public Task<ExplainedResult> ExplainAsync(StudentInput student, CancellationToken cancellationToken = default) =>
+			ExplainAsync(student, default, CancellationToken.None);
 
-		public Task<ExplainedResult> ExplainAsync(StudentInput student, DateOnly asOf) =>
+		public Task<ExplainedResult> ExplainAsync(StudentInput student, DateOnly asOf, CancellationToken cancellationToken = default) =>
 			Task.FromResult(new ExplainedResult(false, [], [], new(0, 0, 0.0)));
 
-		public Task<AdviceResult> AdviseAsync(StudentInput student) => AdviseAsync(student, default(DateOnly));
+		public Task<AdviceResult> AdviseAsync(StudentInput student, CancellationToken cancellationToken = default) =>
+			AdviseAsync(student, default(DateOnly), CancellationToken.None);
 
-		public Task<AdviceResult> AdviseAsync(StudentInput student, DateOnly asOf) =>
+		public Task<AdviceResult> AdviseAsync(StudentInput student, DateOnly asOf, CancellationToken cancellationToken = default) =>
 			Task.FromResult(new AdviceResult(false, [], [], null));
 
-		public Task<AdviceResult> AdviseAsync(StudentInput student, bool considerUnsatGcses) =>
-			AdviseAsync(student, default(DateOnly));
+		public Task<AdviceResult> AdviseAsync(StudentInput student, bool considerUnsatGcses, CancellationToken cancellationToken = default) =>
+			AdviseAsync(student, default(DateOnly), CancellationToken.None);
 
-		public Task<AdviceResult> AdviseAsync(StudentInput student, DateOnly asOf, bool considerUnsatGcses) =>
-			AdviseAsync(student, asOf);
+		public Task<AdviceResult> AdviseAsync(StudentInput student, DateOnly asOf, bool considerUnsatGcses,
+			CancellationToken cancellationToken = default) =>
+			AdviseAsync(student, asOf, CancellationToken.None);
 	}
 }

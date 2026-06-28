@@ -61,7 +61,7 @@ public sealed class Phase11Tests
 	public async Task validation_honours_the_engines_injected_scale_not_the_ambient_default()
 	{
 		// 'platinum' exists only in this custom scale, never in the shipped/ambient default. Validating a
-		// student carrying a platinum qualification must use the engine's own scale, not QualificationScale.Current.
+		// student carrying a platinum qualification must use the engine's own scale, not the shipped default.
 		var customScale = BuildDiplomaScale(
 			("pass", 0, ALevelGrade.C),
 			("platinum", 1, ALevelGrade.AStar));
@@ -133,30 +133,23 @@ public sealed class Phase11Tests
 			("merit", 1, ALevelGrade.B),
 			("distinction_star", 2, ALevelGrade.AStar),
 			("distinction", 3, ALevelGrade.A));
-		var scaleC = BuildDiplomaScale(
-			("pass", 0, ALevelGrade.C),
-			("merit", 1, ALevelGrade.B),
-			("platinum", 2, ALevelGrade.A));
 
 		var (_, rulesEngine) = await Harness.BuildFromShippedWorkflowsAsync();
 		var catalogue = Harness.Catalogue;
 		var thresholds = Harness.Thresholds;
 
+		// Two engines over identical workflows differ only by the scale each was constructed with. The
+		// distinction_star qualification clears Biology's distinction entry-equivalent under scaleA (where
+		// distinction_star outranks distinction) but not under scaleB (where it ranks below) — proving each
+		// engine evaluates against its own injected scale, with no ambient global to consult.
 		var engineA = new EnrolmentEngine(new(rulesEngine, thresholds, catalogue, scaleA), catalogue, Harness.AsOf);
 		var engineB = new EnrolmentEngine(new(rulesEngine, thresholds, catalogue, scaleB), catalogue, Harness.AsOf);
 
-		var original = QualificationScale.Current;
-		try {
-			QualificationScale.Use(scaleC);
-			var resultA = await engineA.EvaluateAsync(student);
-			var resultB = await engineB.EvaluateAsync(student);
+		var resultA = await engineA.EvaluateAsync(student);
+		var resultB = await engineB.EvaluateAsync(student);
 
-			resultA.Recommendations.Single(r => r.Subject == Subject.Biology).Rating.Should().Be(Rating.Green);
-			resultB.Recommendations.Single(r => r.Subject == Subject.Biology).Rating.Should().Be(Rating.Red);
-		}
-		finally {
-			QualificationScale.Use(original);
-		}
+		resultA.Recommendations.Single(r => r.Subject == Subject.Biology).Rating.Should().Be(Rating.Green);
+		resultB.Recommendations.Single(r => r.Subject == Subject.Biology).Rating.Should().Be(Rating.Red);
 	}
 
 	[Fact]

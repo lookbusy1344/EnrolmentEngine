@@ -40,7 +40,7 @@ public sealed class Phase3DataDrivenSubjectTests
 				workflows,
 				[
 					.. RatingEvaluator.EligibilityParameters(probeGcses, thresholds),
-					new("facts", new RatingFacts(probeProfile, probeGcses, new(thresholds), catalogue, QualificationScale.Current)),
+					new("facts", new RatingFacts(probeProfile, probeGcses, new(thresholds), catalogue, QualificationScale.Default)),
 				]);
 
 			var subject = new Subject("philosophy");

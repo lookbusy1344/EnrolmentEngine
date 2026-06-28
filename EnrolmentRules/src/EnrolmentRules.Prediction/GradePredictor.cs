@@ -16,7 +16,7 @@ public static class GradePredictor
 	///     <see cref="Subject" />.
 	/// </summary>
 	public static StudentProfile Predict(StudentInput student, DateOnly asOf) =>
-		Predict(student, student.ToGcseResults(), asOf, Catalogue.Current);
+		Predict(student, student.ToGcseResults(), asOf, Catalogue.Default);
 
 	/// <summary>
 	///     Predict from facts already projected to <see cref="GcseResult" />s. The pipeline entry points
@@ -24,7 +24,7 @@ public static class GradePredictor
 	///     <paramref name="asOf" /> is the reference date the student's age is computed against.
 	/// </summary>
 	public static StudentProfile Predict(StudentInput student, IReadOnlyList<GcseResult> gcses, DateOnly asOf)
-		=> Predict(student, gcses, asOf, Catalogue.Current);
+		=> Predict(student, gcses, asOf, Catalogue.Default);
 
 	/// <summary>
 	///     Predict from facts already projected to <see cref="GcseResult" />s using an explicit catalogue.
@@ -34,7 +34,7 @@ public static class GradePredictor
 	///     explicit, data-directory-sourced matrix through the overload below.
 	/// </summary>
 	public static StudentProfile Predict(StudentInput student, IReadOnlyList<GcseResult> gcses, DateOnly asOf, CatalogueData catalogue)
-		=> Predict(student, gcses, asOf, catalogue, DfeTransitionMatrix.LoadDefault(), QualificationScale.Current);
+		=> Predict(student, gcses, asOf, catalogue, DfeTransitionMatrix.LoadDefault(), QualificationScale.Default);
 
 	/// <summary>
 	///     Predict from facts already projected to <see cref="GcseResult" />s using an explicit catalogue
@@ -49,7 +49,7 @@ public static class GradePredictor
 
 	/// <summary>
 	///     Predict using an explicit catalogue <em>and</em> transition matrix, so a host that ships its data
-	///     in a non-default location drives prediction from that data rather than the process-global default.
+	///     in a non-default location drives prediction from that data rather than the shipped default.
 	/// </summary>
 	public static StudentProfile Predict(
 		StudentInput student, IReadOnlyList<GcseResult> gcses, DateOnly asOf, CatalogueData catalogue, DfeTransitionMatrix matrix,

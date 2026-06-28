@@ -8,9 +8,10 @@ using RulesEngine.Interfaces;
 ///     The façade over the whole pipeline (§1.7): predict → engine (eligibility + per-subject tiers) →
 ///     constraint pass → optional green cap → aggregate, composed into an <see cref="EnrolmentResult" />. Holds only
 ///     the shared, reusable engine, so it is stateless and safe to reuse across students (and to call in
-///     parallel for batch). <see cref="ExplainAsync(StudentInput)" /> projects the same single evaluation into the richer
+///     parallel for batch). <see cref="ExplainAsync(StudentInput, CancellationToken)" /> projects the same single evaluation into the richer
 ///     provenance view without re-running anything.
 /// </summary>
+[CLSCompliant(false)]
 public sealed class EnrolmentEngine : IEnrolmentEngine
 {
 	private readonly Func<DateOnly> asOf;
@@ -24,8 +25,8 @@ public sealed class EnrolmentEngine : IEnrolmentEngine
 	}
 
 	/// <summary>
-	///     Bind a live reference-date source: the parameterless <see cref="EvaluateAsync(StudentInput)" />,
-	///     <see cref="ExplainAsync(StudentInput)" /> and <see cref="AdviseAsync(StudentInput)" /> overloads
+	///     Bind a live reference-date source: the parameterless <see cref="EvaluateAsync(StudentInput, CancellationToken)" />,
+	///     <see cref="ExplainAsync(StudentInput, CancellationToken)" /> and <see cref="AdviseAsync(StudentInput, CancellationToken)" /> overloads
 	///     resolve <paramref name="asOf" /> afresh on every call, so a long-running singleton tracks the wall
 	///     clock instead of freezing the date at construction. The engine stays stateless: the source is a pure
 	///     read, and callers wanting an explicit date use the per-call overloads.
@@ -35,24 +36,24 @@ public sealed class EnrolmentEngine : IEnrolmentEngine
 		this.evaluator = evaluator;
 		Catalogue = evaluator.Catalogue;
 		if (!ReferenceEquals(Catalogue, catalogue)) {
-			throw new InvalidOperationException("engine catalogue must match the evaluator catalogue");
+			throw new InvalidOperationException("The engine catalogue must match the evaluator catalogue.");
 		}
 
 		this.matrix = matrix ?? DfeTransitionMatrix.LoadDefault();
 		this.asOf = asOf;
 	}
 
-	public EnrolmentEngine(IRulesEngine engine, PolicyThresholds thresholds, DateOnly asOf)
-		: this(engine, thresholds, Domain.Catalogue.Current, asOf, QualificationScale.Current)
+	internal EnrolmentEngine(IRulesEngine engine, PolicyThresholds thresholds, DateOnly asOf)
+		: this(engine, thresholds, Domain.Catalogue.Default, asOf, QualificationScale.Default)
 	{
 	}
 
-	public EnrolmentEngine(IRulesEngine engine, PolicyThresholds thresholds, CatalogueData catalogue, DateOnly asOf)
-		: this(engine, thresholds, catalogue, asOf, QualificationScale.Current)
+	internal EnrolmentEngine(IRulesEngine engine, PolicyThresholds thresholds, CatalogueData catalogue, DateOnly asOf)
+		: this(engine, thresholds, catalogue, asOf, QualificationScale.Default)
 	{
 	}
 
-	public EnrolmentEngine(
+	internal EnrolmentEngine(
 		IRulesEngine engine,
 		PolicyThresholds thresholds,
 		CatalogueData catalogue,
@@ -65,7 +66,7 @@ public sealed class EnrolmentEngine : IEnrolmentEngine
 	/// <summary>
 	///     The catalogue this engine evaluates against. Exposed so callers validating student input at the
 	///     boundary (e.g. <c>StudentValidator</c>) honour the same table the engine holds rather than
-	///     reloading or consulting the process-global default.
+	///     reloading or consulting the shipped <see cref="Domain.Catalogue.Default" />.
 	/// </summary>
 	public CatalogueData Catalogue { get; }
 
@@ -73,41 +74,48 @@ public sealed class EnrolmentEngine : IEnrolmentEngine
 	public QualificationScale Scale => evaluator.Scale;
 
 	/// <summary>The whole-student §1.7 verdict (the document the golden-file suite locks), as of the bound date.</summary>
-	public Task<EnrolmentResult> EvaluateAsync(StudentInput student) => EvaluateAsync(student, asOf());
+	public Task<EnrolmentResult> EvaluateAsync(StudentInput student, CancellationToken cancellationToken = default) =>
+		EvaluateAsync(student, asOf(), cancellationToken);
 
 	/// <summary>The whole-student §1.7 verdict as of an explicit reference date (per-request hosting).</summary>
-	public async Task<EnrolmentResult> EvaluateAsync(StudentInput student, DateOnly asOf) =>
-		ToResult(await RunAsync(student, asOf).ConfigureAwait(false));
+	public async Task<EnrolmentResult> EvaluateAsync(StudentInput student, DateOnly asOf, CancellationToken cancellationToken = default) =>
+		ToResult(await RunAsync(student, asOf, cancellationToken).ConfigureAwait(false));
 
 	/// <summary>The same verdict with per-recommendation provenance attached (<c>--explain</c>).</summary>
-	public Task<ExplainedResult> ExplainAsync(StudentInput student) => ExplainAsync(student, asOf());
+	public Task<ExplainedResult> ExplainAsync(StudentInput student, CancellationToken cancellationToken = default) =>
+		ExplainAsync(student, asOf(), cancellationToken);
 
 	/// <summary>The explained verdict as of an explicit reference date.</summary>
-	public async Task<ExplainedResult> ExplainAsync(StudentInput student, DateOnly asOf) =>
-		ToExplained(await RunAsync(student, asOf).ConfigureAwait(false));
+	public async Task<ExplainedResult> ExplainAsync(StudentInput student, DateOnly asOf, CancellationToken cancellationToken = default) =>
+		ToExplained(await RunAsync(student, asOf, cancellationToken).ConfigureAwait(false));
 
 	/// <summary>
 	///     Counterfactual guidance over the same pipeline: for an eligible student, propose the minimal
 	///     GCSE grade moves that would lift each amber/red subject to the next rating; for an ineligible
 	///     student, propose the minimal bundle that clears the eligibility gate.
 	/// </summary>
-	public Task<AdviceResult> AdviseAsync(StudentInput student) => AdviseAsync(student, asOf());
+	public Task<AdviceResult> AdviseAsync(StudentInput student, CancellationToken cancellationToken = default) =>
+		AdviseAsync(student, asOf(), cancellationToken);
 
 	/// <summary>Counterfactual guidance as of an explicit reference date.</summary>
-	public Task<AdviceResult> AdviseAsync(StudentInput student, DateOnly asOf) =>
-		AdviseAsync(student, asOf, evaluator.Thresholds.AdviceConsidersUnsatGcses);
+	public Task<AdviceResult> AdviseAsync(StudentInput student, DateOnly asOf, CancellationToken cancellationToken = default) =>
+		AdviseAsync(student, asOf, evaluator.Thresholds.AdviceConsidersUnsatGcses, cancellationToken);
 
 	/// <summary>
 	///     Counterfactual guidance with an explicit <paramref name="considerUnsatGcses" /> override of the
 	///     loaded <see cref="PolicyThresholds.AdviceConsidersUnsatGcses" /> default — the diagnostic mode that
 	///     lets the search also propose sitting GCSEs the student never took. As of the bound reference date.
 	/// </summary>
-	public Task<AdviceResult> AdviseAsync(StudentInput student, bool considerUnsatGcses) =>
-		AdviseAsync(student, asOf(), considerUnsatGcses);
+	public Task<AdviceResult> AdviseAsync(StudentInput student, bool considerUnsatGcses, CancellationToken cancellationToken = default) =>
+		AdviseAsync(student, asOf(), considerUnsatGcses, cancellationToken);
 
 	/// <summary>Counterfactual guidance with an explicit diagnostic override, as of an explicit reference date.</summary>
-	public Task<AdviceResult> AdviseAsync(StudentInput student, DateOnly asOf, bool considerUnsatGcses) =>
-		CounterfactualAdvisor.AdviseAsync(this, student, evaluator.Thresholds, asOf, considerUnsatGcses);
+	public Task<AdviceResult> AdviseAsync(
+		StudentInput student,
+		DateOnly asOf,
+		bool considerUnsatGcses,
+		CancellationToken cancellationToken = default) =>
+		CounterfactualAdvisor.AdviseAsync(this, student, evaluator.Thresholds, asOf, considerUnsatGcses, cancellationToken);
 
 	/// <summary>
 	///     Create a fully bootstrapped engine from the shipped layout: thresholds, catalogue, workflows,
@@ -198,17 +206,22 @@ public sealed class EnrolmentEngine : IEnrolmentEngine
 	///     downgrades, so it must read the constraint pass's result. The two adjustment stages compose by
 	///     most-severe-wins into the final ratings.
 	/// </summary>
-	private async Task<Evaluation> RunAsync(StudentInput student, DateOnly asOf)
+	private async Task<Evaluation> RunAsync(StudentInput student, DateOnly asOf, CancellationToken cancellationToken)
 	{
+		cancellationToken.ThrowIfCancellationRequested();
 		var gcses = student.ToGcseResults();
 		var profile = GradePredictor.Predict(student, gcses, asOf, Catalogue, matrix, Scale);
-		var (gate, baseRatings) = await evaluator.EvaluateWithGateAsync(profile, gcses).ConfigureAwait(false);
+		cancellationToken.ThrowIfCancellationRequested();
+		var (gate, baseRatings) = await evaluator.EvaluateWithGateAsync(profile, gcses, cancellationToken).ConfigureAwait(false);
+		cancellationToken.ThrowIfCancellationRequested();
 
 		var constraintAdjustments = ConstraintPass.Evaluate(baseRatings, profile, Catalogue);
 		var afterConstraints = ConstraintPass.Apply(baseRatings, constraintAdjustments);
+		cancellationToken.ThrowIfCancellationRequested();
 
 		var capAdjustments = Aggregator.CapGreens(afterConstraints, Catalogue, evaluator.Thresholds);
 		var finalRatings = ConstraintPass.Apply(afterConstraints, capAdjustments);
+		cancellationToken.ThrowIfCancellationRequested();
 
 		EquatableArray<Adjustment> adjustments = [.. constraintAdjustments, .. capAdjustments];
 		return new(profile, gate, [.. baseRatings], [.. finalRatings], adjustments,

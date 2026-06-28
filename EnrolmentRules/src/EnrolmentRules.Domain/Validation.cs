@@ -5,7 +5,7 @@ using System.Globalization;
 
 /// <summary>
 ///     The recognised GCSE subject keys (§1.1). This is the GCSE-side vocabulary, distinct from the
-///     A-level <see cref="Subject" /> enum: it carries <c>english_language</c> (a GCSE that gates
+///     A-level <see cref="Subject" /> type: it carries <c>english_language</c> (a GCSE that gates
 ///     eligibility and the English subject entry rules) and omits
 ///     <c>further_maths</c> (an A-level with no GCSE of its own). It is the single source of truth the
 ///     input validator checks an incoming document's GCSE keys against, so an unknown key is rejected at
@@ -41,14 +41,14 @@ public static class StudentValidator
 	///     document order; an empty list means valid.
 	/// </summary>
 	public static IReadOnlyList<string> Validate(StudentInput? student)
-		=> Validate(student, Catalogue.Current, QualificationScale.Current);
+		=> Validate(student, Catalogue.Default, QualificationScale.Default);
 
 	/// <summary>
 	///     Validate one student document against a specific catalogue. This is the host-safe path for
 	///     long-running processes and library consumers that may hold more than one catalogue in memory.
 	/// </summary>
 	public static IReadOnlyList<string> Validate(StudentInput? student, CatalogueData catalogue)
-		=> Validate(student, catalogue, QualificationScale.Current);
+		=> Validate(student, catalogue, QualificationScale.Default);
 
 	/// <summary>
 	///     Validate one student document against explicit catalogue and qualification-scale snapshots. This
@@ -128,16 +128,9 @@ public static class StudentValidator
 				yield return $"prior_qualifications entry at position {index} subject is blank";
 			}
 
-			string? error = null;
-			try {
-				_ = scale.Ordinal(qualification.Type, qualification.Grade);
-			}
-			catch (InvalidDataException ex) {
-				error = $"prior_qualifications entry at position {index} subject '{qualification.Subject}' is invalid: {ex.Message}";
-			}
-
-			if (error is not null) {
-				yield return error;
+			if (!scale.TryOrdinal(qualification.Type, qualification.Grade, out _)) {
+				yield return $"prior_qualifications entry at position {index} subject '{qualification.Subject}' is invalid: "
+							 + $"unknown qualification {EnumNames.NameOf(qualification.Type)} grade '{qualification.Grade}'";
 			}
 		}
 	}

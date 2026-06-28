@@ -47,17 +47,17 @@ public static class PolicyThresholdsStore
 		var results = schema.Evaluate(doc.RootElement, new() { OutputFormat = OutputFormat.List });
 		if (!results.IsValid) {
 			throw new PolicyThresholdsException(
-				$"thresholds file '{thresholdsPath ?? ThresholdsFileName}' failed schema validation: {DescribeErrors(results)}");
+				$"Thresholds file '{thresholdsPath ?? ThresholdsFileName}' failed schema validation: {DescribeErrors(results)}");
 		}
 
 		try {
 			var thresholds = node.Deserialize(EnrolmentJsonContext.Default.PolicyThresholds)
-							 ?? throw new FormatException("thresholds deserialized to null");
+							 ?? throw new FormatException("Thresholds deserialized to null.");
 			Validate(thresholds);
 			return thresholds;
 		}
 		catch (Exception ex) when (ex is InvalidDataException or FormatException) {
-			throw new PolicyThresholdsException($"thresholds file '{thresholdsPath ?? ThresholdsFileName}' is invalid: {ex.Message}", ex);
+			throw new PolicyThresholdsException($"Thresholds file '{thresholdsPath ?? ThresholdsFileName}' is invalid: {ex.Message}", ex);
 		}
 	}
 
@@ -71,52 +71,52 @@ public static class PolicyThresholdsStore
 
 		if (thresholds.PassGrade is < Thresholds.MinGcseGrade or > Thresholds.MaxGcseGrade) {
 			throw new InvalidDataException(
-				$"pass_grade {thresholds.PassGrade} is out of range ({min}–{max})");
+				$"pass_grade {thresholds.PassGrade} is out of range ({min}–{max}).");
 		}
 
 		if (thresholds.TopEntry is < Thresholds.MinGcseGrade or > Thresholds.MaxGcseGrade) {
 			throw new InvalidDataException(
-				$"top_entry {thresholds.TopEntry} is out of range ({min}–{max})");
+				$"top_entry {thresholds.TopEntry} is out of range ({min}–{max}).");
 		}
 
 		if (thresholds.StrongEntry is < Thresholds.MinGcseGrade or > Thresholds.MaxGcseGrade) {
 			throw new InvalidDataException(
-				$"strong_entry {thresholds.StrongEntry} is out of range ({min}–{max})");
+				$"strong_entry {thresholds.StrongEntry} is out of range ({min}–{max}).");
 		}
 
 		if (thresholds.StandardEntry is < Thresholds.MinGcseGrade or > Thresholds.MaxGcseGrade) {
 			throw new InvalidDataException(
-				$"standard_entry {thresholds.StandardEntry} is out of range ({min}–{max})");
+				$"standard_entry {thresholds.StandardEntry} is out of range ({min}–{max}).");
 		}
 
 		if (thresholds.StandardEntry > thresholds.StrongEntry || thresholds.StrongEntry > thresholds.TopEntry) {
 			throw new InvalidDataException(
-				"entry thresholds must satisfy standard_entry <= strong_entry <= top_entry");
+				"Entry thresholds must satisfy standard_entry <= strong_entry <= top_entry.");
 		}
 
 		if (thresholds.FurtherMathsAverageEntry is < Thresholds.MinGcseGrade or > Thresholds.MaxGcseGrade
 			|| thresholds.HumanitiesAverageEntry is < Thresholds.MinGcseGrade or > Thresholds.MaxGcseGrade) {
-			throw new InvalidDataException("average entry thresholds must stay within the GCSE scale");
+			throw new InvalidDataException("Average entry thresholds must stay within the GCSE scale.");
 		}
 
 		if (thresholds.MinDfeGreenProbabilityAtOrAbove is < 0 or > 1
 			|| thresholds.MinDfeAmberProbabilityAtOrAbove is < 0 or > 1
 			|| thresholds.AmberTariffFactor is < 0 or > 1) {
-			throw new InvalidDataException("probability and tariff factors must be within 0..1");
+			throw new InvalidDataException("Probability and tariff factors must be within 0..1.");
 		}
 
 		if (thresholds.MinDfeAmberProbabilityAtOrAbove > thresholds.MinDfeGreenProbabilityAtOrAbove) {
-			throw new InvalidDataException("amber probability must not exceed green probability");
+			throw new InvalidDataException("Amber probability must not exceed green probability.");
 		}
 
 		if (thresholds.AdultAge <= 0) {
-			throw new InvalidDataException("adult_age must be positive");
+			throw new InvalidDataException("adult_age must be positive.");
 		}
 
 		// max_green_choices is optional: absent (null) disables the green cap entirely. When present it
 		// must be a real cap of at least one.
 		if (thresholds.MaxGreenChoices is < 1) {
-			throw new InvalidDataException("max_green_choices, when set, must be at least 1");
+			throw new InvalidDataException("max_green_choices, when set, must be at least 1.");
 		}
 	}
 
@@ -131,7 +131,7 @@ public static class PolicyThresholdsStore
 }
 
 /// <summary>A thresholds file failed schema validation or a load-time invariant at startup.</summary>
-public sealed class PolicyThresholdsException : Exception
+public sealed class PolicyThresholdsException : EnrolmentDataException
 {
 	public PolicyThresholdsException() { }
 

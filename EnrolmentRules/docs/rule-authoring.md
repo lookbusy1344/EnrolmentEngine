@@ -4,7 +4,8 @@ A practical guide to writing and changing rules in EnrolmentRules. Routine confi
 **entirely a YAML process** — the **rules-as-data YAML** plus the three data tables — and that is
 what this guide covers, along with every datum a rule can read: GCSE grades, the average GCSE score,
 the predicted A-level grades, and the DfE transition-matrix probabilities. Writing rules needs a
-little comfort with simple expressions (`>=`, `&&`), but no programming and no test-writing.
+little comfort with simple expressions (`>=`, `&&`) and an engine-driven test for every changed rule;
+it needs no C# unless the change extends a compiled vocabulary or introduces a new evaluator shape.
 
 If you only read one thing first, read [Where a rule belongs](#1-where-a-rule-belongs): putting a
 rule in the wrong file is the single most common mistake.
@@ -39,7 +40,7 @@ Recommended reading order:
 
 ## 1. Where a rule belongs
 
-Four data files hold all the rules; the choice between them is decided by *what the rule reads*.
+Four data locations hold all the rules; the choice between them is decided by *what the rule reads*.
 
 | If the rule…                                                              | It goes in                 |
 |---------------------------------------------------------------------------|----------------------------|
@@ -293,17 +294,19 @@ loosening of the one above it.
 
 ### 3.5 Always lint a rule change
 
-A rule expression isn't checked by a compiler, so a small mistake — a misspelt subject key, a wrong
-member name — won't stop the system; it just gives the wrong rating. **Run `--lint-workflows` after
-every edit** to confirm the rules are valid before any student is evaluated (see
+A workflow expression is not compile-time checked with the C# project. Startup probe-evaluation does
+reject an invalid member binding such as `facts.Avrage`, but a well-formed string key can still carry
+the wrong meaning. **Run `--lint-workflows` after every edit** to catch both member and vocabulary
+mistakes before startup or student evaluation (see
 [validating your changes](#5-validating-your-changes)).
 
 ---
 
 ## 4. Changing policy data (no code)
 
-Most policy changes are a one-line YAML edit, validated at startup. No rebuild needed; the data files
-are loaded fresh.
+Most policy changes are a one-line YAML edit, validated at startup. No rebuild is needed, but a
+running engine holds an immutable snapshot: restart or explicitly construct a new engine to load the
+changed files.
 
 ### 4.1 `data/thresholds.yaml` — the tuning knobs
 
@@ -352,7 +355,9 @@ fields *does* to a rating is in the [appendix](#appendix-how-the-engine-applies-
 ### 4.3 `data/qualifications.yaml` — the cross-type grade scale
 
 The grade ordering and A-level-points equivalences used when prior qualifications are compared
-(A-level vs BTEC vs NVQ tokens). Edit here to add a qualification type or adjust an equivalence.
+(A-level vs BTEC vs NVQ tokens). Edit here to add or retune grades for an existing type. The type
+vocabulary itself is the compiled `QualificationType` enum and is repeated in the schemas; adding a
+new type requires coordinated C#, schema, and test changes.
 
 ### 4.4 Adding a whole new subject
 
@@ -360,8 +365,10 @@ A subject is data-driven — there is no fixed list in code to extend. To add on
 
 1. Add its block (weight, regression, any relationships) to `data/catalogue.yaml`.
 2. Add its three `<subject>:green|amber|red` rules to `workflows/subject-ratings.yaml`.
-3. Add a DfE matrix row if the subject should be probability-gated.
-4. Run `--lint-workflows`, then evaluate a sample student with `--explain-text` to confirm each tier
+3. Add any required grade mapping for an existing qualification type to `data/qualifications.yaml`.
+4. Add a DfE matrix row if the subject should be probability-gated.
+5. Write engine-driven boundary tests for all three tiers.
+6. Run `--lint-workflows`, then evaluate a sample student with `--explain-text` to confirm each tier
    behaves as intended.
 
 One exception needs a developer: if the subject is also a brand-new **GCSE** key (used in a
@@ -372,15 +379,17 @@ One exception needs a developer: if the subject is also a brand-new **GCSE** key
 
 ## 5. Validating your changes
 
-A rule expression isn't compiler-checked, so validity is **layered**. As an author you use the first
-two; the rest is an automated safety net that runs without you.
+A rule expression is not compile-time checked with the C# project, so validity is **layered**. Rule
+authors use linting and explanation while developing, then add or update an engine-driven test before
+the change is accepted; startup and the wider suite provide further independent protection.
 
 | Layer                    | Catches                                                                 |
 |--------------------------|-------------------------------------------------------------------------|
 | `--lint-workflows`       | Missing/duplicate tiers, tier mis-ordering, off-vocabulary references, eligibility shape |
 | `--explain-text`         | Whether a rule actually produces the rating you intended, on a sample student |
-| Startup validation       | Structural defects, misspelt fields, and malformed expressions — the engine refuses to start |
-| The automated test suite | Threshold regressions, end-to-end drift, and random-input safety across every subject — maintained by developers, run in CI |
+| Startup validation       | Structural defects, invalid member bindings, and malformed expressions — the engine refuses to start |
+| Engine-driven rule tests | The rule's intended pass/fail behavior at and around every relevant boundary |
+| The wider test suite     | End-to-end drift, data contracts, and random-input safety across every subject |
 
 ### What the linter checks
 
@@ -406,6 +415,14 @@ It checks:
 - **Eligibility shape** — exactly `EnglishLanguagePass`, `MathsPass`, `EnoughPasses`, in order.
 
 Exit code `5` on any error finding, `0` when clean.
+
+After adding the rule tests, run the bounded project gate:
+
+```bash
+dotnet build EnrolmentRules.slnx -warnaserror
+dotnet format EnrolmentRules.slnx
+gtimeout 20 dotnet test EnrolmentRules.slnx
+```
 
 ### The schema files
 

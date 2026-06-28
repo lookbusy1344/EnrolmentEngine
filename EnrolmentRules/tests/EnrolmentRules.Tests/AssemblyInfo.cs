@@ -3,4 +3,5 @@
 // state under a Guid-stamped temp directory and routes CLI output through its own StringWriter
 // rather than the global Console. The advisor-search tests dominate wall-clock, so overlapping them
 // with the rest is the win.
+
 [assembly: CollectionBehavior(DisableTestParallelization = false)]

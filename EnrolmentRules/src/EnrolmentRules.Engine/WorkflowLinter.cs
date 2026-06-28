@@ -9,6 +9,7 @@ using RulesEngine.Models;
 ///     Static structural checks over already-loaded workflows. This complements schema validation and
 ///     probe compilation by catching semantic drift that only becomes visible from the rule graph itself.
 /// </summary>
+[CLSCompliant(false)]
 public static partial class WorkflowLinter
 {
 	private static readonly Dictionary<string, Type> MemberOwners = new(StringComparer.Ordinal) {
@@ -32,7 +33,7 @@ public static partial class WorkflowLinter
 	};
 
 	public static IReadOnlyList<LintFinding> Lint(IReadOnlyList<Workflow> workflows)
-		=> Lint(workflows, Catalogue.Current);
+		=> Lint(workflows, Catalogue.Default);
 
 	public static IReadOnlyList<LintFinding> Lint(IReadOnlyList<Workflow> workflows, CatalogueData catalogue)
 	{
@@ -288,7 +289,7 @@ public static partial class WorkflowLinter
 		/// <summary>A GCSE subject key, validated against <see cref="GcseSubjects.Known" />.</summary>
 		Gcse,
 
-		/// <summary>An A-level <see cref="Subject" /> name, validated against the enum.</summary>
+		/// <summary>An A-level <see cref="Subject" /> name, validated against the type.</summary>
 		Subject,
 	}
 }

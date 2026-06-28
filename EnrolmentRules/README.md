@@ -56,7 +56,7 @@ constraint anyway: a rule cannot read sibling rule outcomes.
 **The rules themselves are all configurable data — there is no rule logic compiled into the
 binary.** Which subjects clash, what each subject needs as a prerequisite, what bars it, the UCAS
 weights, the entry equivalents, the restudy bars — every individual rule of this kind lives in
-`data/catalogue.yaml`, a hot-swappable file loaded and schema-validated at startup
+`data/catalogue.yaml`, a deployable file loaded and schema-validated into an immutable startup snapshot
 (`CatalogueStore`), with coverage and exclusion-symmetry enforced as load-time invariants. Adding,
 removing, or retuning a clash pair, prerequisite, entry-equivalent, or restudy bar is a one-line
 YAML edit, not a code change — as is editing the per-student rules in `workflows/` and the numeric
@@ -167,8 +167,8 @@ from the catalogue. Adding a new A-level subject means:
 1. add its row to `data/catalogue.yaml` (UCAS weight, regression coefficients, and any exclusions /
    prerequisites / own-time / entry-equivalent / restudy-bar policy),
 2. add its `green` / `amber` / `red` rules to `workflows/subject-ratings.yaml`,
-3. if the subject or its prior-qualification policy needs a new type or grade mapping, add it to
-   `data/qualifications.yaml`,
+3. if the subject or its prior-qualification policy needs a new grade mapping for an existing
+   qualification type, add it to `data/qualifications.yaml`,
 4. if you want `--lint-workflows` to validate that custom workflow set, keep the matching
    `data/` and `workflows/` directories side by side.
 
@@ -178,6 +178,10 @@ loaded catalogue snapshot, so a custom subject flows end-to-end without changing
 One boundary remains compiled: the **GCSE input vocabulary**. `GcseSubjects.Known` is still the
 fixed list the input validator accepts, so adding an A-level subject that also needs a brand-new
 GCSE key is outside this phase.
+
+The **qualification-type vocabulary** is also compiled as `QualificationType` and repeated in the
+qualification and catalogue schemas. `data/qualifications.yaml` controls the grades, ordering, and
+equivalences for those known types; introducing a new type requires coordinated C# and schema changes.
 
 A checked-in reference fixture for a custom `drama` subject lives in
 `examples/custom-subject/`.
@@ -200,10 +204,12 @@ Two distinct mechanisms decide a subject's rating; keep them apart:
 1. **Base tier** — a RulesEngine workflow picks green/amber/red by a first-hit-wins scan (green
    criteria, else amber, else red). This stage *is* an ordered cascade.
 2. **Cross-subject constraints** — prerequisites, mutual exclusions, prior-choice exclusions,
-   own-time requirements, per-subject vetoes, restudy bars, and — only when explicitly enabled —
-   the optional green cap. Each reads only the base tier, never another constraint's output, and
-   when it fires can only move the rating toward red. Because they are all one-directional they
-   commute, so the host folds them in by most-severe-wins, order-independently.
+   own-time requirements, per-subject vetoes, and restudy bars. Each reads only the base tier,
+   never another constraint's output, and when it fires can only move the rating toward red. They
+   therefore commute and fold in by most-severe-wins, order-independently.
+3. **Optional green cap** — when explicitly enabled, this runs after the constraint fold because it
+   counts only greens that survived those downgrades. It is also downgrade-only, but it is a distinct,
+   ordered aggregation phase rather than one of the commuting base-rating constraints.
 
 The precedence table in the walk-through reads as one top-down ladder, but that is the *net* result
 after the fold, not the execution order: the base tier is emitted first, then every downgrade is
@@ -361,17 +367,20 @@ Batch output is JSONL. Each output line includes the student id and either a suc
 
 ## Using EnrolmentRules As A Library
 
-The CLI is a thin shim over the same engine you can embed directly. Two packages ship from this
-solution:
+The CLI is a thin shim over the same engine you can embed directly. Four packable library projects
+ship from this solution:
 
-| Package                                         | For                                                                                      |
-|-------------------------------------------------|------------------------------------------------------------------------------------------|
-| `EnrolmentRules.Engine`                         | The pipeline façade (`EnrolmentEngine` / `IEnrolmentEngine`), loaders, and domain types. |
-| `EnrolmentRules.Extensions.DependencyInjection` | `AddEnrolmentEngine` registration for `Microsoft.Extensions.DependencyInjection` hosts.  |
+| Package                                         | For                                                                                       |
+|-------------------------------------------------|-------------------------------------------------------------------------------------------|
+| `EnrolmentRules.Domain`                         | Immutable inputs/results, validation, catalogue and qualification-scale domain types.     |
+| `EnrolmentRules.Prediction`                     | GCSE averaging, DfE transition evidence, and A-level prediction.                          |
+| `EnrolmentRules.Engine`                         | The pipeline façade, workflow bootstrap, constraints, aggregation, explanation, and advice. |
+| `EnrolmentRules.Extensions.DependencyInjection` | `AddEnrolmentEngine` registration for `Microsoft.Extensions.DependencyInjection` hosts.   |
 
-Build the engine **once** — `CreateAsync` runs the full startup recipe (schema-validate thresholds
-and catalogue, build and probe-compile the workflows) — then reuse it across students. It is
-stateless and safe to call in parallel:
+Build the engine **once** — `CreateAsync` runs the full startup recipe (schema-validating thresholds,
+the qualification scale, catalogue, and workflows; loading the DfE transition matrix; then building
+and probe-compiling the workflows) — then reuse it across students. It is stateless and safe to call
+in parallel:
 
 ```csharp
 using EnrolmentRules.Engine;
@@ -396,10 +405,14 @@ var live = await EnrolmentEngine.CreateAsync(
 EnrolmentResult atDate = await enrolment.EvaluateAsync(student, new DateOnly(2026, 1, 15));
 ```
 
-Depend on **`IEnrolmentEngine`** (the evaluate/explain/advise surface plus the bound `Catalogue`)
-rather than the concrete type to substitute a fake in your own tests. `CreateAsync` and the
-underlying `WorkflowStore` / `CatalogueStore` loaders also expose `Stream`-based overloads for
-hosts that ship the workflow and data files as embedded resources.
+Depend on **`IEnrolmentEngine`** (the evaluate/explain/advise surface plus the bound `Catalogue` and
+`Scale`) rather than the concrete type to substitute a fake in your own tests. Every evaluation,
+explanation, advice, and bootstrap overload accepts an optional `CancellationToken`.
+
+For hosts that ship data as embedded resources or another non-filesystem source, implement
+`IEnrolmentDataSource` and call `EnrolmentEngine.CreateAsync(source, ...)`. The bootstrapper consumes
+fresh streams for workflows, all schemas and YAML tables, and the transition matrix, then disposes
+them after constructing the immutable engine snapshot.
 
 In a DI host, register the bootstrapped singleton behind the abstraction:
 

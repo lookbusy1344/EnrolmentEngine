@@ -100,7 +100,7 @@ public sealed class AdvisorTests
 			["biology"] = 5,
 		}, []) { ChosenALevels = [Subject.Maths] };
 
-		var advice = await engine.AdviseAsync(student, considerUnsatGcses: true);
+		var advice = await engine.AdviseAsync(student, true);
 
 		// Diagnostic mode reverts to the old, heavier behaviour: Spanish, gated on a French or German GCSE
 		// the student never sat, becomes reachable by proposing those brand-new GCSEs.
@@ -304,10 +304,10 @@ public sealed class AdvisorTests
 		Directory.CreateDirectory(dir);
 		var path = Path.Combine(dir, "student.json");
 		await File.WriteAllTextAsync(path, """
-			{ "student": { "id": "S-CLI-DIAG",
-			  "gcses": {"english_language":7,"maths":5,"physics":5,"chemistry":5,"biology":5},
-			  "hobbies": [], "chosen_a_levels": ["maths"], "date_of_birth": "2009-09-01" } }
-			""");
+										   { "student": { "id": "S-CLI-DIAG",
+										     "gcses": {"english_language":7,"maths":5,"physics":5,"chemistry":5,"biology":5},
+										     "hobbies": [], "chosen_a_levels": ["maths"], "date_of_birth": "2009-09-01" } }
+										   """);
 
 		using var stdout = new StringWriter();
 		using var stderr = new StringWriter();

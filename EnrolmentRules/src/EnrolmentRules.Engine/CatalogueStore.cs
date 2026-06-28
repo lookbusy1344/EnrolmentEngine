@@ -92,19 +92,11 @@ public static class CatalogueStore
 		}
 
 		try {
-			return Catalogue.Build(node, scale ?? QualificationScale.Current);
+			return Catalogue.Build(node, scale ?? QualificationScale.Default);
 		}
 		catch (Exception ex) when (ex is InvalidDataException or FormatException) {
 			throw new CatalogueException($"Catalogue file '{cataloguePath ?? CatalogueFileName}' is invalid: {ex.Message}", ex);
 		}
-	}
-
-	/// <summary>Load, validate and install the catalogue as the active table (the production startup path).</summary>
-	public static CatalogueData LoadValidateAndInstall(string directory, string? cataloguePath = null, string? schemaPath = null)
-	{
-		var data = LoadAndValidate(directory, null, cataloguePath, schemaPath);
-		Catalogue.Use(data);
-		return data;
 	}
 
 	private static string SchemaCacheKey(string schemaText) =>
@@ -121,7 +113,7 @@ public static class CatalogueStore
 }
 
 /// <summary>A catalogue file failed schema validation or a load-time invariant at startup (fail loud).</summary>
-public sealed class CatalogueException : Exception
+public sealed class CatalogueException : EnrolmentDataException
 {
 	public CatalogueException() { }
 

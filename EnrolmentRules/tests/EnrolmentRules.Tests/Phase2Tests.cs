@@ -1,9 +1,11 @@
 namespace EnrolmentRules.Tests;
 
+using System.Reflection;
 using System.Text.Json;
 using Domain;
 using Engine;
 using FluentAssertions;
+using RulesEngine.Interfaces;
 
 /// <summary>
 ///     Phase 2 — the §1.3 eligibility gate as a rules-as-data workflow, driven <em>through the engine</em>
@@ -52,18 +54,18 @@ public sealed class Phase2Tests
 
 		// A thresholds document that omits the optional knob entirely must still validate and default to off.
 		const string withoutKnob = """
-			pass_grade: 4
-			min_passes: 5
-			top_entry: 7
-			strong_entry: 6
-			standard_entry: 5
-			further_maths_average_entry: 7.0
-			humanities_average_entry: 5.0
-			min_dfe_green_probability_at_or_above: 0.60
-			min_dfe_amber_probability_at_or_above: 0.50
-			adult_age: 19
-			amber_tariff_factor: 0.5
-			""";
+								   pass_grade: 4
+								   min_passes: 5
+								   top_entry: 7
+								   strong_entry: 6
+								   standard_entry: 5
+								   further_maths_average_entry: 7.0
+								   humanities_average_entry: 5.0
+								   min_dfe_green_probability_at_or_above: 0.60
+								   min_dfe_amber_probability_at_or_above: 0.50
+								   adult_age: 19
+								   amber_tariff_factor: 0.5
+								   """;
 
 		var defaulted = PolicyThresholdsStore.LoadAndValidate(new StringReader(withoutKnob), new StringReader(schema));
 		defaulted.AdviceConsidersUnsatGcses.Should().BeFalse();
@@ -201,6 +203,41 @@ public sealed class Phase2Tests
 		var act = async () => await WorkflowStore.ProbeCompileAsync(engine, workflows, Harness.CanonicalProbe());
 
 		await act.Should().NotThrowAsync();
+	}
+
+	[Fact]
+	public void public_constructors_do_not_expose_the_rulesengine_dependency()
+	{
+		typeof(EnrolmentEngine).GetConstructors()
+			.Where(static constructor =>
+				constructor.GetParameters().Any(static parameter => parameter.ParameterType == typeof(IRulesEngine)))
+			.Should()
+			.BeEmpty();
+	}
+
+	[Fact]
+	public void the_subject_tables_expose_no_mutation_seam()
+	{
+		// FDG L2: the process-global table is immutable. There is no installer (`Use`) and no swappable
+		// backing field on either holder, so a consumer cannot replace the table out from under in-flight
+		// evaluations and the test suite needs no serialised process-global phase. `Default` is a pure,
+		// lazily-loaded shipped snapshot; constructed engine paths thread their own explicit snapshots.
+		const BindingFlags any = BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.Static;
+
+		typeof(Catalogue).GetMethod("Use", any).Should().BeNull();
+		typeof(QualificationScale).GetMethod("Use", any).Should().BeNull();
+		typeof(Catalogue).GetField("installed", any).Should().BeNull();
+		typeof(QualificationScale).GetField("installed", any).Should().BeNull();
+	}
+
+	[Fact]
+	public void evaluation_surface_accepts_a_terminal_cancellation_token()
+	{
+		typeof(IEnrolmentEngine).GetMethods()
+			.Where(static method => method.Name is nameof(IEnrolmentEngine.EvaluateAsync) or nameof(IEnrolmentEngine.ExplainAsync)
+				or nameof(IEnrolmentEngine.AdviseAsync))
+			.Should()
+			.OnlyContain(static method => method.GetParameters().Last().ParameterType == typeof(CancellationToken));
 	}
 
 	// Strong all-round student sitting on the Art age gate: Art GCSE at StrongEntry (6) with a high average.

@@ -13,9 +13,15 @@ internal static class CounterfactualAdvisor
 	private const string BudgetExhaustedReason = "budget exhausted";
 
 	public static async Task<AdviceResult> AdviseAsync(
-		EnrolmentEngine engine, StudentInput student, PolicyThresholds thresholds, DateOnly asOf, bool considerUnsatGcses)
+		EnrolmentEngine engine,
+		StudentInput student,
+		PolicyThresholds thresholds,
+		DateOnly asOf,
+		bool considerUnsatGcses,
+		CancellationToken cancellationToken = default)
 	{
-		var explained = await engine.ExplainAsync(student, asOf).ConfigureAwait(false);
+		cancellationToken.ThrowIfCancellationRequested();
+		var explained = await engine.ExplainAsync(student, asOf, cancellationToken).ConfigureAwait(false);
 		if (!explained.Eligible) {
 			return new(
 				false,
@@ -43,9 +49,11 @@ internal static class CounterfactualAdvisor
 			[.. explained.EligibilityReasons],
 			[
 				.. await Task.WhenAll(
-					explained.Explanations
-						.Where(static explanation => explanation.Rating is Rating.Red or Rating.Amber)
-						.Select(explanation => BuildSubjectAdviceAsync(engine, student, explanation, candidates, evaluations, asOf))).ConfigureAwait(false),
+						explained.Explanations
+							.Where(static explanation => explanation.Rating is Rating.Red or Rating.Amber)
+							.Select(explanation =>
+								BuildSubjectAdviceAsync(engine, student, explanation, candidates, evaluations, asOf, cancellationToken)))
+					.ConfigureAwait(false),
 			],
 			null);
 	}
@@ -56,8 +64,10 @@ internal static class CounterfactualAdvisor
 		Explanation explanation,
 		IReadOnlyList<string> candidates,
 		ConcurrentDictionary<string, EnrolmentResult> evaluations,
-		DateOnly asOf)
+		DateOnly asOf,
+		CancellationToken cancellationToken)
 	{
+		cancellationToken.ThrowIfCancellationRequested();
 		var target = explanation.Rating == Rating.Red ? Rating.Amber : Rating.Green;
 		var search = await SearchAsync(
 			engine,
@@ -65,11 +75,13 @@ internal static class CounterfactualAdvisor
 			candidates,
 			evaluations,
 			finalResult => finalResult.Recommendations.Single(r => r.Subject == explanation.Subject).Rating == target,
-			asOf).ConfigureAwait(false);
+			asOf,
+			cancellationToken).ConfigureAwait(false);
 
 		var blockedReason = search.Reachable
 			? null
-			: await ClassifyBlockedReasonAsync(engine, student, explanation, target, candidates, evaluations, asOf).ConfigureAwait(false);
+			: await ClassifyBlockedReasonAsync(engine, student, explanation, target, candidates, evaluations, asOf, cancellationToken)
+				.ConfigureAwait(false);
 
 		return new(
 			explanation.Subject,
@@ -95,8 +107,10 @@ internal static class CounterfactualAdvisor
 		Rating target,
 		IReadOnlyList<string> candidates,
 		ConcurrentDictionary<string, EnrolmentResult> evaluations,
-		DateOnly asOf)
+		DateOnly asOf,
+		CancellationToken cancellationToken)
 	{
+		cancellationToken.ThrowIfCancellationRequested();
 		var restudyReason = explanation.Overrides
 			.FirstOrDefault(static override_ =>
 				override_.Reason.StartsWith(ConstraintPass.RestudyBarReasonPrefix, StringComparison.Ordinal))
@@ -107,7 +121,7 @@ internal static class CounterfactualAdvisor
 
 		var maxed = candidates.ToDictionary(
 			static gcse => gcse, static _ => Thresholds.MaxGcseGrade, StringComparer.OrdinalIgnoreCase);
-		var result = await EvaluateCachedAsync(engine, student, maxed, candidates, evaluations, asOf).ConfigureAwait(false);
+		var result = await EvaluateCachedAsync(engine, student, maxed, candidates, evaluations, asOf, cancellationToken).ConfigureAwait(false);
 		var recommendation = result.Recommendations.Single(r => r.Subject == explanation.Subject);
 
 		// Ratings ascend in severity (green < amber < red), so "at least as good as target" is <=.
@@ -122,7 +136,8 @@ internal static class CounterfactualAdvisor
 		IReadOnlyList<string> candidates,
 		ConcurrentDictionary<string, EnrolmentResult> evaluations,
 		Func<EnrolmentResult, bool> predicate,
-		DateOnly asOf)
+		DateOnly asOf,
+		CancellationToken cancellationToken)
 	{
 		var original = GradeMap(student);
 		var queue = new PriorityQueue<SearchState, (int Cost, int TouchedSubjects, int Sequence)>();
@@ -134,8 +149,10 @@ internal static class CounterfactualAdvisor
 		_ = visited.Add(Fingerprint(original, candidates));
 
 		while (queue.Count > 0) {
+			cancellationToken.ThrowIfCancellationRequested();
 			var state = queue.Dequeue();
-			var result = await EvaluateCachedAsync(engine, student, state.Grades, candidates, evaluations, asOf).ConfigureAwait(false);
+			var result = await EvaluateCachedAsync(engine, student, state.Grades, candidates, evaluations, asOf, cancellationToken)
+				.ConfigureAwait(false);
 			if (predicate(result)) {
 				return new(true, [.. state.Changes]);
 			}
@@ -233,14 +250,16 @@ internal static class CounterfactualAdvisor
 		Dictionary<string, int> grades,
 		IReadOnlyList<string> candidates,
 		ConcurrentDictionary<string, EnrolmentResult> evaluations,
-		DateOnly asOf)
+		DateOnly asOf,
+		CancellationToken cancellationToken)
 	{
+		cancellationToken.ThrowIfCancellationRequested();
 		var fingerprint = Fingerprint(grades, candidates);
 		if (evaluations.TryGetValue(fingerprint, out var cached)) {
 			return cached;
 		}
 
-		var result = await engine.EvaluateAsync(Apply(student, grades), asOf).ConfigureAwait(false);
+		var result = await engine.EvaluateAsync(Apply(student, grades), asOf, cancellationToken).ConfigureAwait(false);
 		evaluations[fingerprint] = result;
 		return result;
 	}

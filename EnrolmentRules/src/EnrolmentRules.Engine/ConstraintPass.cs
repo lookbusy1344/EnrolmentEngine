@@ -34,7 +34,7 @@ public static class ConstraintPass
 	///     each other's output), so the result is independent of the order they are produced or applied.
 	/// </summary>
 	public static IReadOnlyList<Adjustment> Evaluate(IReadOnlyList<SubjectRating> ratings, StudentProfile profile)
-		=> Evaluate(ratings, profile, Catalogue.Current);
+		=> Evaluate(ratings, profile, Catalogue.Default);
 
 	public static IReadOnlyList<Adjustment> Evaluate(
 		IReadOnlyList<SubjectRating> ratings,
@@ -260,7 +260,7 @@ public static class ConstraintPass
 		ratings.TryGetValue(subject, out var rating)
 			? rating
 			: throw new InvalidDataException(
-				$"constraint pass expected a base rating for subject '{EnumNames.NameOf(subject)}'");
+				$"Constraint pass expected a base rating for subject '{EnumNames.NameOf(subject)}'.");
 
 	private static AdjustmentReasonPrecedence ReasonPrecedence(Adjustment adjustment) =>
 		adjustment.Reason switch {

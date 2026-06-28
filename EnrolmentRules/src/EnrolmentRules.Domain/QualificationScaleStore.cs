@@ -58,13 +58,6 @@ public static class QualificationScaleStore
 		}
 	}
 
-	public static QualificationScale LoadValidateAndInstall(string directory, string? qualificationsPath = null, string? schemaPath = null)
-	{
-		var scale = LoadAndValidate(directory, qualificationsPath, schemaPath);
-		QualificationScale.Use(scale);
-		return scale;
-	}
-
 	private static string SchemaCacheKey(string schemaText) =>
 		Convert.ToHexString(SHA256.HashData(Encoding.UTF8.GetBytes(schemaText)));
 
@@ -79,7 +72,7 @@ public static class QualificationScaleStore
 }
 
 /// <summary>A qualification scale file failed schema validation or a load-time invariant at startup.</summary>
-public sealed class QualificationScaleException : Exception
+public sealed class QualificationScaleException : EnrolmentDataException
 {
 	public QualificationScaleException() { }
 

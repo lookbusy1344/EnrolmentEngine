@@ -54,7 +54,7 @@ public sealed class Phase6Tests
 			(Subject.Maths, Rating.Green), (Subject.Physics, Rating.Green), (Subject.Chemistry, Rating.Green),
 			(Subject.Biology, Rating.Amber), (Subject.Art, Rating.Amber));
 
-		var summary = Aggregator.Summarise(ratings, Catalogue.Current, Harness.Thresholds);
+		var summary = Aggregator.Summarise(ratings, Catalogue.Default, Harness.Thresholds);
 
 		// Independent recomputation from the catalogue weights and the loaded amber factor.
 		var expected = Weight(Subject.Maths) + Weight(Subject.Physics) + Weight(Subject.Chemistry)
@@ -70,7 +70,7 @@ public sealed class Phase6Tests
 	{
 		var ratings = Ratings();
 
-		var summary = Aggregator.Summarise(ratings, Catalogue.Current, Harness.Thresholds);
+		var summary = Aggregator.Summarise(ratings, Catalogue.Default, Harness.Thresholds);
 		var shortlist = Aggregator.Rank(ratings);
 
 		summary.Should().Be(new EnrolmentSummary(0, 0, 0.0));
@@ -86,7 +86,7 @@ public sealed class Phase6Tests
 		greens.Should().HaveCount(Cap + 1);
 		var lowest = greens.OrderBy(Weight).First();
 
-		var adjustments = Aggregator.CapGreens(Ratings([.. greens.Select(s => (s, Rating.Green))]), Catalogue.Current, CappedThresholds);
+		var adjustments = Aggregator.CapGreens(Ratings([.. greens.Select(s => (s, Rating.Green))]), Catalogue.Default, CappedThresholds);
 
 		var capped = adjustments.Should().ContainSingle().Which;
 		capped.Subject.Should().Be(lowest);
@@ -103,7 +103,7 @@ public sealed class Phase6Tests
 		var surplus = greens.Length - Cap;
 		var expected = greens.OrderBy(Weight).Take(surplus).ToHashSet();
 
-		var adjustments = Aggregator.CapGreens(Ratings([.. greens.Select(s => (s, Rating.Green))]), Catalogue.Current, CappedThresholds);
+		var adjustments = Aggregator.CapGreens(Ratings([.. greens.Select(s => (s, Rating.Green))]), Catalogue.Default, CappedThresholds);
 
 		adjustments.Should().HaveCount(surplus);
 		adjustments.Select(a => a.Subject).Should().BeEquivalentTo(expected);
@@ -115,7 +115,7 @@ public sealed class Phase6Tests
 	{
 		var greens = Catalogue.Subjects.Take(Cap).Select(s => (s, Rating.Green));
 
-		Aggregator.CapGreens(Ratings([.. greens]), Catalogue.Current, CappedThresholds).Should().BeEmpty();
+		Aggregator.CapGreens(Ratings([.. greens]), Catalogue.Default, CappedThresholds).Should().BeEmpty();
 	}
 
 	[Fact]
@@ -125,7 +125,7 @@ public sealed class Phase6Tests
 		Harness.Thresholds.MaxGreenChoices.Should().BeNull();
 		var greens = Catalogue.Subjects.Select(s => (s, Rating.Green));
 
-		Aggregator.CapGreens(Ratings([.. greens]), Catalogue.Current, Harness.Thresholds).Should().BeEmpty();
+		Aggregator.CapGreens(Ratings([.. greens]), Catalogue.Default, Harness.Thresholds).Should().BeEmpty();
 	}
 
 	[Fact]
@@ -161,8 +161,8 @@ public sealed class Phase6Tests
 		var greens = new[] { Subject.Maths, Subject.Physics, Subject.Chemistry, Subject.Biology };
 		var ratings = Ratings([.. greens.Select(s => (s, Rating.Green))]);
 
-		Aggregator.CapGreens(ratings, Catalogue.Current, Harness.Thresholds).Should().BeEmpty();
-		Aggregator.CapGreens(ratings, Catalogue.Current, capped)
+		Aggregator.CapGreens(ratings, Catalogue.Default, Harness.Thresholds).Should().BeEmpty();
+		Aggregator.CapGreens(ratings, Catalogue.Default, capped)
 			.Should().ContainSingle().Which.Subject.Should().Be(greens.OrderBy(Weight).First());
 	}
 
@@ -173,7 +173,7 @@ public sealed class Phase6Tests
 		var halved = Harness.Thresholds with { AmberTariffFactor = Harness.Thresholds.AmberTariffFactor / 2 };
 		var ratings = Ratings((Subject.Maths, Rating.Green), (Subject.Art, Rating.Amber));
 
-		var summary = Aggregator.Summarise(ratings, Catalogue.Current, halved);
+		var summary = Aggregator.Summarise(ratings, Catalogue.Default, halved);
 
 		summary.ProjectedTariff.Should().Be(Weight(Subject.Maths) + (halved.AmberTariffFactor * Weight(Subject.Art)));
 	}
@@ -189,8 +189,8 @@ public sealed class Phase6Tests
 		// Constraint pass first: the exclusion demotes the lower-weight pair member (Art) to amber.
 		var afterConstraints = ConstraintPass.Apply(sixGreens, ConstraintPass.Evaluate(sixGreens, new("S", 7.0, [], [], [])));
 
-		var capOnConstrained = Aggregator.CapGreens(afterConstraints, Catalogue.Current, CappedThresholds);
-		var capOnBase = Aggregator.CapGreens(sixGreens, Catalogue.Current, CappedThresholds);
+		var capOnConstrained = Aggregator.CapGreens(afterConstraints, Catalogue.Default, CappedThresholds);
+		var capOnBase = Aggregator.CapGreens(sixGreens, Catalogue.Default, CappedThresholds);
 
 		// Run in the correct order, the cap sees five greens (one surplus) and touches only History.
 		// Run on the un-constrained base it would see six greens (two surplus) — a different result.

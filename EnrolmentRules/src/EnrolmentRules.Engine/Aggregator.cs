@@ -62,7 +62,7 @@ public static class Aggregator
 	///     descending <see cref="SubjectMeta.UcasWeight" />. Returns every subject; callers take the top-N.
 	/// </summary>
 	public static IReadOnlyList<SubjectRating> Rank(IReadOnlyList<SubjectRating> ratings) =>
-		Rank(ratings, Catalogue.Current);
+		Rank(ratings, Catalogue.Default);
 
 	public static IReadOnlyList<SubjectRating> Rank(IReadOnlyList<SubjectRating> ratings, CatalogueData catalogue) => [
 		.. ratings

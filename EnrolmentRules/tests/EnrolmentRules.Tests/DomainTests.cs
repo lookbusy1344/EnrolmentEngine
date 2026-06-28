@@ -43,6 +43,17 @@ public sealed class DomainTests
 	}
 
 	[Fact]
+	public void subject_parse_returns_an_open_name() => Subject.Parse("drama").Should().Be(new("drama"));
+
+	[Fact]
+	public void subject_parse_throws_for_an_invalid_name()
+	{
+		var act = () => Subject.Parse("Drama");
+
+		act.Should().Throw<FormatException>().WithMessage("*not a valid subject name*");
+	}
+
+	[Fact]
 	public void most_severe_returns_the_worse_rating()
 	{
 		Rating.Green.MostSevere(Rating.Amber).Should().Be(Rating.Amber);

@@ -82,7 +82,7 @@ public readonly record struct PredictedGrade(Subject Subject, double PredictedPo
 ///     DfE national transition-matrix evidence for a subject at the student's prior-attainment band.
 ///     Probabilities are proportions in [0, 1] for the A-level grade columns in the source workbook.
 /// </summary>
-public readonly record struct TransitionEvidence(
+public sealed record TransitionEvidence(
 	Subject Subject,
 	string Source,
 	string PriorAttainmentBand,

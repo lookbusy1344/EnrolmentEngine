@@ -63,11 +63,11 @@ public sealed partial class InvariantTests : IAsyncLifetime
 		pairs.Should().NotBeEmpty();
 		pairs.Should().OnlyContain(static pair => pair.Severity != Rating.Green);
 
-		foreach (var (a, b, severity) in pairs) {
-			Catalogue.Meta(a).Exclusions.Should().ContainSingle(exclusion =>
-				exclusion.Other == b && exclusion.Severity == severity);
-			Catalogue.Meta(b).Exclusions.Should().ContainSingle(exclusion =>
-				exclusion.Other == a && exclusion.Severity == severity);
+		foreach (var pair in pairs) {
+			Catalogue.Meta(pair.A).Exclusions.Should().ContainSingle(exclusion =>
+				exclusion.Other == pair.B && exclusion.Severity == pair.Severity);
+			Catalogue.Meta(pair.B).Exclusions.Should().ContainSingle(exclusion =>
+				exclusion.Other == pair.A && exclusion.Severity == pair.Severity);
 		}
 	}
 

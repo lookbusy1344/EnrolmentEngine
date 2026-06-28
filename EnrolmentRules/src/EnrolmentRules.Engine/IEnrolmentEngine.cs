@@ -16,29 +16,29 @@ public interface IEnrolmentEngine
 	QualificationScale Scale { get; }
 
 	/// <summary>The whole-student §1.7 verdict as of the engine's bound reference date.</summary>
-	Task<EnrolmentResult> EvaluateAsync(StudentInput student);
+	Task<EnrolmentResult> EvaluateAsync(StudentInput student, CancellationToken cancellationToken = default);
 
 	/// <summary>The whole-student §1.7 verdict as of an explicit reference date (per-request hosting).</summary>
-	Task<EnrolmentResult> EvaluateAsync(StudentInput student, DateOnly asOf);
+	Task<EnrolmentResult> EvaluateAsync(StudentInput student, DateOnly asOf, CancellationToken cancellationToken = default);
 
 	/// <summary>The verdict with per-recommendation provenance attached, as of the bound reference date.</summary>
-	Task<ExplainedResult> ExplainAsync(StudentInput student);
+	Task<ExplainedResult> ExplainAsync(StudentInput student, CancellationToken cancellationToken = default);
 
 	/// <summary>The explained verdict as of an explicit reference date.</summary>
-	Task<ExplainedResult> ExplainAsync(StudentInput student, DateOnly asOf);
+	Task<ExplainedResult> ExplainAsync(StudentInput student, DateOnly asOf, CancellationToken cancellationToken = default);
 
 	/// <summary>Counterfactual guidance over the same pipeline, as of the bound reference date.</summary>
-	Task<AdviceResult> AdviseAsync(StudentInput student);
+	Task<AdviceResult> AdviseAsync(StudentInput student, CancellationToken cancellationToken = default);
 
 	/// <summary>Counterfactual guidance as of an explicit reference date.</summary>
-	Task<AdviceResult> AdviseAsync(StudentInput student, DateOnly asOf);
+	Task<AdviceResult> AdviseAsync(StudentInput student, DateOnly asOf, CancellationToken cancellationToken = default);
 
 	/// <summary>
 	///     Counterfactual guidance with an explicit override of the loaded
 	///     <see cref="PolicyThresholds.AdviceConsidersUnsatGcses" /> diagnostic default, as of the bound date.
 	/// </summary>
-	Task<AdviceResult> AdviseAsync(StudentInput student, bool considerUnsatGcses);
+	Task<AdviceResult> AdviseAsync(StudentInput student, bool considerUnsatGcses, CancellationToken cancellationToken = default);
 
 	/// <summary>Counterfactual guidance with an explicit diagnostic override, as of an explicit reference date.</summary>
-	Task<AdviceResult> AdviseAsync(StudentInput student, DateOnly asOf, bool considerUnsatGcses);
+	Task<AdviceResult> AdviseAsync(StudentInput student, DateOnly asOf, bool considerUnsatGcses, CancellationToken cancellationToken = default);
 }

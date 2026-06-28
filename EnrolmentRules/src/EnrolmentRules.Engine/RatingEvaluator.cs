@@ -23,6 +23,7 @@ public sealed record SubjectRating(Subject Subject, Rating Rating, string Reason
 ///     Runs the rules-as-data workflows over one student's facts and composes the host-side verdicts.
 ///     Stateless and thread-safe: it holds only the shared, reusable engine.
 /// </summary>
+[CLSCompliant(false)]
 public sealed class RatingEvaluator(
 	IRulesEngine engine,
 	PolicyThresholds thresholds,
@@ -41,10 +42,10 @@ public sealed class RatingEvaluator(
 	public PolicyThresholds Thresholds { get; } = thresholds;
 
 	/// <summary>The catalogue this evaluator binds into prediction, entry-equivalent checks, and host validation.</summary>
-	public CatalogueData Catalogue { get; } = catalogue ?? Domain.Catalogue.Current;
+	public CatalogueData Catalogue { get; } = catalogue ?? Domain.Catalogue.Default;
 
 	/// <summary>The qualification scale this evaluator binds into prediction and entry-equivalent checks.</summary>
-	public QualificationScale Scale { get; } = scale ?? QualificationScale.Current;
+	public QualificationScale Scale { get; } = scale ?? QualificationScale.Default;
 
 	/// <summary>
 	///     Shape one student's GCSEs into the two engine inputs the eligibility workflow binds to: the
@@ -63,8 +64,9 @@ public sealed class RatingEvaluator(
 	///     preserving the rules' declared order so the reasons keep the English → Maths → pass-count
 	///     precedence.
 	/// </summary>
-	public async Task<EligibilityGate> EvaluateEligibilityAsync(IReadOnlyList<GcseResult> gcses)
+	public async Task<EligibilityGate> EvaluateEligibilityAsync(IReadOnlyList<GcseResult> gcses, CancellationToken cancellationToken = default)
 	{
+		cancellationToken.ThrowIfCancellationRequested();
 		var results = await engine.ExecuteAllRulesAsync(EligibilityWorkflow, EligibilityParameters(gcses, Thresholds)).ConfigureAwait(false);
 
 		var reasons = results
@@ -84,11 +86,13 @@ public sealed class RatingEvaluator(
 	/// </summary>
 	public async Task<(EligibilityGate Gate, IReadOnlyList<SubjectRating> Ratings)> EvaluateWithGateAsync(
 		StudentProfile profile,
-		IReadOnlyList<GcseResult> gcses)
+		IReadOnlyList<GcseResult> gcses,
+		CancellationToken cancellationToken = default)
 	{
-		var gate = await EvaluateEligibilityAsync(gcses).ConfigureAwait(false);
+		var gate = await EvaluateEligibilityAsync(gcses, cancellationToken).ConfigureAwait(false);
+		cancellationToken.ThrowIfCancellationRequested();
 		var ratings = gate.Eligible
-			? await EvaluateRatingsAsync(profile, gcses).ConfigureAwait(false)
+			? await EvaluateRatingsAsync(profile, gcses, cancellationToken).ConfigureAwait(false)
 			: AllRed(gate.Reasons[0]);
 		return (gate, ratings);
 	}
@@ -99,12 +103,13 @@ public sealed class RatingEvaluator(
 	/// </summary>
 	public async Task<IReadOnlyList<SubjectRating>> EvaluateAsync(
 		StudentProfile profile,
-		IReadOnlyList<GcseResult> gcses) =>
-		(await EvaluateWithGateAsync(profile, gcses).ConfigureAwait(false)).Ratings;
+		IReadOnlyList<GcseResult> gcses,
+		CancellationToken cancellationToken = default) =>
+		(await EvaluateWithGateAsync(profile, gcses, cancellationToken).ConfigureAwait(false)).Ratings;
 
 	/// <summary>
 	///     The ineligible short-circuit output: one red <see cref="SubjectRating" /> per <see cref="Subject" />
-	///     carrying the gate reason. The subject set is data-driven from the enum, so adding a subject can't
+	///     carrying the gate reason. The subject set is data-driven from the <see cref="Subject" /> type, so adding a subject can't
 	///     silently skip the gate.
 	/// </summary>
 	private IReadOnlyList<SubjectRating> AllRed(string gateReason) =>
@@ -119,8 +124,10 @@ public sealed class RatingEvaluator(
 	/// </summary>
 	public async Task<IReadOnlyList<SubjectRating>> EvaluateRatingsAsync(
 		StudentProfile profile,
-		IReadOnlyList<GcseResult> gcses)
+		IReadOnlyList<GcseResult> gcses,
+		CancellationToken cancellationToken = default)
 	{
+		cancellationToken.ThrowIfCancellationRequested();
 		var results = await engine.ExecuteAllRulesAsync(
 			SubjectRatingsWorkflow, new RuleParameter("facts", new RatingFacts(profile, gcses, policy, Catalogue, Scale))).ConfigureAwait(false);
 

@@ -25,7 +25,7 @@ public static class YamlConverter
 			stream.Load(reader);
 		}
 		catch (YamlException ex) {
-			throw new FormatException($"could not parse YAML: {ex.Message}", ex);
+			throw new FormatException($"Could not parse YAML: {ex.Message}", ex);
 		}
 
 		if (stream.Documents.Count != 1) {
@@ -43,7 +43,7 @@ public static class YamlConverter
 			YamlScalarNode scalar => ConvertScalar(scalar),
 			YamlSequenceNode sequence => new JsonArray([.. sequence.Children.Select(ConvertNode)]),
 			YamlMappingNode mapping => ConvertMapping(mapping),
-			_ => throw new FormatException($"unsupported YAML node type '{node.GetType().Name}'"),
+			_ => throw new FormatException($"Unsupported YAML node type '{node.GetType().Name}'."),
 		};
 
 	private static JsonObject ConvertMapping(YamlMappingNode mapping)

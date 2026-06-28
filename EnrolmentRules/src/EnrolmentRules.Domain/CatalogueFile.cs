@@ -6,7 +6,7 @@ using System.Text.Json.Serialization;
 
 /// <summary>
 ///     The on-disk shape of <c>data/catalogue.yaml</c>: a flat list of per-subject entries (rather than a
-///     map keyed by the <see cref="Subject" /> enum) so it deserializes reflection-free through the
+///     map keyed by the <see cref="Subject" /> type) so it deserializes reflection-free through the
 ///     source-generated <see cref="CatalogueJsonContext" />. <see cref="Catalogue" /> projects this into the
 ///     runtime <see cref="CatalogueData" /> and enforces the coverage / symmetry invariants the schema
 ///     cannot express.
@@ -16,7 +16,7 @@ internal sealed record CatalogueFile(EquatableArray<CatalogueEntry> Subjects)
 	/// <summary>Parse a YAML catalogue document (already normalized to a <see cref="JsonNode" />) into the DTO.</summary>
 	public static CatalogueFile From(JsonNode node) =>
 		node.Deserialize(CatalogueJsonContext.Default.CatalogueFile)
-		?? throw new InvalidDataException("catalogue document deserialized to null");
+		?? throw new InvalidDataException("Catalogue document deserialized to null.");
 }
 
 /// <summary>One subject's row in <see cref="CatalogueFile" />; arrays default to empty when the key is omitted.</summary>

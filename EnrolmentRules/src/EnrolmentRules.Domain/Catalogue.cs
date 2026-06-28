@@ -52,6 +52,9 @@ public readonly record struct EntryEquivalent(string Subject, QualificationType 
 /// <summary>A bar on re-studying the subject when the student already holds a qualifying prior qualification.</summary>
 public readonly record struct RestudyBar(EquatableArray<QualificationType> Types, Rating Severity);
 
+/// <summary>A mutual-exclusion pair in catalogue order with its downgrade severity.</summary>
+public readonly record struct ExclusionPair(Subject A, Subject B, Rating Severity);
+
 /// <summary>
 ///     The validated, immutable catalogue table loaded from <c>data/catalogue.yaml</c>: per-subject
 ///     <see cref="SubjectMeta" /> plus the derived mutual-exclusion pairs. Construction enforces the two
@@ -65,12 +68,12 @@ public sealed class CatalogueData
 	private readonly FrozenDictionary<Subject, int> order;
 
 	public CatalogueData(IReadOnlyDictionary<Subject, SubjectMeta> entries)
-		: this(entries, [.. entries.Keys], QualificationScale.Current)
+		: this(entries, [.. entries.Keys], QualificationScale.Default)
 	{
 	}
 
 	public CatalogueData(IReadOnlyDictionary<Subject, SubjectMeta> entries, IReadOnlyList<Subject> subjects)
-		: this(entries, subjects, QualificationScale.Current)
+		: this(entries, subjects, QualificationScale.Default)
 	{
 	}
 
@@ -92,7 +95,7 @@ public sealed class CatalogueData
 			from exclusion in this.entries[subject].Exclusions
 			let other = exclusion.Other
 			where order[subject] < order[other]
-			select (subject, other, exclusion.Severity),
+			select new ExclusionPair(subject, other, exclusion.Severity),
 		];
 	}
 
@@ -100,7 +103,7 @@ public sealed class CatalogueData
 	public IReadOnlyList<Subject> Subjects { get; }
 
 	/// <summary>Each mutual-exclusion pair once, lower enum value first.</summary>
-	public IReadOnlyList<(Subject A, Subject B, Rating Severity)> ExclusionPairs { get; }
+	public IReadOnlyList<ExclusionPair> ExclusionPairs { get; }
 
 	/// <summary>The metadata for <paramref name="subject" /> (guaranteed present by the coverage invariant).</summary>
 	public SubjectMeta Meta(Subject subject) => entries[subject];
@@ -115,15 +118,15 @@ public sealed class CatalogueData
 			foreach (var exclusion in meta.Exclusions) {
 				if (!entries.TryGetValue(exclusion.Other, out var otherMeta)) {
 					throw new InvalidDataException(
-						$"catalogue references undefined subject '{EnumNames.NameOf(exclusion.Other)}' in an exclusion from '{EnumNames.NameOf(subject)}'");
+						$"Catalogue references undefined subject '{EnumNames.NameOf(exclusion.Other)}' in an exclusion from '{EnumNames.NameOf(subject)}'.");
 				}
 
 				var mirrored = otherMeta.Exclusions
 					.Any(back => back.Other == subject && back.Severity == exclusion.Severity);
 				if (!mirrored) {
 					throw new InvalidDataException(
-						$"catalogue exclusion {EnumNames.NameOf(subject)} → {EnumNames.NameOf(exclusion.Other)} "
-						+ $"({EnumNames.NameOf(exclusion.Severity)}) is not declared symmetrically");
+						$"Catalogue exclusion {EnumNames.NameOf(subject)} → {EnumNames.NameOf(exclusion.Other)} "
+						+ $"({EnumNames.NameOf(exclusion.Severity)}) is not declared symmetrically.");
 				}
 			}
 
@@ -131,20 +134,20 @@ public sealed class CatalogueData
 			// subject to its severity unconditionally, which is a configuration mistake, not a policy.
 			if (meta.Prerequisites.Any(static group => group.AnyOf.Count == 0)) {
 				throw new InvalidDataException(
-					$"{EnumNames.NameOf(subject)} has a prerequisite group with no alternatives");
+					$"Subject {EnumNames.NameOf(subject)} has a prerequisite group with no alternatives.");
 			}
 
 			foreach (var required in meta.Prerequisites.SelectMany(static group => group.AnyOf)) {
 				if (!entries.ContainsKey(required)) {
 					throw new InvalidDataException(
-						$"catalogue references undefined subject '{EnumNames.NameOf(required)}' in prerequisites for '{EnumNames.NameOf(subject)}'");
+						$"Catalogue references undefined subject '{EnumNames.NameOf(required)}' in prerequisites for '{EnumNames.NameOf(subject)}'.");
 				}
 			}
 
 			foreach (var entryEquivalent in meta.EntryEquivalents) {
 				if (string.IsNullOrWhiteSpace(entryEquivalent.Subject)) {
 					throw new InvalidDataException(
-						$"{EnumNames.NameOf(subject)} has an entry equivalent with a blank subject");
+						$"Subject {EnumNames.NameOf(subject)} has an entry equivalent with a blank subject.");
 				}
 
 				_ = scale.Ordinal(entryEquivalent.Type, entryEquivalent.MinGrade);
@@ -153,7 +156,7 @@ public sealed class CatalogueData
 			if (meta.RestudyBar is { } restudyBar) {
 				if (restudyBar.Types.Count == 0) {
 					throw new InvalidDataException(
-						$"{EnumNames.NameOf(subject)} has a restudy bar with no qualification types");
+						$"Subject {EnumNames.NameOf(subject)} has a restudy bar with no qualification types.");
 				}
 			}
 		}
@@ -165,41 +168,32 @@ public sealed class CatalogueData
 ///     and the constraint pass all derive from here, so drift (a subject with no metadata, an exclusion that
 ///     isn't symmetric) is a load failure, not a silent gap. The table itself lives in
 ///     <c>data/catalogue.yaml</c>, loaded and validated at startup — editing that file, not this code, is how
-///     cross-subject policy changes. The data is hot-swappable: host code may install a freshly loaded table
-///     via <see cref="Use" />; absent that, it is read once from the shipped file on first access.
+///     cross-subject policy changes. <see cref="Default" /> is an immutable, lazily-loaded snapshot of the
+///     shipped file for zero-wiring callers; there is no installer and no swap. A constructed engine threads
+///     its own explicit <see cref="CatalogueData" /> and never consults it.
 /// </summary>
 public static class Catalogue
 {
 	/// <summary>The catalogue file's location relative to the repository / publish root.</summary>
 	public const string DefaultRelativePath = "data/catalogue.yaml";
 
-	// The fallback used when no host has installed a table: load the shipped file once, lazily, so library
-	// and test consumers get a valid catalogue with no wiring. The CLI/startup path installs a
-	// schema-validated table via Use() before first access, so this lazy never runs in production.
-	private static readonly Lazy<CatalogueData> Fallback = new(static () => LoadFromFile(FindDefaultPath()));
-
-	private static volatile CatalogueData? installed;
+	// The shipped reference table: loaded once, lazily, from the shipped file, so library and test consumers
+	// get a valid catalogue with no wiring. Immutable — it is never swapped, so reading it is reading fixed
+	// data, not ambient mutable state.
+	private static readonly Lazy<CatalogueData> Shipped = new(static () => LoadFromFile(FindDefaultPath()));
 
 	/// <summary>
-	///     The active catalogue snapshot: installed by the host, or the shipped fallback. This is a
-	///     convenience default for zero-wiring callers; constructed engine paths take an explicit
-	///     <see cref="CatalogueData" /> and do not consult this property.
+	///     The immutable shipped catalogue snapshot, read once from <c>data/catalogue.yaml</c> on first
+	///     access. A read-only convenience default for the zero-wiring overloads; constructed engine paths
+	///     take an explicit <see cref="CatalogueData" /> and do not consult it.
 	/// </summary>
-	public static CatalogueData Current => Active;
+	public static CatalogueData Default => Shipped.Value;
 
-	/// <summary>Every catalogue subject (the authoritative subject list, derived from the loaded data).</summary>
-	public static IReadOnlyList<Subject> Subjects => Active.Subjects;
-
-	private static CatalogueData Active => installed ?? Fallback.Value;
+	/// <summary>Every catalogue subject (the authoritative subject list, derived from the shipped data).</summary>
+	public static IReadOnlyList<Subject> Subjects => Default.Subjects;
 
 	/// <summary>Each mutual-exclusion pair once, lower enum value first.</summary>
-	public static IReadOnlyList<(Subject A, Subject B, Rating Severity)> ExclusionPairs => Active.ExclusionPairs;
-
-	/// <summary>
-	///     Install a loaded catalogue as the active table. This is for single-config convenience hosts and
-	///     tests; library consumers should prefer passing a <see cref="CatalogueData" /> explicitly.
-	/// </summary>
-	public static void Use(CatalogueData data) => installed = data;
+	public static IReadOnlyList<ExclusionPair> ExclusionPairs => Default.ExclusionPairs;
 
 	/// <summary>Parse and validate a YAML catalogue document, returning the runtime table.</summary>
 	public static CatalogueData Load(string yaml) => Build(YamlConverter.ToJsonNode(yaml));
@@ -213,7 +207,7 @@ public static class Catalogue
 	///     and the lazy fallback build the table the same way.
 	/// </summary>
 	public static CatalogueData Build(JsonNode document)
-		=> Build(document, QualificationScale.Current);
+		=> Build(document, QualificationScale.Default);
 
 	/// <summary>
 	///     Project an already-normalized catalogue document using an explicit qualification scale.
@@ -244,7 +238,7 @@ public static class Catalogue
 					: null,
 			};
 			if (!entries.TryAdd(entry.Subject, meta)) {
-				throw new InvalidDataException($"catalogue has a duplicate entry for {EnumNames.NameOf(entry.Subject)}");
+				throw new InvalidDataException($"Catalogue has a duplicate entry for {EnumNames.NameOf(entry.Subject)}.");
 			}
 
 			subjects.Add(entry.Subject);
@@ -253,8 +247,8 @@ public static class Catalogue
 		return new(entries, subjects, scale);
 	}
 
-	/// <summary>The metadata for <paramref name="subject" />.</summary>
-	public static SubjectMeta Meta(Subject subject) => Active.Meta(subject);
+	/// <summary>The metadata for <paramref name="subject" /> in the shipped catalogue.</summary>
+	public static SubjectMeta Meta(Subject subject) => Default.Meta(subject);
 
 	// Resolve the shipped catalogue file: prefer the copy beside the executable (publish output), else walk
 	// up from the working directory / base directory to the repository root. Mirrors DfeTransitionMatrix.

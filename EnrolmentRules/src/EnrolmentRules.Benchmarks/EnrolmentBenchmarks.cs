@@ -27,10 +27,11 @@ public class EnrolmentBenchmarks
 	public void Setup()
 	{
 		workflows = WorkflowStore.LoadAndValidate(WorkflowsDir, SchemaPath);
-		engine = new(
-			WorkflowStore.BuildEngine(workflows),
-			PolicyThresholdsStore.LoadAndValidate(DataDir),
-			DateOnly.FromDateTime(DateTime.Today));
+		var rulesEngine = WorkflowStore.BuildEngine(workflows);
+		var thresholds = PolicyThresholdsStore.LoadAndValidate(DataDir);
+		var catalogue = CatalogueStore.LoadAndValidate(DataDir);
+		var scale = QualificationScaleStore.LoadAndValidate(DataDir);
+		engine = new(new(rulesEngine, thresholds, catalogue, scale), catalogue, DateOnly.FromDateTime(DateTime.Today));
 		student = StrongStudent("S-BENCH-1", "plays_piano");
 
 		// Worst case for the counterfactual advisor: an eligible-but-middling student whose subjects are
@@ -78,7 +79,7 @@ public class EnrolmentBenchmarks
 	public async Task<EnrolmentResult> EvaluateSingleAsync() => await engine.EvaluateAsync(student);
 
 	[Benchmark]
-	public async Task<EnrolmentResult[]> EvaluateBatchAsync() => await Task.WhenAll(batch.Select(engine.EvaluateAsync));
+	public async Task<EnrolmentResult[]> EvaluateBatchAsync() => await Task.WhenAll(batch.Select(student => engine.EvaluateAsync(student)));
 
 	[Benchmark]
 	public async Task<AdviceResult> AdviseAsync() => await engine.AdviseAsync(adviseStudent);

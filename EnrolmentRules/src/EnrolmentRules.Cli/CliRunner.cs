@@ -48,7 +48,7 @@ public static class CliRunner
 			["--explain-text", var path] => RunEvaluationAsync(path, Output.ExplainText, stdout, stderr),
 			["--advise", var path] => RunEvaluationAsync(path, Output.Advise, stdout, stderr),
 			["--advise", "--all-gcses", var path] =>
-				RunEvaluationAsync(path, Output.Advise, stdout, stderr, considerUnsatGcses: true),
+				RunEvaluationAsync(path, Output.Advise, stdout, stderr, true),
 			["--batch", var path] => RunBatchAsync(path, stdout, stderr),
 			_ => Task.FromResult(Usage(stderr)),
 		};
@@ -299,7 +299,7 @@ public static class CliRunner
 			dir = dir.Parent;
 		}
 
-		throw new DirectoryNotFoundException("could not locate the 'workflows' directory from " + AppContext.BaseDirectory);
+		throw new DirectoryNotFoundException("Could not locate the 'workflows' directory from " + AppContext.BaseDirectory + ".");
 	}
 
 	/// <summary>
@@ -323,7 +323,7 @@ public static class CliRunner
 			dir = dir.Parent;
 		}
 
-		throw new DirectoryNotFoundException("could not locate the 'data' directory from " + AppContext.BaseDirectory);
+		throw new DirectoryNotFoundException("Could not locate the 'data' directory from " + AppContext.BaseDirectory + ".");
 	}
 
 	private enum Output

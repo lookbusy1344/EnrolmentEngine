@@ -61,6 +61,11 @@ public readonly record struct Subject(string Value) : IComparable<Subject>
 		return true;
 	}
 
+	public static Subject Parse(string value) =>
+		TryParse(value, out var subject)
+			? subject
+			: throw new FormatException($"'{value}' is not a valid subject name.");
+
 	private static bool IsValid(string? value)
 	{
 		if (string.IsNullOrWhiteSpace(value)) {

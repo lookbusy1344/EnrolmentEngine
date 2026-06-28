@@ -8,8 +8,9 @@ using FluentAssertions;
 /// <summary>
 ///     The subject catalogue is now rules-as-data: <c>data/catalogue.yaml</c>, loaded and schema-validated
 ///     at startup (the cross-subject constraint policy, §1.5–1.6). These tests drive the loader and its
-///     guards directly — they never call <see cref="Catalogue.Use" />, so they inspect the returned
-///     <see cref="CatalogueData" /> without mutating the process-wide active table other tests read.
+///     guards directly, inspecting the returned <see cref="CatalogueData" /> instance. The catalogue holder
+///     exposes only an immutable shipped <see cref="Catalogue.Default" />, so there is no active table to
+///     mutate and the suite needs no serialised process-global phase.
 /// </summary>
 public sealed class CatalogueTests
 {
@@ -49,9 +50,16 @@ public sealed class CatalogueTests
 
 		// Lower catalogue-order value first: French < German; History < Art; Economics < Business Studies.
 		data.ExclusionPairs.Should().BeEquivalentTo(new[] {
-			(A: Subject.French, B: Subject.German, Severity: Rating.Red), (A: Subject.History, B: Subject.Art, Severity: Rating.Amber),
-			(A: Subject.Economics, B: Subject.BusinessStudies, Severity: Rating.Amber),
+			new ExclusionPair(Subject.French, Subject.German, Rating.Red), new ExclusionPair(Subject.History, Subject.Art, Rating.Amber),
+			new ExclusionPair(Subject.Economics, Subject.BusinessStudies, Rating.Amber),
 		});
+	}
+
+	[Fact]
+	public void exclusion_pairs_use_a_named_public_type()
+	{
+		typeof(CatalogueData).GetProperty(nameof(CatalogueData.ExclusionPairs))!.PropertyType.GetGenericArguments()[0]
+			.Should().Be<ExclusionPair>();
 	}
 
 	[Fact]
