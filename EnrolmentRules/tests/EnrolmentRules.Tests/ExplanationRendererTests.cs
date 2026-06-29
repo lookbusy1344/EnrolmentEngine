@@ -16,8 +16,8 @@ public sealed class ExplanationRendererTests
 	{
 		var path = Path.Combine(Harness.RepoRoot, "examples", "golden", "strong-constraints.json");
 		var expectedPath = Path.Combine(Harness.RepoRoot, "examples", "golden", "strong-constraints.expected.md");
-		using var stdout = new StringWriter();
-		using var stderr = new StringWriter();
+		await using var stdout = new StringWriter();
+		await using var stderr = new StringWriter();
 
 		var exit = await CliRunner.RunAsync(["--explain-text", path], stdout, stderr);
 
@@ -35,7 +35,7 @@ public sealed class ExplanationRendererTests
 	{
 		var engine = await Harness.ShippedEngineAsync();
 		var explained = await engine.ExplainAsync(new("S-INELIGIBLE", new Dictionary<string, int> { ["maths"] = 6 }, []));
-		using var stdout = new StringWriter();
+		await using var stdout = new StringWriter();
 
 		ExplanationRenderer.Render(explained, stdout);
 

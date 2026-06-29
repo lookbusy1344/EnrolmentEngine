@@ -165,7 +165,7 @@ public sealed class Phase11Tests
 		var mismatchedCatalogue = new CatalogueData(
 			catalogue.Subjects.ToDictionary(
 				static subject => subject,
-				subject => catalogue.Meta(subject)),
+				catalogue.Meta),
 			catalogue.Subjects);
 
 		var evaluator = new RatingEvaluator(rulesEngine, Harness.Thresholds, catalogue, scale);

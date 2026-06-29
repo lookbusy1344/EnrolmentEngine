@@ -90,7 +90,7 @@ public sealed class Phase1Tests
 	{
 		Subject.TryParse(subjectName, out var subject).Should().BeTrue();
 		var gcses = new Dictionary<string, int> { ["maths"] = 7, ["physics"] = 6, ["english_language"] = 5 };
-		var average = (7 + 6 + 5) / 3.0;
+		const double average = (7 + 6 + 5) / 3.0;
 
 		var profile = Predict(Student(gcses));
 
@@ -106,7 +106,7 @@ public sealed class Phase1Tests
 	{
 		var student = Student(new() { ["maths"] = 7, ["physics"] = 6, ["english_language"] = 5 });
 		var gcses = student.ToGcseResults();
-		var average = (7 + 6 + 5) / 3.0;
+		const double average = (7 + 6 + 5) / 3.0;
 
 		var shipped = CatalogueStore.LoadAndValidate(DataDir);
 		var tweaked = new CatalogueData(
@@ -255,7 +255,7 @@ public sealed class Phase1Tests
 	[Fact]
 	public void no_gcses_yields_zero_average_without_throwing()
 	{
-		var profile = Predict(Student(new()));
+		var profile = Predict(Student([]));
 
 		profile.AverageGcseScore.Should().Be(0.0);
 		profile.PredictedGrades.Should().OnlyContain(p => p.PredictedPoints >= ALevelGrade.Min && p.PredictedPoints <= ALevelGrade.Max);
@@ -285,8 +285,8 @@ public sealed class Phase1Tests
 	public async Task cli_runs_on_the_example_fixture_and_emits_a_parseable_profile()
 	{
 		var examplePath = Path.Combine(Harness.RepoRoot, "examples", "student.json");
-		using var stdout = new StringWriter();
-		using var stderr = new StringWriter();
+		await using var stdout = new StringWriter();
+		await using var stderr = new StringWriter();
 
 		var exit = await CliRunner.RunAsync([examplePath], stdout, stderr);
 
@@ -305,8 +305,8 @@ public sealed class Phase1Tests
 	[Fact]
 	public async Task cli_with_no_argument_is_a_usage_error()
 	{
-		using var stdout = new StringWriter();
-		using var stderr = new StringWriter();
+		await using var stdout = new StringWriter();
+		await using var stderr = new StringWriter();
 
 		(await CliRunner.RunAsync([], stdout, stderr)).Should().Be(CliRunner.ExitUsage);
 	}
@@ -314,8 +314,8 @@ public sealed class Phase1Tests
 	[Fact]
 	public async Task cli_with_a_missing_file_is_an_input_error()
 	{
-		using var stdout = new StringWriter();
-		using var stderr = new StringWriter();
+		await using var stdout = new StringWriter();
+		await using var stderr = new StringWriter();
 		var missing = Path.Combine(Path.GetTempPath(), "does-not-exist-" + Guid.NewGuid().ToString("N") + ".json");
 
 		(await CliRunner.RunAsync([missing], stdout, stderr)).Should().Be(CliRunner.ExitInput);

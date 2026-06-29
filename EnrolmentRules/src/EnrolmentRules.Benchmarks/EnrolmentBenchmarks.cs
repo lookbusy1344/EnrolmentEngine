@@ -76,13 +76,13 @@ public class EnrolmentBenchmarks
 	}
 
 	[Benchmark]
-	public async Task<EnrolmentResult> EvaluateSingleAsync() => await engine.EvaluateAsync(student);
+	public Task<EnrolmentResult> EvaluateSingleAsync() => engine.EvaluateAsync(student);
 
 	[Benchmark]
-	public async Task<EnrolmentResult[]> EvaluateBatchAsync() => await Task.WhenAll(batch.Select(student => engine.EvaluateAsync(student)));
+	public Task<EnrolmentResult[]> EvaluateBatchAsync() => Task.WhenAll(batch.Select(student => engine.EvaluateAsync(student)));
 
 	[Benchmark]
-	public async Task<AdviceResult> AdviseAsync() => await engine.AdviseAsync(adviseStudent);
+	public Task<AdviceResult> AdviseAsync() => engine.AdviseAsync(adviseStudent);
 
 	private static StudentInput StrongStudent(string id, params string[] hobbies) =>
 		new(id, new Dictionary<string, int> {

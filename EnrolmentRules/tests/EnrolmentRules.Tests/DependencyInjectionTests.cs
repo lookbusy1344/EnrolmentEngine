@@ -32,9 +32,9 @@ public sealed class DependencyInjectionTests
 	{
 		var services = new ServiceCollection();
 		_ = await services.AddEnrolmentEngineAsync(options => {
-			options.UseWorkflowsDirectory(Harness.WorkflowsDir);
-			options.UseDataDirectory(Harness.DataDir);
-			options.UseFixedAsOf(Harness.AsOf);
+			options.UseWorkflowsDirectory(Harness.WorkflowsDir)
+				.UseDataDirectory(Harness.DataDir)
+				.UseFixedAsOf(Harness.AsOf);
 		});
 
 		await using var provider = services.BuildServiceProvider();
@@ -51,8 +51,8 @@ public sealed class DependencyInjectionTests
 		var services = new ServiceCollection();
 
 		var act = () => services.AddEnrolmentEngineAsync(options => {
-			options.UseWorkflowsDirectory(string.Empty);
-			options.UseDataDirectory(Harness.DataDir);
+			options.UseWorkflowsDirectory(string.Empty)
+				.UseDataDirectory(Harness.DataDir);
 		});
 
 		await act.Should().ThrowAsync<ArgumentException>().WithParameterName("WorkflowsDirectory");
@@ -64,8 +64,8 @@ public sealed class DependencyInjectionTests
 		var services = new ServiceCollection();
 
 		var act = () => services.AddEnrolmentEngineAsync(options => {
-			options.UseWorkflowsDirectory(Harness.WorkflowsDir);
-			options.UseDataDirectory(string.Empty);
+			options.UseWorkflowsDirectory(Harness.WorkflowsDir)
+				.UseDataDirectory(string.Empty);
 		});
 
 		await act.Should().ThrowAsync<ArgumentException>().WithParameterName("DataDirectory");
@@ -76,9 +76,9 @@ public sealed class DependencyInjectionTests
 	{
 		var services = new ServiceCollection();
 		_ = await services.AddEnrolmentEngineAsync(options => {
-			options.UseWorkflowsDirectory(Harness.WorkflowsDir);
-			options.UseDataDirectory(Harness.DataDir);
-			options.UseFixedAsOf(Harness.AsOf);
+			options.UseWorkflowsDirectory(Harness.WorkflowsDir)
+				.UseDataDirectory(Harness.DataDir)
+				.UseFixedAsOf(Harness.AsOf);
 		});
 
 		await using var provider = services.BuildServiceProvider();
@@ -119,9 +119,9 @@ public sealed class DependencyInjectionTests
 	{
 		var services = new ServiceCollection();
 		_ = await services.AddEnrolmentEngineAsync(options => {
-			options.UseWorkflowsDirectory(Harness.WorkflowsDir);
-			options.UseDataDirectory(Harness.DataDir);
-			options.UseFixedAsOf(Harness.AsOf);
+			options.UseWorkflowsDirectory(Harness.WorkflowsDir)
+				.UseDataDirectory(Harness.DataDir)
+				.UseFixedAsOf(Harness.AsOf);
 		});
 
 		await using var provider = services.BuildServiceProvider();
@@ -139,9 +139,9 @@ public sealed class DependencyInjectionTests
 		var clock = new MutableClock(new(2026, 6, 25, 12, 0, 0, TimeSpan.Zero)); // student is 18
 		var services = new ServiceCollection();
 		_ = await services.AddEnrolmentEngineAsync(options => {
-			options.UseWorkflowsDirectory(Harness.WorkflowsDir);
-			options.UseDataDirectory(Harness.DataDir);
-			options.UseTimeProvider(clock);
+			options.UseWorkflowsDirectory(Harness.WorkflowsDir)
+				.UseDataDirectory(Harness.DataDir)
+				.UseTimeProvider(clock);
 		});
 
 		await using var provider = services.BuildServiceProvider();
@@ -161,9 +161,9 @@ public sealed class DependencyInjectionTests
 	{
 		var services = new ServiceCollection();
 		_ = await services.AddEnrolmentEngineFactoryAsync(options => {
-			options.UseWorkflowsDirectory(Harness.WorkflowsDir);
-			options.UseDataDirectory(Harness.DataDir);
-			options.UseFixedAsOf(Harness.AsOf);
+			options.UseWorkflowsDirectory(Harness.WorkflowsDir)
+				.UseDataDirectory(Harness.DataDir)
+				.UseFixedAsOf(Harness.AsOf);
 		});
 
 		await using var provider = services.BuildServiceProvider();
@@ -184,9 +184,9 @@ public sealed class DependencyInjectionTests
 		try {
 			var services = new ServiceCollection();
 			_ = await services.AddEnrolmentEngineFactoryAsync(options => {
-				options.UseWorkflowsDirectory(Path.Combine(fixture, "workflows"));
-				options.UseDataDirectory(Path.Combine(fixture, "data"));
-				options.UseFixedAsOf(Harness.AsOf);
+				options.UseWorkflowsDirectory(Path.Combine(fixture, "workflows"))
+					.UseDataDirectory(Path.Combine(fixture, "data"))
+					.UseFixedAsOf(Harness.AsOf);
 			});
 
 			await using var provider = services.BuildServiceProvider();
@@ -211,9 +211,9 @@ public sealed class DependencyInjectionTests
 	{
 		var services = new ServiceCollection();
 		_ = await services.AddEnrolmentEngineAsync(options => {
-			options.UseWorkflowsDirectory(Harness.WorkflowsDir);
-			options.UseDataDirectory(Harness.DataDir);
-			options.UseFixedAsOf(Harness.AsOf);
+			options.UseWorkflowsDirectory(Harness.WorkflowsDir)
+				.UseDataDirectory(Harness.DataDir)
+				.UseFixedAsOf(Harness.AsOf);
 		});
 
 		await using var provider = services.BuildServiceProvider();
@@ -282,7 +282,7 @@ public sealed class DependencyInjectionTests
 	}
 
 	// A trivial hand-written double, proving IEnrolmentEngine is implementable without the concrete engine.
-	private sealed class StubEngine(CatalogueData catalogue) : IEnrolmentEngine, IEnrolmentEvaluator, IEnrolmentAdvisor
+	private sealed class StubEngine(CatalogueData catalogue) : IEnrolmentEngine
 	{
 		public CatalogueData Catalogue => catalogue;
 

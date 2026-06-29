@@ -52,23 +52,17 @@ public sealed class AgeGateTests
 	}
 
 	[Fact]
-	public async Task a_younger_student_clears_art_entry_at_the_strong_threshold()
-	{
+	public async Task a_younger_student_clears_art_entry_at_the_strong_threshold() =>
 		// Art GCSE exactly at StrongEntry: a sub-adult meets entry, so the rating is decided by prediction, not the gate.
 		(await RateArtAsync(YoungerDob, Harness.Thresholds.StrongEntry)).Should().NotBe(Rating.Red);
-	}
 
 	[Fact]
-	public async Task an_adult_fails_art_entry_at_the_strong_threshold()
-	{
+	public async Task an_adult_fails_art_entry_at_the_strong_threshold() =>
 		// The same art GCSE that suffices for a younger student is below the adult's TopEntry bar ⇒ entry unmet ⇒ red.
 		(await RateArtAsync(AdultDob, Harness.Thresholds.StrongEntry)).Should().Be(Rating.Red);
-	}
 
 	[Fact]
-	public async Task an_adult_clears_art_entry_at_the_top_threshold()
-	{
+	public async Task an_adult_clears_art_entry_at_the_top_threshold() =>
 		// Raising the art GCSE to TopEntry meets the adult bar, so the gate no longer forces red.
 		(await RateArtAsync(AdultDob, Harness.Thresholds.TopEntry)).Should().NotBe(Rating.Red);
-	}
 }

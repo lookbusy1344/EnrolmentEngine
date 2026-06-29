@@ -12,15 +12,11 @@ using System.Text.Json.Serialization;
 ///     as empty.
 /// </summary>
 [JsonConverter(typeof(EquatableDictionaryJsonConverterFactory))]
-public readonly struct EquatableDictionary<TKey, TValue>
+public readonly struct EquatableDictionary<TKey, TValue>(IDictionary<TKey, TValue> entries)
 	: IReadOnlyDictionary<TKey, TValue>, IEquatable<EquatableDictionary<TKey, TValue>>
 	where TKey : notnull
 {
-	private readonly Dictionary<TKey, TValue>? entries;
-
-	public EquatableDictionary(IDictionary<TKey, TValue> entries) => this.entries = new(entries);
-
-	private Dictionary<TKey, TValue> Entries => entries ?? [];
+	private Dictionary<TKey, TValue> Entries { get => field ?? []; } = new(entries);
 
 	public int Count => Entries.Count;
 

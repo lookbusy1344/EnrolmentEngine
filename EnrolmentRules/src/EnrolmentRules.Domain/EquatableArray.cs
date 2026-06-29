@@ -15,13 +15,9 @@ using System.Text.Json.Serialization;
 /// </summary>
 [CollectionBuilder(typeof(EquatableArray), nameof(EquatableArray.Create))]
 [JsonConverter(typeof(EquatableArrayJsonConverterFactory))]
-public readonly struct EquatableArray<T> : IReadOnlyList<T>, IEquatable<EquatableArray<T>>
+public readonly struct EquatableArray<T>(ImmutableArray<T> items) : IReadOnlyList<T>, IEquatable<EquatableArray<T>>
 {
-	private readonly ImmutableArray<T> items;
-
-	public EquatableArray(ImmutableArray<T> items) => this.items = items;
-
-	private ImmutableArray<T> Items => items.IsDefault ? [] : items;
+	private ImmutableArray<T> Items { get => field.IsDefault ? [] : field; } = items;
 
 	public int Count => Items.Length;
 

@@ -177,20 +177,17 @@ public sealed class RatingEvaluator(
 ///     missing GCSE can never satisfy a threshold. Registered in <see cref="RuleSettings" /> custom types
 ///     so the engine permits the instance-method call.
 /// </summary>
-public sealed class GcseFacts
+public sealed class GcseFacts(IEnumerable<GcseResult> gcses)
 {
 	// One below the GCSE floor: a non-pass sentinel that can never satisfy a threshold, derived from the
 	// scale so it tracks Thresholds.MinGcseGrade rather than drifting from a hard-coded literal.
 	private const int NotTaken = Thresholds.MinGcseGrade - 1;
 
-	private readonly IReadOnlyDictionary<string, int> byKey;
-
-	public GcseFacts(IEnumerable<GcseResult> gcses) =>
-		// Defensive against a repeated subject key: keep the best grade (real inputs come from a
-		// dictionary and carry no duplicates, but the engine inputs are a plain list).
-		byKey = gcses
-			.GroupBy(static g => g.Subject, StringComparer.OrdinalIgnoreCase)
-			.ToDictionary(static grp => grp.Key, static grp => grp.Max(static g => g.Grade), StringComparer.OrdinalIgnoreCase);
+	// Defensive against a repeated subject key: keep the best grade (real inputs come from a
+	// dictionary and carry no duplicates, but the engine inputs are a plain list).
+	private readonly IReadOnlyDictionary<string, int> byKey = gcses
+		.GroupBy(static g => g.Subject, StringComparer.OrdinalIgnoreCase)
+		.ToDictionary(static grp => grp.Key, static grp => grp.Max(static g => g.Grade), StringComparer.OrdinalIgnoreCase);
 
 	public int Grade(string subject) => byKey.GetValueOrDefault(subject, NotTaken);
 }
@@ -204,32 +201,28 @@ public sealed class GcseFacts
 ///     never clear
 ///     a probability-gated tier. Registered in <see cref="RuleSettings" /> custom types for the method calls.
 /// </summary>
-public sealed class RatingFacts
+public sealed class RatingFacts(
+	StudentProfile profile,
+	IEnumerable<GcseResult> gcses,
+	PolicyFacts policy,
+	CatalogueData catalogue,
+	QualificationScale scale)
 {
-	private readonly HashSet<string> entryEquivalentSubjects;
-	private readonly GcseFacts gcses;
-	private readonly PolicyFacts policy;
-	private readonly IReadOnlyDictionary<string, double> predicted;
-	private readonly Dictionary<string, TransitionEvidence> transitionEvidence;
+	private readonly HashSet<string> entryEquivalentSubjects = BuildEntryEquivalentSubjects(profile, catalogue, scale);
+	private readonly GcseFacts gcses = new(gcses);
+	private readonly PolicyFacts policy = policy;
 
-	public RatingFacts(StudentProfile profile, IEnumerable<GcseResult> gcses, PolicyFacts policy, CatalogueData catalogue, QualificationScale scale)
-	{
-		this.gcses = new(gcses);
-		this.policy = policy;
-		Average = profile.AverageGcseScore;
-		Age = profile.Age;
-		predicted = profile.PredictedGrades.ToDictionary(
-			static p => EnumNames.NameOf(p.Subject), static p => p.PredictedPoints);
-		transitionEvidence = profile.TransitionEvidence.ToDictionary(
-			static e => EnumNames.NameOf(e.Subject), static e => e);
-		entryEquivalentSubjects = BuildEntryEquivalentSubjects(profile, catalogue, scale);
-	}
+	private readonly IReadOnlyDictionary<string, double> predicted = profile.PredictedGrades.ToDictionary(
+		static p => EnumNames.NameOf(p.Subject), static p => p.PredictedPoints);
+
+	private readonly Dictionary<string, TransitionEvidence> transitionEvidence = profile.TransitionEvidence.ToDictionary(
+		static e => EnumNames.NameOf(e.Subject), static e => e);
 
 	/// <summary>The student's mean GCSE score (the average-based entry feature).</summary>
-	public double Average { get; }
+	public double Average { get; } = profile.AverageGcseScore;
 
 	/// <summary>The student's age in years (the age-gated entry feature).</summary>
-	public int Age { get; }
+	public int Age { get; } = profile.Age;
 
 	// The policy knobs the rating lambdas read, forwarded from the single PolicyFacts surface rather than
 	// copied — one source of truth for the values. Eligibility-only and host-aggregation knobs (PassGrade,

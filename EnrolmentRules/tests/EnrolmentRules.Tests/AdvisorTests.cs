@@ -279,8 +279,8 @@ public sealed class AdvisorTests
 	{
 		var path = Path.Combine(Harness.RepoRoot, "examples", "golden", "advise-counterfactual.json");
 		var expectedPath = Path.Combine(Harness.RepoRoot, "examples", "golden", "advise-counterfactual.expected.json");
-		using var stdout = new StringWriter();
-		using var stderr = new StringWriter();
+		await using var stdout = new StringWriter();
+		await using var stderr = new StringWriter();
 
 		var exit = await CliRunner.RunAsync(["--advise", path], stdout, stderr);
 
@@ -309,8 +309,8 @@ public sealed class AdvisorTests
 										     "hobbies": [], "chosen_a_levels": ["maths"], "date_of_birth": "2009-09-01" } }
 										   """);
 
-		using var stdout = new StringWriter();
-		using var stderr = new StringWriter();
+		await using var stdout = new StringWriter();
+		await using var stderr = new StringWriter();
 
 		var exit = await CliRunner.RunAsync(["--advise", "--all-gcses", path], stdout, stderr);
 
@@ -380,13 +380,13 @@ public sealed class AdvisorTests
 		// The diagnostic search ranges over the full candidate set — far more pipeline evaluations than a
 		// 1 ms window allows — so cancellation must be observed inside the BFS loop, not merely at the entry
 		// guard. The call can never complete before the token fires, so it must always throw.
-		var act = async () => await engine.AdviseAsync(student, true, cts.Token);
+		var act = () => engine.AdviseAsync(student, true, cts.Token);
 		_ = await act.Should().ThrowAsync<OperationCanceledException>();
 	}
 
 	private static StudentInput ApplyChanges(StudentInput original, EquatableArray<GradeChange> changes)
 	{
-		var gcses = original.Gcses?.ToDictionary(static kv => kv.Key, static kv => kv.Value) ?? new Dictionary<string, int>();
+		var gcses = original.Gcses?.ToDictionary(static kv => kv.Key, static kv => kv.Value) ?? [];
 		foreach (var change in changes) {
 			gcses[change.GcseSubject] = change.To;
 		}

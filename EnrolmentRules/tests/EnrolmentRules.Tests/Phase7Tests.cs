@@ -147,8 +147,8 @@ public sealed class Phase7Tests
 	public async Task cli_explain_emits_a_parseable_explained_result()
 	{
 		var path = Path.Combine(Harness.RepoRoot, "examples", "student.json");
-		using var stdout = new StringWriter();
-		using var stderr = new StringWriter();
+		await using var stdout = new StringWriter();
+		await using var stderr = new StringWriter();
 
 		var exit = await CliRunner.RunAsync(["--explain", path], stdout, stderr);
 
@@ -165,8 +165,8 @@ public sealed class Phase7Tests
 	public async Task cli_json_emits_a_parseable_enrolment_result()
 	{
 		var path = Path.Combine(Harness.RepoRoot, "examples", "student.json");
-		using var stdout = new StringWriter();
-		using var stderr = new StringWriter();
+		await using var stdout = new StringWriter();
+		await using var stderr = new StringWriter();
 
 		var exit = await CliRunner.RunAsync(["--json", path], stdout, stderr);
 

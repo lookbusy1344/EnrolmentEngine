@@ -66,8 +66,8 @@ public static class PolicyThresholdsStore
 
 	private static void Validate(PolicyThresholds thresholds)
 	{
-		var min = Thresholds.MinGcseGrade;
-		var max = Thresholds.MaxGcseGrade;
+		const int min = Thresholds.MinGcseGrade;
+		const int max = Thresholds.MaxGcseGrade;
 
 		if (thresholds.PassGrade is < Thresholds.MinGcseGrade or > Thresholds.MaxGcseGrade) {
 			throw new InvalidDataException(

@@ -49,10 +49,10 @@ public sealed class CatalogueTests
 		var data = CatalogueStore.LoadAndValidate(DataDir);
 
 		// Lower catalogue-order value first: French < German; History < Art; Economics < Business Studies.
-		data.ExclusionPairs.Should().BeEquivalentTo(new[] {
-			new ExclusionPair(Subject.French, Subject.German, Rating.Red), new ExclusionPair(Subject.History, Subject.Art, Rating.Amber),
+		data.ExclusionPairs.Should().BeEquivalentTo([
+			new(Subject.French, Subject.German, Rating.Red), new(Subject.History, Subject.Art, Rating.Amber),
 			new ExclusionPair(Subject.Economics, Subject.BusinessStudies, Rating.Amber),
-		});
+		]);
 	}
 
 	[Fact]

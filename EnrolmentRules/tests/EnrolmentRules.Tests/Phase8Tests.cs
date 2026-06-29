@@ -133,8 +133,8 @@ public sealed class Phase8Tests
 	public async Task cli_rejects_an_out_of_range_grade_with_an_input_error_not_a_silent_rating()
 	{
 		var path = WriteTemp(StudentLine("S-BAD", """{"maths":10}"""), ".json");
-		using var stdout = new StringWriter();
-		using var stderr = new StringWriter();
+		await using var stdout = new StringWriter();
+		await using var stderr = new StringWriter();
 
 		var exit = await CliRunner.RunAsync(["--json", path], stdout, stderr);
 
@@ -147,8 +147,8 @@ public sealed class Phase8Tests
 	public async Task cli_rejects_an_unknown_subject_with_an_input_error()
 	{
 		var path = WriteTemp(StudentLine("S-BAD", """{"quidditch":6}"""), ".json");
-		using var stdout = new StringWriter();
-		using var stderr = new StringWriter();
+		await using var stdout = new StringWriter();
+		await using var stderr = new StringWriter();
 
 		var exit = await CliRunner.RunAsync(["--table", path], stdout, stderr);
 
@@ -160,8 +160,8 @@ public sealed class Phase8Tests
 	public async Task cli_rejects_missing_required_student_members_with_an_input_error()
 	{
 		var path = WriteTemp("""{"student":{"id":"S-BAD","gcses":{"maths":6}}}""", ".json");
-		using var stdout = new StringWriter();
-		using var stderr = new StringWriter();
+		await using var stdout = new StringWriter();
+		await using var stderr = new StringWriter();
 
 		var exit = await CliRunner.RunAsync(["--json", path], stdout, stderr);
 
@@ -174,8 +174,8 @@ public sealed class Phase8Tests
 	public async Task cli_rejects_an_unknown_chosen_a_level_value_with_an_input_error()
 	{
 		var path = WriteTemp("""{"student":{"id":"S-BAD","gcses":{"maths":6},"hobbies":[],"chosen_a_levels":["philosophy"]}}""", ".json");
-		using var stdout = new StringWriter();
-		using var stderr = new StringWriter();
+		await using var stdout = new StringWriter();
+		await using var stderr = new StringWriter();
 
 		var exit = await CliRunner.RunAsync(["--json", path], stdout, stderr);
 
@@ -191,8 +191,8 @@ public sealed class Phase8Tests
 	{
 		// Only Maths present ⇒ no English pass and too few passes ⇒ ineligible.
 		var path = WriteTemp(StudentLine("S-INELIGIBLE", """{"maths":6}"""), ".json");
-		using var stdout = new StringWriter();
-		using var stderr = new StringWriter();
+		await using var stdout = new StringWriter();
+		await using var stderr = new StringWriter();
 
 		var exit = await CliRunner.RunAsync(["--json", path], stdout, stderr);
 
@@ -206,8 +206,8 @@ public sealed class Phase8Tests
 	public async Task cli_json_on_an_eligible_student_exits_ok()
 	{
 		var path = WriteTemp(EligibleLine("S-OK"), ".json");
-		using var stdout = new StringWriter();
-		using var stderr = new StringWriter();
+		await using var stdout = new StringWriter();
+		await using var stderr = new StringWriter();
 
 		(await CliRunner.RunAsync(["--json", path], stdout, stderr)).Should().Be(CliRunner.ExitOk);
 	}
@@ -218,8 +218,8 @@ public sealed class Phase8Tests
 	public async Task cli_table_renders_every_subject_with_its_rating()
 	{
 		var path = Path.Combine(Harness.RepoRoot, "examples", "student.json");
-		using var stdout = new StringWriter();
-		using var stderr = new StringWriter();
+		await using var stdout = new StringWriter();
+		await using var stderr = new StringWriter();
 
 		var exit = await CliRunner.RunAsync(["--table", path], stdout, stderr);
 
@@ -241,8 +241,8 @@ public sealed class Phase8Tests
 		var ids = new[] { "S-A", "S-B", "S-C" };
 		var jsonl = string.Join('\n', ids.Select(EligibleLine));
 		var path = WriteTemp(jsonl, ".jsonl");
-		using var stdout = new StringWriter();
-		using var stderr = new StringWriter();
+		await using var stdout = new StringWriter();
+		await using var stderr = new StringWriter();
 
 		var exit = await CliRunner.RunAsync(["--batch", path], stdout, stderr);
 
@@ -266,8 +266,8 @@ public sealed class Phase8Tests
 			StudentLine("S-BAD", """{"maths":99}"""),
 			EligibleLine("S-C"));
 		var path = WriteTemp(jsonl, ".jsonl");
-		using var stdout = new StringWriter();
-		using var stderr = new StringWriter();
+		await using var stdout = new StringWriter();
+		await using var stderr = new StringWriter();
 
 		var exit = await CliRunner.RunAsync(["--batch", path], stdout, stderr);
 
@@ -289,8 +289,8 @@ public sealed class Phase8Tests
 			"""{"student":{"id":"S-BAD","gcses":{"maths":6}}}""",
 			EligibleLine("S-C"));
 		var path = WriteTemp(jsonl, ".jsonl");
-		using var stdout = new StringWriter();
-		using var stderr = new StringWriter();
+		await using var stdout = new StringWriter();
+		await using var stderr = new StringWriter();
 
 		var exit = await CliRunner.RunAsync(["--batch", path], stdout, stderr);
 
@@ -311,8 +311,8 @@ public sealed class Phase8Tests
 			"""{"student":{"id":"S-BAD","gcses":{"maths":6},"hobbies":[],"chosen_a_levels":["philosophy"]}}""",
 			EligibleLine("S-C"));
 		var path = WriteTemp(jsonl, ".jsonl");
-		using var stdout = new StringWriter();
-		using var stderr = new StringWriter();
+		await using var stdout = new StringWriter();
+		await using var stderr = new StringWriter();
 
 		var exit = await CliRunner.RunAsync(["--batch", path], stdout, stderr);
 
@@ -330,8 +330,8 @@ public sealed class Phase8Tests
 	public async Task cli_batch_on_a_missing_file_is_an_input_error()
 	{
 		var missing = Path.Combine(Path.GetTempPath(), "no-such-batch-" + Guid.NewGuid().ToString("N") + ".jsonl");
-		using var stdout = new StringWriter();
-		using var stderr = new StringWriter();
+		await using var stdout = new StringWriter();
+		await using var stderr = new StringWriter();
 
 		(await CliRunner.RunAsync(["--batch", missing], stdout, stderr)).Should().Be(CliRunner.ExitInput);
 	}
@@ -356,8 +356,8 @@ public sealed class Phase8Tests
 	public async Task cli_json_accepts_a_yaml_student_document()
 	{
 		var path = WriteTemp(EligibleYaml("S-YAML"), ".yaml");
-		using var stdout = new StringWriter();
-		using var stderr = new StringWriter();
+		await using var stdout = new StringWriter();
+		await using var stderr = new StringWriter();
 
 		var exit = await CliRunner.RunAsync(["--json", path], stdout, stderr);
 
@@ -379,16 +379,16 @@ public sealed class Phase8Tests
 	[Fact]
 	public async Task cli_applies_input_validation_to_yaml_documents_too()
 	{
-		var yaml = """
-				   student:
-				     id: S-BAD
-				     gcses:
-				       maths: 10
-				     hobbies: []
-				   """;
+		const string yaml = """
+							student:
+							  id: S-BAD
+							  gcses:
+							    maths: 10
+							  hobbies: []
+							""";
 		var path = WriteTemp(yaml, ".yml");
-		using var stdout = new StringWriter();
-		using var stderr = new StringWriter();
+		await using var stdout = new StringWriter();
+		await using var stderr = new StringWriter();
 
 		var exit = await CliRunner.RunAsync(["--table", path], stdout, stderr);
 
@@ -401,8 +401,8 @@ public sealed class Phase8Tests
 	{
 		// Unbalanced flow mapping ⇒ a YAML parse error, surfaced as an input error rather than a crash.
 		var path = WriteTemp("student: {id: S-BAD", ".yaml");
-		using var stdout = new StringWriter();
-		using var stderr = new StringWriter();
+		await using var stdout = new StringWriter();
+		await using var stderr = new StringWriter();
 
 		var exit = await CliRunner.RunAsync(["--json", path], stdout, stderr);
 
@@ -412,8 +412,8 @@ public sealed class Phase8Tests
 
 	private static async Task<string> CaptureJsonAsync(string path)
 	{
-		using var stdout = new StringWriter();
-		using var stderr = new StringWriter();
+		await using var stdout = new StringWriter();
+		await using var stderr = new StringWriter();
 		(await CliRunner.RunAsync(["--json", path], stdout, stderr)).Should().Be(CliRunner.ExitOk);
 		return stdout.ToString();
 	}

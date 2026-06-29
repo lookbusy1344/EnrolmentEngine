@@ -200,8 +200,8 @@ public sealed class WorkflowLinterTests
 	[Fact]
 	public async Task cli_lint_workflows_passes_on_shipped_workflows()
 	{
-		using var stdout = new StringWriter();
-		using var stderr = new StringWriter();
+		await using var stdout = new StringWriter();
+		await using var stderr = new StringWriter();
 
 		var exit = await CliRunner.RunAsync(["--lint-workflows"], stdout, stderr);
 
@@ -219,8 +219,8 @@ public sealed class WorkflowLinterTests
 				.Replace("facts.Predicted", "facts.Prediced", StringComparison.Ordinal);
 			await File.WriteAllTextAsync(ratingsPath, corrupted);
 
-			using var stdout = new StringWriter();
-			using var stderr = new StringWriter();
+			await using var stdout = new StringWriter();
+			await using var stderr = new StringWriter();
 
 			var exit = await CliRunner.RunAsync(["--lint-workflows", brokenDir], stdout, stderr);
 
@@ -237,8 +237,8 @@ public sealed class WorkflowLinterTests
 	{
 		var fixture = WriteCustomSubjectFixture();
 		try {
-			using var stdout = new StringWriter();
-			using var stderr = new StringWriter();
+			await using var stdout = new StringWriter();
+			await using var stderr = new StringWriter();
 
 			var exit = await CliRunner.RunAsync(["--lint-workflows", Path.Combine(fixture, "workflows")], stdout, stderr);
 

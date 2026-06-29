@@ -151,11 +151,11 @@ public sealed class EnrolmentEngine : IEnrolmentEngine
 		TryAdviseAsync(student, asOf(), cancellationToken);
 
 	/// <inheritdoc cref="IEnrolmentAdvisor.TryAdviseAsync(StudentInput, DateOnly, CancellationToken)" />
-	public async Task<ValidatedEvaluation<AdviceResult>> TryAdviseAsync(
+	public Task<ValidatedEvaluation<AdviceResult>> TryAdviseAsync(
 		StudentInput student,
 		DateOnly asOf,
 		CancellationToken cancellationToken = default) =>
-		await TryAdviseAsync(student, asOf, evaluator.Thresholds.AdviceConsidersUnsatGcses, cancellationToken).ConfigureAwait(false);
+		TryAdviseAsync(student, asOf, evaluator.Thresholds.AdviceConsidersUnsatGcses, cancellationToken);
 
 	/// <inheritdoc cref="IEnrolmentAdvisor.TryAdviseAsync(StudentInput, bool, CancellationToken)" />
 	public Task<ValidatedEvaluation<AdviceResult>> TryAdviseAsync(
@@ -197,12 +197,12 @@ public sealed class EnrolmentEngine : IEnrolmentEngine
 	///     The <paramref name="asOf" /> source is resolved per evaluation, so a singleton built this way tracks
 	///     a live clock (e.g. <c>() =&gt; DateOnly.FromDateTime(timeProvider.GetLocalNow().DateTime)</c>).
 	/// </remarks>
-	public static async Task<EnrolmentEngine> CreateAsync(
+	public static Task<EnrolmentEngine> CreateAsync(
 		string workflowsDirectory,
 		string dataDirectory,
 		Func<DateOnly> asOf,
 		CancellationToken cancellationToken = default)
-		=> await CreateAsync(new DirectoryDataSource(workflowsDirectory, dataDirectory), asOf, cancellationToken).ConfigureAwait(false);
+		=> CreateAsync(new DirectoryDataSource(workflowsDirectory, dataDirectory), asOf, cancellationToken);
 
 	/// <summary>
 	///     Create a fully bootstrapped engine from a stream-backed data source. This is the shared startup
@@ -230,24 +230,24 @@ public sealed class EnrolmentEngine : IEnrolmentEngine
 	{
 		ArgumentNullException.ThrowIfNull(source);
 		cancellationToken.ThrowIfCancellationRequested();
-		using var thresholdsStream = source.OpenThresholds();
-		using var thresholdsSchemaStream = source.OpenThresholdsSchema();
+		await using var thresholdsStream = source.OpenThresholds();
+		await using var thresholdsSchemaStream = source.OpenThresholdsSchema();
 		var thresholds = PolicyThresholdsStore.LoadAndValidate(thresholdsStream, thresholdsSchemaStream);
 		cancellationToken.ThrowIfCancellationRequested();
-		using var qualificationsStream = source.OpenQualifications();
-		using var qualificationsSchemaStream = source.OpenQualificationsSchema();
+		await using var qualificationsStream = source.OpenQualifications();
+		await using var qualificationsSchemaStream = source.OpenQualificationsSchema();
 		var scale = QualificationScaleStore.LoadAndValidate(qualificationsStream, qualificationsSchemaStream);
 		cancellationToken.ThrowIfCancellationRequested();
-		using var catalogueStream = source.OpenCatalogue();
-		using var catalogueSchemaStream = source.OpenCatalogueSchema();
+		await using var catalogueStream = source.OpenCatalogue();
+		await using var catalogueSchemaStream = source.OpenCatalogueSchema();
 		var catalogue = CatalogueStore.LoadAndValidate(catalogueStream, catalogueSchemaStream, scale);
 		cancellationToken.ThrowIfCancellationRequested();
-		using var matrixStream = source.OpenTransitionMatrix();
+		await using var matrixStream = source.OpenTransitionMatrix();
 		var matrix = DfeTransitionMatrix.Load(matrixStream);
 		cancellationToken.ThrowIfCancellationRequested();
 		var workflowFiles = source.OpenWorkflows();
 		try {
-			using var workflowSchemaStream = source.OpenWorkflowSchema();
+			await using var workflowSchemaStream = source.OpenWorkflowSchema();
 			var engine = await WorkflowStore.LoadValidateBuildAndProbeAsync(workflowFiles, workflowSchemaStream, catalogue, thresholds, matrix, scale)
 				.ConfigureAwait(false);
 			cancellationToken.ThrowIfCancellationRequested();
