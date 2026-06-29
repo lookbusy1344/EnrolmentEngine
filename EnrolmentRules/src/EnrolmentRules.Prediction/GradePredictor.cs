@@ -11,37 +11,9 @@ using Domain;
 public static class GradePredictor
 {
 	/// <summary>
-	///     Predict a profile from raw student facts as of <paramref name="asOf" /> (the run's reference date,
-	///     which fixes the student's derived age): mean GCSE score and one clamped A-level prediction per
-	///     <see cref="Subject" />.
-	/// </summary>
-	public static StudentProfile Predict(StudentInput student, DateOnly asOf) =>
-		Predict(student, student.ToGcseResults(), asOf, Catalogue.Default);
-
-	/// <summary>
-	///     Predict from facts already projected to <see cref="GcseResult" />s. The pipeline entry points
-	///     materialise the GCSE list once for the engine and reuse it here, so the projection isn't repeated.
-	///     <paramref name="asOf" /> is the reference date the student's age is computed against.
-	/// </summary>
-	public static StudentProfile Predict(StudentInput student, IReadOnlyList<GcseResult> gcses, DateOnly asOf)
-		=> Predict(student, gcses, asOf, Catalogue.Default);
-
-	/// <summary>
-	///     Predict from facts already projected to <see cref="GcseResult" />s using an explicit catalogue.
-	///     The pipeline entry points materialise the GCSE list once for the engine and reuse it here, so the
-	///     projection isn't repeated. <paramref name="asOf" /> is the reference date the student's age is
-	///     computed against. The transition matrix defaults to the shipped extract; the engine threads an
-	///     explicit, data-directory-sourced matrix through the overload below.
-	/// </summary>
-	public static StudentProfile Predict(StudentInput student, IReadOnlyList<GcseResult> gcses, DateOnly asOf, CatalogueData catalogue)
-		=> Predict(student, gcses, asOf, catalogue, DfeTransitionMatrix.LoadDefault(), QualificationScale.Default);
-
-	/// <summary>
 	///     Predict from facts already projected to <see cref="GcseResult" />s using an explicit catalogue
-	///     and qualification scale. The pipeline entry points materialise the GCSE list once for the engine
-	///     and reuse it here, so the projection isn't repeated. <paramref name="asOf" /> is the reference
-	///     date the student's age is computed against. The transition matrix defaults to the shipped
-	///     extract; the engine threads an explicit, data-directory-sourced matrix through the overload below.
+	///     and qualification scale. The transition matrix defaults to the shipped extract; the engine
+	///     threads an explicit, data-directory-sourced matrix through the overload below.
 	/// </summary>
 	public static StudentProfile Predict(
 		StudentInput student, IReadOnlyList<GcseResult> gcses, DateOnly asOf, CatalogueData catalogue, QualificationScale scale)

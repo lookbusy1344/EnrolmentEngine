@@ -44,7 +44,7 @@ public sealed class Phase8Tests
 			new Dictionary<string, int> { ["maths"] = 6, ["english_language"] = 5 },
 			["plays_piano"]) { DateOfBirth = ValidDob };
 
-		StudentValidator.Validate(student).Should().BeEmpty();
+		StudentValidator.Validate(student, Harness.Catalogue, Harness.Scale).Should().BeEmpty();
 	}
 
 	[Theory]
@@ -55,7 +55,7 @@ public sealed class Phase8Tests
 	{
 		var student = new StudentInput("S-BAD", new Dictionary<string, int> { ["maths"] = grade }, []) { DateOfBirth = ValidDob };
 
-		StudentValidator.Validate(student)
+		StudentValidator.Validate(student, Harness.Catalogue, Harness.Scale)
 			.Should().ContainSingle()
 			.Which.Should().Contain("maths").And.Contain("out of range");
 	}
@@ -68,7 +68,7 @@ public sealed class Phase8Tests
 			new Dictionary<string, int> { ["maths"] = Thresholds.MinGcseGrade, ["art"] = Thresholds.MaxGcseGrade },
 			[]) { DateOfBirth = ValidDob };
 
-		StudentValidator.Validate(student).Should().BeEmpty();
+		StudentValidator.Validate(student, Harness.Catalogue, Harness.Scale).Should().BeEmpty();
 	}
 
 	[Fact]
@@ -76,7 +76,7 @@ public sealed class Phase8Tests
 	{
 		var student = new StudentInput("S-BAD", new Dictionary<string, int> { ["underwater_basketweaving"] = 6 }, []) { DateOfBirth = ValidDob };
 
-		StudentValidator.Validate(student)
+		StudentValidator.Validate(student, Harness.Catalogue, Harness.Scale)
 			.Should().ContainSingle()
 			.Which.Should().Contain("underwater_basketweaving");
 	}
@@ -86,7 +86,7 @@ public sealed class Phase8Tests
 	{
 		var student = new StudentInput("S-BAD", new Dictionary<string, int> { ["maths"] = 6 }, ["plays_piano", "   "]) { DateOfBirth = ValidDob };
 
-		StudentValidator.Validate(student)
+		StudentValidator.Validate(student, Harness.Catalogue, Harness.Scale)
 			.Should().ContainSingle()
 			.Which.Should().Contain("hobby");
 	}
@@ -99,7 +99,7 @@ public sealed class Phase8Tests
 			DateOfBirth = ValidDob,
 		};
 
-		StudentValidator.Validate(student)
+		StudentValidator.Validate(student, Harness.Catalogue, Harness.Scale)
 			.Should().ContainSingle()
 			.Which.Should().Contain("chosen_a_levels").And.Contain("duplicate");
 	}
@@ -112,7 +112,7 @@ public sealed class Phase8Tests
 			DateOfBirth = ValidDob,
 		};
 
-		StudentValidator.Validate(student)
+		StudentValidator.Validate(student, Harness.Catalogue, Harness.Scale)
 			.Should().ContainSingle()
 			.Which.Should().Contain("chosen_a_levels").And.Contain("philosophy");
 	}
@@ -122,7 +122,7 @@ public sealed class Phase8Tests
 	{
 		var student = new StudentInput("S-BAD", new Dictionary<string, int> { ["maths"] = 6 }, ["plays_piano"]);
 
-		StudentValidator.Validate(student)
+		StudentValidator.Validate(student, Harness.Catalogue, Harness.Scale)
 			.Should().ContainSingle()
 			.Which.Should().Contain("date_of_birth").And.Contain("required");
 	}

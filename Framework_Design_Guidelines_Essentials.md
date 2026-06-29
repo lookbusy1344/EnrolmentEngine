@@ -264,12 +264,14 @@ Extensibility is a *contract*. Every virtual member, protected member, and abstr
 
 The exception model makes failures propagate by default instead of relying on callers to inspect return codes. It also carries failure information outside the return type, which is essential for constrained signatures such as constructors, properties, events, virtual overrides, and operator overloads. Get this chapter wrong and every consumer inherits the unreliability.
 
+One of the biggest misconceptions about exceptions is that they are for “exceptional conditions”. The reality is that they are intended for communicating **error conditions**. From a framework design perspective, there is no such thing as an exceptional condition. One man’s exceptional condition is another man’s chronic condition.
+
 **Throw, don't return codes**
 - **DO** report execution failures by throwing exceptions. **DO NOT** return error codes, including for performance reasons. Error codes are easy to ignore; exceptions propagate by default.
 - .NET APIs use exceptions pervasively. Returning error codes introduces a second, parallel failure protocol that consumers must handle alongside exceptions; it is inconsistent with the platform and non-idiomatic. Use a deliberate Tester-Doer or Try API only for expected, common failure cases.
 - **CONSIDER** `Environment.FailFast` instead of throwing when continuing would corrupt process state; **AVOID** APIs that can cause an unrecoverable system failure.
 
-**Don't use exceptions for control flow**
+**Use exceptions for error conditions, not normal control flow**
 - **DO NOT** use exceptions for normal flow. For failures common in normal operation, offer a **Tester-Doer** (`if (d.ContainsKey(k)) …`) or the **Try pattern** so callers avoid the throw entirely.
 - **CONSIDER** the performance cost: throw rates above ~100/second will noticeably hurt most apps. The cost is in the throw, not the try.
 

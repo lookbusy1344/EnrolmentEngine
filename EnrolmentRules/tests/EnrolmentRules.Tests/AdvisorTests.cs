@@ -322,6 +322,68 @@ public sealed class AdvisorTests
 		parsed!.Advice.Single(a => a.Subject == Subject.Spanish).Reachable.Should().BeTrue();
 	}
 
+	[Fact]
+	public async Task low_grade_cost_budget_marks_subject_unreachable()
+	{
+		var (_, rules) = await Harness.BuildFromShippedWorkflowsAsync();
+		var engine = new EnrolmentEngine(
+			rules, Harness.Thresholds with { AdviceMaxGradeCost = 1 }, Harness.Catalogue, Harness.AsOf);
+		var student = new StudentInput("S-ADVISE", new Dictionary<string, int> {
+			["english_language"] = 7,
+			["maths"] = 5,
+			["physics"] = 5,
+			["chemistry"] = 5,
+			["biology"] = 5,
+		}, []);
+
+		var advice = await engine.AdviseAsync(student);
+		var chemistry = advice.Advice.Single(a => a.Subject == Subject.Chemistry);
+
+		chemistry.Reachable.Should().BeFalse();
+		chemistry.BlockedReason.Should().Be("budget exhausted");
+	}
+
+	[Fact]
+	public async Task pipeline_evaluation_cap_truncates_advice()
+	{
+		var (_, rules) = await Harness.BuildFromShippedWorkflowsAsync();
+		var engine = new EnrolmentEngine(
+			rules, Harness.Thresholds with { AdviceMaxPipelineEvaluations = 1 }, Harness.Catalogue, Harness.AsOf);
+		var student = new StudentInput("S-ADVISE", new Dictionary<string, int> {
+			["english_language"] = 7,
+			["maths"] = 5,
+			["physics"] = 5,
+			["chemistry"] = 5,
+			["biology"] = 5,
+		}, []);
+
+		var advice = await engine.AdviseAsync(student);
+
+		advice.TruncationReason.Should().Be("advice truncated");
+	}
+
+	[Fact]
+	public async Task advise_honours_cancellation_during_the_search()
+	{
+		var engine = await Harness.ShippedEngineAsync();
+		var student = new StudentInput("S-CANCEL", new Dictionary<string, int> {
+			["english_language"] = 7,
+			["maths"] = 5,
+			["physics"] = 5,
+			["chemistry"] = 5,
+			["biology"] = 5,
+		}, []);
+
+		using var cts = new CancellationTokenSource();
+		cts.CancelAfter(TimeSpan.FromMilliseconds(1));
+
+		// The diagnostic search ranges over the full candidate set — far more pipeline evaluations than a
+		// 1 ms window allows — so cancellation must be observed inside the BFS loop, not merely at the entry
+		// guard. The call can never complete before the token fires, so it must always throw.
+		var act = async () => await engine.AdviseAsync(student, true, cts.Token);
+		_ = await act.Should().ThrowAsync<OperationCanceledException>();
+	}
+
 	private static StudentInput ApplyChanges(StudentInput original, EquatableArray<GradeChange> changes)
 	{
 		var gcses = original.Gcses?.ToDictionary(static kv => kv.Key, static kv => kv.Value) ?? new Dictionary<string, int>();

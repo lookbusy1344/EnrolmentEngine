@@ -3,7 +3,6 @@ namespace EnrolmentRules.Tests;
 using Domain;
 using Engine;
 using FluentAssertions;
-using Prediction;
 
 /// <summary>
 ///     The twelve additional A-levels (economics … design technology) added as a pure data exercise —
@@ -37,7 +36,7 @@ public sealed class AdditionalSubjectsTests
 	{
 		var student = new StudentInput("S-TEST", gcses.ToDictionary(g => g.Subject, g => g.Grade), []);
 		var evaluator = await Harness.ShippedEvaluatorAsync();
-		return await evaluator.EvaluateRatingsAsync(GradePredictor.Predict(student, Harness.AsOf), student.ToGcseResults());
+		return await evaluator.EvaluateRatingsAsync(Harness.Predict(student), student.ToGcseResults());
 	}
 
 	private static Rating Of(IEnumerable<SubjectRating> ratings, Subject subject) =>

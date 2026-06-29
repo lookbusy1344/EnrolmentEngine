@@ -12,7 +12,7 @@ than assertion.
   deserialization, and RulesEngine lambda compilation — happens at startup (`CreateAsync` /
   `WorkflowStore.LoadValidateBuildAndProbeAsync`). The built engine is immutable and the evaluation
   path threads every per-student fact through the call, so a single instance serves the whole
-  process. Register it as a DI **singleton** (`AddEnrolmentEngine`); never rebuild per request.
+  process. Register it as a DI **singleton** (`AddEnrolmentEngineAsync` / `AddEnrolmentEngine`); never rebuild per request.
 - **Stateless and parallel-safe.** `EnrolmentEngine` and `RatingEvaluator` hold only the shared
   engine, catalogue, scale, and thresholds. There is no per-request mutable state, so concurrent
   `EvaluateAsync` calls neither contend nor interfere — batch is just `Task.WhenAll` over one

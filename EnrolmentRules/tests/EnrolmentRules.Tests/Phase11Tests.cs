@@ -3,7 +3,6 @@ namespace EnrolmentRules.Tests;
 using Domain;
 using Engine;
 using FluentAssertions;
-using Prediction;
 
 /// <summary>
 ///     Phase 11 — typed prior qualifications as entry qualifiers. The predictor must lift a matching
@@ -26,7 +25,7 @@ public sealed class Phase11Tests
 		var student = Student(new() { ["english_language"] = 1, ["maths"] = 1, ["biology"] = 1 },
 			new Qualification("applied_science", QualificationType.BtecDiploma, "distinction"));
 
-		var profile = GradePredictor.Predict(student, Harness.AsOf);
+		var profile = Harness.Predict(student);
 
 		profile.PriorQualifications.Should().Equal(student.PriorQualifications);
 		profile.PredictedGrades.Single(p => p.Subject == Subject.Biology).PredictedPoints.Should().Be(ALevelGrade.A);
@@ -38,7 +37,7 @@ public sealed class Phase11Tests
 		var student = Student(new() { ["english_language"] = 7, ["maths"] = 7, ["biology"] = 7 },
 			new Qualification("applied_science", QualificationType.BtecDiploma, "pass"));
 
-		var profile = GradePredictor.Predict(student, Harness.AsOf);
+		var profile = Harness.Predict(student);
 		var biology = profile.PredictedGrades.Single(p => p.Subject == Subject.Biology).PredictedPoints;
 
 		biology.Should().BeApproximately(Catalogue.Meta(Subject.Biology).Regression.Predict(profile.AverageGcseScore), 1e-9);
@@ -50,7 +49,7 @@ public sealed class Phase11Tests
 		var student = Student(new() { ["english_language"] = 9, ["maths"] = 9, ["biology"] = 9 },
 			new Qualification("applied_science", QualificationType.BtecDiploma, "distinction"));
 
-		var profile = GradePredictor.Predict(student, Harness.AsOf);
+		var profile = Harness.Predict(student);
 		var biology = profile.PredictedGrades.Single(p => p.Subject == Subject.Biology).PredictedPoints;
 
 		biology.Should().BeApproximately(Catalogue.Meta(Subject.Biology).Regression.Predict(profile.AverageGcseScore), 1e-9);
@@ -73,7 +72,8 @@ public sealed class Phase11Tests
 			new Qualification("applied_science", QualificationType.BtecDiploma, "platinum"));
 
 		StudentValidator.Validate(student, engine.Catalogue, engine.Scale).Should().BeEmpty();
-		StudentValidator.Validate(student, engine.Catalogue).Should().Contain(error => error.Contains("platinum"));
+		StudentValidator.Validate(student, engine.Catalogue, QualificationScale.Default)
+			.Should().Contain(error => error.Contains("platinum"));
 	}
 
 	[Fact]

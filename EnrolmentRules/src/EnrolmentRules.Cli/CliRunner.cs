@@ -120,43 +120,62 @@ public static class CliRunner
 			return ExitInput;
 		}
 
-		if (LoadValidStudent(path, stderr, engine.Catalogue, engine.Scale) is not { } student) {
+		if (Load(path, stderr) is not { } document) {
 			return ExitInput;
 		}
 
 		var useExplanation = output is Output.Explain or Output.ExplainText;
 		var useAdvice = output == Output.Advise;
-		var explanation = useExplanation ? await engine.ExplainAsync(student) : null;
-		var advice = useAdvice
-			? considerUnsatGcses is { } flag ? await engine.AdviseAsync(student, flag) : await engine.AdviseAsync(student)
-			: null;
-		var result = explanation is null ? await engine.EvaluateAsync(student) : null;
+		if (useExplanation) {
+			var outcome = await engine.TryExplainAsync(document.Student);
+			if (!outcome.Validation.IsValid) {
+				WriteValidationErrors(stderr, outcome.Validation);
+				return ExitInput;
+			}
+
+			switch (output) {
+				case Output.Explain:
+					stdout.WriteLine(JsonSerializer.Serialize(outcome.Value!, EnrolmentJsonContext.Default.ExplainedResult));
+					break;
+				case Output.ExplainText:
+					ExplanationRenderer.Render(outcome.Value!, stdout);
+					break;
+			}
+
+			return outcome.Value!.Eligible ? ExitOk : ExitIneligible;
+		}
+
+		if (useAdvice) {
+			var outcome = considerUnsatGcses is { } flag
+				? await engine.TryAdviseAsync(document.Student, flag)
+				: await engine.TryAdviseAsync(document.Student);
+			if (!outcome.Validation.IsValid) {
+				WriteValidationErrors(stderr, outcome.Validation);
+				return ExitInput;
+			}
+
+			stdout.WriteLine(JsonSerializer.Serialize(outcome.Value!, EnrolmentJsonContext.Default.AdviceResult));
+			return outcome.Value!.Eligible ? ExitOk : ExitIneligible;
+		}
+
+		var evaluation = await engine.TryEvaluateAsync(document.Student);
+		if (!evaluation.Validation.IsValid) {
+			WriteValidationErrors(stderr, evaluation.Validation);
+			return ExitInput;
+		}
+
+		var result = evaluation.Value!;
 		switch (output) {
 			case Output.Json:
-				stdout.WriteLine(JsonSerializer.Serialize(result!, EnrolmentJsonContext.Default.EnrolmentResult));
-				break;
-			case Output.Explain:
-				stdout.WriteLine(JsonSerializer.Serialize(explanation!, EnrolmentJsonContext.Default.ExplainedResult));
-				break;
-			case Output.ExplainText:
-				ExplanationRenderer.Render(explanation!, stdout);
-				break;
-			case Output.Advise:
-				stdout.WriteLine(JsonSerializer.Serialize(advice!, EnrolmentJsonContext.Default.AdviceResult));
+				stdout.WriteLine(JsonSerializer.Serialize(result, EnrolmentJsonContext.Default.EnrolmentResult));
 				break;
 			case Output.Table:
 			default:
-				TableRenderer.Render(result!, stdout);
+				TableRenderer.Render(result, stdout);
 				break;
 		}
 
-		return useExplanation
-			? explanation!.Eligible ? ExitOk : ExitIneligible
-			: useAdvice
-				? advice!.Eligible ? ExitOk : ExitIneligible
-				: result!.Eligible
-					? ExitOk
-					: ExitIneligible;
+		return result.Eligible ? ExitOk : ExitIneligible;
 	}
 
 	/// <summary>
@@ -212,13 +231,12 @@ public static class CliRunner
 			return new("?", null, "student document was empty or null");
 		}
 
-		var errors = StudentValidator.Validate(document.Student, engine.Catalogue, engine.Scale);
-		if (errors.Count > 0) {
-			return new(document.Student?.Id ?? "?", null, string.Join("; ", errors));
+		var outcome = await engine.TryEvaluateAsync(document.Student);
+		if (!outcome.Validation.IsValid) {
+			return new(document.Student?.Id ?? "?", null, string.Join("; ", outcome.Validation.Errors));
 		}
 
-		var result = await engine.EvaluateAsync(document.Student);
-		return new(document.Student.Id, result, null);
+		return new(document.Student.Id, outcome.Value, null);
 	}
 
 	/// <summary>Build the façade over the shipped workflows, reporting a load failure as an input error.</summary>
@@ -231,6 +249,13 @@ public static class CliRunner
 									   or PolicyThresholdsException or DirectoryNotFoundException or FileNotFoundException) {
 			stderr.WriteLine($"error: could not load enrolment rules: {ex.Message}");
 			return null;
+		}
+	}
+
+	private static void WriteValidationErrors(TextWriter stderr, ValidationOutcome validation)
+	{
+		foreach (var error in validation.Errors) {
+			stderr.WriteLine($"error: {error}");
 		}
 	}
 

@@ -40,7 +40,9 @@ public readonly record struct Subject(string Value) : IComparable<Subject>
 
 	public int CompareTo(Subject other) => StringComparer.Ordinal.Compare(Value, other.Value);
 
-	public override string ToString() => Value;
+	// The zero/default state has a null Value; FDG §8 forbids a null ToString, and the strongly-typed-string
+	// convention represents that state as the empty string.
+	public override string ToString() => Value ?? string.Empty;
 
 	public static bool operator <(Subject left, Subject right) => left.CompareTo(right) < 0;
 

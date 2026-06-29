@@ -42,8 +42,15 @@ internal static class Harness
 	/// <summary>The shipped policy thresholds, loaded once for the host-side tests to pin against.</summary>
 	public static PolicyThresholds Thresholds { get; } = PolicyThresholdsStore.LoadAndValidate(DataDir);
 
+	/// <summary>The shipped qualification scale, loaded once for the host-side tests to pin against.</summary>
+	public static QualificationScale Scale { get; } = QualificationScaleStore.LoadAndValidate(DataDir);
+
 	/// <summary>The shipped catalogue snapshot, loaded once for the host-side tests to pin against.</summary>
-	public static CatalogueData Catalogue { get; } = CatalogueStore.LoadAndValidate(DataDir);
+	public static CatalogueData Catalogue { get; } = CatalogueStore.LoadAndValidate(DataDir, Scale);
+
+	/// <summary>Predict a student profile against the shipped catalogue and scale.</summary>
+	public static StudentProfile Predict(StudentInput student) =>
+		GradePredictor.Predict(student, student.ToGcseResults(), AsOf, Catalogue, Scale);
 
 	/// <summary>Load + validate + probe-compile the shipped workflows and construct the engine over them.</summary>
 	public static async Task<(IReadOnlyList<Workflow> Workflows, IRulesEngine Engine)> BuildFromShippedWorkflowsAsync()
@@ -71,11 +78,11 @@ internal static class Harness
 
 	/// <summary>A <see cref="RatingEvaluator" /> over the shipped workflows for the host-side verdict tests.</summary>
 	public static async Task<RatingEvaluator> ShippedEvaluatorAsync() =>
-		new((await BuildFromShippedWorkflowsAsync()).Engine, Thresholds, Catalogue);
+		new((await BuildFromShippedWorkflowsAsync()).Engine, Thresholds, Catalogue, Scale);
 
 	/// <summary>The full <see cref="EnrolmentEngine" /> façade over the shipped workflows (end-to-end tests).</summary>
 	public static async Task<EnrolmentEngine> ShippedEngineAsync() =>
-		new((await BuildFromShippedWorkflowsAsync()).Engine, Thresholds, Catalogue, AsOf);
+		new((await BuildFromShippedWorkflowsAsync()).Engine, Thresholds, Catalogue, AsOf, Scale);
 
 	/// <summary>
 	///     The canonical probe input — the <em>union</em> of every shipped workflow's bound parameters, so
@@ -88,11 +95,11 @@ internal static class Harness
 	{
 		var student = WorkflowStore.CanonicalProbeStudent(thresholds);
 		var gcses = student.ToGcseResults();
-		var profile = GradePredictor.Predict(student, gcses, AsOf, Catalogue);
+		var profile = GradePredictor.Predict(student, gcses, AsOf, Catalogue, Scale);
 
 		return [
 			.. RatingEvaluator.EligibilityParameters(gcses, thresholds),
-			new("facts", new RatingFacts(profile, gcses, new(thresholds), Catalogue, QualificationScale.Default)),
+			new("facts", new RatingFacts(profile, gcses, new(thresholds), Catalogue, Scale)),
 		];
 	}
 

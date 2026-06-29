@@ -1,6 +1,5 @@
 namespace EnrolmentRules.Engine;
 
-using System.Collections.Concurrent;
 using Domain;
 
 /// <summary>
@@ -11,6 +10,7 @@ using Domain;
 internal static class CounterfactualAdvisor
 {
 	private const string BudgetExhaustedReason = "budget exhausted";
+	private const string TruncationReason = "advice truncated";
 
 	public static async Task<AdviceResult> AdviseAsync(
 		EnrolmentEngine engine,
@@ -33,8 +33,8 @@ internal static class CounterfactualAdvisor
 		// One evaluation cache shared across every subject's search: the searches all perturb the same
 		// student and explore heavily overlapping grade vectors, and a full EnrolmentResult is a pure
 		// function of the (fixed-hobbies) grade vector, so a vector evaluated for one subject is reused by
-		// the rest. Concurrent because the per-subject searches run in parallel below.
-		var evaluations = new ConcurrentDictionary<string, EnrolmentResult>(StringComparer.Ordinal);
+		// the rest. The per-subject searches run sequentially (below), so a plain dictionary suffices.
+		var evaluations = new Dictionary<string, EnrolmentResult>(StringComparer.Ordinal);
 
 		// The per-subject reachability search only ever raises GCSEs the student already sat: a grade bump is
 		// actionable advice, "sit another GCSE from scratch" is not. Restricting the candidate set to the held
@@ -43,19 +43,38 @@ internal static class CounterfactualAdvisor
 		// alone, which ClassifyBlockedReasonAsync surfaces as that entry rule's own reason. The
 		// considerUnsatGcses diagnostic knob reverts to the old, heavier search over every known GCSE.
 		var candidates = considerUnsatGcses ? AdvisorCandidates.AllSubjects : HeldSubjects(student);
+		var pipelineBudget = new PipelineEvaluationBudget(thresholds.AdviceMaxPipelineEvaluations);
+		var advice = new List<SubjectAdvice>();
+		string? truncation = null;
+
+		// Search the amber/red subjects sequentially rather than fanning out in parallel: an
+		// AdviceMaxPipelineEvaluations cap must truncate the same subjects on every run, and because the
+		// shared cache makes overlapping searches mostly redundant work, a parallel fan-out would buy little.
+		// Stop at the first subject whose search exhausts the cap and record the truncation.
+		foreach (var explanation in explained.Explanations.Where(static explanation => explanation.Rating is Rating.Red or Rating.Amber)) {
+			try {
+				advice.Add(await BuildSubjectAdviceAsync(
+					engine,
+					student,
+					explanation,
+					candidates,
+					evaluations,
+					thresholds,
+					pipelineBudget,
+					asOf,
+					cancellationToken).ConfigureAwait(false));
+			}
+			catch (PipelineEvaluationBudgetExhaustedException) {
+				truncation = TruncationReason;
+				break;
+			}
+		}
 
 		return new(
 			true,
 			[.. explained.EligibilityReasons],
-			[
-				.. await Task.WhenAll(
-						explained.Explanations
-							.Where(static explanation => explanation.Rating is Rating.Red or Rating.Amber)
-							.Select(explanation =>
-								BuildSubjectAdviceAsync(engine, student, explanation, candidates, evaluations, asOf, cancellationToken)))
-					.ConfigureAwait(false),
-			],
-			null);
+			[.. advice],
+			null) { TruncationReason = truncation };
 	}
 
 	private static async Task<SubjectAdvice> BuildSubjectAdviceAsync(
@@ -63,7 +82,9 @@ internal static class CounterfactualAdvisor
 		StudentInput student,
 		Explanation explanation,
 		IReadOnlyList<string> candidates,
-		ConcurrentDictionary<string, EnrolmentResult> evaluations,
+		Dictionary<string, EnrolmentResult> evaluations,
+		PolicyThresholds thresholds,
+		PipelineEvaluationBudget pipelineBudget,
 		DateOnly asOf,
 		CancellationToken cancellationToken)
 	{
@@ -74,14 +95,24 @@ internal static class CounterfactualAdvisor
 			student,
 			candidates,
 			evaluations,
+			thresholds,
+			pipelineBudget,
 			finalResult => finalResult.Recommendations.Single(r => r.Subject == explanation.Subject).Rating == target,
 			asOf,
 			cancellationToken).ConfigureAwait(false);
 
 		var blockedReason = search.Reachable
 			? null
-			: await ClassifyBlockedReasonAsync(engine, student, explanation, target, candidates, evaluations, asOf, cancellationToken)
-				.ConfigureAwait(false);
+			: await ClassifyBlockedReasonAsync(
+				engine,
+				student,
+				explanation,
+				target,
+				candidates,
+				evaluations,
+				pipelineBudget,
+				asOf,
+				cancellationToken).ConfigureAwait(false);
 
 		return new(
 			explanation.Subject,
@@ -106,7 +137,8 @@ internal static class CounterfactualAdvisor
 		Explanation explanation,
 		Rating target,
 		IReadOnlyList<string> candidates,
-		ConcurrentDictionary<string, EnrolmentResult> evaluations,
+		Dictionary<string, EnrolmentResult> evaluations,
+		PipelineEvaluationBudget pipelineBudget,
 		DateOnly asOf,
 		CancellationToken cancellationToken)
 	{
@@ -121,7 +153,8 @@ internal static class CounterfactualAdvisor
 
 		var maxed = candidates.ToDictionary(
 			static gcse => gcse, static _ => Thresholds.MaxGcseGrade, StringComparer.OrdinalIgnoreCase);
-		var result = await EvaluateCachedAsync(engine, student, maxed, candidates, evaluations, asOf, cancellationToken).ConfigureAwait(false);
+		var result = await EvaluateCachedAsync(engine, student, maxed, candidates, evaluations, pipelineBudget, asOf, cancellationToken)
+			.ConfigureAwait(false);
 		var recommendation = result.Recommendations.Single(r => r.Subject == explanation.Subject);
 
 		// Ratings ascend in severity (green < amber < red), so "at least as good as target" is <=.
@@ -134,7 +167,9 @@ internal static class CounterfactualAdvisor
 		EnrolmentEngine engine,
 		StudentInput student,
 		IReadOnlyList<string> candidates,
-		ConcurrentDictionary<string, EnrolmentResult> evaluations,
+		Dictionary<string, EnrolmentResult> evaluations,
+		PolicyThresholds thresholds,
+		PipelineEvaluationBudget pipelineBudget,
 		Func<EnrolmentResult, bool> predicate,
 		DateOnly asOf,
 		CancellationToken cancellationToken)
@@ -151,13 +186,13 @@ internal static class CounterfactualAdvisor
 		while (queue.Count > 0) {
 			cancellationToken.ThrowIfCancellationRequested();
 			var state = queue.Dequeue();
-			var result = await EvaluateCachedAsync(engine, student, state.Grades, candidates, evaluations, asOf, cancellationToken)
+			var result = await EvaluateCachedAsync(engine, student, state.Grades, candidates, evaluations, pipelineBudget, asOf, cancellationToken)
 				.ConfigureAwait(false);
 			if (predicate(result)) {
 				return new(true, [.. state.Changes]);
 			}
 
-			if (state.Cost >= AdvisorBudget.MaxCost) {
+			if (state.Cost >= thresholds.AdviceMaxGradeCost) {
 				continue;
 			}
 
@@ -176,7 +211,7 @@ internal static class CounterfactualAdvisor
 					_ = nextChanged.Add(subject);
 				}
 
-				if (nextChanged.Count > AdvisorBudget.MaxSubjects) {
+				if (nextChanged.Count > thresholds.AdviceMaxSubjectsChanged) {
 					continue;
 				}
 
@@ -241,15 +276,15 @@ internal static class CounterfactualAdvisor
 		return [.. changes];
 	}
 
-	// Evaluate the student with these grades, reusing a prior result for the same grade vector. The race
-	// between two parallel searches missing the same key is benign: both compute the same result and the
-	// second write replaces an identical value.
+	// Evaluate the student with these grades, reusing a prior result for the same grade vector. Searches run
+	// sequentially, so the cache is touched single-threaded — no synchronisation needed.
 	private static async Task<EnrolmentResult> EvaluateCachedAsync(
 		EnrolmentEngine engine,
 		StudentInput student,
 		Dictionary<string, int> grades,
 		IReadOnlyList<string> candidates,
-		ConcurrentDictionary<string, EnrolmentResult> evaluations,
+		Dictionary<string, EnrolmentResult> evaluations,
+		PipelineEvaluationBudget pipelineBudget,
 		DateOnly asOf,
 		CancellationToken cancellationToken)
 	{
@@ -257,6 +292,10 @@ internal static class CounterfactualAdvisor
 		var fingerprint = Fingerprint(grades, candidates);
 		if (evaluations.TryGetValue(fingerprint, out var cached)) {
 			return cached;
+		}
+
+		if (!pipelineBudget.TryConsume()) {
+			throw new PipelineEvaluationBudgetExhaustedException();
 		}
 
 		var result = await engine.EvaluateAsync(Apply(student, grades), asOf, cancellationToken).ConfigureAwait(false);
@@ -313,9 +352,37 @@ internal static class CounterfactualAdvisor
 	}
 }
 
-/// <summary>Named advisor budgets, kept separate from the search so the limits are not magic numbers.</summary>
-public static class AdvisorBudget
+internal sealed class PipelineEvaluationBudgetExhaustedException : Exception
 {
-	public const int MaxCost = 12;
-	public const int MaxSubjects = 3;
+	public PipelineEvaluationBudgetExhaustedException() { }
+
+	public PipelineEvaluationBudgetExhaustedException(string message) : base(message) { }
+
+	public PipelineEvaluationBudgetExhaustedException(string message, Exception innerException)
+		: base(message, innerException)
+	{
+	}
+}
+
+/// <summary>
+///     Counts full pipeline evaluations against an optional hard cap. The advisor consumes it from a single
+///     sequential search loop, so a plain counter suffices — no synchronisation.
+/// </summary>
+internal sealed class PipelineEvaluationBudget(int? limit)
+{
+	private int count;
+
+	public bool TryConsume()
+	{
+		if (limit is not { } max) {
+			return true;
+		}
+
+		if (count >= max) {
+			return false;
+		}
+
+		count++;
+		return true;
+	}
 }

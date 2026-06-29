@@ -3,7 +3,6 @@ namespace EnrolmentRules.Tests;
 using Domain;
 using Engine;
 using FluentAssertions;
-using Prediction;
 
 /// <summary>
 ///     The restudy bar is the downgrade half of the new prior-qualification feature. It must demote a
@@ -35,9 +34,8 @@ public sealed class RestudyBarTests
 	[Fact]
 	public void a_same_subject_prior_a_level_triggers_the_restudy_bar()
 	{
-		var profile = GradePredictor.Predict(
-			StrongStudent(new Qualification(Subject.Biology.Value, QualificationType.ALevel, "e")),
-			Harness.AsOf);
+		var profile = Harness.Predict(
+			StrongStudent(new Qualification(Subject.Biology.Value, QualificationType.ALevel, "e")));
 
 		var adjustments = ConstraintPass.Evaluate([
 			new(Subject.Biology, Rating.Green, "base"),
@@ -52,9 +50,8 @@ public sealed class RestudyBarTests
 	[Fact]
 	public void a_prior_qualification_in_a_different_subject_does_not_trigger_the_bar()
 	{
-		var profile = GradePredictor.Predict(
-			StrongStudent(new Qualification(Subject.Physics.Value, QualificationType.ALevel, "e")),
-			Harness.AsOf);
+		var profile = Harness.Predict(
+			StrongStudent(new Qualification(Subject.Physics.Value, QualificationType.ALevel, "e")));
 
 		ConstraintPass.Evaluate([
 				new(Subject.Biology, Rating.Green, "base"),

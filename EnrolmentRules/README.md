@@ -94,7 +94,9 @@ Routine policy changes are YAML changes. C# changes are reserved for new evaluat
 introducing a relationship type that does not already exist.
 
 For the full rule-location matrix and authoring workflow, see
-[the rule-authoring guide](docs/rule-authoring.md). New to the project or to Microsoft RulesEngine?
+[the rule-authoring guide](docs/rule-authoring.md). For a field-by-field map of the editable YAML
+and JSON surfaces, see [the configuration reference](docs/configuration-reference.md). New to the
+project or to Microsoft RulesEngine?
 Start with the [guided walk-through](docs/walkthrough.md).
 
 ## Repository Layout
@@ -104,13 +106,13 @@ Start with the [guided walk-through](docs/walkthrough.md).
 | `src/EnrolmentRules.Domain`                         | Immutable domain inputs, outputs, subject/rating vocabulary, thresholds, the `Catalogue` (loads/validates `data/catalogue.yaml`), and JSON source generation.                           |
 | `src/EnrolmentRules.Prediction`                     | GCSE averaging and linear prediction from raw student facts to `StudentProfile`.                                                                                                        |
 | `src/EnrolmentRules.Engine`                         | Workflow and catalogue loading, schema validation, probe compilation, rating evaluation, constraints, aggregation, the `EnrolmentEngine` facade and its `IEnrolmentEngine` abstraction. |
-| `src/EnrolmentRules.Extensions.DependencyInjection` | `AddEnrolmentEngine` registration helpers for `Microsoft.Extensions.DependencyInjection` hosts.                                                                                         |
+| `src/EnrolmentRules.Extensions.DependencyInjection` | `AddEnrolmentEngineAsync` / `AddEnrolmentEngine` registration helpers for `Microsoft.Extensions.DependencyInjection` hosts.                                                             |
 | `src/EnrolmentRules.Cli`                            | `enrolment` executable and table/JSON/batch command line modes.                                                                                                                         |
 | `src/EnrolmentRules.Benchmarks`                     | BenchmarkDotNet harness for engine throughput.                                                                                                                                          |
 | `tests/EnrolmentRules.Tests`                        | xUnit and FluentAssertions coverage, including engine-driven rule tests, invariants, and golden files.                                                                                  |
 | `workflows`                                         | Hot-swappable RulesEngine workflow YAML and its schema.                                                                                                                                 |
 | `examples`                                          | Single-student JSON, JSONL batch input, and golden-file fixtures.                                                                                                                       |
-| `docs/*.md`                                         | Reference docs for the pipeline, rule authoring, and engine-choice rationale.                                                                                                           |
+| `docs/*.md`                                         | Reference docs for the pipeline, configuration surfaces, rule authoring, and engine-choice rationale.                                                                                   |
 | `docs/plans`                                        | Design and implementation planning notes.                                                                                                                                               |
 
 ## Student Input
@@ -370,12 +372,12 @@ Batch output is JSONL. Each output line includes the student id and either a suc
 The CLI is a thin shim over the same engine you can embed directly. Four packable library projects
 ship from this solution:
 
-| Package                                         | For                                                                                       |
-|-------------------------------------------------|-------------------------------------------------------------------------------------------|
-| `EnrolmentRules.Domain`                         | Immutable inputs/results, validation, catalogue and qualification-scale domain types.     |
-| `EnrolmentRules.Prediction`                     | GCSE averaging, DfE transition evidence, and A-level prediction.                          |
-| `EnrolmentRules.Engine`                         | The pipeline façade, workflow bootstrap, constraints, aggregation, explanation, and advice. |
-| `EnrolmentRules.Extensions.DependencyInjection` | `AddEnrolmentEngine` registration for `Microsoft.Extensions.DependencyInjection` hosts.   |
+| Package                                         | For                                                                                                                 |
+|-------------------------------------------------|---------------------------------------------------------------------------------------------------------------------|
+| `EnrolmentRules.Domain`                         | Immutable inputs/results, validation, catalogue and qualification-scale domain types.                               |
+| `EnrolmentRules.Prediction`                     | GCSE averaging, DfE transition evidence, and A-level prediction.                                                    |
+| `EnrolmentRules.Engine`                         | The pipeline façade, workflow bootstrap, constraints, aggregation, explanation, and advice.                         |
+| `EnrolmentRules.Extensions.DependencyInjection` | `AddEnrolmentEngineAsync` / `AddEnrolmentEngine` registration for `Microsoft.Extensions.DependencyInjection` hosts. |
 
 Build the engine **once** — `CreateAsync` runs the full startup recipe (schema-validating thresholds,
 the qualification scale, catalogue, and workflows; loading the DfE transition matrix; then building
@@ -394,6 +396,20 @@ ExplainedResult explained = await enrolment.ExplainAsync(student);
 AdviceResult    advice    = await enrolment.AdviseAsync(student);
 ```
 
+For HTTP or other request boundaries, prefer **`TryEvaluateAsync`** (and the matching `TryExplainAsync`
+/ `TryAdviseAsync` overloads): invalid student documents return a structured `ValidationOutcome` instead
+of throwing, so the host can map problems to 400 responses without a catch block.
+
+```csharp
+ValidatedEvaluation<EnrolmentResult> validated = await enrolment.TryEvaluateAsync(student);
+if (!validated.Validation.IsValid)
+{
+    return Results.ValidationProblem(validated.Validation.Errors);
+}
+
+EnrolmentResult result = validated.Value!;
+```
+
 For a long-running host the reference date must not freeze at construction (a student's age would
 go stale across midnight). Either bind a live source resolved per evaluation, or pin the date per
 call:
@@ -406,30 +422,73 @@ EnrolmentResult atDate = await enrolment.EvaluateAsync(student, new DateOnly(202
 ```
 
 Depend on **`IEnrolmentEngine`** (the evaluate/explain/advise surface plus the bound `Catalogue` and
-`Scale`) rather than the concrete type to substitute a fake in your own tests. Every evaluation,
-explanation, advice, and bootstrap overload accepts an optional `CancellationToken`.
+`Scale`) rather than the concrete type to substitute a fake in your own tests. HTTP hosts can depend on
+**`IEnrolmentEvaluator`** alone and reserve **`IEnrolmentAdvisor`** for diagnostic tooling — DI registers
+the same singleton for all three. Every evaluation, explanation, advice, and bootstrap overload accepts
+an optional `CancellationToken`.
+
+#### Catalogue and scale snapshots
+
+`EnrolmentEngine.CreateAsync` binds one immutable `CatalogueData` and `QualificationScale` for the
+engine's lifetime. Every evaluation path threads those snapshots through prediction, the constraint
+pass, and aggregation. If your host loads a custom `data/` tree (or boots via `IEnrolmentDataSource`),
+**always** pass `enrolment.Catalogue` and `enrolment.Scale` — or the snapshots you passed to
+`CreateAsync` — into boundary validation and any direct calls to `GradePredictor`, `ConstraintPass`,
+`Aggregator`, `WorkflowLinter`, or `StudentValidator`. There are no implicit defaults on those APIs:
+`Catalogue.Default` / `QualificationScale.Default` remain for the shipped reference tables only
+(zero-wiring tests and CLI tooling).
+
+```csharp
+// Boundary validation must honour the same table the engine evaluates against.
+var problems = StudentValidator.Validate(student, enrolment.Catalogue, enrolment.Scale);
+```
 
 For hosts that ship data as embedded resources or another non-filesystem source, implement
 `IEnrolmentDataSource` and call `EnrolmentEngine.CreateAsync(source, ...)`. The bootstrapper consumes
 fresh streams for workflows, all schemas and YAML tables, and the transition matrix, then disposes
 them after constructing the immutable engine snapshot.
 
-In a DI host, register the bootstrapped singleton behind the abstraction:
+In a DI host, bootstrap asynchronously before building the container:
 
 ```csharp
 using EnrolmentRules.Extensions.DependencyInjection;
 
-services.AddEnrolmentEngine(options => {
-    options.WorkflowsDirectory = "workflows/";
-    options.DataDirectory      = "data/";
+await services.AddEnrolmentEngineAsync(options => {
+    options.UseWorkflowsDirectory("workflows/");
+    options.UseDataDirectory("data/");
     options.UseTimeProvider();        // live clock, resolved per evaluation; or UseFixedAsOf(date)
 });
+var provider = services.BuildServiceProvider();
 ```
 
-`AddEnrolmentEngine` performs its one-time bootstrap at container build (it blocks once on the
-async load; the engine's awaits use `ConfigureAwait(false)` so it cannot deadlock a host carrying a
-`SynchronizationContext`), then serves the same stateless singleton through both `EnrolmentEngine`
-and `IEnrolmentEngine`.
+If the host has already called `EnrolmentEngine.CreateAsync`, register the result with
+`services.AddEnrolmentEngine(engine)` instead. Both paths serve the same stateless singleton through
+`EnrolmentEngine` and `IEnrolmentEngine`.
+
+Workflows and policy YAML are **editable without recompile**, but a running process keeps the snapshot
+loaded at bootstrap until you reload. For hosts that edit `workflows/` or `data/` at runtime, register
+`IEnrolmentEngineFactory` and call `ReloadAsync` after each coherent edit (the library does not watch
+the filesystem — scheduling is the host's job). The DI package serves a stable interface proxy that
+reads `Current` on each call, so existing `IEnrolmentEngine` / `IEnrolmentEvaluator` /
+`IEnrolmentAdvisor` resolutions see the reloaded policy without rebuilding the container:
+
+```csharp
+await services.AddEnrolmentEngineFactoryAsync(options => {
+    options.UseWorkflowsDirectory("workflows/");
+    options.UseDataDirectory("data/");
+});
+var factory = provider.GetRequiredService<IEnrolmentEngineFactory>();
+await factory.ReloadAsync(); // re-runs the full startup recipe; leaves Current unchanged on failure
+```
+
+#### Hosting Advise
+
+`AdviseAsync` runs many full pipeline evaluations per subject (grade-cost search × counterfactual
+swaps). Treat it as a **diagnostic** operation: never map it to a synchronous hot HTTP path, always
+pass a `CancellationToken` linked to request abort, and rate-limit or queue it. Limits live in
+`data/thresholds.yaml` (`advice_max_grade_cost`, `advice_max_subjects_changed`, optional
+`advice_max_pipeline_evaluations`); when the pipeline cap is hit, `AdviceResult.TruncationReason` is
+`"advice truncated"`. Prefer `IEnrolmentAdvisor` only in tools that need this surface.
 
 For the per-request and batch costs this design delivers — and why `AdviseAsync` is the one call to
 keep off a hot path — see the [performance & benchmarks note](docs/benchmarks.md).
@@ -469,3 +528,29 @@ dotnet run -c Release --project src/EnrolmentRules.Benchmarks
   such as `ALevelGrade` and the `Thresholds` scale invariants — never bare literals.
 - Keep this project scoped to the `EnrolmentRules` directory. The parent repository contains
   unrelated sibling projects.
+
+## Code Quality
+
+The public API surface is designed to follow the
+[Framework Design Guidelines — Essentials](../Framework_Design_Guidelines_Essentials.md) (a distilled
+reference to Cwalina & Abrams, *Framework Design Guidelines*, 4th ed.): scenario-driven shapes,
+consistent naming, the exception model, and the standard collection/async/dispose patterns.
+
+These conventions are backed by three analyzer packages, run as part of the build (warnings are
+errors), so drift is caught mechanically rather than by review alone:
+
+- **Roslynator.Analyzers** — broad C# style and correctness analyzers.
+  [NuGet](https://www.nuget.org/packages/Roslynator.Analyzers) ·
+  [GitHub](https://github.com/dotnet/roslynator)
+- **Microsoft.VisualStudio.Threading.Analyzers** — async/threading correctness (e.g. `ConfigureAwait`,
+  sync-over-async).
+  [NuGet](https://www.nuget.org/packages/Microsoft.VisualStudio.Threading.Analyzers) ·
+  [GitHub](https://github.com/microsoft/vs-threading)
+- **lookbusy1344.RecordValueAnalyser** — verifies that `record` types backed by reference members keep
+  correct value-equality semantics.
+  [NuGet](https://www.nuget.org/packages/lookbusy1344.RecordValueAnalyser) ·
+  [GitHub](https://github.com/lookbusy1344/RecordValueAnalyser)
+
+## License
+
+MIT.

@@ -108,7 +108,14 @@ public static class WorkflowStore
 		var readers = files
 			.Select(file => (file.FileName, (TextReader)new StreamReader(file.Content, Encoding.UTF8, true, 1024, true)))
 			.ToList();
-		return LoadAndValidate(readers, schemaReader);
+		try {
+			return LoadAndValidate(readers, schemaReader);
+		}
+		finally {
+			foreach (var (_, content) in readers) {
+				content.Dispose();
+			}
+		}
 	}
 
 	private static string SchemaCacheKey(string schemaText) =>
@@ -128,14 +135,6 @@ public static class WorkflowStore
 	/// </summary>
 	public static IRulesEngine BuildEngine(IReadOnlyList<Workflow> workflows, ReSettings? settings = null) =>
 		new RulesEngine([.. workflows], settings ?? RuleSettings.Default);
-
-	/// <summary>
-	///     The production startup path: load, schema-validate, build the reusable engine, then probe-compile
-	///     every workflow against a canonical fully-populated input. Callers should use this when a workflow
-	///     problem must fail at startup rather than on the first real student evaluation.
-	/// </summary>
-	public static async Task<IRulesEngine> LoadValidateBuildAndProbeAsync(string directory, string? schemaPath = null)
-		=> await LoadValidateBuildAndProbeAsync(directory, Catalogue.Default, schemaPath).ConfigureAwait(false);
 
 	/// <summary>
 	///     The production startup path with an explicit catalogue: load, schema-validate, build the

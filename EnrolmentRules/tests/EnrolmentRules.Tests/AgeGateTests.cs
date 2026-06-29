@@ -3,7 +3,6 @@ namespace EnrolmentRules.Tests;
 using Domain;
 using Engine;
 using FluentAssertions;
-using Prediction;
 
 /// <summary>
 ///     The age-gated entry demonstration (§1.1 per-student attributes): <c>date_of_birth</c> is the raw
@@ -38,7 +37,7 @@ public sealed class AgeGateTests
 			[]) { DateOfBirth = dateOfBirth };
 
 		var evaluator = await Harness.ShippedEvaluatorAsync();
-		var ratings = await evaluator.EvaluateRatingsAsync(GradePredictor.Predict(student, Harness.AsOf), student.ToGcseResults());
+		var ratings = await evaluator.EvaluateRatingsAsync(Harness.Predict(student), student.ToGcseResults());
 		return ratings.Single(r => r.Subject == Subject.Art).Rating;
 	}
 

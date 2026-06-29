@@ -117,7 +117,7 @@ public sealed partial class InvariantTests : IAsyncLifetime
 	[Property(Arbitrary = new[] { typeof(StudentArbitraries) }, MaxTest = 250)]
 	public async Task<bool> random_valid_students_never_throw_and_preserve_phase_nine_invariants(StudentInput student)
 	{
-		StudentValidator.Validate(student).Should().BeEmpty();
+		StudentValidator.Validate(student, Harness.Catalogue, Harness.Scale).Should().BeEmpty();
 
 		var explained = await engine.ExplainAsync(student);
 

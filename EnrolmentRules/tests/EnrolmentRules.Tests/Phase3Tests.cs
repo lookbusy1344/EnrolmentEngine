@@ -3,7 +3,6 @@ namespace EnrolmentRules.Tests;
 using Domain;
 using Engine;
 using FluentAssertions;
-using Prediction;
 
 /// <summary>
 ///     Phase 3 — per-subject entry requirements + green/amber/red rating tiers as ordered workflow rules,
@@ -17,7 +16,7 @@ public sealed class Phase3Tests
 	{
 		var student = new StudentInput("S-TEST", gcses.ToDictionary(g => g.Subject, g => g.Grade), []);
 		var evaluator = await Harness.ShippedEvaluatorAsync();
-		return await evaluator.EvaluateRatingsAsync(GradePredictor.Predict(student, Harness.AsOf), student.ToGcseResults());
+		return await evaluator.EvaluateRatingsAsync(Harness.Predict(student), student.ToGcseResults());
 	}
 
 	private static Rating Of(IEnumerable<SubjectRating> ratings, Subject subject) =>

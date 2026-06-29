@@ -37,7 +37,12 @@ public sealed class Phase4Tests
 		}, []);
 
 	private static StudentProfile ProfileFor(IReadOnlyList<GcseResult> gcses) =>
-		GradePredictor.Predict(new("S", gcses.ToDictionary(g => g.Subject, g => g.Grade), []), Harness.AsOf);
+		GradePredictor.Predict(
+			new("S", gcses.ToDictionary(g => g.Subject, g => g.Grade), []),
+			gcses,
+			Harness.AsOf,
+			Harness.Catalogue,
+			Harness.Scale);
 
 	[Fact]
 	public async Task ineligible_student_is_red_in_every_subject_with_the_gate_reason()
@@ -77,7 +82,7 @@ public sealed class Phase4Tests
 		var spy = new RecordingEngine((await Harness.BuildFromShippedWorkflowsAsync()).Engine);
 		var thresholds = PolicyThresholdsStore.LoadAndValidate(Harness.DataDir);
 
-		var ratings = await new RatingEvaluator(spy, thresholds).EvaluateAsync(GradePredictor.Predict(student, Harness.AsOf), gcses);
+		var ratings = await new RatingEvaluator(spy, thresholds).EvaluateAsync(Harness.Predict(student), gcses);
 
 		spy.ExecutedWorkflows.Should().Contain(RatingEvaluator.SubjectRatingsWorkflow);
 		ratings.Should().NotContain(r => r.Rating == Rating.Red);

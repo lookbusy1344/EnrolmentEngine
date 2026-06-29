@@ -21,3 +21,6 @@ amber_tariff_factor: 0.5
 # cheaper search. Set it to true to revert to the old behaviour, which may also propose sitting a brand
 # new GCSE; useful for diagnosing why a subject is reachable or unreachable, not for normal operation.
 advice_considers_unsat_gcses: false
+advice_max_grade_cost: 12
+advice_max_subjects_changed: 3
+# advice_max_pipeline_evaluations:  # optional hard cap on full pipeline runs per advise call; omit for unlimited

@@ -7,34 +7,65 @@ using Microsoft.Extensions.DependencyInjection;
 public static class ServiceCollectionExtensions
 {
 	/// <summary>
-	///     Register a singleton <see cref="EnrolmentEngine" /> after bootstrapping the shipped workflows,
-	///     catalogue and thresholds. The engine itself is stateless and safe to reuse across requests.
+	///     Register a pre-bootstrapped singleton engine. The instance is stateless and safe to reuse across
+	///     requests. Use this when the host has already bootstrapped an engine (for example via
+	///     <c>EnrolmentEngine.CreateAsync</c> or <see cref="AddEnrolmentEngineAsync" />).
 	/// </summary>
-	public static IServiceCollection AddEnrolmentEngine(
+	public static IServiceCollection AddEnrolmentEngine(this IServiceCollection services, IEnrolmentEngine engine)
+	{
+		ArgumentNullException.ThrowIfNull(services);
+		ArgumentNullException.ThrowIfNull(engine);
+
+		_ = services.AddSingleton<IEnrolmentEngine>(engine);
+		_ = services.AddSingleton<IEnrolmentEvaluator>(engine);
+		_ = services.AddSingleton<IEnrolmentAdvisor>(engine);
+		if (engine is EnrolmentEngine concrete) {
+			_ = services.AddSingleton(concrete);
+		}
+
+		return services;
+	}
+
+	/// <summary>
+	///     Bootstrap and register a singleton <see cref="EnrolmentEngine" /> from the configured workflows and
+	///     data directories. Await this before <c>BuildServiceProvider</c> so startup I/O stays async end-to-end.
+	/// </summary>
+	public static async Task<IServiceCollection> AddEnrolmentEngineAsync(
 		this IServiceCollection services,
-		Action<EnrolmentEngineOptions> configure)
+		Action<EnrolmentEngineOptions> configure,
+		CancellationToken cancellationToken = default)
 	{
 		ArgumentNullException.ThrowIfNull(services);
 		ArgumentNullException.ThrowIfNull(configure);
 
 		var options = new EnrolmentEngineOptions();
 		configure(options);
-		options.Validate();
+		var engine = await options.CreateEngineAsync(cancellationToken).ConfigureAwait(false);
+		return services.AddEnrolmentEngine(engine);
+	}
 
-		// Service registration is synchronous; this one-time bootstrap intentionally blocks at container build.
-		// CreateAsync's awaits use ConfigureAwait(false), so this blocking resolve does not deadlock a host that
-		// carries a SynchronizationContext.
-#pragma warning disable VSTHRD002
-		_ = services.AddSingleton(_ =>
-			EnrolmentEngine.CreateAsync(
-				options.WorkflowsDirectory,
-				options.DataDirectory,
-				options.AsOfSource()).GetAwaiter().GetResult());
-#pragma warning restore VSTHRD002
+	/// <summary>
+	///     Bootstrap and register a reloadable <see cref="IEnrolmentEngineFactory" /> plus a singleton
+	///     <see cref="IEnrolmentEngine" /> proxy that forwards each call to
+	///     <see cref="IEnrolmentEngineFactory.Current" />.
+	/// </summary>
+	public static async Task<IServiceCollection> AddEnrolmentEngineFactoryAsync(
+		this IServiceCollection services,
+		Action<EnrolmentEngineOptions> configure,
+		CancellationToken cancellationToken = default)
+	{
+		ArgumentNullException.ThrowIfNull(services);
+		ArgumentNullException.ThrowIfNull(configure);
 
-		// Expose the same singleton through the abstraction so consumers can depend on IEnrolmentEngine and
-		// substitute a fake in their own tests.
-		_ = services.AddSingleton<IEnrolmentEngine>(static sp => sp.GetRequiredService<EnrolmentEngine>());
+		var options = new EnrolmentEngineOptions();
+		configure(options);
+		var factory = await options.CreateFactoryAsync(cancellationToken).ConfigureAwait(false);
+		_ = services.AddSingleton(factory);
+		_ = services.AddSingleton<IEnrolmentEngineFactory>(factory);
+		_ = services.AddSingleton<ReloadingEnrolmentEngineProxy>();
+		_ = services.AddSingleton<IEnrolmentEvaluator>(static provider => provider.GetRequiredService<ReloadingEnrolmentEngineProxy>());
+		_ = services.AddSingleton<IEnrolmentAdvisor>(static provider => provider.GetRequiredService<ReloadingEnrolmentEngineProxy>());
+		_ = services.AddSingleton<IEnrolmentEngine>(static provider => provider.GetRequiredService<ReloadingEnrolmentEngineProxy>());
 
 		return services;
 	}

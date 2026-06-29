@@ -118,6 +118,18 @@ public static class PolicyThresholdsStore
 		if (thresholds.MaxGreenChoices is < 1) {
 			throw new InvalidDataException("max_green_choices, when set, must be at least 1.");
 		}
+
+		if (thresholds.AdviceMaxGradeCost < 1) {
+			throw new InvalidDataException("advice_max_grade_cost must be at least 1.");
+		}
+
+		if (thresholds.AdviceMaxSubjectsChanged < 1) {
+			throw new InvalidDataException("advice_max_subjects_changed must be at least 1.");
+		}
+
+		if (thresholds.AdviceMaxPipelineEvaluations is < 1) {
+			throw new InvalidDataException("advice_max_pipeline_evaluations, when set, must be at least 1.");
+		}
 	}
 
 	private static string DescribeErrors(EvaluationResults results)

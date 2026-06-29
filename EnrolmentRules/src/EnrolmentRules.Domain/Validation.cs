@@ -40,20 +40,6 @@ public static class StudentValidator
 	///     birth must be present, and every hobby tag must be non-blank. Returns one message per problem, in
 	///     document order; an empty list means valid.
 	/// </summary>
-	public static IReadOnlyList<string> Validate(StudentInput? student)
-		=> Validate(student, Catalogue.Default, QualificationScale.Default);
-
-	/// <summary>
-	///     Validate one student document against a specific catalogue. This is the host-safe path for
-	///     long-running processes and library consumers that may hold more than one catalogue in memory.
-	/// </summary>
-	public static IReadOnlyList<string> Validate(StudentInput? student, CatalogueData catalogue)
-		=> Validate(student, catalogue, QualificationScale.Default);
-
-	/// <summary>
-	///     Validate one student document against explicit catalogue and qualification-scale snapshots. This
-	///     is the host-safe path for long-running processes and tests that hold more than one table in memory.
-	/// </summary>
 	public static IReadOnlyList<string> Validate(StudentInput? student, CatalogueData catalogue, QualificationScale scale)
 	{
 		if (student is null) {

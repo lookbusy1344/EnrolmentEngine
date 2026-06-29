@@ -8,6 +8,8 @@ and how to run it and change it safely.
 It is a companion to the other project docs:
 
 - [`README.md`](../README.md) — the quick start, input shape, CLI examples, and library usage.
+- [`docs/configuration-reference.md`](configuration-reference.md) — the field-level reference for
+  the editable YAML/JSON surfaces.
 - [`docs/rule-authoring.md`](rule-authoring.md) — the practical guide to changing workflow and
   policy YAML safely.
 - [`docs/engine-choice.md`](engine-choice.md) — why this project uses Microsoft RulesEngine rather
@@ -671,7 +673,7 @@ ExplainedResult explained = await enrolment.ExplainAsync(student);
 
 All bootstrap and evaluate/explain/advise overloads accept an optional `CancellationToken`. For
 long-running hosts (live clock per evaluation), the `IEnrolmentEngine` abstraction, DI registration
-via `AddEnrolmentEngine`, and stream-backed `IEnrolmentDataSource` bootstrap, see the
+via `AddEnrolmentEngineAsync`, and stream-backed `IEnrolmentDataSource` bootstrap, see the
 [library usage section in `README.md`](../README.md#using-enrolmentrules-as-a-library).
 
 ---
@@ -688,9 +690,15 @@ normal operation. They are listed only to mark the boundary.
 to require 6 GCSE passes instead of 5, set `min_passes: 6` — the `EnoughPasses` expression already
 reads `policy.MinPasses`, so no expression or code change is needed. The file is loaded and
 schema-validated at startup (`PolicyThresholdsStore`) and threaded in as `PolicyThresholds`, so the
-new value flows to *both* the eligibility lambda and the host pass (optional green cap, tariff, advice). No
-recompile — but **you must add or update a test that drives the change through the engine** (see
-[defence in depth](#7-why-you-can-trust-untyped-rules-defence-in-depth)).
+new value flows to *both* the eligibility lambda and the host pass (optional green cap, tariff, advice).
+No recompile — but **you must add or update a test that drives the change through the engine** (see
+[defence in depth](#7-why-you-can-trust-untyped-rules-defence-in-depth)). A long-running host must
+also call `IEnrolmentEngineFactory.ReloadAsync` (or rebuild the engine) to pick up the edit; the
+library does not watch the filesystem.
+
+```csharp
+await factory.ReloadAsync(); // same startup recipe as CreateAsync; Current unchanged on failure
+```
 
 **Changing a tier's shape (the "rules-as-data" path).** Edit the YAML in `workflows/`. To make
 Physics need a predicted A for green, change `physics:green` in `subject-ratings.yaml`.
@@ -783,7 +791,7 @@ weaknesses into loud boot-time failures rather than silent mis-enrolments:
 The practical rule for contributors: **treat workflow YAML as executable code.** A workflow
 change is a code change, and it must keep all seven layers green
 (`dotnet build EnrolmentRules.slnx -warnaserror`, `dotnet format EnrolmentRules.slnx`,
-`gtimeout 20 dotnet test EnrolmentRules.slnx`).
+`dotnet test EnrolmentRules.slnx`).
 
 ---
 

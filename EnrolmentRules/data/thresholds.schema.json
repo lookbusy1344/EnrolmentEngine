@@ -80,6 +80,21 @@
     "advice_considers_unsat_gcses": {
       "description": "Optional, off by default. When true the counterfactual advisor reverts to the old, heavier search that may propose sitting a brand-new GCSE; a diagnostic knob, not for normal operation.",
       "type": "boolean"
+    },
+    "advice_max_grade_cost": {
+      "description": "Maximum total GCSE grade increments the counterfactual advisor may propose per subject search.",
+      "type": "integer",
+      "minimum": 1
+    },
+    "advice_max_subjects_changed": {
+      "description": "Maximum distinct GCSE subjects the counterfactual advisor may change in one proposal bundle.",
+      "type": "integer",
+      "minimum": 1
+    },
+    "advice_max_pipeline_evaluations": {
+      "description": "Optional hard cap on full pipeline evaluations across one advise call; omit for unlimited.",
+      "type": "integer",
+      "minimum": 1
     }
   }
 }

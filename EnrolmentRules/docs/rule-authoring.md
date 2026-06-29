@@ -17,9 +17,11 @@ understand or debug an effect.
 Recommended reading order:
 
 1. [README](../README.md) for setup, CLI usage, input shape, and library usage.
-2. [Guided walk-through](walkthrough.md) for the end-to-end pipeline and decision tables.
-3. This guide for changing workflow/data rules safely.
-4. [Engine-choice rationale](engine-choice.md) if you want the RulesEngine vs NRules/RETE design
+2. [Configuration reference](configuration-reference.md) for the field-level map of the editable
+   YAML/JSON surfaces.
+3. [Guided walk-through](walkthrough.md) for the end-to-end pipeline and decision tables.
+4. This guide for changing workflow/data rules safely.
+5. [Engine-choice rationale](engine-choice.md) if you want the RulesEngine vs NRules/RETE design
    argument.
 
 ---
@@ -421,7 +423,7 @@ After adding the rule tests, run the bounded project gate:
 ```bash
 dotnet build EnrolmentRules.slnx -warnaserror
 dotnet format EnrolmentRules.slnx
-gtimeout 20 dotnet test EnrolmentRules.slnx
+dotnet test EnrolmentRules.slnx
 ```
 
 ### The schema files

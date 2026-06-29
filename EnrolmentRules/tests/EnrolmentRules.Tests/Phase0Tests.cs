@@ -24,7 +24,7 @@ public sealed class Phase0Tests
 	[Fact]
 	public async Task shipped_engine_construction_probe_compiles_at_startup()
 	{
-		var engine = await WorkflowStore.LoadValidateBuildAndProbeAsync(Harness.WorkflowsDir, Harness.SchemaPath);
+		var engine = await WorkflowStore.LoadValidateBuildAndProbeAsync(Harness.WorkflowsDir, Harness.Catalogue, Harness.SchemaPath);
 
 		engine.Should().NotBeNull();
 	}

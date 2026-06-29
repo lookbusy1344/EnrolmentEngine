@@ -25,7 +25,7 @@ public sealed class WorkflowLinterTests
 			},
 		];
 
-		var findings = WorkflowLinter.Lint(workflows);
+		var findings = WorkflowLinter.Lint(workflows, Harness.Catalogue);
 
 		findings.Should().ContainSingle(finding =>
 			finding.Workflow == RatingEvaluator.SubjectRatingsWorkflow
@@ -49,7 +49,7 @@ public sealed class WorkflowLinterTests
 			},
 		];
 
-		var findings = WorkflowLinter.Lint(workflows);
+		var findings = WorkflowLinter.Lint(workflows, Harness.Catalogue);
 
 		findings.Should().ContainSingle(finding =>
 			finding.Rule == "maths:red"
@@ -70,7 +70,7 @@ public sealed class WorkflowLinterTests
 			},
 		];
 
-		var findings = WorkflowLinter.Lint(workflows);
+		var findings = WorkflowLinter.Lint(workflows, Harness.Catalogue);
 
 		findings.Should().ContainSingle(finding =>
 			finding.Rule == "maths"
@@ -91,7 +91,7 @@ public sealed class WorkflowLinterTests
 			},
 		];
 
-		var findings = WorkflowLinter.Lint(workflows);
+		var findings = WorkflowLinter.Lint(workflows, Harness.Catalogue);
 
 		findings.Should().ContainSingle(finding =>
 			finding.Rule == "maths:green"
@@ -112,7 +112,7 @@ public sealed class WorkflowLinterTests
 			},
 		];
 
-		var findings = WorkflowLinter.Lint(workflows);
+		var findings = WorkflowLinter.Lint(workflows, Harness.Catalogue);
 
 		findings.Should().ContainSingle(finding =>
 			finding.Rule == "maths:green"
@@ -135,7 +135,7 @@ public sealed class WorkflowLinterTests
 			},
 		];
 
-		var findings = WorkflowLinter.Lint(workflows);
+		var findings = WorkflowLinter.Lint(workflows, Harness.Catalogue);
 
 		findings.Should().ContainSingle(finding =>
 			finding.Rule == "maths:green"
@@ -163,7 +163,7 @@ public sealed class WorkflowLinterTests
 			},
 		];
 
-		var findings = WorkflowLinter.Lint(workflows);
+		var findings = WorkflowLinter.Lint(workflows, Harness.Catalogue);
 
 		findings.Should().NotContain(finding => finding.Message.Contains("unknown subject key", StringComparison.OrdinalIgnoreCase));
 	}
@@ -173,7 +173,7 @@ public sealed class WorkflowLinterTests
 	{
 		var workflows = WorkflowStore.LoadAndValidate(Harness.WorkflowsDir, Harness.SchemaPath);
 
-		var findings = WorkflowLinter.Lint(workflows);
+		var findings = WorkflowLinter.Lint(workflows, Harness.Catalogue);
 
 		findings.Should().BeEmpty();
 	}

@@ -33,7 +33,7 @@ public sealed class Phase1Tests
 	}
 
 	// Phase 1 exercises GCSE averaging/prediction, not the age gate, so a fixed reference date suffices.
-	private static StudentProfile Predict(StudentInput student) => GradePredictor.Predict(student, Harness.AsOf);
+	private static StudentProfile Predict(StudentInput student) => Harness.Predict(student);
 
 	private static CatalogueData FurtherMathsPrerequisiteCatalogue(bool requiresMaths)
 	{
@@ -116,7 +116,7 @@ public sealed class Phase1Tests
 					? shipped.Meta(subject) with { Regression = new(0.50, 0.25) }
 					: shipped.Meta(subject)));
 
-		var profile = GradePredictor.Predict(student, gcses, Harness.AsOf, tweaked);
+		var profile = GradePredictor.Predict(student, gcses, Harness.AsOf, tweaked, Harness.Scale);
 
 		var predicted = profile.PredictedGrades.Single(p => p.Subject == Subject.Maths).PredictedPoints;
 		predicted.Should().BeApproximately(Math.Clamp((0.50 * average) + 0.25, ALevelGrade.Min, ALevelGrade.Max), Tolerance);
@@ -161,7 +161,7 @@ public sealed class Phase1Tests
 	{
 		var student = Student(new() { ["maths"] = 6 }, "plays_piano") with { ChosenALevels = [Subject.Physics], DateOfBirth = new(2009, 9, 1) };
 
-		StudentValidator.Validate(student, LimitedCatalogue())
+		StudentValidator.Validate(student, LimitedCatalogue(), Harness.Scale)
 			.Should()
 			.ContainSingle()
 			.Which.Should().Contain("physics");
@@ -180,7 +180,7 @@ public sealed class Phase1Tests
 	public void dfe_transition_matrix_maps_average_gcse_band_to_real_probability()
 	{
 		var evidence = DfeTransitionMatrix.LoadDefault()
-			.EvidenceFor(7.2)
+			.EvidenceFor(7.2, Harness.Catalogue)
 			.Single(e => e.Subject == Subject.Maths);
 
 		evidence.PriorAttainmentBand.Should().Be("7 to < 8");
@@ -202,7 +202,7 @@ public sealed class Phase1Tests
 	public void sparse_dfe_subject_band_falls_back_to_nearest_lower_populated_band()
 	{
 		var evidence = DfeTransitionMatrix.LoadDefault()
-			.EvidenceFor(9.0)
+			.EvidenceFor(9.0, Harness.Catalogue)
 			.Single(e => e.Subject == Subject.Art);
 
 		evidence.PriorAttainmentBand.Should().Be("8 to < 9");

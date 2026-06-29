@@ -35,7 +35,7 @@ public sealed class Phase5Tests
 	public void further_maths_is_forced_red_when_maths_does_not_qualify()
 	{
 		// Further Maths cleared its own tier (green) but Maths is red: the prerequisite is unmet.
-		var adjustments = ConstraintPass.Evaluate(Ratings((Subject.FurtherMaths, Rating.Green)), Profile());
+		var adjustments = ConstraintPass.Evaluate(Ratings((Subject.FurtherMaths, Rating.Green)), Profile(), Harness.Catalogue);
 
 		var fm = adjustments.Should().ContainSingle().Which;
 		fm.Subject.Should().Be(Subject.FurtherMaths);
@@ -50,7 +50,7 @@ public sealed class Phase5Tests
 		// Shipped policy requires Maths to be a committed choice (requires: chosen): a merely-qualifying
 		// Maths no longer satisfies Further Maths's prerequisite.
 		var adjustments = ConstraintPass.Evaluate(
-			Ratings((Subject.Maths, Rating.Amber), (Subject.FurtherMaths, Rating.Green)), Profile());
+			Ratings((Subject.Maths, Rating.Amber), (Subject.FurtherMaths, Rating.Green)), Profile(), Harness.Catalogue);
 
 		adjustments.Should().ContainSingle(a => a.Subject == Subject.FurtherMaths)
 			.Which.To.Should().Be(Rating.Red);
@@ -63,7 +63,7 @@ public sealed class Phase5Tests
 		// A-level — a committed prerequisite is at least as strong as a qualifying one, so Further Maths
 		// keeps the green its own entry table earned.
 		var profile = Profile() with { ChosenALevels = [Subject.Maths] };
-		var adjustments = ConstraintPass.Evaluate(Ratings((Subject.FurtherMaths, Rating.Green)), profile);
+		var adjustments = ConstraintPass.Evaluate(Ratings((Subject.FurtherMaths, Rating.Green)), profile, Harness.Catalogue);
 
 		adjustments.Should().NotContain(a => a.Subject == Subject.FurtherMaths);
 	}
@@ -73,7 +73,7 @@ public sealed class Phase5Tests
 	{
 		// A committed A-level that isn't Maths does not satisfy Further Maths's prerequisite.
 		var profile = Profile() with { ChosenALevels = [Subject.Physics] };
-		var adjustments = ConstraintPass.Evaluate(Ratings((Subject.FurtherMaths, Rating.Green)), profile);
+		var adjustments = ConstraintPass.Evaluate(Ratings((Subject.FurtherMaths, Rating.Green)), profile, Harness.Catalogue);
 
 		adjustments.Should().ContainSingle(a => a.Subject == Subject.FurtherMaths)
 			.Which.To.Should().Be(Rating.Red);
@@ -166,7 +166,7 @@ public sealed class Phase5Tests
 	public void mutual_exclusion_downgrades_only_the_lower_weight_subject_to_amber()
 	{
 		var adjustments = ConstraintPass.Evaluate(
-			Ratings((Subject.History, Rating.Green), (Subject.Art, Rating.Green)), Profile());
+			Ratings((Subject.History, Rating.Green), (Subject.Art, Rating.Green)), Profile(), Harness.Catalogue);
 
 		var (loser, winner) =
 			Catalogue.Meta(Subject.History).UcasWeight < Catalogue.Meta(Subject.Art).UcasWeight
@@ -184,7 +184,7 @@ public sealed class Phase5Tests
 	public void red_severity_mutual_exclusion_downgrades_the_lower_weight_subject_to_red()
 	{
 		var adjustments = ConstraintPass.Evaluate(
-			Ratings((Subject.French, Rating.Green), (Subject.German, Rating.Green)), Profile());
+			Ratings((Subject.French, Rating.Green), (Subject.German, Rating.Green)), Profile(), Harness.Catalogue);
 
 		var loser = Catalogue.Meta(Subject.French).UcasWeight < Catalogue.Meta(Subject.German).UcasWeight
 			? Subject.French
@@ -204,7 +204,7 @@ public sealed class Phase5Tests
 		var ratings = Ratings((Subject.French, Rating.Green), (Subject.German, Rating.Red));
 		var profile = Profile() with { ChosenALevels = [Subject.German] };
 
-		var adjustments = ConstraintPass.Evaluate(ratings, profile);
+		var adjustments = ConstraintPass.Evaluate(ratings, profile, Harness.Catalogue);
 
 		var exclusion = adjustments.Should().ContainSingle().Which;
 		exclusion.Subject.Should().Be(Subject.French);
@@ -219,7 +219,7 @@ public sealed class Phase5Tests
 		var ratings = Ratings((Subject.History, Rating.Green), (Subject.Art, Rating.Red));
 		var profile = Profile() with { ChosenALevels = [Subject.Art] };
 
-		var adjustments = ConstraintPass.Evaluate(ratings, profile);
+		var adjustments = ConstraintPass.Evaluate(ratings, profile, Harness.Catalogue);
 
 		var exclusion = adjustments.Should().ContainSingle().Which;
 		exclusion.Subject.Should().Be(Subject.History);
@@ -232,7 +232,7 @@ public sealed class Phase5Tests
 	public void mutual_exclusion_fires_only_when_both_subjects_are_green()
 	{
 		var adjustments = ConstraintPass.Evaluate(
-			Ratings((Subject.History, Rating.Green), (Subject.Art, Rating.Amber)), Profile());
+			Ratings((Subject.History, Rating.Green), (Subject.Art, Rating.Amber)), Profile(), Harness.Catalogue);
 
 		adjustments.Should().BeEmpty();
 	}
@@ -246,7 +246,7 @@ public sealed class Phase5Tests
 			(Subject.Biology, Rating.Green), (Subject.History, Rating.Green));
 		var profile = Profile() with { ChosenALevels = [Subject.French] };
 
-		var final = ConstraintPass.Apply(ratings, ConstraintPass.Evaluate(ratings, profile));
+		var final = ConstraintPass.Apply(ratings, ConstraintPass.Evaluate(ratings, profile, Harness.Catalogue));
 
 		final.Should().ContainSingle(r => r.Subject == Subject.French && r.Rating == Rating.Green);
 	}
@@ -254,7 +254,7 @@ public sealed class Phase5Tests
 	[Fact]
 	public void own_time_requirement_downgrades_music_without_the_hobby()
 	{
-		var adjustments = ConstraintPass.Evaluate(Ratings((Subject.Music, Rating.Green)), Profile());
+		var adjustments = ConstraintPass.Evaluate(Ratings((Subject.Music, Rating.Green)), Profile(), Harness.Catalogue);
 
 		var ownTime = adjustments.Should().ContainSingle().Which;
 		ownTime.Subject.Should().Be(Subject.Music);
@@ -266,14 +266,14 @@ public sealed class Phase5Tests
 	[Fact]
 	public void own_time_requirement_is_satisfied_by_a_matching_hobby()
 	{
-		ConstraintPass.Evaluate(Ratings((Subject.Music, Rating.Green)), Profile("plays_piano"))
+		ConstraintPass.Evaluate(Ratings((Subject.Music, Rating.Green)), Profile("plays_piano"), Harness.Catalogue)
 			.Should().BeEmpty();
 	}
 
 	[Fact]
 	public void already_amber_music_without_the_hobby_records_the_own_time_authorisation_requirement()
 	{
-		var adjustments = ConstraintPass.Evaluate(Ratings((Subject.Music, Rating.Amber)), Profile());
+		var adjustments = ConstraintPass.Evaluate(Ratings((Subject.Music, Rating.Amber)), Profile(), Harness.Catalogue);
 
 		var ownTime = adjustments.Should().ContainSingle().Which;
 		ownTime.Subject.Should().Be(Subject.Music);
@@ -292,7 +292,7 @@ public sealed class Phase5Tests
 			(Subject.History, Rating.Green), (Subject.Music, Rating.Green));
 		var profile = Profile("plays_guitar") with { ChosenALevels = [Subject.Maths] };
 
-		ConstraintPass.Evaluate(ratings, profile).Should().BeEmpty();
+		ConstraintPass.Evaluate(ratings, profile, Harness.Catalogue).Should().BeEmpty();
 	}
 
 	[Fact]
@@ -302,7 +302,7 @@ public sealed class Phase5Tests
 		var ratings = Ratings(
 			(Subject.Maths, Rating.Green), (Subject.History, Rating.Green),
 			(Subject.Art, Rating.Green), (Subject.Music, Rating.Green));
-		var adjustments = ConstraintPass.Evaluate(ratings, Profile());
+		var adjustments = ConstraintPass.Evaluate(ratings, Profile(), Harness.Catalogue);
 
 		var forward = ConstraintPass.Apply(ratings, adjustments);
 		var reversed = ConstraintPass.Apply(ratings, [.. adjustments.Reverse()]);
@@ -323,7 +323,7 @@ public sealed class Phase5Tests
 	{
 		// Further Maths base amber, Maths red ⇒ prerequisite forces red (most-severe wins).
 		var ratings = Ratings((Subject.FurtherMaths, Rating.Amber));
-		var adjustments = ConstraintPass.Evaluate(ratings, Profile());
+		var adjustments = ConstraintPass.Evaluate(ratings, Profile(), Harness.Catalogue);
 
 		var final = ConstraintPass.Apply(ratings, adjustments);
 

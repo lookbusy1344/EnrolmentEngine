@@ -32,9 +32,7 @@ public static partial class WorkflowLinter
 		[("facts", "DfeProbabilityAtOrAbove")] = KeyVocabulary.Subject,
 	};
 
-	public static IReadOnlyList<LintFinding> Lint(IReadOnlyList<Workflow> workflows)
-		=> Lint(workflows, Catalogue.Default);
-
+	/// <summary>Lint loaded workflows against an explicit catalogue snapshot.</summary>
 	public static IReadOnlyList<LintFinding> Lint(IReadOnlyList<Workflow> workflows, CatalogueData catalogue)
 	{
 		var findings = new List<LintFinding>();

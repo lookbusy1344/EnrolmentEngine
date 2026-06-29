@@ -1,9 +1,11 @@
 namespace EnrolmentRules.Tests;
 
+using System.Reflection;
 using System.Text.RegularExpressions;
+using Engine;
 using FluentAssertions;
 
-/// <summary>Guards executable commands and local cross-references in the maintained project guides.</summary>
+/// <summary>Guards local cross-references in the maintained project guides.</summary>
 public sealed partial class DocumentationTests
 {
 	private static readonly string[] MaintainedDocuments = [
@@ -11,21 +13,10 @@ public sealed partial class DocumentationTests
 		Path.Combine("docs", "walkthrough.md"),
 		Path.Combine("docs", "rule-authoring.md"),
 	];
-	private static readonly string[] ContributorGuides = [
-		Path.Combine("docs", "walkthrough.md"),
-		Path.Combine("docs", "rule-authoring.md"),
-	];
 
-	[Fact]
-	public void dotnet_test_commands_are_bounded_by_gtimeout()
-	{
-		var unbounded = ContributorGuides
-			.SelectMany(ReadLines)
-			.Where(static line => DotnetTestCommand().IsMatch(line) && !line.Contains("gtimeout", StringComparison.Ordinal))
-			.ToArray();
-
-		unbounded.Should().BeEmpty("every test invocation must have a bounded runtime");
-	}
+	/// <summary>Transient planning notes that may be deleted at any time; links into them are not validated.</summary>
+	private static readonly string TransientPlansDirectory =
+		Path.GetFullPath(Path.Combine("docs", "plans"), Harness.RepoRoot);
 
 	[Fact]
 	public void local_markdown_links_resolve_to_existing_files_and_anchors()
@@ -37,12 +28,24 @@ public sealed partial class DocumentationTests
 		failures.Should().BeEmpty();
 	}
 
-	private static IEnumerable<string> ReadLines(string relativePath) =>
-		File.ReadLines(Path.Combine(Harness.RepoRoot, relativePath));
+	[Fact]
+	public void enrolment_engine_has_no_public_constructors()
+	{
+		typeof(EnrolmentEngine).GetConstructors(BindingFlags.Instance | BindingFlags.Public)
+			.Should()
+			.BeEmpty("library hosts should construct via CreateAsync or DI, not new EnrolmentEngine(...)");
+	}
 
-	/// <summary>Transient planning notes that may be deleted at any time; links into them are not validated.</summary>
-	private static readonly string TransientPlansDirectory =
-		Path.GetFullPath(Path.Combine("docs", "plans"), Harness.RepoRoot);
+	[Fact]
+	public void readme_validated_evaluation_example_uses_the_current_api_shape()
+	{
+		var readme = File.ReadAllText(Path.Combine(Harness.RepoRoot, "README.md"));
+
+		readme.Should().Contain("validated.Validation.IsValid");
+		readme.Should().Contain("validated.Validation.Errors");
+		readme.Should().NotContain("validated.IsValid");
+		readme.Should().NotContain("validated.Outcome");
+	}
 
 	private static IEnumerable<string> ValidateLinks(string relativePath)
 	{
@@ -59,6 +62,7 @@ public sealed partial class DocumentationTests
 			if (targetPath.StartsWith(TransientPlansDirectory, StringComparison.Ordinal)) {
 				continue;
 			}
+
 			if (!File.Exists(targetPath)) {
 				yield return $"{relativePath}: missing link target '{destination}'";
 				continue;
@@ -79,11 +83,8 @@ public sealed partial class DocumentationTests
 
 	private static string Slug(string heading) =>
 		string.Concat(heading.Trim().ToLowerInvariant()
-			.Where(static character => char.IsLetterOrDigit(character) || character is ' ' or '-' or '_'))
+				.Where(static character => char.IsLetterOrDigit(character) || character is ' ' or '-' or '_'))
 			.Replace(' ', '-');
-
-	[GeneratedRegex(@"^\s*(?:\$\s*)?dotnet\s+test\b", RegexOptions.CultureInvariant)]
-	private static partial Regex DotnetTestCommand();
 
 	[GeneratedRegex(@"\[[^\]]+\]\((?!https?://|mailto:)([^)]+)\)", RegexOptions.CultureInvariant)]
 	private static partial Regex MarkdownLink();

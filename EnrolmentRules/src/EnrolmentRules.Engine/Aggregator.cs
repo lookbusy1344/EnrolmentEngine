@@ -61,9 +61,6 @@ public static class Aggregator
 	///     The ranked shortlist: least-severe rating first (green &gt; amber &gt; red), ties broken by
 	///     descending <see cref="SubjectMeta.UcasWeight" />. Returns every subject; callers take the top-N.
 	/// </summary>
-	public static IReadOnlyList<SubjectRating> Rank(IReadOnlyList<SubjectRating> ratings) =>
-		Rank(ratings, Catalogue.Default);
-
 	public static IReadOnlyList<SubjectRating> Rank(IReadOnlyList<SubjectRating> ratings, CatalogueData catalogue) => [
 		.. ratings
 			.OrderBy(static r => (int)r.Rating)

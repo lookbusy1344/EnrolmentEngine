@@ -354,4 +354,17 @@ public sealed class CatalogueTests
 				$"  - subject: {EnumNames.NameOf(subject)}\n    ucas_weight: {index + 30}\n    regression: {{ slope: 0.80, intercept: -1.00 }}");
 		return "subjects:\n" + string.Join('\n', lines) + '\n' + extraFor;
 	}
+
+	[Fact]
+	public void validation_rejects_unknown_chosen_subjects_against_the_bound_catalogue()
+	{
+		var student = new StudentInput("S", new Dictionary<string, int> { ["maths"] = 6 }, []) {
+			ChosenALevels = [new("philosophy")],
+			DateOfBirth = new(2009, 9, 1),
+		};
+
+		StudentValidator.Validate(student, Harness.Catalogue, Harness.Scale)
+			.Should().ContainSingle()
+			.Which.Should().Contain("philosophy");
+	}
 }

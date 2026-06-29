@@ -33,7 +33,7 @@ public sealed class Phase3DataDrivenSubjectTests
 				},
 				[]);
 			var probeGcses = probeStudent.ToGcseResults();
-			var probeProfile = GradePredictor.Predict(probeStudent, probeGcses, Harness.AsOf, catalogue);
+			var probeProfile = GradePredictor.Predict(probeStudent, probeGcses, Harness.AsOf, catalogue, QualificationScale.Default);
 			var engine = WorkflowStore.BuildEngine(workflows);
 			await WorkflowStore.ProbeCompileAsync(
 				engine,
@@ -55,7 +55,7 @@ public sealed class Phase3DataDrivenSubjectTests
 				},
 				[]);
 
-			var profile = GradePredictor.Predict(student, student.ToGcseResults(), Harness.AsOf, catalogue);
+			var profile = GradePredictor.Predict(student, student.ToGcseResults(), Harness.AsOf, catalogue, QualificationScale.Default);
 			var result = await new EnrolmentEngine(engine, thresholds, catalogue, Harness.AsOf).EvaluateAsync(student);
 
 			profile.PredictedGrades.Select(static grade => grade.Subject).Should().Contain(subject);

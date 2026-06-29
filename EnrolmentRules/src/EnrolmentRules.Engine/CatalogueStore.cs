@@ -11,7 +11,7 @@ using Json.Schema;
 ///     The startup loader for the subject catalogue (the cross-subject constraint policy, §1.5–1.6): reads
 ///     <c>catalogue.yaml</c>, validates it against <c>catalogue.schema.json</c>, builds the runtime
 ///     <see cref="CatalogueData" /> (enforcing the coverage / symmetry invariants the schema cannot express)
-///     and installs it as the active table. The same fail-loud-at-boot guarantee the workflows get
+///     and returns an immutable snapshot for the host to hold. The same fail-loud-at-boot guarantee the workflows get
 ///     (Reservation 1): a malformed catalogue stops the process rather than silently mis-rating a student.
 ///     <see cref="Domain.Catalogue" /> can also load the file lazily without schema validation; this is the
 ///     host path that adds the schema guard.

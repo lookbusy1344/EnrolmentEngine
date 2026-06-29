@@ -9,13 +9,27 @@ using Engine;
 /// </summary>
 public sealed class EnrolmentEngineOptions
 {
-	public string WorkflowsDirectory { get; set; } = string.Empty;
+	public string WorkflowsDirectory { get; private set; } = string.Empty;
 
-	public string DataDirectory { get; set; } = string.Empty;
+	public string DataDirectory { get; private set; } = string.Empty;
 
 	public DateOnly? FixedAsOf { get; private set; }
 
 	public TimeProvider? TimeProvider { get; private set; }
+
+	/// <summary>Point the engine at the directory holding the workflow YAML files.</summary>
+	public EnrolmentEngineOptions UseWorkflowsDirectory(string workflowsDirectory)
+	{
+		WorkflowsDirectory = workflowsDirectory;
+		return this;
+	}
+
+	/// <summary>Point the engine at the data directory holding the catalogue, thresholds and matrices.</summary>
+	public EnrolmentEngineOptions UseDataDirectory(string dataDirectory)
+	{
+		DataDirectory = dataDirectory;
+		return this;
+	}
 
 	/// <summary>Bind the engine to one fixed reference date; every evaluation uses <paramref name="asOf" />.</summary>
 	public EnrolmentEngineOptions UseFixedAsOf(DateOnly asOf)
@@ -51,7 +65,7 @@ public sealed class EnrolmentEngineOptions
 		return () => DateOnly.FromDateTime(provider.GetLocalNow().DateTime);
 	}
 
-	/// <summary>Validate the configured directories before container build, so misconfiguration fails at the boundary.</summary>
+	/// <summary>Validate the configured directories before bootstrap, so misconfiguration fails at the boundary.</summary>
 	internal void Validate()
 	{
 		if (string.IsNullOrWhiteSpace(WorkflowsDirectory)) {
@@ -61,5 +75,22 @@ public sealed class EnrolmentEngineOptions
 		if (string.IsNullOrWhiteSpace(DataDirectory)) {
 			throw new ArgumentException("Data directory must not be empty.", nameof(DataDirectory));
 		}
+	}
+
+	/// <summary>Run the full startup recipe for these options and return a reusable engine.</summary>
+	internal Task<EnrolmentEngine> CreateEngineAsync(CancellationToken cancellationToken = default)
+	{
+		Validate();
+		return EnrolmentEngine.CreateAsync(WorkflowsDirectory, DataDirectory, AsOfSource(), cancellationToken);
+	}
+
+	/// <summary>Run the full startup recipe and return a reloadable factory.</summary>
+	internal Task<EnrolmentEngineFactory> CreateFactoryAsync(CancellationToken cancellationToken = default)
+	{
+		Validate();
+		return EnrolmentEngineFactory.CreateAsync(
+			new DirectoryDataSource(WorkflowsDirectory, DataDirectory),
+			AsOfSource(),
+			cancellationToken);
 	}
 }

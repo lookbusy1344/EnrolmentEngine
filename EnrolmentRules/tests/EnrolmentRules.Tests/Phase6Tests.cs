@@ -71,7 +71,7 @@ public sealed class Phase6Tests
 		var ratings = Ratings();
 
 		var summary = Aggregator.Summarise(ratings, Catalogue.Default, Harness.Thresholds);
-		var shortlist = Aggregator.Rank(ratings);
+		var shortlist = Aggregator.Rank(ratings, Harness.Catalogue);
 
 		summary.Should().Be(new EnrolmentSummary(0, 0, 0.0));
 		shortlist.Should().HaveCount(Catalogue.Subjects.Count);
@@ -135,7 +135,7 @@ public sealed class Phase6Tests
 			(Subject.Music, Rating.Green), (Subject.Maths, Rating.Green),
 			(Subject.Art, Rating.Amber), (Subject.History, Rating.Amber));
 
-		var ranked = Aggregator.Rank(ratings);
+		var ranked = Aggregator.Rank(ratings, Harness.Catalogue);
 
 		// Greens first (Maths outranks the lower-weight Music), then ambers (History outranks Art),
 		// then reds — all in descending weight within a rating band.
@@ -187,7 +187,7 @@ public sealed class Phase6Tests
 			(Subject.Biology, Rating.Green), (Subject.History, Rating.Green), (Subject.Art, Rating.Green));
 
 		// Constraint pass first: the exclusion demotes the lower-weight pair member (Art) to amber.
-		var afterConstraints = ConstraintPass.Apply(sixGreens, ConstraintPass.Evaluate(sixGreens, new("S", 7.0, [], [], [])));
+		var afterConstraints = ConstraintPass.Apply(sixGreens, ConstraintPass.Evaluate(sixGreens, new("S", 7.0, [], [], []), Harness.Catalogue));
 
 		var capOnConstrained = Aggregator.CapGreens(afterConstraints, Catalogue.Default, CappedThresholds);
 		var capOnBase = Aggregator.CapGreens(sixGreens, Catalogue.Default, CappedThresholds);

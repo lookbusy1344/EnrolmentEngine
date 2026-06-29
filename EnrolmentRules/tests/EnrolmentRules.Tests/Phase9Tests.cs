@@ -63,7 +63,7 @@ public sealed class Phase9Tests
 	[Fact]
 	public void veto_forces_red_when_an_incompatible_activity_is_present()
 	{
-		var adjustments = ConstraintPass.Evaluate(Ratings((Subject.Music, Rating.Green)), Profile(TromboneHobby));
+		var adjustments = ConstraintPass.Evaluate(Ratings((Subject.Music, Rating.Green)), Profile(TromboneHobby), Harness.Catalogue);
 
 		var veto = adjustments.Should().ContainSingle().Which;
 		veto.Subject.Should().Be(Subject.Music);
@@ -75,7 +75,7 @@ public sealed class Phase9Tests
 	[Fact]
 	public void veto_overrides_an_amber_base()
 	{
-		ConstraintPass.Evaluate(Ratings((Subject.Music, Rating.Amber)), Profile(TromboneHobby))
+		ConstraintPass.Evaluate(Ratings((Subject.Music, Rating.Amber)), Profile(TromboneHobby), Harness.Catalogue)
 			.Should().ContainSingle().Which.To.Should().Be(Rating.Red);
 	}
 
@@ -83,7 +83,7 @@ public sealed class Phase9Tests
 	public void veto_relabels_an_already_red_subject_with_the_specific_bar()
 	{
 		// The rating is red either way, but the veto is the more informative reason, so it still fires.
-		var veto = ConstraintPass.Evaluate(Ratings((Subject.Music, Rating.Red)), Profile(TromboneHobby))
+		var veto = ConstraintPass.Evaluate(Ratings((Subject.Music, Rating.Red)), Profile(TromboneHobby), Harness.Catalogue)
 			.Should().ContainSingle().Which;
 		veto.To.Should().Be(Rating.Red);
 		veto.Reason.Should().Contain(TromboneHobby);
@@ -108,7 +108,7 @@ public sealed class Phase9Tests
 	public void no_veto_when_the_incompatible_activity_is_absent()
 	{
 		// A piano player satisfies Music's own-time requirement and triggers no veto.
-		ConstraintPass.Evaluate(Ratings((Subject.Music, Rating.Green)), Profile("plays_piano"))
+		ConstraintPass.Evaluate(Ratings((Subject.Music, Rating.Green)), Profile("plays_piano"), Harness.Catalogue)
 			.Should().BeEmpty();
 	}
 

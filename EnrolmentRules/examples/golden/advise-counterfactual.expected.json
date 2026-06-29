@@ -323,5 +323,6 @@
       "blocked_reason": null
     }
   ],
-  "gate": null
+  "gate": null,
+  "truncation_reason": null
 }

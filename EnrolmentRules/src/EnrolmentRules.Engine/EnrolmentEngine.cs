@@ -6,12 +6,9 @@ using RulesEngine.Interfaces;
 
 /// <summary>
 ///     The façade over the whole pipeline (§1.7): predict → engine (eligibility + per-subject tiers) →
-///     constraint pass → optional green cap → aggregate, composed into an <see cref="EnrolmentResult" />. Holds only
-///     the shared, reusable engine, so it is stateless and safe to reuse across students (and to call in
-///     parallel for batch). <see cref="ExplainAsync(StudentInput, CancellationToken)" /> projects the same single evaluation into the richer
-///     provenance view without re-running anything.
+///     constraint pass → optional green cap → aggregate, composed into an <see cref="EnrolmentResult" />.
+///     Construct via <c>EnrolmentEngine.CreateAsync</c> or dependency-injection registration — not via <c>new</c>.
 /// </summary>
-[CLSCompliant(false)]
 public sealed class EnrolmentEngine : IEnrolmentEngine
 {
 	private readonly Func<DateOnly> asOf;
@@ -19,7 +16,7 @@ public sealed class EnrolmentEngine : IEnrolmentEngine
 	private readonly DfeTransitionMatrix matrix;
 
 	/// <summary>Bind a fixed reference date: the parameterless overloads always evaluate as of <paramref name="asOf" />.</summary>
-	public EnrolmentEngine(RatingEvaluator evaluator, CatalogueData catalogue, DateOnly asOf, DfeTransitionMatrix? matrix = null)
+	internal EnrolmentEngine(RatingEvaluator evaluator, CatalogueData catalogue, DateOnly asOf, DfeTransitionMatrix? matrix = null)
 		: this(evaluator, catalogue, () => asOf, matrix)
 	{
 	}
@@ -31,7 +28,7 @@ public sealed class EnrolmentEngine : IEnrolmentEngine
 	///     clock instead of freezing the date at construction. The engine stays stateless: the source is a pure
 	///     read, and callers wanting an explicit date use the per-call overloads.
 	/// </summary>
-	public EnrolmentEngine(RatingEvaluator evaluator, CatalogueData catalogue, Func<DateOnly> asOf, DfeTransitionMatrix? matrix = null)
+	internal EnrolmentEngine(RatingEvaluator evaluator, CatalogueData catalogue, Func<DateOnly> asOf, DfeTransitionMatrix? matrix = null)
 	{
 		this.evaluator = evaluator;
 		Catalogue = evaluator.Catalogue;
@@ -116,6 +113,69 @@ public sealed class EnrolmentEngine : IEnrolmentEngine
 		bool considerUnsatGcses,
 		CancellationToken cancellationToken = default) =>
 		CounterfactualAdvisor.AdviseAsync(this, student, evaluator.Thresholds, asOf, considerUnsatGcses, cancellationToken);
+
+	/// <inheritdoc cref="IEnrolmentEvaluator.TryEvaluateAsync(StudentInput, CancellationToken)" />
+	public Task<ValidatedEvaluation<EnrolmentResult>> TryEvaluateAsync(StudentInput student, CancellationToken cancellationToken = default) =>
+		TryEvaluateAsync(student, asOf(), cancellationToken);
+
+	/// <inheritdoc cref="IEnrolmentEvaluator.TryEvaluateAsync(StudentInput, DateOnly, CancellationToken)" />
+	public async Task<ValidatedEvaluation<EnrolmentResult>> TryEvaluateAsync(
+		StudentInput student,
+		DateOnly asOf,
+		CancellationToken cancellationToken = default)
+	{
+		var validation = ValidateInput(student);
+		return validation.IsValid
+			? new(validation, await EvaluateAsync(student, asOf, cancellationToken).ConfigureAwait(false))
+			: new(validation, null);
+	}
+
+	/// <inheritdoc cref="IEnrolmentEvaluator.TryExplainAsync(StudentInput, CancellationToken)" />
+	public Task<ValidatedEvaluation<ExplainedResult>> TryExplainAsync(StudentInput student, CancellationToken cancellationToken = default) =>
+		TryExplainAsync(student, asOf(), cancellationToken);
+
+	/// <inheritdoc cref="IEnrolmentEvaluator.TryExplainAsync(StudentInput, DateOnly, CancellationToken)" />
+	public async Task<ValidatedEvaluation<ExplainedResult>> TryExplainAsync(
+		StudentInput student,
+		DateOnly asOf,
+		CancellationToken cancellationToken = default)
+	{
+		var validation = ValidateInput(student);
+		return validation.IsValid
+			? new(validation, await ExplainAsync(student, asOf, cancellationToken).ConfigureAwait(false))
+			: new(validation, null);
+	}
+
+	/// <inheritdoc cref="IEnrolmentAdvisor.TryAdviseAsync(StudentInput, CancellationToken)" />
+	public Task<ValidatedEvaluation<AdviceResult>> TryAdviseAsync(StudentInput student, CancellationToken cancellationToken = default) =>
+		TryAdviseAsync(student, asOf(), cancellationToken);
+
+	/// <inheritdoc cref="IEnrolmentAdvisor.TryAdviseAsync(StudentInput, DateOnly, CancellationToken)" />
+	public async Task<ValidatedEvaluation<AdviceResult>> TryAdviseAsync(
+		StudentInput student,
+		DateOnly asOf,
+		CancellationToken cancellationToken = default) =>
+		await TryAdviseAsync(student, asOf, evaluator.Thresholds.AdviceConsidersUnsatGcses, cancellationToken).ConfigureAwait(false);
+
+	/// <inheritdoc cref="IEnrolmentAdvisor.TryAdviseAsync(StudentInput, bool, CancellationToken)" />
+	public Task<ValidatedEvaluation<AdviceResult>> TryAdviseAsync(
+		StudentInput student,
+		bool considerUnsatGcses,
+		CancellationToken cancellationToken = default) =>
+		TryAdviseAsync(student, asOf(), considerUnsatGcses, cancellationToken);
+
+	/// <inheritdoc cref="IEnrolmentAdvisor.TryAdviseAsync(StudentInput, DateOnly, bool, CancellationToken)" />
+	public async Task<ValidatedEvaluation<AdviceResult>> TryAdviseAsync(
+		StudentInput student,
+		DateOnly asOf,
+		bool considerUnsatGcses,
+		CancellationToken cancellationToken = default)
+	{
+		var validation = ValidateInput(student);
+		return validation.IsValid
+			? new(validation, await AdviseAsync(student, asOf, considerUnsatGcses, cancellationToken).ConfigureAwait(false))
+			: new(validation, null);
+	}
 
 	/// <summary>
 	///     Create a fully bootstrapped engine from the shipped layout: thresholds, catalogue, workflows,
@@ -227,6 +287,9 @@ public sealed class EnrolmentEngine : IEnrolmentEngine
 		return new(profile, gate, [.. baseRatings], [.. finalRatings], adjustments,
 			Aggregator.Summarise(finalRatings, Catalogue, evaluator.Thresholds));
 	}
+
+	private ValidationOutcome ValidateInput(StudentInput student) =>
+		new([.. StudentValidator.Validate(student, Catalogue, Scale)]);
 
 	private EnrolmentResult ToResult(Evaluation e) =>
 		new(

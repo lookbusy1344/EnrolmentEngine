@@ -107,7 +107,38 @@ public sealed record AdviceResult(
 	bool Eligible,
 	EquatableArray<string> EligibilityReasons,
 	EquatableArray<SubjectAdvice> Advice,
-	GateAdvice? Gate);
+	GateAdvice? Gate)
+{
+	/// <summary>Present when <see cref="PolicyThresholds.AdviceMaxPipelineEvaluations" /> truncated the search.</summary>
+	public string? TruncationReason { get; init; }
+}
+
+/// <summary>
+///     The outcome of <see cref="StudentValidator" /> at the evaluation boundary: an empty
+///     <see cref="Errors" /> list means the student document is well-formed for the bound catalogue and
+///     scale.
+/// </summary>
+public sealed record ValidationOutcome(EquatableArray<string> Errors)
+{
+	/// <summary>Whether <see cref="Errors" /> is empty.</summary>
+	public bool IsValid => Errors.Count == 0;
+
+	/// <summary>A successful validation with no errors.</summary>
+	public static ValidationOutcome Valid { get; } = new([]);
+}
+
+/// <summary>
+///     An evaluation (or explanation, or advice) together with the input validation that gated it.
+///     When <see cref="Validation" /> is invalid, <see cref="Value" /> is <c>null</c> and the pipeline did
+///     not run. A <c>class</c> rather than a <c>record</c> because the generic <typeparamref name="T" />
+///     is not uniformly value-semantic under JSV01.
+/// </summary>
+public sealed class ValidatedEvaluation<T>(ValidationOutcome validation, T? value)
+{
+	public ValidationOutcome Validation { get; } = validation;
+
+	public T? Value { get; } = value;
+}
 
 /// <summary>
 ///     One line of <c>--batch</c> JSONL output (Phase 8): the student <see cref="Id" /> and exactly one of

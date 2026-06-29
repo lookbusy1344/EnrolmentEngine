@@ -54,6 +54,11 @@ public sealed class DomainTests
 	}
 
 	[Fact]
+	public void default_subject_stringifies_to_empty_not_null() =>
+		// FDG §8: ToString must never return null; the strongly-typed-string zero state is the empty string.
+		default(Subject).ToString().Should().BeEmpty();
+
+	[Fact]
 	public void most_severe_returns_the_worse_rating()
 	{
 		Rating.Green.MostSevere(Rating.Amber).Should().Be(Rating.Amber);

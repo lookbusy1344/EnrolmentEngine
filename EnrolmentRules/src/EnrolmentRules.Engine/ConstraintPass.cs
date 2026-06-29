@@ -33,9 +33,6 @@ public static class ConstraintPass
 	///     Collect every downgrade for one student. The three rules read only the <em>base</em> ratings (never
 	///     each other's output), so the result is independent of the order they are produced or applied.
 	/// </summary>
-	public static IReadOnlyList<Adjustment> Evaluate(IReadOnlyList<SubjectRating> ratings, StudentProfile profile)
-		=> Evaluate(ratings, profile, Catalogue.Default);
-
 	public static IReadOnlyList<Adjustment> Evaluate(
 		IReadOnlyList<SubjectRating> ratings,
 		StudentProfile profile,
