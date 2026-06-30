@@ -10,7 +10,7 @@ using Prediction;
 ///     parse trick: a workflow/catalogue fixture introducing Philosophy must produce both a prediction and a final
 ///     recommendation for it.
 /// </summary>
-public sealed class Phase3DataDrivenSubjectTests
+public sealed class SubjectRatingDataDrivenTests
 {
 	[Fact]
 	public async Task adding_a_subject_in_data_only_flows_through_prediction_and_final_recommendations()

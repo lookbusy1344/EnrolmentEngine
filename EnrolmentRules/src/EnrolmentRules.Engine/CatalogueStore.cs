@@ -92,7 +92,12 @@ public static class CatalogueStore
 		}
 
 		try {
-			return Catalogue.Build(node, scale ?? QualificationScale.Default);
+			var catalogue = Catalogue.Build(node, scale ?? QualificationScale.Default);
+			// Coverage is guarded here (and in Catalogue.LoadFromFile), not in Build, on purpose: Build is also used
+			// to construct deliberately partial catalogues (e.g. the open-subject test fixtures), which a
+			// full-vocabulary coverage check would wrongly reject. The guard belongs only on the full-load entry points.
+			GcseSubjects.ValidateCatalogueCoverage(catalogue.Subjects);
+			return catalogue;
 		}
 		catch (Exception ex) when (ex is InvalidDataException or FormatException) {
 			throw new CatalogueException($"Catalogue file '{cataloguePath ?? CatalogueFileName}' is invalid: {ex.Message}", ex);

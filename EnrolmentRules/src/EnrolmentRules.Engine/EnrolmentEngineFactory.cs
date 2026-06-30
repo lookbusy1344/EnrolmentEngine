@@ -4,9 +4,10 @@ namespace EnrolmentRules.Engine;
 ///     Thread-safe factory that rebuilds <see cref="EnrolmentEngine" /> from a fixed
 ///     <see cref="IEnrolmentDataSource" /> when policy changes on disk.
 /// </summary>
-public sealed class EnrolmentEngineFactory : IEnrolmentEngineFactory
+public sealed class EnrolmentEngineFactory : IEnrolmentEngineFactory, IDisposable
 {
 	private readonly Func<DateOnly> asOf;
+	private readonly SemaphoreSlim reloadGate = new(1, 1);
 	private readonly IEnrolmentDataSource source;
 	private IEnrolmentEngine current;
 
@@ -17,14 +18,22 @@ public sealed class EnrolmentEngineFactory : IEnrolmentEngineFactory
 		current = initial;
 	}
 
+	public void Dispose() => reloadGate.Dispose();
+
 	/// <inheritdoc />
 	public IEnrolmentEngine Current => Volatile.Read(ref current);
 
 	/// <inheritdoc />
 	public async Task ReloadAsync(CancellationToken cancellationToken = default)
 	{
-		var rebuilt = await EnrolmentEngine.CreateAsync(source, asOf, cancellationToken).ConfigureAwait(false);
-		Volatile.Write(ref current, rebuilt);
+		await reloadGate.WaitAsync(cancellationToken).ConfigureAwait(false);
+		try {
+			var rebuilt = await EnrolmentEngine.CreateAsync(source, asOf, cancellationToken).ConfigureAwait(false);
+			Volatile.Write(ref current, rebuilt);
+		}
+		finally {
+			_ = reloadGate.Release();
+		}
 	}
 
 	/// <summary>Bootstrap a factory from directory paths and a fixed reference date.</summary>

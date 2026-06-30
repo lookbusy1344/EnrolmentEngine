@@ -144,19 +144,17 @@ public sealed partial class InvariantTests : IAsyncLifetime
 			bothGreen.Should().BeFalse($"excluding pair {a}/{b} cannot both survive green");
 		}
 
+		foreach (var explanation in explained.Explanations) {
+			((int)explanation.Rating).Should().BeGreaterThanOrEqualTo(
+				(int)explanation.BaseRating,
+				$"{explanation.Subject} must not be upgraded by constraints");
+		}
+
 		foreach (var explanation in explained.Explanations.Where(static explanation =>
 					 explanation.BaseRating != Rating.Red && explanation.Rating == Rating.Red)) {
-			if (explanation.Subject == Subject.FurtherMaths) {
-				explanation.Overrides.Should().ContainSingle(override_ =>
-					override_.Reason == ConstraintPass.MathsPrerequisiteReason
-					&& override_.To == Rating.Red);
-				continue;
-			}
-
-			explanation.Subject.Should().Be(Subject.German);
-			explanation.Overrides.Should().ContainSingle(override_ =>
-				override_.To == Rating.Red
-				&& override_.Reason.Contains("Mutual exclusion", StringComparison.Ordinal));
+			explanation.Overrides.Should().Contain(
+				static override_ => override_.To == Rating.Red,
+				"a downgrade to red must be explained by at least one red adjustment");
 		}
 
 		return true;

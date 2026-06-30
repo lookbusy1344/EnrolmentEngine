@@ -1,8 +1,10 @@
 namespace EnrolmentRules.Tests;
 
+using System.Text;
 using Domain;
 using Engine;
 using FluentAssertions;
+using Prediction;
 
 /// <summary>Reloadable engine factory for policy edits without process restart.</summary>
 public sealed class EngineFactoryTests
@@ -35,7 +37,20 @@ public sealed class EngineFactoryTests
 			RaisePassGrade(Path.Combine(fixture, "data", "thresholds.yaml"), 7);
 			await factory.ReloadAsync();
 
-			(await factory.Current.TryEvaluateAsync(student)).Value!.Eligible.Should().BeFalse();
+			var afterPassGradeReload = (await factory.Current.TryEvaluateAsync(student)).Value!;
+			afterPassGradeReload.Eligible.Should().BeFalse();
+			afterPassGradeReload.EligibilityReasons.Should().Equal(
+				"GCSE English Language below the pass grade (7)",
+				"GCSE Maths below the pass grade (7)",
+				"Fewer than the required number of GCSE passes (5 at grade 7 or above)");
+
+			RaiseMinPasses(Path.Combine(fixture, "data", "thresholds.yaml"), 6);
+			await factory.ReloadAsync();
+
+			var afterMinPassesReload = (await factory.Current.TryEvaluateAsync(StudentForPassGradeBoundary())).Value!;
+			afterMinPassesReload.Eligible.Should().BeFalse();
+			afterMinPassesReload.EligibilityReasons.Should().ContainSingle()
+				.Which.Should().Be("Fewer than the required number of GCSE passes (6 at grade 7 or above)");
 		}
 		finally {
 			Directory.Delete(fixture, true);
@@ -82,6 +97,69 @@ public sealed class EngineFactoryTests
 		evaluations.Select(task => task.Result).Should().OnlyContain(outcome => outcome.Validation.IsValid);
 	}
 
+	[Fact]
+	public async Task concurrent_reload_calls_are_serialized_and_publish_in_call_order()
+	{
+		using var source = ControlledReloadDataSource.WithReloadThresholds(
+			Harness.WorkflowsDir,
+			Harness.DataDir,
+			true,
+			ThresholdsBytes("min_passes", "4"),
+			ThresholdsBytes("min_passes", "6"));
+		var factory = await EnrolmentEngineFactory.CreateAsync(source, Harness.AsOf);
+		var student = StudentForPassGradeBoundary();
+
+		var firstReload = Task.Run(() => factory.ReloadAsync());
+		await EventuallyAsync(() => source.IsFirstReloadBlocked);
+
+		var secondReload = Task.Run(() => factory.ReloadAsync());
+		source.HasSecondReloadEnteredBuild.Should().BeFalse();
+		source.MaxConcurrentReloadBuilds.Should().Be(1);
+
+		source.ReleaseFirstReload();
+		await Task.WhenAll(firstReload, secondReload);
+
+		source.MaxConcurrentReloadBuilds.Should().Be(1);
+		(await factory.Current.TryEvaluateAsync(student)).Value!.Eligible.Should().BeFalse();
+	}
+
+	[Fact]
+	public async Task failed_reload_releases_the_gate_and_keeps_current_until_a_later_success()
+	{
+		using var source = ControlledReloadDataSource.WithReloadThresholds(
+			Harness.WorkflowsDir,
+			Harness.DataDir,
+			false,
+			InvalidThresholdsBytes(),
+			ThresholdsBytes("min_passes", "4"));
+		var factory = await EnrolmentEngineFactory.CreateAsync(source, Harness.AsOf);
+		var before = factory.Current;
+		var student = StudentForPassGradeBoundary();
+
+		var act = () => factory.ReloadAsync();
+		await act.Should().ThrowAsync<PolicyThresholdsException>();
+		factory.Current.Should().BeSameAs(before);
+		(await factory.Current.TryEvaluateAsync(student)).Value!.Eligible.Should().BeTrue();
+
+		await factory.ReloadAsync();
+
+		factory.Current.Should().NotBeSameAs(before);
+		(await factory.Current.TryEvaluateAsync(student)).Value!.Eligible.Should().BeTrue();
+		source.MaxConcurrentReloadBuilds.Should().Be(1);
+	}
+
+	private static StudentInput StudentForPassGradeBoundary() =>
+		new(
+			"S-RELOAD-BOUNDARY",
+			new Dictionary<string, int> {
+				["english_language"] = 7,
+				["maths"] = 7,
+				["physics"] = 7,
+				["chemistry"] = 7,
+				["biology"] = 7,
+			},
+			[]) { DateOfBirth = new(2009, 9, 1) };
+
 	private static string CopyShippedLayout()
 	{
 		var fixture = Path.Combine(Path.GetTempPath(), "enrolmentrules-tests", Guid.NewGuid().ToString("N"));
@@ -111,5 +189,164 @@ public sealed class EngineFactoryTests
 		}
 
 		File.WriteAllLines(thresholdsPath, lines);
+	}
+
+	private static void RaiseMinPasses(string thresholdsPath, int minPasses)
+	{
+		var lines = File.ReadAllLines(thresholdsPath);
+		for (var i = 0; i < lines.Length; i++) {
+			if (lines[i].StartsWith("min_passes:", StringComparison.Ordinal)) {
+				lines[i] = $"min_passes: {minPasses}";
+			}
+		}
+
+		File.WriteAllLines(thresholdsPath, lines);
+	}
+
+	private static byte[] ThresholdsBytes(string key, string value)
+	{
+		var lines = File.ReadAllLines(Path.Combine(Harness.DataDir, PolicyThresholdsStore.ThresholdsFileName));
+		for (var i = 0; i < lines.Length; i++) {
+			if (lines[i].StartsWith($"{key}:", StringComparison.Ordinal)) {
+				lines[i] = $"{key}: {value}";
+			}
+		}
+
+		return Encoding.UTF8.GetBytes(string.Join(Environment.NewLine, lines));
+	}
+
+	private static byte[] InvalidThresholdsBytes() =>
+		Encoding.UTF8.GetBytes("pass_grade: nope");
+
+	private static async Task EventuallyAsync(Func<bool> predicate)
+	{
+		for (var attempt = 0; attempt < 50; attempt++) {
+			if (predicate()) {
+				return;
+			}
+
+			await Task.Delay(10);
+		}
+
+		throw new TimeoutException("Condition was not met in time.");
+	}
+
+	private sealed class ControlledReloadDataSource : IEnrolmentDataSource, IDisposable
+	{
+		private readonly bool blockFirstReload;
+		private readonly byte[] catalogue;
+		private readonly byte[] catalogueSchema;
+		private readonly byte[] qualifications;
+		private readonly byte[] qualificationsSchema;
+		private readonly ManualResetEventSlim releaseFirstReloadSignal = new(false);
+		private readonly Queue<byte[]> reloadThresholds;
+		private readonly byte[] shippedThresholds;
+		private readonly byte[] thresholdsSchema;
+		private readonly byte[] transitionMatrix;
+		private readonly IReadOnlyList<(string FileName, byte[] Bytes)> workflows;
+		private readonly byte[] workflowSchema;
+		private int activeReloadBuilds;
+		private int thresholdsOpenCount;
+
+		private ControlledReloadDataSource(
+			IReadOnlyList<(string FileName, byte[] Bytes)> workflows,
+			byte[] workflowSchema,
+			byte[] catalogue,
+			byte[] catalogueSchema,
+			byte[] qualifications,
+			byte[] qualificationsSchema,
+			byte[] shippedThresholds,
+			Queue<byte[]> reloadThresholds,
+			byte[] thresholdsSchema,
+			byte[] transitionMatrix,
+			bool blockFirstReload)
+		{
+			this.workflows = workflows;
+			this.workflowSchema = workflowSchema;
+			this.catalogue = catalogue;
+			this.catalogueSchema = catalogueSchema;
+			this.qualifications = qualifications;
+			this.qualificationsSchema = qualificationsSchema;
+			this.shippedThresholds = shippedThresholds;
+			this.reloadThresholds = reloadThresholds;
+			this.thresholdsSchema = thresholdsSchema;
+			this.transitionMatrix = transitionMatrix;
+			this.blockFirstReload = blockFirstReload;
+		}
+
+		public bool IsFirstReloadBlocked { get; private set; }
+		public bool HasSecondReloadEnteredBuild { get; private set; }
+		public int MaxConcurrentReloadBuilds { get; private set; }
+
+		public void Dispose() => releaseFirstReloadSignal.Dispose();
+
+		public IReadOnlyList<(string FileName, Stream Content)> OpenWorkflows() =>
+			[.. workflows.Select(static workflow => (workflow.FileName, (Stream)new MemoryStream(workflow.Bytes, false)))];
+
+		public Stream OpenWorkflowSchema() => new MemoryStream(workflowSchema, false);
+
+		public Stream OpenCatalogue() => new MemoryStream(catalogue, false);
+
+		public Stream OpenCatalogueSchema() => new MemoryStream(catalogueSchema, false);
+
+		public Stream OpenQualifications() => new MemoryStream(qualifications, false);
+
+		public Stream OpenQualificationsSchema() => new MemoryStream(qualificationsSchema, false);
+
+		public Stream OpenThresholds()
+		{
+			var openNumber = Interlocked.Increment(ref thresholdsOpenCount);
+			if (openNumber == 1) {
+				return new MemoryStream(shippedThresholds, false);
+			}
+
+			var active = Interlocked.Increment(ref activeReloadBuilds);
+			MaxConcurrentReloadBuilds = Math.Max(MaxConcurrentReloadBuilds, active);
+			try {
+				if (openNumber == 2 && blockFirstReload) {
+					IsFirstReloadBlocked = true;
+					releaseFirstReloadSignal.Wait();
+				} else if (openNumber == 3) {
+					HasSecondReloadEnteredBuild = true;
+				}
+
+				return new MemoryStream(reloadThresholds.Dequeue(), false);
+			}
+			finally {
+				_ = Interlocked.Decrement(ref activeReloadBuilds);
+			}
+		}
+
+		public Stream OpenThresholdsSchema() => new MemoryStream(thresholdsSchema, false);
+
+		public Stream OpenTransitionMatrix() => new MemoryStream(transitionMatrix, false);
+
+		public void ReleaseFirstReload() => releaseFirstReloadSignal.Set();
+
+		public static ControlledReloadDataSource WithReloadThresholds(
+			string workflowsDirectory,
+			string dataDirectory,
+			bool blockFirstReload,
+			params byte[][] reloadThresholds)
+		{
+			var workflows = Directory.EnumerateFiles(workflowsDirectory)
+				.Where(file => file != Path.Combine(workflowsDirectory, WorkflowStore.SchemaFileName))
+				.OrderBy(static file => file, StringComparer.Ordinal)
+				.Select(static file => (Path.GetFileName(file), File.ReadAllBytes(file)))
+				.ToArray();
+
+			return new(
+				workflows,
+				File.ReadAllBytes(Path.Combine(workflowsDirectory, WorkflowStore.SchemaFileName)),
+				File.ReadAllBytes(Path.Combine(dataDirectory, CatalogueStore.CatalogueFileName)),
+				File.ReadAllBytes(Path.Combine(dataDirectory, CatalogueStore.SchemaFileName)),
+				File.ReadAllBytes(Path.Combine(dataDirectory, QualificationScaleStore.QualificationsFileName)),
+				File.ReadAllBytes(Path.Combine(dataDirectory, QualificationScaleStore.SchemaFileName)),
+				File.ReadAllBytes(Path.Combine(dataDirectory, PolicyThresholdsStore.ThresholdsFileName)),
+				new(reloadThresholds),
+				File.ReadAllBytes(Path.Combine(dataDirectory, PolicyThresholdsStore.SchemaFileName)),
+				File.ReadAllBytes(Path.Combine(dataDirectory, DfeTransitionMatrix.DataDirectoryRelativePath)),
+				blockFirstReload);
+		}
 	}
 }

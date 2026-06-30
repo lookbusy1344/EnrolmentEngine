@@ -16,7 +16,8 @@ understand or debug an effect.
 
 Recommended reading order:
 
-1. [README](../README.md) for setup, CLI usage, input shape, and library usage.
+1. [Technical reference](technical-reference.md) for setup, CLI usage, input shape, and library
+   usage.
 2. [Configuration reference](configuration-reference.md) for the field-level map of the editable
    YAML/JSON surfaces.
 3. [Guided walk-through](walkthrough.md) for the end-to-end pipeline and decision tables.
@@ -374,8 +375,9 @@ A subject is data-driven — there is no fixed list in code to extend. To add on
    behaves as intended.
 
 One exception needs a developer: if the subject is also a brand-new **GCSE** key (used in a
-`facts.Gcse(...)` call), that key must be added to the known-GCSE list in code. The README's
-[Custom A-level subjects](../README.md#custom-a-level-subjects) section covers that wiring.
+`facts.Gcse(...)` call), that key must be added to the known-GCSE list in code. The technical
+reference's [Custom A-level subjects](technical-reference.md#custom-a-level-subjects) section covers
+that wiring.
 
 ---
 
@@ -534,8 +536,10 @@ The mistakes that pass a casual review — worth a deliberate check.
   `english_language` but **not** `further_maths`; A-level keys (`facts.Predicted`,
   `facts.DfeProbabilityAtOrAbove`) are the catalogue subjects. Using the wrong vocabulary is a lint
   error — run `--lint-workflows` to catch it before a student does.
-- **A typo'd subject key gives the wrong rating, quietly.** `facts.Gcse("physis")` isn't an error —
-  it just rates the student incorrectly. `--lint-workflows` is what catches it, so never skip it.
+- **A typo'd subject key is a lint error.** `facts.Gcse("physis")` compiles and would otherwise
+  rate the student incorrectly, but the linter flags it as off-vocabulary — and that lint now runs
+  inside `CreateAsync`, so such a workflow fails startup rather than shipping. `--lint-workflows` is
+  the cheaper pre-check that surfaces the same finding without booting an engine, so never skip it.
 - **Magic numbers.** A literal `4` or `5.0` or `0.6` in a rule will not survive review — pull it
   from `policy.*` / `facts.*` (sourced from `thresholds.yaml`) or `ALevelGrade.*`.
 - **Scale confusion.** GCSE grades are `1–9`; predicted points are `ALevelGrade` (`A*=6 … U=0`).
@@ -616,5 +620,5 @@ sets it, the cap keeps only the highest-weighted greens and demotes the surplus 
 
 ---
 
-See also: [README](../README.md) · [pipeline walk-through](walkthrough.md) ·
+See also: [technical reference](technical-reference.md) · [pipeline walk-through](walkthrough.md) ·
 [engine-choice rationale](engine-choice.md).

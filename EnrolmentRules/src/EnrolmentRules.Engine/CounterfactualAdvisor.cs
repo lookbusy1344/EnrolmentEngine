@@ -18,6 +18,7 @@ internal static class CounterfactualAdvisor
 		PolicyThresholds thresholds,
 		DateOnly asOf,
 		bool considerUnsatGcses,
+		Action? onPipelineEvaluation = null,
 		CancellationToken cancellationToken = default)
 	{
 		cancellationToken.ThrowIfCancellationRequested();
@@ -32,8 +33,9 @@ internal static class CounterfactualAdvisor
 
 		// One evaluation cache shared across every subject's search: the searches all perturb the same
 		// student and explore heavily overlapping grade vectors, and a full EnrolmentResult is a pure
-		// function of the (fixed-hobbies) grade vector, so a vector evaluated for one subject is reused by
-		// the rest. The per-subject searches run sequentially (below), so a plain dictionary suffices.
+		// function of the fixed non-GCSE student facts plus the grade vector, so a vector evaluated for one
+		// subject is reused by the rest. The per-subject searches run sequentially (below), so a plain
+		// dictionary suffices.
 		var evaluations = new Dictionary<string, EnrolmentResult>(StringComparer.Ordinal);
 
 		// The per-subject reachability search only ever raises GCSEs the student already sat: a grade bump is
@@ -43,7 +45,7 @@ internal static class CounterfactualAdvisor
 		// alone, which ClassifyBlockedReasonAsync surfaces as that entry rule's own reason. The
 		// considerUnsatGcses diagnostic knob reverts to the old, heavier search over every known GCSE.
 		var candidates = considerUnsatGcses ? AdvisorCandidates.AllSubjects : HeldSubjects(student);
-		var pipelineBudget = new PipelineEvaluationBudget(thresholds.AdviceMaxPipelineEvaluations);
+		var pipelineBudget = new PipelineEvaluationBudget(thresholds.AdviceMaxPipelineEvaluations, onPipelineEvaluation);
 		var advice = new List<SubjectAdvice>();
 		string? truncation = null;
 
@@ -97,7 +99,9 @@ internal static class CounterfactualAdvisor
 			evaluations,
 			thresholds,
 			pipelineBudget,
-			finalResult => finalResult.Recommendations.Single(r => r.Subject == explanation.Subject).Rating == target,
+			finalResult => IsAtLeastAsGoodAs(
+				finalResult.Recommendations.Single(r => r.Subject == explanation.Subject).Rating,
+				target),
 			asOf,
 			cancellationToken).ConfigureAwait(false);
 
@@ -157,11 +161,13 @@ internal static class CounterfactualAdvisor
 			.ConfigureAwait(false);
 		var recommendation = result.Recommendations.Single(r => r.Subject == explanation.Subject);
 
-		// Ratings ascend in severity (green < amber < red), so "at least as good as target" is <=.
-		return (int)recommendation.Rating <= (int)target
+		return IsAtLeastAsGoodAs(recommendation.Rating, target)
 			? BudgetExhaustedReason
 			: recommendation.Reason;
 	}
+
+	// Ratings ascend in severity (green < amber < red), so "at least as good as target" is <=.
+	private static bool IsAtLeastAsGoodAs(Rating actual, Rating target) => actual <= target;
 
 	private static async Task<SearchResult> SearchAsync(
 		EnrolmentEngine engine,
@@ -304,7 +310,7 @@ internal static class CounterfactualAdvisor
 	}
 
 	private static StudentInput Apply(StudentInput student, IReadOnlyDictionary<string, int> grades) =>
-		new(student.Id, GradeMap(grades), student.Hobbies) { ChosenALevels = student.ChosenALevels };
+		student with { Gcses = GradeMap(grades) };
 
 	private static Dictionary<string, int> GradeMap(StudentInput student) => GradeMap(student.Gcses);
 
@@ -366,23 +372,22 @@ internal sealed class PipelineEvaluationBudgetExhaustedException : Exception
 
 /// <summary>
 ///     Counts full pipeline evaluations against an optional hard cap. The advisor consumes it from a single
-///     sequential search loop, so a plain counter suffices — no synchronisation.
+///     sequential search loop, so a plain counter suffices — no synchronisation. An optional
+///     <paramref name="onConsume" /> hook fires after each successful consume (whether or not a cap is set);
+///     it is the test seam for tripping cancellation deterministically from inside the search.
 /// </summary>
-internal sealed class PipelineEvaluationBudget(int? limit)
+internal sealed class PipelineEvaluationBudget(int? limit, Action? onConsume = null)
 {
 	private int count;
 
 	public bool TryConsume()
 	{
-		if (limit is not { } max) {
-			return true;
-		}
-
-		if (count >= max) {
+		if (limit is { } max && count >= max) {
 			return false;
 		}
 
 		count++;
+		onConsume?.Invoke();
 		return true;
 	}
 }

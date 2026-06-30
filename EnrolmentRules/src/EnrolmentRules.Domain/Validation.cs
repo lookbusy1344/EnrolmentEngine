@@ -21,6 +21,22 @@ public static class GcseSubjects
 
 	/// <summary>Whether <paramref name="subject" /> is a recognised GCSE subject key.</summary>
 	public static bool IsKnown(string subject) => Known.Contains(subject);
+
+	/// <summary>
+	///     Load-time guard against vocabulary drift: every compiled GCSE key must have a matching catalogue
+	///     subject so student input validation and the prediction table stay aligned when subjects are added.
+	/// </summary>
+	public static void ValidateCatalogueCoverage(IReadOnlyList<Subject> catalogueSubjects)
+	{
+		var catalogue = catalogueSubjects.ToHashSet();
+		foreach (var key in Known) {
+			if (!Subject.TryParse(key, out var subject) || !catalogue.Contains(subject)) {
+				throw new InvalidDataException(
+					$"GCSE vocabulary key '{key}' has no matching catalogue subject; "
+					+ "update data/catalogue.yaml or GcseSubjects.Known.");
+			}
+		}
+	}
 }
 
 /// <summary>

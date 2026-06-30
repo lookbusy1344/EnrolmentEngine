@@ -32,6 +32,9 @@ public sealed class RatingEvaluator(
 {
 	public const string EligibilityWorkflow = "eligibility";
 	public const string SubjectRatingsWorkflow = "subject-ratings";
+	public const string EnglishLanguagePassRule = "EnglishLanguagePass";
+	public const string MathsPassRule = "MathsPass";
+	public const string EnoughPassesRule = "EnoughPasses";
 
 	/// <summary>Separator between the subject and rating segments of a subject-rating rule name.</summary>
 	public const char RuleNameSeparator = ':';
@@ -71,7 +74,7 @@ public sealed class RatingEvaluator(
 
 		var reasons = results
 			.Where(static r => !r.IsSuccess)
-			.Select(static r => string.IsNullOrWhiteSpace(r.Rule.ErrorMessage) ? r.Rule.RuleName : r.Rule.ErrorMessage)
+			.Select(EligibilityFailureReason)
 			.ToList();
 
 		return new(reasons.Count == 0, reasons);
@@ -168,6 +171,15 @@ public sealed class RatingEvaluator(
 		throw new WorkflowProbeException(
 			SubjectRatingsWorkflow, $"rule name '{ruleName}' is not a valid '<subject>{RuleNameSeparator}<rating>' pair");
 	}
+
+	private string EligibilityFailureReason(RuleResultTree result) =>
+		result.Rule.RuleName switch {
+			EnglishLanguagePassRule => $"GCSE English Language below the pass grade ({Thresholds.PassGrade})",
+			MathsPassRule => $"GCSE Maths below the pass grade ({Thresholds.PassGrade})",
+			EnoughPassesRule => $"Fewer than the required number of GCSE passes ({Thresholds.MinPasses} at grade {Thresholds.PassGrade} or above)",
+			_ => throw new WorkflowProbeException(
+				EligibilityWorkflow, $"unknown eligibility rule '{result.Rule.RuleName}' cannot be projected into a threshold-aware failure reason"),
+		};
 }
 
 /// <summary>

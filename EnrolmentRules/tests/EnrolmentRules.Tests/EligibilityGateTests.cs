@@ -5,6 +5,7 @@ using System.Text.Json;
 using Domain;
 using Engine;
 using FluentAssertions;
+using Prediction;
 using RulesEngine.Interfaces;
 
 /// <summary>
@@ -12,7 +13,7 @@ using RulesEngine.Interfaces;
 ///     (never by eyeballing JSON). Pins the boundary matrix, the reason precedence, the array-vs-accessor
 ///     input shaping, and the hot-swap property the whole engine choice rests on.
 /// </summary>
-public sealed class Phase2Tests
+public sealed class EligibilityGateTests
 {
 	private static string DataDir => Path.Combine(Harness.RepoRoot, "data");
 
@@ -108,6 +109,34 @@ public sealed class Phase2Tests
 	}
 
 	[Fact]
+	public async Task english_failure_reason_uses_the_loaded_pass_grade()
+	{
+		var thresholds = Harness.Thresholds with { PassGrade = 7 };
+		var evaluator = await EvaluatorAsync(thresholds);
+
+		var gate = await evaluator.EvaluateEligibilityAsync(Gcses(
+			("english_language", 6), ("maths", 7), ("physics", 7), ("chemistry", 7), ("biology", 7),
+			("history", 7), ("geography", 7)));
+
+		gate.Eligible.Should().BeFalse();
+		gate.Reasons.Should().Equal("GCSE English Language below the pass grade (7)");
+	}
+
+	[Fact]
+	public async Task maths_failure_reason_uses_the_loaded_pass_grade()
+	{
+		var thresholds = Harness.Thresholds with { PassGrade = 7 };
+		var evaluator = await EvaluatorAsync(thresholds);
+
+		var gate = await evaluator.EvaluateEligibilityAsync(Gcses(
+			("english_language", 7), ("maths", 6), ("physics", 7), ("chemistry", 7), ("biology", 7),
+			("history", 7), ("geography", 7)));
+
+		gate.Eligible.Should().BeFalse();
+		gate.Reasons.Should().Equal("GCSE Maths below the pass grade (7)");
+	}
+
+	[Fact]
 	public async Task failing_english_and_pass_count_lists_english_first()
 	{
 		// Only Maths present: English fails, pass-count fails, Maths passes. Precedence puts English first.
@@ -118,6 +147,20 @@ public sealed class Phase2Tests
 		gate.Reasons.Should().HaveCount(2);
 		gate.Reasons[0].Should().Contain("English");
 		gate.Reasons[1].Should().Contain("passes");
+	}
+
+	[Fact]
+	public async Task multiple_failures_keep_declared_order_with_loaded_threshold_values()
+	{
+		var thresholds = Harness.Thresholds with { PassGrade = 7, MinPasses = 6 };
+		var evaluator = await EvaluatorAsync(thresholds);
+
+		var gate = await evaluator.EvaluateEligibilityAsync(Gcses(("maths", 7), ("physics", 7), ("chemistry", 7)));
+
+		gate.Eligible.Should().BeFalse();
+		gate.Reasons.Should().Equal(
+			"GCSE English Language below the pass grade (7)",
+			"Fewer than the required number of GCSE passes (6 at grade 7 or above)");
 	}
 
 	[Fact]
@@ -134,6 +177,19 @@ public sealed class Phase2Tests
 
 		gate.Eligible.Should().BeFalse();
 		gate.Reasons.Should().ContainSingle().Which.Should().Contain("passes");
+	}
+
+	[Fact]
+	public async Task pass_count_failure_reason_uses_the_loaded_thresholds()
+	{
+		var thresholds = Harness.Thresholds with { PassGrade = 7, MinPasses = 6 };
+		var evaluator = await EvaluatorAsync(thresholds);
+
+		var gate = await evaluator.EvaluateEligibilityAsync(Gcses(
+			("english_language", 7), ("maths", 7), ("physics", 7), ("chemistry", 7), ("biology", 7)));
+
+		gate.Eligible.Should().BeFalse();
+		gate.Reasons.Should().Equal("Fewer than the required number of GCSE passes (6 at grade 7 or above)");
 	}
 
 	[Fact]
@@ -258,6 +314,9 @@ public sealed class Phase2Tests
 	private static Rating ArtRating(EnrolmentResult result) =>
 		result.Recommendations.Single(r => r.Subject == Subject.Art).Rating;
 
+	private static async Task<RatingEvaluator> EvaluatorAsync(PolicyThresholds thresholds) =>
+		new((await Harness.BuildFromShippedWorkflowsAsync()).Engine, thresholds, Harness.Catalogue, Harness.Scale);
+
 	[Fact]
 	public async Task per_call_asof_overrides_the_bound_construction_date()
 	{
@@ -350,8 +409,8 @@ public sealed class Phase2Tests
 		}
 	}
 
-	// Rewrite a transition-matrix CSV with every probability column set to zero, leaving the header and the
-	// non-probability identity columns (indices 0–4) intact.
+	// Rewrite a transition-matrix CSV into a valid but maximally pessimistic matrix: all mass moves to U, so
+	// every probability gate above U fails while each row still sums to 1 and passes structural validation.
 	private static void ZeroTransitionProbabilities(string csvPath)
 	{
 		var lines = File.ReadAllLines(csvPath);
@@ -361,13 +420,15 @@ public sealed class Phase2Tests
 			}
 
 			var fields = line.Split(',');
-			for (var i = 5; i < fields.Length; i++) {
+			fields[5] = "1";
+			for (var i = 6; i < fields.Length; i++) {
 				fields[i] = "0";
 			}
 
 			return string.Join(',', fields);
-		});
+		}).ToArray();
 		File.WriteAllLines(csvPath, rewritten);
+		DfeTransitionMatrix.Load(csvPath);
 	}
 
 	// Copy a directory tree into a fresh, isolated temp location whose parent has no sibling `data/` folder,

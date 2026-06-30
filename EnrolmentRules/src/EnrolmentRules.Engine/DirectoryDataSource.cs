@@ -9,12 +9,12 @@ using Prediction;
 /// </summary>
 public sealed class DirectoryDataSource(string workflowsDirectory, string dataDirectory) : IEnrolmentDataSource
 {
-	public IReadOnlyList<(string FileName, Stream Content)> OpenWorkflows() => [
-		.. Directory.EnumerateFiles(workflowsDirectory)
-			.Where(IsWorkflowFile)
-			.OrderBy(static file => file, StringComparer.Ordinal)
-			.Select(static file => (file, (Stream)File.OpenRead(file))),
-	];
+	public IReadOnlyList<(string FileName, Stream Content)> OpenWorkflows() =>
+		OpenWorkflowFiles(
+			Directory.EnumerateFiles(workflowsDirectory)
+				.Where(IsWorkflowFile)
+				.OrderBy(static file => file, StringComparer.Ordinal),
+			File.OpenRead);
 
 	public Stream OpenWorkflowSchema() => File.OpenRead(Path.Combine(workflowsDirectory, WorkflowStore.SchemaFileName));
 
@@ -32,6 +32,27 @@ public sealed class DirectoryDataSource(string workflowsDirectory, string dataDi
 
 	public Stream OpenTransitionMatrix() =>
 		File.OpenRead(Path.Combine(dataDirectory, DfeTransitionMatrix.DataDirectoryRelativePath));
+
+	internal static IReadOnlyList<(string FileName, Stream Content)> OpenWorkflowFiles(
+		IEnumerable<string> files,
+		Func<string, Stream> openFile)
+	{
+		var opened = new List<(string FileName, Stream Content)>();
+		try {
+			foreach (var file in files) {
+				opened.Add((file, openFile(file)));
+			}
+
+			return opened;
+		}
+		catch {
+			foreach (var (_, content) in opened) {
+				content.Dispose();
+			}
+
+			throw;
+		}
+	}
 
 	private static bool IsWorkflowFile(string file) =>
 		!string.Equals(Path.GetFileName(file), WorkflowStore.SchemaFileName, StringComparison.OrdinalIgnoreCase)

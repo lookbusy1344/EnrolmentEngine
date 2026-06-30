@@ -199,7 +199,15 @@ public static class Catalogue
 	public static CatalogueData Load(string yaml) => Build(YamlConverter.ToJsonNode(yaml));
 
 	/// <summary>Read, parse and validate the catalogue file at <paramref name="path" />.</summary>
-	public static CatalogueData LoadFromFile(string path) => Load(File.ReadAllText(path));
+	public static CatalogueData LoadFromFile(string path)
+	{
+		var data = Load(File.ReadAllText(path));
+		// Coverage is guarded here (and in CatalogueStore.LoadAndValidate), not in Build, on purpose: Build/Load is
+		// also used to construct deliberately partial catalogues (e.g. the open-subject test fixtures), which a
+		// full-vocabulary coverage check would wrongly reject. The guard belongs only on the full-load entry points.
+		GcseSubjects.ValidateCatalogueCoverage(data.Subjects);
+		return data;
+	}
 
 	/// <summary>
 	///     Project an already-normalized catalogue document (post YAML→JSON, post schema validation) into the

@@ -1,5 +1,7 @@
 namespace EnrolmentRules.Engine;
 
+using Domain;
+
 /// <summary>Base type for workflow problems detected at startup (fail loud, never silent — Reservation 1).</summary>
 public abstract class WorkflowException : Exception
 {
@@ -46,4 +48,22 @@ public sealed class WorkflowProbeException : WorkflowException
 		: base($"Workflow '{workflowName}' failed probe-evaluation at startup: {errors}", innerException)
 	{
 	}
+}
+
+/// <summary>
+///     A schema-valid, probe-compiling workflow failed semantic lint at startup. This captures the
+///     aggregated lint findings in deterministic order so bootstrap and CLI lint report the same facts.
+/// </summary>
+public sealed class WorkflowLintException : WorkflowException
+{
+	public WorkflowLintException(IReadOnlyList<LintFinding> findings)
+		: base($"Workflow lint failed at startup: {string.Join("; ", findings.Select(FormatFinding))}")
+	{
+		Findings = findings;
+	}
+
+	public IReadOnlyList<LintFinding> Findings { get; }
+
+	private static string FormatFinding(LintFinding finding) =>
+		$"{finding.Workflow}/{finding.Rule ?? "-"}: {finding.Message}";
 }

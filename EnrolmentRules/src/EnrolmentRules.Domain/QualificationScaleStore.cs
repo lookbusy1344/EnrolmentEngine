@@ -8,7 +8,8 @@ using Json.Schema;
 
 /// <summary>
 ///     Startup loader for the qualification scale: reads <c>qualifications.yaml</c>, validates it against
-///     <c>qualifications.schema.json</c> and installs the resulting scale as the active lookup table.
+///     <c>qualifications.schema.json</c>, enforces full <see cref="QualificationType" /> coverage, and
+///     installs the resulting scale as the active lookup table.
 /// </summary>
 public static class QualificationScaleStore
 {
@@ -50,7 +51,7 @@ public static class QualificationScaleStore
 		}
 
 		try {
-			return QualificationScale.Build(node);
+			return QualificationScale.RequireCompleteCoverage(QualificationScale.Build(node));
 		}
 		catch (Exception ex) when (ex is InvalidDataException or FormatException) {
 			throw new QualificationScaleException(

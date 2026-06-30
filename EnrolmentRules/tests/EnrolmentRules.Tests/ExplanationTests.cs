@@ -13,7 +13,7 @@ using FluentAssertions;
 ///     <see cref="Adjustment" /> trail. Driven through the real engine + constraint pass, never by reading
 ///     JSON. The golden-file end-to-end suite lives in <see cref="GoldenFileTests" />.
 /// </summary>
-public sealed class Phase7Tests
+public sealed class ExplanationTests
 {
 	private static CatalogueData ShippedCatalogue => CatalogueStore.LoadAndValidate(Harness.DataDir);
 

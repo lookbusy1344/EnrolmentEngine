@@ -267,12 +267,6 @@ public static partial class WorkflowLinter
 				}
 			}
 		}
-
-		foreach (var child in Flatten(rule.Rules)) {
-			if (!string.IsNullOrWhiteSpace(child.Expression)) {
-				yield return child.Expression!;
-			}
-		}
 	}
 
 	[GeneratedRegex(@"(?<![\w])(?<owner>[A-Za-z_][A-Za-z0-9_]*)\.(?<member>[A-Za-z_][A-Za-z0-9_]*)")]

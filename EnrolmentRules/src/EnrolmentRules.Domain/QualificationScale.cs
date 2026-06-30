@@ -26,6 +26,7 @@ public sealed class QualificationScale
 	public const string DefaultRelativePath = "data/qualifications.yaml";
 
 	private static readonly Lazy<QualificationScale> Shipped = new(static () => LoadFromFile(FindDefaultPath()));
+	private static readonly QualificationType[] KnownTypes = Enum.GetValues<QualificationType>();
 
 	private readonly FrozenDictionary<QualificationType, FrozenDictionary<string, QualificationScaleEntry>> byType;
 
@@ -45,7 +46,7 @@ public sealed class QualificationScale
 			}
 		}
 
-		ValidateCoverage(grouped);
+		ValidateScaleInvariants(grouped);
 		byType = grouped.ToFrozenDictionary(
 			static kv => kv.Key,
 			static kv => kv.Value.ToFrozenDictionary(static g => g.Key, static g => g.Value));
@@ -59,11 +60,18 @@ public sealed class QualificationScale
 	/// </summary>
 	public static QualificationScale Default => Shipped.Value;
 
+	internal static IReadOnlyList<QualificationType> AllTypes => KnownTypes;
+
 	/// <summary>Parse a YAML qualification scale document into the runtime table.</summary>
 	public static QualificationScale Load(string yaml) => Build(YamlConverter.ToJsonNode(yaml));
 
-	/// <summary>Read and parse the qualification scale file at <paramref name="path" />.</summary>
-	public static QualificationScale LoadFromFile(string path) => Load(File.ReadAllText(path));
+	/// <summary>
+	///     Read and parse the qualification scale file at <paramref name="path" />. Full
+	///     <see cref="QualificationType" /> coverage is enforced by the startup/load entry points, not by
+	///     this lower-level constructor path, so tests and hosts can still construct deliberate partial
+	///     in-memory scales explicitly.
+	/// </summary>
+	public static QualificationScale LoadFromFile(string path) => RequireCompleteCoverage(Load(File.ReadAllText(path)));
 
 	/// <summary>
 	///     Project an already-normalized qualification-scale document into the runtime table. Shared with
@@ -104,6 +112,22 @@ public sealed class QualificationScale
 		&& string.Equals(qualification.Subject, entryEquivalent.Subject, StringComparison.OrdinalIgnoreCase)
 		&& Ordinal(qualification.Type, qualification.Grade) >= Ordinal(entryEquivalent.Type, entryEquivalent.MinGrade);
 
+	internal bool ContainsType(QualificationType type) => byType.ContainsKey(type);
+
+	internal static QualificationScale RequireCompleteCoverage(QualificationScale scale)
+	{
+		var missing = AllTypes
+			.Where(type => !scale.ContainsType(type))
+			.Select(EnumNames.NameOf)
+			.ToArray();
+		if (missing.Length > 0) {
+			throw new InvalidDataException(
+				$"Qualification scale is missing entries for: {string.Join(", ", missing)}.");
+		}
+
+		return scale;
+	}
+
 	private static void ValidateEntry(QualificationScaleEntry entry)
 	{
 		if (string.IsNullOrWhiteSpace(entry.Grade)) {
@@ -122,7 +146,7 @@ public sealed class QualificationScale
 		}
 	}
 
-	private static void ValidateCoverage(Dictionary<QualificationType, Dictionary<string, QualificationScaleEntry>> grouped)
+	private static void ValidateScaleInvariants(Dictionary<QualificationType, Dictionary<string, QualificationScaleEntry>> grouped)
 	{
 		foreach (var (type, grades) in grouped) {
 			if (grades.Count == 0) {

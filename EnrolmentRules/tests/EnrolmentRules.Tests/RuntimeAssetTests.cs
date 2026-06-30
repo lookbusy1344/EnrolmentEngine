@@ -11,7 +11,7 @@ using FluentAssertions;
 ///     workflow YAML and the DfE transition matrix beside itself, rather than depending on the source
 ///     checkout layout to locate them at runtime.
 /// </summary>
-public sealed class Phase10Tests
+public sealed class RuntimeAssetTests
 {
 	[Fact]
 	public async Task published_cli_contains_its_runtime_assets_and_can_evaluate_outside_the_source_tree()

@@ -112,7 +112,7 @@ public sealed class EnrolmentEngine : IEnrolmentEngine
 		DateOnly asOf,
 		bool considerUnsatGcses,
 		CancellationToken cancellationToken = default) =>
-		CounterfactualAdvisor.AdviseAsync(this, student, evaluator.Thresholds, asOf, considerUnsatGcses, cancellationToken);
+		CounterfactualAdvisor.AdviseAsync(this, student, evaluator.Thresholds, asOf, considerUnsatGcses, cancellationToken: cancellationToken);
 
 	/// <inheritdoc cref="IEnrolmentEvaluator.TryEvaluateAsync(StudentInput, CancellationToken)" />
 	public Task<ValidatedEvaluation<EnrolmentResult>> TryEvaluateAsync(StudentInput student, CancellationToken cancellationToken = default) =>

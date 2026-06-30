@@ -12,6 +12,12 @@ using FluentAssertions;
 ///     byte-for-byte against its golden. This is the primary defence against the untyped-rule risk
 ///     (Reservation 1): a silent rule error breaks a golden file. Hand-checked invariants per fixture sit
 ///     beside the byte-match so the goldens are not merely self-consistent.
+///
+///     To regenerate goldens after a deliberate output change: delete the *.expected.json files, run
+///     the fixture_evaluates_to_its_committed_golden test (which will fail with "file must be committed"),
+///     copy each actual output into the corresponding expected path, and commit alongside the change.
+///     Review every diff in the regenerated golden — a golden committed without scrutiny defeats its own
+///     purpose.
 /// </summary>
 public sealed class GoldenFileTests
 {
@@ -96,6 +102,33 @@ public sealed class GoldenFileTests
 		var music = result.Recommendations.Single(r => r.Subject == Subject.Music);
 		music.Rating.Should().Be(Rating.Amber);
 		music.Reason.Should().Be(ConstraintPass.OwnTimeReason);
+	}
+
+	[Fact]
+	public async Task chosen_prior_choice_red_fixture_excludes_german_and_downgrades_french()
+	{
+		// An all-8s student (except German at 5) who has committed to German A-level: French
+		// is excluded as a prior choice, Art is demoted by mutual exclusion with History,
+		// and German itself is red from its own low grade.
+		var result = await EvaluateFixtureAsync("chosen-prior-choice-red");
+
+		result.Eligible.Should().BeTrue();
+
+		var french = result.Recommendations.Single(r => r.Subject == Subject.French);
+		french.Rating.Should().Be(Rating.Red);
+		french.Reason.Should().Be("Cannot be combined with chosen german");
+
+		var german = result.Recommendations.Single(r => r.Subject == Subject.German);
+		german.Rating.Should().Be(Rating.Red);
+		german.Reason.Should().Contain("amber threshold");
+
+		var art = result.Recommendations.Single(r => r.Subject == Subject.Art);
+		art.Rating.Should().Be(Rating.Amber);
+		art.Reason.Should().Contain("Mutual exclusion").And.Contain("history");
+
+		result.Adjustments.Should().ContainSingle(a =>
+			a.Subject == Subject.French && a.From == Rating.Green && a.To == Rating.Red
+			&& a.Reason.Contains("Cannot be combined with chosen german"));
 	}
 
 	[Fact]

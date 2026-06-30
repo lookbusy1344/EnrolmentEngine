@@ -11,7 +11,7 @@ using FluentAssertions;
 ///     weight or factor breaks a test. The cap runs <em>after</em> the constraint pass: it counts greens
 ///     that survived the exclusion/prereq/own-time downgrades.
 /// </summary>
-public sealed class Phase6Tests
+public sealed class AggregationTests
 {
 	// The green cap is an optional feature, disabled in the shipped thresholds (MaxGreenChoices is null).
 	// These tests opt it in explicitly to exercise the capping behaviour.

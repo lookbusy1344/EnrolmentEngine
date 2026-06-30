@@ -13,7 +13,7 @@ using RulesEngine.Models;
 ///     never run; an eligible student flows through to the Phase 3 ratings. The "every subject" set is
 ///     data-driven from <see cref="Subject" />, so adding a subject can't silently skip the gate.
 /// </summary>
-public sealed class Phase4Tests
+public sealed class EligibilityShortCircuitTests
 {
 	// Only Maths present: English absent (first gate failure) and the pass-count fails too — ineligible.
 	private static GcseResult[] IneligibleGcses() => [new("maths", Harness.Thresholds.PassGrade)];

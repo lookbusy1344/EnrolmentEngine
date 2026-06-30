@@ -10,6 +10,7 @@ public sealed partial class DocumentationTests
 {
 	private static readonly string[] MaintainedDocuments = [
 		"README.md",
+		Path.Combine("docs", "technical-reference.md"),
 		Path.Combine("docs", "walkthrough.md"),
 		Path.Combine("docs", "rule-authoring.md"),
 	];
@@ -37,14 +38,15 @@ public sealed partial class DocumentationTests
 	}
 
 	[Fact]
-	public void readme_validated_evaluation_example_uses_the_current_api_shape()
+	public void technical_reference_validated_evaluation_example_uses_the_current_api_shape()
 	{
-		var readme = File.ReadAllText(Path.Combine(Harness.RepoRoot, "README.md"));
+		var technicalReference = File.ReadAllText(
+			Path.Combine(Harness.RepoRoot, "docs", "technical-reference.md"));
 
-		readme.Should().Contain("validated.Validation.IsValid");
-		readme.Should().Contain("validated.Validation.Errors");
-		readme.Should().NotContain("validated.IsValid");
-		readme.Should().NotContain("validated.Outcome");
+		technicalReference.Should().Contain("validated.Validation.IsValid");
+		technicalReference.Should().Contain("validated.Validation.Errors");
+		technicalReference.Should().NotContain("validated.IsValid");
+		technicalReference.Should().NotContain("validated.Outcome");
 	}
 
 	private static IEnumerable<string> ValidateLinks(string relativePath)

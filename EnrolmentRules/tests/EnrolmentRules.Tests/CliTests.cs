@@ -13,7 +13,7 @@ using FluentAssertions;
 ///     preserved, no cross-student leakage. The ineligible exit code (4) is asserted for the
 ///     single-student evaluation modes.
 /// </summary>
-public sealed class Phase8Tests
+public sealed class CliTests
 {
 	// A valid date of birth so its presence never confounds the other validation assertions.
 	private const string DobText = "2009-09-01";
@@ -225,12 +225,20 @@ public sealed class Phase8Tests
 
 		exit.Should().Be(CliRunner.ExitOk);
 		var output = stdout.ToString();
-		// Plain-text capture (no terminal ⇒ colour markup is resolved away); assert the structure is present.
-		foreach (var subject in Catalogue.Subjects) {
-			output.Should().Contain(EnumNames.NameOf(subject));
-		}
+		var lines = output.Split('\n', StringSplitOptions.RemoveEmptyEntries);
 
-		output.Should().MatchRegex("green|amber|red");
+		// Each subject appears as its own row in the table; the rating is in the second
+		// pipe-delimited column of that same line, so a regression that drops the rating
+		// column fails every subject's line check. The cell may contain Spectre.Console
+		// ANSI escape codes (preserved when captured via StringWriter), so check by
+		// substring rather than exact match.
+		foreach (var subject in Catalogue.Subjects) {
+			var name = EnumNames.NameOf(subject);
+			lines.Should().Contain(l => l.Contains(name));
+			var subjectLine = lines.First(l => l.Contains(name));
+			var ratingCell = subjectLine.Split('│')[2];
+			ratingCell.Should().ContainAny("green", "amber", "red");
+		}
 	}
 
 	// ---- batch -------------------------------------------------------------------------------

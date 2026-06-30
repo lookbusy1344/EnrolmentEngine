@@ -179,6 +179,33 @@ public sealed class WorkflowLinterTests
 	}
 
 	[Fact]
+	public void nested_rule_expressions_are_reported_once()
+	{
+		Workflow[] workflows = [
+			new() {
+				WorkflowName = "custom",
+				Rules = [
+					new() {
+						RuleName = "parent",
+						Rules = [
+							new() {
+								RuleName = "child",
+								Expression = "facts.Gcse(\"mathz\") >= Thresholds.TopEntry",
+							},
+						],
+					},
+				],
+			},
+		];
+
+		var findings = WorkflowLinter.Lint(workflows, Harness.Catalogue);
+
+		findings.Should().ContainSingle(finding =>
+			finding.Rule == "child"
+			&& finding.Message.Contains("mathz", StringComparison.Ordinal));
+	}
+
+	[Fact]
 	public void custom_subject_workflows_lint_clean_against_their_matching_catalogue()
 	{
 		var fixture = WriteCustomSubjectFixture();

@@ -167,6 +167,7 @@ public static class WorkflowStore
 		string? schemaPath = null)
 	{
 		var workflows = LoadAndValidate(directory, schemaPath);
+		ThrowOnLintErrors(workflows, catalogue);
 		var engine = BuildEngine(workflows);
 		await ProbeCompileAsync(engine, workflows,
 				CanonicalProbe(thresholds, catalogue, matrix ?? DfeTransitionMatrix.LoadDefault(), scale ?? QualificationScale.Default))
@@ -188,6 +189,7 @@ public static class WorkflowStore
 		QualificationScale? scale = null)
 	{
 		var workflows = LoadAndValidate(files, schemaStream);
+		ThrowOnLintErrors(workflows, catalogue);
 		var engine = BuildEngine(workflows);
 		await ProbeCompileAsync(engine, workflows,
 				CanonicalProbe(thresholds, catalogue, matrix ?? DfeTransitionMatrix.LoadDefault(), scale ?? QualificationScale.Default))
@@ -242,6 +244,16 @@ public static class WorkflowStore
 	private static bool IsWorkflowFile(string file) =>
 		!string.Equals(Path.GetFileName(file), SchemaFileName, StringComparison.OrdinalIgnoreCase)
 		&& Path.GetExtension(file) is ".json" or ".yaml" or ".yml";
+
+	private static void ThrowOnLintErrors(IReadOnlyList<Workflow> workflows, CatalogueData catalogue)
+	{
+		var findings = WorkflowLinter.Lint(workflows, catalogue)
+			.Where(static finding => finding.Severity == LintSeverity.Error)
+			.ToArray();
+		if (findings.Length > 0) {
+			throw new WorkflowLintException(findings);
+		}
+	}
 
 	// Reuse the shared YAML→JSON normalization (YamlConverter), then layer on the workflow-only default
 	// (the implicit LambdaExpression rule type). A generic parse failure is mapped onto the workflow

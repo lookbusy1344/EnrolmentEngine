@@ -38,18 +38,26 @@ public static class CliRunner
 	private static DateOnly Today => DateOnly.FromDateTime(DateTime.Today);
 
 	public static Task<int> RunAsync(IReadOnlyList<string> args, TextWriter stdout, TextWriter stderr) =>
+		RunAsync(args, stdout, stderr, WorkflowsDirectory, DataDirectory);
+
+	public static Task<int> RunAsync(
+		IReadOnlyList<string> args,
+		TextWriter stdout,
+		TextWriter stderr,
+		Func<string> workflowsDirectory,
+		Func<string> dataDirectory) =>
 		args switch {
-			["--lint-workflows"] => RunLintAsync(null, stdout, stderr),
-			["--lint-workflows", var dir] => RunLintAsync(dir, stdout, stderr),
-			[var path] => Task.FromResult(RunProfile(path, stdout, stderr)),
-			["--table", var path] => RunEvaluationAsync(path, Output.Table, stdout, stderr),
-			["--json", var path] => RunEvaluationAsync(path, Output.Json, stdout, stderr),
-			["--explain", var path] => RunEvaluationAsync(path, Output.Explain, stdout, stderr),
-			["--explain-text", var path] => RunEvaluationAsync(path, Output.ExplainText, stdout, stderr),
-			["--advise", var path] => RunEvaluationAsync(path, Output.Advise, stdout, stderr),
+			["--lint-workflows"] => Task.FromResult(RunLint(null, stdout, stderr)),
+			["--lint-workflows", var dir] => Task.FromResult(RunLint(dir, stdout, stderr)),
+			[var path] => Task.FromResult(RunProfile(path, stdout, stderr, dataDirectory)),
+			["--table", var path] => RunEvaluationAsync(path, Output.Table, stdout, stderr, null, workflowsDirectory, dataDirectory),
+			["--json", var path] => RunEvaluationAsync(path, Output.Json, stdout, stderr, null, workflowsDirectory, dataDirectory),
+			["--explain", var path] => RunEvaluationAsync(path, Output.Explain, stdout, stderr, null, workflowsDirectory, dataDirectory),
+			["--explain-text", var path] => RunEvaluationAsync(path, Output.ExplainText, stdout, stderr, null, workflowsDirectory, dataDirectory),
+			["--advise", var path] => RunEvaluationAsync(path, Output.Advise, stdout, stderr, null, workflowsDirectory, dataDirectory),
 			["--advise", "--all-gcses", var path] =>
-				RunEvaluationAsync(path, Output.Advise, stdout, stderr, true),
-			["--batch", var path] => RunBatchAsync(path, stdout, stderr),
+				RunEvaluationAsync(path, Output.Advise, stdout, stderr, true, workflowsDirectory, dataDirectory),
+			["--batch", var path] => RunBatchAsync(path, stdout, stderr, workflowsDirectory, dataDirectory),
 			_ => Task.FromResult(Usage(stderr)),
 		};
 
@@ -69,7 +77,7 @@ public static class CliRunner
 	///     line. Exit <see cref="ExitOk" /> when clean, <see cref="ExitLint" /> on any
 	///     <see cref="LintSeverity.Error" />.
 	/// </summary>
-	private static async Task<int> RunLintAsync(string? directory, TextWriter stdout, TextWriter stderr)
+	private static int RunLint(string? directory, TextWriter stdout, TextWriter stderr)
 	{
 		IReadOnlyList<Workflow> workflows;
 		CatalogueData catalogue;
@@ -97,26 +105,39 @@ public static class CliRunner
 		return Directory.Exists(sibling) ? sibling : DataDirectory();
 	}
 
-	private static int RunProfile(string path, TextWriter stdout, TextWriter stderr)
+	private static int RunProfile(string path, TextWriter stdout, TextWriter stderr, Func<string> dataDirectory)
 	{
-		var dataDirectory = DataDirectory();
-		var scale = QualificationScaleStore.LoadAndValidate(dataDirectory);
-		var catalogue = CatalogueStore.LoadAndValidate(dataDirectory, scale);
-		if (LoadValidStudent(path, stderr, catalogue, scale) is not { } student) {
+		try {
+			var loadedDataDirectory = dataDirectory();
+			var scale = QualificationScaleStore.LoadAndValidate(loadedDataDirectory);
+			var catalogue = CatalogueStore.LoadAndValidate(loadedDataDirectory, scale);
+			if (LoadValidStudent(path, stderr, catalogue, scale) is not { } student) {
+				return ExitInput;
+			}
+
+			var profile = GradePredictor.Predict(student, student.ToGcseResults(), Today, catalogue, DfeTransitionMatrix.LoadFromDataDirectory(loadedDataDirectory), scale);
+			stdout.WriteLine(JsonSerializer.Serialize(profile, EnrolmentJsonContext.Default.StudentProfile));
+			return ExitOk;
+		}
+		catch (Exception ex) when (ex is CatalogueException or QualificationScaleException or TransitionMatrixException
+									   or DirectoryNotFoundException or FileNotFoundException) {
+			stderr.WriteLine($"error: could not load enrolment rules: {ex.Message}");
 			return ExitInput;
 		}
-
-		var profile = GradePredictor.Predict(student, student.ToGcseResults(), Today, catalogue, scale);
-		stdout.WriteLine(JsonSerializer.Serialize(profile, EnrolmentJsonContext.Default.StudentProfile));
-		return ExitOk;
 	}
 
 	// considerUnsatGcses is null in normal use so --advise honours the loaded thresholds default; the
 	// --all-gcses flag passes true to force the diagnostic search over every known GCSE for this run only.
 	private static async Task<int> RunEvaluationAsync(
-		string path, Output output, TextWriter stdout, TextWriter stderr, bool? considerUnsatGcses = null)
+		string path,
+		Output output,
+		TextWriter stdout,
+		TextWriter stderr,
+		bool? considerUnsatGcses,
+		Func<string> workflowsDirectory,
+		Func<string> dataDirectory)
 	{
-		if (await BuildEngineAsync(stderr) is not { } engine) {
+		if (await BuildEngineAsync(stderr, workflowsDirectory, dataDirectory) is not { } engine) {
 			return ExitInput;
 		}
 
@@ -184,7 +205,12 @@ public static class CliRunner
 	///     order preserved in the output. A parse or validation failure on one line is isolated to that
 	///     line's <see cref="BatchOutcome" /> rather than aborting the whole run.
 	/// </summary>
-	private static async Task<int> RunBatchAsync(string path, TextWriter stdout, TextWriter stderr)
+	private static async Task<int> RunBatchAsync(
+		string path,
+		TextWriter stdout,
+		TextWriter stderr,
+		Func<string> workflowsDirectory,
+		Func<string> dataDirectory)
 	{
 		string[] lines;
 		try {
@@ -195,7 +221,7 @@ public static class CliRunner
 			return ExitInput;
 		}
 
-		if (await BuildEngineAsync(stderr) is not { } engine) {
+		if (await BuildEngineAsync(stderr, workflowsDirectory, dataDirectory) is not { } engine) {
 			return ExitInput;
 		}
 
@@ -240,13 +266,17 @@ public static class CliRunner
 	}
 
 	/// <summary>Build the façade over the shipped workflows, reporting a load failure as an input error.</summary>
-	private static async Task<EnrolmentEngine?> BuildEngineAsync(TextWriter stderr)
+	private static async Task<EnrolmentEngine?> BuildEngineAsync(
+		TextWriter stderr,
+		Func<string> workflowsDirectory,
+		Func<string> dataDirectory)
 	{
 		try {
-			return await EnrolmentEngine.CreateAsync(WorkflowsDirectory(), DataDirectory(), Today);
+			return await EnrolmentEngine.CreateAsync(workflowsDirectory(), dataDirectory(), Today);
 		}
 		catch (Exception ex) when (ex is WorkflowException or CatalogueException or QualificationScaleException
-									   or PolicyThresholdsException or DirectoryNotFoundException or FileNotFoundException) {
+									   or PolicyThresholdsException or TransitionMatrixException
+									   or DirectoryNotFoundException or FileNotFoundException) {
 			stderr.WriteLine($"error: could not load enrolment rules: {ex.Message}");
 			return null;
 		}

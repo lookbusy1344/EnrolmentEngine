@@ -5,7 +5,8 @@ EnrolmentRules behaviour.
 
 It complements, rather than replaces:
 
-- [`README.md`](../README.md) for setup, CLI usage, and the student input shape.
+- [`technical-reference.md`](technical-reference.md) for setup, CLI usage, and the student input
+  shape.
 - [`rule-authoring.md`](rule-authoring.md) for the workflow for changing rules safely.
 - [`walkthrough.md`](walkthrough.md) for the end-to-end pipeline and decision semantics.
 
@@ -290,7 +291,7 @@ Rule object fields used here:
 | --- | --- | --- | --- |
 | `RuleName` | string | yes | Stable rule identifier. |
 | `SuccessEvent` | string | no | Human-readable reason emitted when the rule passes. |
-| `ErrorMessage` | string | no | Human-readable reason emitted when the rule fails. |
+| `ErrorMessage` | string | no | Permitted by the schema but not used by the shipped workflows. Eligibility failure reasons are projected from the loaded `data/thresholds.yaml` values in compiled code (keyed by rule name), not read from this field, so the explanation cannot drift from the threshold that actually fired. |
 | `Expression` | string | yes | Lambda expression evaluated by RulesEngine. |
 | `LocalParams` | array | no | Named sub-expressions computed before the main expression. |
 
@@ -319,13 +320,11 @@ WorkflowName: eligibility
 Rules:
   - RuleName: EnglishLanguagePass
     SuccessEvent: GCSE English Language at pass grade or above
-    ErrorMessage: GCSE English Language below the pass grade
     Expression: >-
       lookup.Grade("english_language") >= policy.PassGrade
 
   - RuleName: EnoughPasses
     SuccessEvent: Enough GCSE passes for eligibility
-    ErrorMessage: Fewer than the required number of GCSE passes
     LocalParams:
       - Name: passCount
         Expression: >-
@@ -339,6 +338,9 @@ How to read that example:
 - `lookup.Grade("english_language")` fetches the student's English Language GCSE,
 - `policy.PassGrade` comes from `data/thresholds.yaml`,
 - `LocalParams` lets the workflow compute `passCount` once and reuse it in the rule.
+- The rules carry no `ErrorMessage`: a failed rule's reason text is projected from the loaded
+  thresholds in compiled code (keyed by `RuleName`), so changing `pass_grade` or `min_passes`
+  updates the explanation as well as the verdict.
 
 ### `workflows/subject-ratings.yaml`
 
@@ -473,7 +475,7 @@ Relevant rule fields:
 | --- | --- | --- |
 | `RuleName` | yes | Stable rule identifier. |
 | `Enabled` | no | RulesEngine toggle. Not used by shipped workflows. |
-| `ErrorMessage` | no | Failure text for gate-style rules. |
+| `ErrorMessage` | no | Permitted by the schema but not used by shipped workflows; eligibility failure reasons are projected from thresholds in compiled code. |
 | `SuccessEvent` | no | Success text. |
 | `Operator` | no | Composite-rule operator. Not used by shipped workflows. |
 | `RuleExpressionType` | no | Schema permits `LambdaExpression`; loader fills this automatically for real rules. |
@@ -490,7 +492,6 @@ For this project, the practical subset is much smaller than the full schema surf
 - top-level `Rules`
 - per-rule `RuleName`
 - per-rule `SuccessEvent`
-- per-rule `ErrorMessage` in eligibility
 - per-rule `Expression`
 - optional `LocalParams`
 

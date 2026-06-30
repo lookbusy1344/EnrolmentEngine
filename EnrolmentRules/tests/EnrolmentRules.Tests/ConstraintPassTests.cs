@@ -82,3 +82,61 @@ public sealed class ConstraintPassTests
 		applied.Should().ContainSingle().Which.Should().Be(new SubjectRating(Subject.Maths, Rating.Green, "base reason"));
 	}
 }
+
+/// <summary>
+///     Engine-driven constraint-pass scenarios through the full pipeline. Explicit regression anchors
+///     for the cross-subject downgrades, kept alongside the unit tests for Apply.
+/// </summary>
+public sealed class ConstraintPassScenarioTests : IAsyncLifetime
+{
+	private EnrolmentEngine engine = null!;
+
+	public async Task InitializeAsync() => engine = await Harness.ShippedEngineAsync();
+
+	public Task DisposeAsync() => Task.CompletedTask;
+
+	private static StudentInput StrongEligibleStudent() =>
+		new("S-MONOTONE", new Dictionary<string, int> {
+			["english_language"] = 8,
+			["maths"] = 8,
+			["physics"] = 8,
+			["chemistry"] = 8,
+			["biology"] = 8,
+			["english_literature"] = 8,
+			["french"] = 8,
+			["german"] = 8,
+			["physical_education"] = 8,
+			["computer_studies"] = 8,
+			["history"] = 8,
+			["music"] = 8,
+			["art"] = 8,
+		}, []) { DateOfBirth = new(2009, 9, 1) };
+
+	[Fact]
+	public async Task further_maths_without_chosen_maths_is_red_from_prerequisite_constraint()
+	{
+		var explained = await engine.ExplainAsync(StrongEligibleStudent());
+
+		explained.Eligible.Should().BeTrue();
+		var furtherMaths = explained.Explanations.Single(explanation => explanation.Subject == Subject.FurtherMaths);
+		furtherMaths.BaseRating.Should().NotBe(Rating.Red);
+		furtherMaths.Rating.Should().Be(Rating.Red);
+		furtherMaths.Overrides.Should().ContainSingle(override_ =>
+			override_.To == Rating.Red && override_.Reason == ConstraintPass.MathsPrerequisiteReason);
+	}
+
+	[Fact]
+	public async Task qualifying_french_and_german_mutual_exclusion_demotes_german_to_red()
+	{
+		var explained = await engine.ExplainAsync(StrongEligibleStudent());
+
+		explained.Eligible.Should().BeTrue();
+		var french = explained.Explanations.Single(explanation => explanation.Subject == Subject.French);
+		var german = explained.Explanations.Single(explanation => explanation.Subject == Subject.German);
+		french.Rating.Should().Be(Rating.Green);
+		german.BaseRating.Should().Be(Rating.Green);
+		german.Rating.Should().Be(Rating.Red);
+		german.Overrides.Should().ContainSingle(override_ =>
+			override_.To == Rating.Red && override_.Reason.Contains("Mutual exclusion", StringComparison.Ordinal));
+	}
+}

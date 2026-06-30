@@ -61,6 +61,12 @@ A blank cell means that grade was suppressed/zero in the source — keep it **em
 - Preserve the raw workbook value strings verbatim (this is why the file carries
   scientific-notation values like `4.1666...E-2`).
 - **Line endings are LF** (normalised via `.gitattributes`); emit LF when regenerating.
+- **The loader validates the output**, so a regenerated file that breaks the contract fails engine
+  startup with a `TransitionMatrixException` rather than loading silently: the header must match the
+  string above exactly, there must be at least one data row, every `subject`/`prior_attainment_band`
+  pair must be unique, each probability must parse to a finite value in `[0, 1]` (a blank counts as
+  zero), and each row's seven probabilities must sum to 1. Blank only genuinely-zero source cells —
+  blanking a small non-zero value would drop the row total below 1 and be rejected.
 - `subject` is our snake_case id; map it to the workbook's `dfe_subject_number`/name. The
   subjects modelled by this project and their DfE numbers:
 

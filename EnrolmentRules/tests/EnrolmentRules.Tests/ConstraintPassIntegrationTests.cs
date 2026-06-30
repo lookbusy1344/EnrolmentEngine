@@ -5,14 +5,12 @@ using Engine;
 using FluentAssertions;
 
 /// <summary>
-///     Phase 5 — the cross-subject constraint pass (§1.5–1.6), the constraint half that cannot live in
-///     the engine (Reservation 2). A pure function over the collected base <see cref="SubjectRating" />s:
-///     an unmet prerequisite is the <em>only</em> path to red, mutual exclusion and own-time downgrade to
-///     amber, and the adjustments only ever downgrade so they commute (the property that justifies a
-///     stateless engine over RETE). Fixtures construct the base ratings directly — the constraint pass is
-///     host code, not a rule, so this is its natural unit boundary.
+///     Integration-style tests for the cross-subject constraint pass, driving
+///     <see cref="ConstraintPass.Evaluate" /> over the shipped catalogue. Fixtures construct the base
+///     ratings directly — the constraint pass is host code, not a rule, so this is its natural unit
+///     boundary. These sit alongside the <see cref="ConstraintPassTests.Apply" /> unit tests.
 /// </summary>
-public sealed class Phase5Tests
+public sealed class ConstraintPassIntegrationTests
 {
 	// Build a full base-rating set: every subject red unless explicitly overridden. Defaulting to red
 	// isolates one constraint at a time (no stray both-green exclusion or unmet own-time leaking in).

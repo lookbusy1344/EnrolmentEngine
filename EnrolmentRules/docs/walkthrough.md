@@ -7,7 +7,9 @@ and how to run it and change it safely.
 
 It is a companion to the other project docs:
 
-- [`README.md`](../README.md) — the quick start, input shape, CLI examples, and library usage.
+- [`README.md`](../README.md) — the concise product overview for non-technical readers.
+- [`docs/technical-reference.md`](technical-reference.md) — setup, input shape, CLI examples, and
+  library usage.
 - [`docs/configuration-reference.md`](configuration-reference.md) — the field-level reference for
   the editable YAML/JSON surfaces.
 - [`docs/rule-authoring.md`](rule-authoring.md) — the practical guide to changing workflow and
@@ -309,9 +311,11 @@ A small workflow of three independent rules:
 | `EnoughPasses` | count of GCSEs at grade ≥ 4 is ≥ `policy.MinPasses` (5) |
 
 The engine reports each rule's pass/fail. `RatingEvaluator.EvaluateEligibilityAsync` then
-*assembles the verdict in host code*: if any rule failed, the student is ineligible and the
-failed rules' messages become the reasons (kept in declared order). Note this assembly is host
-code precisely because the engine can't aggregate sibling rules.
+*assembles the verdict in host code*: if any rule failed, the student is ineligible and each
+failed rule's reason is projected from the loaded thresholds (keyed by `RuleName`), kept in
+declared order. Projecting the text from `PolicyThresholds` rather than reading a static
+`ErrorMessage` keeps the explanation in step with the `pass_grade` / `min_passes` that actually
+fired. Note this assembly is host code precisely because the engine can't aggregate sibling rules.
 
 A subtlety in how inputs are shaped: counting passes needs to iterate a **collection**, but
 checking a single subject needs a **keyed lookup**. So the engine is given two inputs —
@@ -650,7 +654,8 @@ dotnet run --project src/EnrolmentRules.Cli -- --explain-text examples/student.j
 ```
 
 The rest — `--json`, `--explain`, `--advise`, `--batch`, `--lint-workflows` — plus the full
-exit-code table and the input shape are in [`README.md`](../README.md). Single-student modes also
+exit-code table and the input shape are in the [technical reference](technical-reference.md).
+Single-student modes also
 accept a YAML document (chosen by file extension); `--batch` is JSONL only.
 
 ### From code
@@ -673,8 +678,8 @@ ExplainedResult explained = await enrolment.ExplainAsync(student);
 
 All bootstrap and evaluate/explain/advise overloads accept an optional `CancellationToken`. For
 long-running hosts (live clock per evaluation), the `IEnrolmentEngine` abstraction, DI registration
-via `AddEnrolmentEngineAsync`, and stream-backed `IEnrolmentDataSource` bootstrap, see the
-[library usage section in `README.md`](../README.md#using-enrolmentrules-as-a-library).
+via `AddEnrolmentEngineAsync`, and stream-backed `IEnrolmentDataSource` bootstrap, see
+[Using EnrolmentRules as a library](technical-reference.md#using-enrolmentrules-as-a-library).
 
 ---
 

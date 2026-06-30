@@ -1,5 +1,6 @@
 namespace EnrolmentRules.Tests;
 
+using System.Globalization;
 using System.Text.Json;
 using Cli;
 using Domain;
@@ -12,7 +13,7 @@ using Prediction;
 ///     + the runnable CLI. Pins the average and the per-subject regression against an independent
 ///     recomputation from the shipped catalogue coefficients (never a literal).
 /// </summary>
-public sealed class Phase1Tests
+public sealed class PredictionTests
 {
 	private const double Tolerance = 1e-9;
 	private static string DataDir => Path.Combine(Harness.RepoRoot, "data");
@@ -179,13 +180,23 @@ public sealed class Phase1Tests
 	[Fact]
 	public void dfe_transition_matrix_maps_average_gcse_band_to_real_probability()
 	{
+		var csv = Path.Combine(Harness.RepoRoot, "data", DfeTransitionMatrix.DataDirectoryRelativePath);
+		var row = File.ReadLines(csv)
+			.Skip(1)
+			.Select(static line => line.Split(','))
+			.First(static fields => fields[0] == "maths" && fields[4] == "7 to < 8");
+		// Independent derivation: at-or-above-A = prob_a + prob_a_star from the raw CSV row.
+		var probA = double.Parse(row[10], CultureInfo.InvariantCulture);
+		var probAStar = double.Parse(row[11], CultureInfo.InvariantCulture);
+		var expectedAOrAbove = probA + probAStar;
+
 		var evidence = DfeTransitionMatrix.LoadDefault()
 			.EvidenceFor(7.2, Harness.Catalogue)
 			.Single(e => e.Subject == Subject.Maths);
 
 		evidence.PriorAttainmentBand.Should().Be("7 to < 8");
 		evidence.ProbabilityAtOrAbove(ALevelGrade.A)
-			.Should().BeApproximately(0.5682336182336183, Tolerance);
+			.Should().BeApproximately(expectedAOrAbove, Tolerance);
 	}
 
 	[Fact]
@@ -201,13 +212,24 @@ public sealed class Phase1Tests
 	[Fact]
 	public void sparse_dfe_subject_band_falls_back_to_nearest_lower_populated_band()
 	{
+		var csv = Path.Combine(Harness.RepoRoot, "data", DfeTransitionMatrix.DataDirectoryRelativePath);
+		var row = File.ReadLines(csv)
+			.Skip(1)
+			.Select(static line => line.Split(','))
+			.First(static fields => fields[0] == "art" && fields[4] == "8 to < 9");
+		// Independent derivation: at-or-above-B = prob_b + prob_a + prob_a_star from the raw CSV row.
+		var probB = double.Parse(row[9], CultureInfo.InvariantCulture);
+		var probA = double.Parse(row[10], CultureInfo.InvariantCulture);
+		var probAStar = double.Parse(row[11], CultureInfo.InvariantCulture);
+		var expectedBOrAbove = probB + probA + probAStar;
+
 		var evidence = DfeTransitionMatrix.LoadDefault()
 			.EvidenceFor(9.0, Harness.Catalogue)
 			.Single(e => e.Subject == Subject.Art);
 
 		evidence.PriorAttainmentBand.Should().Be("8 to < 9");
 		evidence.ProbabilityAtOrAbove(ALevelGrade.B)
-			.Should().BeApproximately(0.9842931937172774, Tolerance);
+			.Should().BeApproximately(expectedBOrAbove, Tolerance);
 	}
 
 	[Theory]

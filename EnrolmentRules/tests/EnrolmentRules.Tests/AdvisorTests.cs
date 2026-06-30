@@ -60,6 +60,55 @@ public sealed class AdvisorTests
 	}
 
 	[Fact]
+	public async Task advisor_accepts_a_red_to_green_step_as_hitting_an_amber_target()
+	{
+		var engine = await Harness.ShippedEngineAsync();
+		var student = new StudentInput("S-RED-GREEN", new Dictionary<string, int> {
+			["english_language"] = 9,
+			["maths"] = 7,
+			["physics"] = 9,
+			["chemistry"] = 5,
+			["biology"] = 9,
+			["history"] = 9,
+		}, []) { DateOfBirth = new DateOnly(2009, 9, 1) };
+
+		var advice = await engine.AdviseAsync(student);
+		var chemistry = advice.Advice.Single(a => a.Subject == Subject.Chemistry);
+
+		chemistry.Reachable.Should().BeTrue();
+		chemistry.Target.Should().Be(Rating.Amber);
+		chemistry.Changes.Should().BeEquivalentTo([new GradeChange("chemistry", 5, 6)]);
+
+		var improved = ApplyChanges(student, chemistry.Changes);
+		var explained = await engine.ExplainAsync(improved);
+		((int)explained.Explanations.Single(e => e.Subject == Subject.Chemistry).Rating).Should().BeLessThanOrEqualTo((int)chemistry.Target);
+	}
+
+	[Fact]
+	public async Task advisor_preserves_date_of_birth_when_searching_age_gated_art_counterfactuals()
+	{
+		var engine = await Harness.ShippedEngineAsync();
+		var student = new StudentInput("S-ADULT-ART", new Dictionary<string, int> {
+			["english_language"] = 9,
+			["maths"] = 9,
+			["chemistry"] = 9,
+			["biology"] = 9,
+			["history"] = 9,
+			["art"] = Harness.Thresholds.StrongEntry,
+		}, []) { DateOfBirth = Harness.AsOf.AddYears(-Harness.Thresholds.AdultAge) };
+
+		var advice = await engine.AdviseAsync(student);
+		var art = advice.Advice.Single(a => a.Subject == Subject.Art);
+
+		art.Reachable.Should().BeTrue();
+		art.Changes.Should().NotBeEmpty();
+
+		var improved = ApplyChanges(student, art.Changes);
+		var explained = await engine.ExplainAsync(improved);
+		((int)explained.Explanations.Single(e => e.Subject == Subject.Art).Rating).Should().BeLessThanOrEqualTo((int)art.Target);
+	}
+
+	[Fact]
 	public async Task advice_never_proposes_sitting_a_gcse_the_student_has_not_taken()
 	{
 		var engine = await Harness.ShippedEngineAsync();
@@ -170,6 +219,31 @@ public sealed class AdvisorTests
 		biology.Reachable.Should().BeFalse();
 		biology.BlockedReason.Should().Contain(ConstraintPass.RestudyBarReasonPrefix);
 		biology.BlockedReason.Should().Contain("biology");
+	}
+
+	[Fact]
+	public async Task advisor_preserves_prior_qualifications_when_replaying_reported_changes()
+	{
+		var engine = await Harness.ShippedEngineAsync();
+		var student = new StudentInput("S-QUAL-EQUIV", new Dictionary<string, int> {
+			["english_language"] = 7,
+			["maths"] = 7,
+			["chemistry"] = 7,
+			["biology"] = 4,
+			["history"] = 7,
+		}, []) {
+			DateOfBirth = new DateOnly(2009, 9, 1),
+			PriorQualifications = [new("applied_science", QualificationType.BtecDiploma, "distinction")],
+		};
+
+		var advice = await engine.AdviseAsync(student);
+		var biology = advice.Advice.Single(a => a.Subject == Subject.Biology);
+
+		biology.Reachable.Should().BeTrue();
+
+		var improved = ApplyChanges(student, biology.Changes);
+		var explained = await engine.ExplainAsync(improved);
+		((int)explained.Explanations.Single(e => e.Subject == Subject.Biology).Rating).Should().BeLessThanOrEqualTo((int)biology.Target);
 	}
 
 	[Fact]
@@ -295,6 +369,19 @@ public sealed class AdvisorTests
 		var parsed = JsonSerializer.Deserialize(stdout.ToString(), EnrolmentJsonContext.Default.AdviceResult);
 		parsed.Should().NotBeNull();
 		parsed!.Advice.Should().NotBeEmpty();
+
+		// Hand-checked invariants beside the byte-match.
+		parsed.Eligible.Should().BeTrue();
+		parsed.Gate.Should().BeNull();
+		parsed.TruncationReason.Should().BeNull();
+
+		var furtherMaths = parsed.Advice.Single(a => a.Subject == Subject.FurtherMaths);
+		furtherMaths.Reachable.Should().BeFalse();
+		furtherMaths.BlockedReason.Should().Be(ConstraintPass.MathsPrerequisiteReason);
+
+		var chemistry = parsed.Advice.Single(a => a.Subject == Subject.Chemistry);
+		chemistry.Reachable.Should().BeTrue();
+		chemistry.Changes.Should().ContainSingle(c => c.GcseSubject == "chemistry" && c.From == 5 && c.To == 8);
 	}
 
 	[Fact]
@@ -347,8 +434,6 @@ public sealed class AdvisorTests
 	public async Task pipeline_evaluation_cap_truncates_advice()
 	{
 		var (_, rules) = await Harness.BuildFromShippedWorkflowsAsync();
-		var engine = new EnrolmentEngine(
-			rules, Harness.Thresholds with { AdviceMaxPipelineEvaluations = 1 }, Harness.Catalogue, Harness.AsOf);
 		var student = new StudentInput("S-ADVISE", new Dictionary<string, int> {
 			["english_language"] = 7,
 			["maths"] = 5,
@@ -357,9 +442,39 @@ public sealed class AdvisorTests
 			["biology"] = 5,
 		}, []);
 
-		var advice = await engine.AdviseAsync(student);
+		// Evaluate without the cap to establish the expected full advice size.
+		var uncapped = new EnrolmentEngine(
+			rules, Harness.Thresholds, Harness.Catalogue, Harness.AsOf);
+		var fullAdvice = await uncapped.AdviseAsync(student);
 
-		advice.TruncationReason.Should().Be("advice truncated");
+		// Evaluate with an aggressive cap: 1 pipeline evaluation.
+		var capped = new EnrolmentEngine(
+			rules, Harness.Thresholds with { AdviceMaxPipelineEvaluations = 1 }, Harness.Catalogue, Harness.AsOf);
+		var truncated = await capped.AdviseAsync(student);
+
+		truncated.TruncationReason.Should().Be("advice truncated");
+		truncated.Advice.Count.Should().BeLessThan(fullAdvice.Advice.Count);
+	}
+
+	[Fact]
+	public async Task advise_honours_cancellation_at_the_entry_guard()
+	{
+		var engine = await Harness.ShippedEngineAsync();
+		var student = new StudentInput("S-CANCEL", new Dictionary<string, int> {
+			["english_language"] = 7,
+			["maths"] = 5,
+			["physics"] = 5,
+			["chemistry"] = 5,
+			["biology"] = 5,
+		}, []);
+
+		using var cts = new CancellationTokenSource();
+		cts.Cancel();
+
+		// An already-cancelled token is observed at the first ThrowIfCancellationRequested in the advisor
+		// entry guard, before any search state is allocated.
+		var act = () => engine.AdviseAsync(student, true, cts.Token);
+		_ = await act.Should().ThrowAsync<OperationCanceledException>();
 	}
 
 	[Fact]
@@ -374,14 +489,25 @@ public sealed class AdvisorTests
 			["biology"] = 5,
 		}, []);
 
+		// Deterministic, no wall clock: trip the token synchronously from the per-evaluation hook
+		// once the search has done a few pipeline evaluations. The budget hook fires only inside the
+		// per-subject search (the entry guard and ExplainAsync run before any evaluation is consumed),
+		// so observing >= TripAfter evaluations before the throw proves cancellation was seen inside
+		// the BFS loop, not merely at the entry guard. Replaces the original 1ms/500ms timer race.
+		const int TripAfter = 3;
 		using var cts = new CancellationTokenSource();
-		cts.CancelAfter(TimeSpan.FromMilliseconds(1));
+		var evaluations = 0;
+		void OnEvaluation()
+		{
+			if (++evaluations >= TripAfter) {
+				cts.Cancel();
+			}
+		}
 
-		// The diagnostic search ranges over the full candidate set — far more pipeline evaluations than a
-		// 1 ms window allows — so cancellation must be observed inside the BFS loop, not merely at the entry
-		// guard. The call can never complete before the token fires, so it must always throw.
-		var act = () => engine.AdviseAsync(student, true, cts.Token);
+		var act = () => CounterfactualAdvisor.AdviseAsync(
+			engine, student, Harness.Thresholds, Harness.AsOf, true, OnEvaluation, cts.Token);
 		_ = await act.Should().ThrowAsync<OperationCanceledException>();
+		evaluations.Should().BeGreaterThanOrEqualTo(TripAfter);
 	}
 
 	private static StudentInput ApplyChanges(StudentInput original, EquatableArray<GradeChange> changes)
@@ -391,6 +517,6 @@ public sealed class AdvisorTests
 			gcses[change.GcseSubject] = change.To;
 		}
 
-		return new(original.Id, gcses, original.Hobbies) { ChosenALevels = original.ChosenALevels };
+		return original with { Gcses = gcses };
 	}
 }

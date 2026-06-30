@@ -97,22 +97,14 @@ public sealed class CatalogueTests
 	[Fact]
 	public void a_catalogue_can_load_from_a_memory_stream()
 	{
-		const string yaml = """
-							subjects:
-							  - subject: maths
-							    ucas_weight: 50
-							    regression: { slope: 0.80, intercept: -1.00 }
-							  - subject: drama
-							    ucas_weight: 42
-							    regression: { slope: 0.75, intercept: -0.50 }
-							""";
+		var yaml = File.ReadAllText(Path.Combine(DataDir, CatalogueStore.CatalogueFileName));
 
 		using var catalogueStream = new MemoryStream(Encoding.UTF8.GetBytes(yaml));
 		using var schemaStream = File.OpenRead(Path.Combine(DataDir, CatalogueStore.SchemaFileName));
 
 		var data = CatalogueStore.LoadAndValidate(catalogueStream, schemaStream);
 
-		data.Subjects.Should().Equal(Subject.Maths, new Subject("drama"));
+		data.Subjects.Should().Equal(Harness.Catalogue.Subjects);
 	}
 
 	[Fact]
@@ -326,33 +318,39 @@ public sealed class CatalogueTests
 	[Fact]
 	public void schema_validation_allows_an_open_subject_name()
 	{
-		var dir = Path.Combine(Path.GetTempPath(), "enrolmentrules-tests", "catalogue-" + Guid.NewGuid().ToString("N"));
-		Directory.CreateDirectory(dir);
-		File.Copy(Path.Combine(DataDir, CatalogueStore.SchemaFileName), Path.Combine(dir, CatalogueStore.SchemaFileName));
-		File.WriteAllText(Path.Combine(dir, CatalogueStore.CatalogueFileName), """
-																			   subjects:
-																			     - subject: maths
-																			       ucas_weight: 50
-																			       regression: { slope: 0.80, intercept: -1.00 }
-																			     - subject: drama
-																			       ucas_weight: 42
-																			       regression: { slope: 0.75, intercept: -0.50 }
-																			   """);
+		const string yaml = """
+							subjects:
+							  - subject: maths
+							    ucas_weight: 50
+							    regression: { slope: 0.80, intercept: -1.00 }
+							  - subject: drama
+							    ucas_weight: 42
+							    regression: { slope: 0.75, intercept: -0.50 }
+							""";
 
-		var data = CatalogueStore.LoadAndValidate(dir);
+		var data = Catalogue.Load(yaml);
 
 		data.Subjects.Should().Equal(Subject.Maths, new Subject("drama"));
 	}
 
 	// Build a full 14-subject catalogue (every subject weight-only) with one subject replaced by a custom
 	// block, so a single-constraint fixture still satisfies the coverage invariant.
-	private static string AllSubjects(string extraFor, string? omit)
+	internal static string AllSubjects(string extraFor, string? omit)
 	{
 		var lines = Catalogue.Subjects
 			.Where(subject => !string.Equals(EnumNames.NameOf(subject), omit, StringComparison.Ordinal))
 			.Select(static (subject, index) =>
 				$"  - subject: {EnumNames.NameOf(subject)}\n    ucas_weight: {index + 30}\n    regression: {{ slope: 0.80, intercept: -1.00 }}");
 		return "subjects:\n" + string.Join('\n', lines) + '\n' + extraFor;
+	}
+
+	internal static string AllSubjectsFixtureDirectory(string? omit)
+	{
+		var dir = Path.Combine(Path.GetTempPath(), "enrolmentrules-tests", "catalogue-" + Guid.NewGuid().ToString("N"));
+		Directory.CreateDirectory(dir);
+		File.Copy(Path.Combine(DataDir, CatalogueStore.SchemaFileName), Path.Combine(dir, CatalogueStore.SchemaFileName));
+		File.WriteAllText(Path.Combine(dir, CatalogueStore.CatalogueFileName), AllSubjects(string.Empty, omit));
+		return dir;
 	}
 
 	[Fact]

@@ -10,7 +10,7 @@ using FluentAssertions;
 ///     and the <see cref="PredictionModel" /> / <see cref="ALevelGrade" /> tiers, not recomputed with the
 ///     rules' own logic — a transposed comparison in the JSON has to break a test.
 /// </summary>
-public sealed class Phase3Tests
+public sealed class SubjectRatingTests
 {
 	private static async Task<IReadOnlyList<SubjectRating>> RateAsync(params (string Subject, int Grade)[] gcses)
 	{

@@ -13,7 +13,7 @@ using FluentAssertions;
 ///     composes by most-severe-wins. Unlike the other rules it fires even on an already-red base: the bar
 ///     is the most informative reason, so it replaces "entry unmet" with the specific incompatibility.
 /// </summary>
-public sealed class Phase9Tests
+public sealed class VetoTests
 {
 	// Music carries the illustrative veto: a `plays_trombone` hobby bars Music outright — even though that
 	// same hobby satisfies Music's own-time `plays_` requirement, demonstrating the veto wins over the tier.

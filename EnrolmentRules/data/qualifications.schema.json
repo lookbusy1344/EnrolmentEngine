@@ -2,7 +2,7 @@
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "$id": "https://enrolmentrules/qualifications.schema.json",
   "title": "Qualification scale",
-  "description": "Structural validation for the typed qualification scale data file. Coverage and duplicate/ordinal checks are enforced in code.",
+  "description": "Structural validation for the typed qualification scale data file. Complete qualification-type coverage is enforced at the production load boundary; duplicate and ordinal checks are enforced in code.",
   "type": "object",
   "additionalProperties": false,
   "required": [

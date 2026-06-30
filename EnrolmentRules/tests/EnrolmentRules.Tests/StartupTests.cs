@@ -10,7 +10,7 @@ using RulesEngine.Models;
 ///     engine, and round-trips a trivial workflow. The startup guards (schema + probe) are the
 ///     Reservation-1 safety net proved here before any real rule exists.
 /// </summary>
-public sealed class Phase0Tests
+public sealed class StartupTests
 {
 	[Fact]
 	public async Task workflows_load_and_validate()

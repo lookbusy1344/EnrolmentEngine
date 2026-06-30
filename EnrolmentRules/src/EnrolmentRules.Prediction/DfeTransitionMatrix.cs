@@ -17,6 +17,10 @@ public sealed class DfeTransitionMatrix
 	public const string DataDirectoryRelativePath = "dfe-transition-matrices/gce-a-level-2019-transition-probabilities.csv";
 
 	private const string DefaultRelativePath = "data/" + DataDirectoryRelativePath;
+	private const int ExpectedFieldCount = 12;
+	private const double ProbabilityTotalTolerance = 1e-9;
+	private const string ExpectedHeader =
+		"subject,dfe_qualification_number,dfe_subject_number,dfe_subject_name,prior_attainment_band,probability_u,probability_e,probability_d,probability_c,probability_b,probability_a,probability_a_star";
 
 	private static readonly Lazy<DfeTransitionMatrix> Default = new(static () => Load(FindDefaultCsvPath()));
 
@@ -54,12 +58,47 @@ public sealed class DfeTransitionMatrix
 		Load(Path.Combine(dataDirectory, DataDirectoryRelativePath));
 
 	/// <summary>Load a normalized DfE transition-matrix CSV.</summary>
-	public static DfeTransitionMatrix Load(string path) =>
-		new(File.ReadLines(path).Skip(1).Where(static line => !string.IsNullOrWhiteSpace(line)).Select(Parse));
+	public static DfeTransitionMatrix Load(string path)
+	{
+		using var reader = File.OpenText(path);
+		return Load(reader);
+	}
 
 	/// <summary>Load a normalized DfE transition-matrix CSV from an arbitrary text reader.</summary>
-	public static DfeTransitionMatrix Load(TextReader reader) =>
-		new(ReadLines(reader).Skip(1).Where(static line => !string.IsNullOrWhiteSpace(line)).Select(Parse));
+	public static DfeTransitionMatrix Load(TextReader reader)
+	{
+		ArgumentNullException.ThrowIfNull(reader);
+
+		var header = reader.ReadLine()
+			?? throw new TransitionMatrixException("DfE transition matrix is missing the required header row.");
+		ValidateHeader(header);
+
+		var evidence = new List<TransitionEvidence>();
+		var seen = new HashSet<(Subject Subject, string Band)>();
+		var dataRowCount = 0;
+
+		while (reader.ReadLine() is { } line) {
+			if (string.IsNullOrWhiteSpace(line)) {
+				continue;
+			}
+
+			dataRowCount++;
+			var rowNumber = dataRowCount + 1;
+			var parsed = Parse(line, rowNumber);
+			if (!seen.Add((parsed.Subject, parsed.PriorAttainmentBand))) {
+				throw new TransitionMatrixException(
+					$"DfE transition matrix row {rowNumber} duplicates subject '{EnumNames.NameOf(parsed.Subject)}' and prior attainment band '{parsed.PriorAttainmentBand}'.");
+			}
+
+			evidence.Add(parsed);
+		}
+
+		if (dataRowCount == 0) {
+			throw new TransitionMatrixException("DfE transition matrix must contain at least one data row.");
+		}
+
+		return new(evidence);
+	}
 
 	/// <summary>Load a normalized DfE transition-matrix CSV from an arbitrary stream.</summary>
 	public static DfeTransitionMatrix Load(Stream stream)
@@ -98,35 +137,92 @@ public sealed class DfeTransitionMatrix
 		return Empty(subject, band);
 	}
 
-	private static TransitionEvidence Parse(string line)
+	private static void ValidateHeader(string header)
+	{
+		if (!string.Equals(header, ExpectedHeader, StringComparison.Ordinal)) {
+			throw new TransitionMatrixException("DfE transition matrix header does not match the normalized CSV contract.");
+		}
+	}
+
+	private static TransitionEvidence Parse(string line, int rowNumber)
 	{
 		var fields = line.Split(',');
-		if (fields.Length != 12 || !Subject.TryParse(fields[0], out var subject)) {
-			throw new InvalidDataException("DfE transition matrix row does not match the normalized CSV contract.");
+		if (fields.Length != ExpectedFieldCount) {
+			throw new TransitionMatrixException(
+				$"DfE transition matrix row {rowNumber} must contain exactly {ExpectedFieldCount} fields.");
+		}
+
+		if (!Subject.TryParse(fields[0], out var subject)) {
+			throw new TransitionMatrixException($"DfE transition matrix row {rowNumber} has an unknown subject '{fields[0]}'.");
+		}
+
+		var band = fields[4];
+		if (!Bands.Contains(band, StringComparer.Ordinal)) {
+			throw new TransitionMatrixException(
+				$"DfE transition matrix row {rowNumber} has an unknown prior_attainment_band '{band}'.");
+		}
+
+		var probabilities = new[] {
+			Probability(fields[5], rowNumber, "probability_u"),
+			Probability(fields[6], rowNumber, "probability_e"),
+			Probability(fields[7], rowNumber, "probability_d"),
+			Probability(fields[8], rowNumber, "probability_c"),
+			Probability(fields[9], rowNumber, "probability_b"),
+			Probability(fields[10], rowNumber, "probability_a"),
+			Probability(fields[11], rowNumber, "probability_a_star"),
+		};
+
+		var total = probabilities.Sum();
+		if (Math.Abs(total - 1.0) > ProbabilityTotalTolerance) {
+			throw new TransitionMatrixException(
+				$"DfE transition matrix row {rowNumber} probabilities must sum to 1 within tolerance {ProbabilityTotalTolerance}.");
 		}
 
 		return new(
 			subject,
 			Source,
-			fields[4],
-			Probability(fields[5]),
-			Probability(fields[6]),
-			Probability(fields[7]),
-			Probability(fields[8]),
-			Probability(fields[9]),
-			Probability(fields[10]),
-			Probability(fields[11]));
+			band,
+			probabilities[0],
+			probabilities[1],
+			probabilities[2],
+			probabilities[3],
+			probabilities[4],
+			probabilities[5],
+			probabilities[6]);
 	}
 
-	private static IEnumerable<string> ReadLines(TextReader reader)
+	private static double Probability(string field, int rowNumber, string columnName)
 	{
-		while (reader.ReadLine() is { } line) {
-			yield return line;
+		if (string.IsNullOrWhiteSpace(field)) {
+			return 0.0;
+		}
+
+		try {
+			if (!double.TryParse(field, CultureInfo.InvariantCulture, out var probability)) {
+				throw new FormatException($"Could not parse '{field}' as a floating-point value.");
+			}
+
+			if (double.IsNaN(probability) || double.IsInfinity(probability)) {
+				throw new TransitionMatrixException(
+					$"DfE transition matrix row {rowNumber} column '{columnName}' must be finite.");
+			}
+
+			if (probability is < 0.0 or > 1.0) {
+				throw new TransitionMatrixException(
+					$"DfE transition matrix row {rowNumber} column '{columnName}' must be within [0, 1].");
+			}
+
+			return probability;
+		}
+		catch (TransitionMatrixException) {
+			throw;
+		}
+		catch (FormatException ex) {
+			throw new TransitionMatrixException(
+				$"DfE transition matrix row {rowNumber} column '{columnName}' contains an invalid probability value.",
+				ex);
 		}
 	}
-
-	private static double Probability(string field) =>
-		string.IsNullOrWhiteSpace(field) ? 0.0 : double.Parse(field, CultureInfo.InvariantCulture);
 
 	private static TransitionEvidence Empty(Subject subject, string band) =>
 		new(subject, Source, band, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0);
@@ -163,4 +259,15 @@ public sealed class DfeTransitionMatrix
 
 		throw new FileNotFoundException($"Could not locate '{DefaultRelativePath}'.");
 	}
+}
+
+/// <summary>
+///     Startup-data failure while loading the DfE transition matrix. Hosts can catch the shared
+///     <see cref="EnrolmentDataException" /> category across all runtime-loaded policy inputs.
+/// </summary>
+public sealed class TransitionMatrixException : EnrolmentDataException
+{
+	public TransitionMatrixException(string message) : base(message) { }
+
+	public TransitionMatrixException(string message, Exception innerException) : base(message, innerException) { }
 }
