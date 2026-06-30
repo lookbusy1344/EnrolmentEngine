@@ -1,8 +1,8 @@
 namespace EnrolmentRules.Tests;
 
+using AwesomeAssertions;
 using Domain;
 using Engine;
-using FluentAssertions;
 
 /// <summary>
 ///     Integration-style tests for the cross-subject constraint pass, driving

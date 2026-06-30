@@ -9,8 +9,19 @@ using System.Text.Json.Serialization;
 ///     JSON is the raw snake_case string name.
 /// </summary>
 [JsonConverter(typeof(SubjectJsonConverter))]
-public readonly record struct Subject(string Value) : IComparable<Subject>
+public readonly record struct Subject : IComparable<Subject>
 {
+	public Subject(string value)
+	{
+		if (!IsValid(value)) {
+			throw new ArgumentException($"'{value}' is not a valid subject name.", nameof(value));
+		}
+
+		Value = value;
+	}
+
+	public string Value { get; }
+
 	public static Subject Maths { get; } = new("maths");
 	public static Subject FurtherMaths { get; } = new("further_maths");
 	public static Subject Physics { get; } = new("physics");
@@ -39,6 +50,8 @@ public readonly record struct Subject(string Value) : IComparable<Subject>
 	public static Subject DesignTechnology { get; } = new("design_technology");
 
 	public int CompareTo(Subject other) => StringComparer.Ordinal.Compare(Value, other.Value);
+
+	public void Deconstruct(out string value) => value = Value;
 
 	// The zero/default state has a null Value; FDG §8 forbids a null ToString, and the strongly-typed-string
 	// convention represents that state as the empty string.

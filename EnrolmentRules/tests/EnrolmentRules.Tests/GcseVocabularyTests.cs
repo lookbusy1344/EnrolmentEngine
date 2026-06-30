@@ -1,9 +1,9 @@
 namespace EnrolmentRules.Tests;
 
 using System.Text.Json;
+using AwesomeAssertions;
 using Domain;
 using Engine;
-using FluentAssertions;
 
 /// <summary>
 ///     Guards against drift between the compiled GCSE input vocabulary and the catalogue / example

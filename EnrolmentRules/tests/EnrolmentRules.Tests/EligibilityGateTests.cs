@@ -2,9 +2,9 @@ namespace EnrolmentRules.Tests;
 
 using System.Reflection;
 using System.Text.Json;
+using AwesomeAssertions;
 using Domain;
 using Engine;
-using FluentAssertions;
 using Prediction;
 using RulesEngine.Interfaces;
 

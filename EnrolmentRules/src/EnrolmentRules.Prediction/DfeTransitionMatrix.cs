@@ -19,6 +19,7 @@ public sealed class DfeTransitionMatrix
 	private const string DefaultRelativePath = "data/" + DataDirectoryRelativePath;
 	private const int ExpectedFieldCount = 12;
 	private const double ProbabilityTotalTolerance = 1e-9;
+
 	private const string ExpectedHeader =
 		"subject,dfe_qualification_number,dfe_subject_number,dfe_subject_name,prior_attainment_band,probability_u,probability_e,probability_d,probability_c,probability_b,probability_a,probability_a_star";
 
@@ -70,7 +71,7 @@ public sealed class DfeTransitionMatrix
 		ArgumentNullException.ThrowIfNull(reader);
 
 		var header = reader.ReadLine()
-			?? throw new TransitionMatrixException("DfE transition matrix is missing the required header row.");
+					 ?? throw new TransitionMatrixException("DfE transition matrix is missing the required header row.");
 		ValidateHeader(header);
 
 		var evidence = new List<TransitionEvidence>();
@@ -163,12 +164,9 @@ public sealed class DfeTransitionMatrix
 		}
 
 		var probabilities = new[] {
-			Probability(fields[5], rowNumber, "probability_u"),
-			Probability(fields[6], rowNumber, "probability_e"),
-			Probability(fields[7], rowNumber, "probability_d"),
-			Probability(fields[8], rowNumber, "probability_c"),
-			Probability(fields[9], rowNumber, "probability_b"),
-			Probability(fields[10], rowNumber, "probability_a"),
+			Probability(fields[5], rowNumber, "probability_u"), Probability(fields[6], rowNumber, "probability_e"),
+			Probability(fields[7], rowNumber, "probability_d"), Probability(fields[8], rowNumber, "probability_c"),
+			Probability(fields[9], rowNumber, "probability_b"), Probability(fields[10], rowNumber, "probability_a"),
 			Probability(fields[11], rowNumber, "probability_a_star"),
 		};
 
@@ -213,9 +211,6 @@ public sealed class DfeTransitionMatrix
 			}
 
 			return probability;
-		}
-		catch (TransitionMatrixException) {
-			throw;
 		}
 		catch (FormatException ex) {
 			throw new TransitionMatrixException(

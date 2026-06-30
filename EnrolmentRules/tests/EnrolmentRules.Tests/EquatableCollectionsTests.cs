@@ -1,8 +1,8 @@
 namespace EnrolmentRules.Tests;
 
 using System.Text.Json;
+using AwesomeAssertions;
 using Domain;
-using FluentAssertions;
 
 /// <summary>
 ///     Pins the value-semantics fix the RecordValueAnalyser (JSV01) demands: records carrying collection
@@ -11,6 +11,22 @@ using FluentAssertions;
 /// </summary>
 public sealed class EquatableCollectionsTests
 {
+	[Fact]
+	public void implicit_collection_conversions_treat_null_as_empty()
+	{
+		int[]? array = null;
+		List<int>? list = null;
+		Dictionary<string, int>? dictionary = null;
+
+		EquatableArray<int> convertedArray = array;
+		EquatableArray<int> convertedList = list;
+		EquatableDictionary<string, int> convertedDictionary = dictionary;
+
+		convertedArray.Should().BeEmpty();
+		convertedList.Should().BeEmpty();
+		convertedDictionary.Should().BeEmpty();
+	}
+
 	[Fact]
 	public void records_with_equal_but_distinct_lists_are_equal()
 	{

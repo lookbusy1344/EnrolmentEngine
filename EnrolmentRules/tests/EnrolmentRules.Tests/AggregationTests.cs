@@ -1,8 +1,8 @@
 namespace EnrolmentRules.Tests;
 
+using AwesomeAssertions;
 using Domain;
 using Engine;
-using FluentAssertions;
 
 /// <summary>
 ///     Phase 6 — host-code aggregation over the <em>final</em> ratings: the UCAS tariff summary, the green

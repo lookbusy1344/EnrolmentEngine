@@ -1,9 +1,9 @@
 namespace EnrolmentRules.Tests;
 
 using System.Text.Json;
+using AwesomeAssertions;
 using Domain;
 using Engine;
-using FluentAssertions;
 using Prediction;
 
 /// <summary>
@@ -107,8 +107,8 @@ public sealed class BootstrapTests
 			this.transitionMatrix = transitionMatrix;
 		}
 
-		public IReadOnlyList<(string FileName, Stream Content)> OpenWorkflows() =>
-			[.. workflows.Select(static workflow => (workflow.FileName, (Stream)new MemoryStream(workflow.Bytes, false)))];
+		public IReadOnlyList<WorkflowContent> OpenWorkflows() =>
+			[.. workflows.Select(static workflow => new WorkflowContent(workflow.FileName, new MemoryStream(workflow.Bytes, false)))];
 
 		public Stream OpenWorkflowSchema() => new MemoryStream(workflowSchema, false);
 

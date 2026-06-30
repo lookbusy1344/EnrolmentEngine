@@ -254,8 +254,8 @@ public sealed class EnrolmentEngine : IEnrolmentEngine
 			return new(new(engine, thresholds, catalogue, scale), catalogue, asOf, matrix);
 		}
 		finally {
-			foreach (var (_, content) in workflowFiles) {
-				content.Dispose();
+			foreach (var workflow in workflowFiles) {
+				workflow.Dispose();
 			}
 		}
 	}

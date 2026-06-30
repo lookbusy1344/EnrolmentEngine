@@ -1,8 +1,8 @@
 namespace EnrolmentRules.Tests;
 
+using AwesomeAssertions;
 using Domain;
 using Engine;
-using FluentAssertions;
 
 /// <summary>
 ///     The twelve additional A-levels (economics … design technology) added as a pure data exercise —

@@ -1,8 +1,8 @@
 namespace EnrolmentRules.Tests;
 
+using AwesomeAssertions;
 using Cli;
 using Domain;
-using FluentAssertions;
 
 /// <summary>
 ///     Human-readable explanation rendering. The renderer is a pure projection of an existing

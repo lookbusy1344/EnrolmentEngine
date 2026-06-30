@@ -1,8 +1,8 @@
 namespace EnrolmentRules.Tests;
 
+using AwesomeAssertions;
 using Domain;
 using Engine;
-using FluentAssertions;
 using RulesEngine.Models;
 
 /// <summary>

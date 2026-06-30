@@ -1,9 +1,9 @@
 namespace EnrolmentRules.Tests;
 
 using System.Text;
+using AwesomeAssertions;
 using Domain;
 using Engine;
-using FluentAssertions;
 using Prediction;
 
 /// <summary>Reloadable engine factory for policy edits without process restart.</summary>
@@ -280,8 +280,8 @@ public sealed class EngineFactoryTests
 
 		public void Dispose() => releaseFirstReloadSignal.Dispose();
 
-		public IReadOnlyList<(string FileName, Stream Content)> OpenWorkflows() =>
-			[.. workflows.Select(static workflow => (workflow.FileName, (Stream)new MemoryStream(workflow.Bytes, false)))];
+		public IReadOnlyList<WorkflowContent> OpenWorkflows() =>
+			[.. workflows.Select(static workflow => new WorkflowContent(workflow.FileName, new MemoryStream(workflow.Bytes, false)))];
 
 		public Stream OpenWorkflowSchema() => new MemoryStream(workflowSchema, false);
 

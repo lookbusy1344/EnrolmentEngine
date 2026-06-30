@@ -1,8 +1,8 @@
 namespace EnrolmentRules.Tests;
 
+using AwesomeAssertions;
 using Domain;
 using Engine;
-using FluentAssertions;
 
 /// <summary>
 ///     Direct unit tests for <see cref="ConstraintPass.Apply" />, pinning the two behaviours the

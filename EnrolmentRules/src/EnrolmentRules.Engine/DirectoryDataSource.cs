@@ -7,9 +7,20 @@ using Prediction;
 ///     Filesystem-backed enrolment data source matching the shipped layout: workflows under one
 ///     directory and the data files beneath the sibling <c>data/</c> directory.
 /// </summary>
-public sealed class DirectoryDataSource(string workflowsDirectory, string dataDirectory) : IEnrolmentDataSource
+public sealed class DirectoryDataSource : IEnrolmentDataSource
 {
-	public IReadOnlyList<(string FileName, Stream Content)> OpenWorkflows() =>
+	private readonly string dataDirectory;
+	private readonly string workflowsDirectory;
+
+	public DirectoryDataSource(string workflowsDirectory, string dataDirectory)
+	{
+		ArgumentException.ThrowIfNullOrWhiteSpace(workflowsDirectory);
+		ArgumentException.ThrowIfNullOrWhiteSpace(dataDirectory);
+		this.workflowsDirectory = workflowsDirectory;
+		this.dataDirectory = dataDirectory;
+	}
+
+	public IReadOnlyList<WorkflowContent> OpenWorkflows() =>
 		OpenWorkflowFiles(
 			Directory.EnumerateFiles(workflowsDirectory)
 				.Where(IsWorkflowFile)
@@ -33,21 +44,21 @@ public sealed class DirectoryDataSource(string workflowsDirectory, string dataDi
 	public Stream OpenTransitionMatrix() =>
 		File.OpenRead(Path.Combine(dataDirectory, DfeTransitionMatrix.DataDirectoryRelativePath));
 
-	internal static IReadOnlyList<(string FileName, Stream Content)> OpenWorkflowFiles(
+	internal static IReadOnlyList<WorkflowContent> OpenWorkflowFiles(
 		IEnumerable<string> files,
 		Func<string, Stream> openFile)
 	{
-		var opened = new List<(string FileName, Stream Content)>();
+		var opened = new List<WorkflowContent>();
 		try {
 			foreach (var file in files) {
-				opened.Add((file, openFile(file)));
+				opened.Add(new(file, openFile(file)));
 			}
 
 			return opened;
 		}
 		catch {
-			foreach (var (_, content) in opened) {
-				content.Dispose();
+			foreach (var workflow in opened) {
+				workflow.Dispose();
 			}
 
 			throw;

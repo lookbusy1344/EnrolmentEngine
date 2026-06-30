@@ -1,7 +1,7 @@
 namespace EnrolmentRules.Tests;
 
+using AwesomeAssertions;
 using Engine;
-using FluentAssertions;
 
 /// <summary>
 ///     Production bootstrap must enforce semantic workflow lint, not just schema validation and probe
@@ -145,7 +145,8 @@ public sealed class WorkflowBootstrapLintTests
 		try {
 			RewriteSubjectRatings(
 				fixture,
-				static content => content.Replace("facts.Predicted(\"maths\") >= ALevelGrade.A", "facts.Predicted(\"mathz\") >= ALevelGrade.A", StringComparison.Ordinal));
+				static content => content.Replace("facts.Predicted(\"maths\") >= ALevelGrade.A", "facts.Predicted(\"mathz\") >= ALevelGrade.A",
+					StringComparison.Ordinal));
 
 			var act = () => EnrolmentEngine.CreateAsync(WorkflowsDir(fixture), DataDir(fixture), Harness.AsOf);
 

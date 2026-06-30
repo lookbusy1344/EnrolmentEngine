@@ -2,9 +2,9 @@ namespace EnrolmentRules.Tests;
 
 using System.Text.Json;
 using System.Text.RegularExpressions;
+using AwesomeAssertions;
 using Domain;
 using Engine;
-using FluentAssertions;
 using FsCheck;
 using FsCheck.Fluent;
 using FsCheck.Xunit;

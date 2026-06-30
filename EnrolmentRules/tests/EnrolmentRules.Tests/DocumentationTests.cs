@@ -2,8 +2,8 @@ namespace EnrolmentRules.Tests;
 
 using System.Reflection;
 using System.Text.RegularExpressions;
+using AwesomeAssertions;
 using Engine;
-using FluentAssertions;
 
 /// <summary>Guards local cross-references in the maintained project guides.</summary>
 public sealed partial class DocumentationTests

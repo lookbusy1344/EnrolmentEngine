@@ -1,9 +1,9 @@
 namespace EnrolmentRules.Tests;
 
 using System.Text.Json;
+using AwesomeAssertions;
 using Domain;
 using Engine;
-using FluentAssertions;
 
 /// <summary>
 ///     Phase 7 — the golden-file end-to-end suite: a handful of representative students whose expected
@@ -12,7 +12,6 @@ using FluentAssertions;
 ///     byte-for-byte against its golden. This is the primary defence against the untyped-rule risk
 ///     (Reservation 1): a silent rule error breaks a golden file. Hand-checked invariants per fixture sit
 ///     beside the byte-match so the goldens are not merely self-consistent.
-///
 ///     To regenerate goldens after a deliberate output change: delete the *.expected.json files, run
 ///     the fixture_evaluates_to_its_committed_golden test (which will fail with "file must be committed"),
 ///     copy each actual output into the corresponding expected path, and commit alongside the change.

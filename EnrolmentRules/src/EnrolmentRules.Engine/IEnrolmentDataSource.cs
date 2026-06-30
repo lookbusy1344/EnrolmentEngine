@@ -6,7 +6,7 @@ namespace EnrolmentRules.Engine;
 /// </summary>
 public interface IEnrolmentDataSource
 {
-	IReadOnlyList<(string FileName, Stream Content)> OpenWorkflows();
+	IReadOnlyList<WorkflowContent> OpenWorkflows();
 
 	Stream OpenWorkflowSchema();
 

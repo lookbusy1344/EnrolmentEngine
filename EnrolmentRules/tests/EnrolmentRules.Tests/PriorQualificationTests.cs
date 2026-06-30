@@ -1,9 +1,9 @@
 namespace EnrolmentRules.Tests;
 
 using System.Text.Json;
+using AwesomeAssertions;
 using Domain;
 using Engine;
-using FluentAssertions;
 
 /// <summary>
 ///     Typed prior qualifications — entry qualifiers, qualification scale resolution, and the restudy bar.
@@ -281,7 +281,7 @@ public sealed class QualificationScaleResolutionTests
 	[Fact]
 	public void load_and_validate_rejects_a_scale_missing_a_known_qualification_type()
 	{
-		var missingNvq = """
+		const string missingNvq = """
 						 qualifications:
 						   - type: gcse
 						     grades:
@@ -310,7 +310,7 @@ public sealed class QualificationScaleResolutionTests
 	[Fact]
 	public void load_and_validate_rejects_duplicate_type_entries_with_a_startup_exception()
 	{
-		var duplicateType = """
+		const string duplicateType = """
 							qualifications:
 							  - type: gcse
 							    grades:

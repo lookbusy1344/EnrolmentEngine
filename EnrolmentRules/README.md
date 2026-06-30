@@ -17,7 +17,9 @@ It then assesses every available A-Level subject and gives it a clear recommenda
 - **Amber** - enrolment may be appropriate but needs staff review or authorisation.
 - **Red** - the published requirements are not met.
 
-The system provides explainable recommendations based on specific policy conditions. These results can either serve as 1) advisory support for staff judgment or 2) enforced as a hard gate to guarantee consistent decision-making. The original system evolved from 1 to 2, with management override (not replicated here).
+The system provides explainable recommendations based on specific policy conditions. These results can either serve as 1) advisory support for staff
+judgment or 2) enforced as a hard gate to guarantee consistent decision-making. The original system evolved from 1 to 2, with management override (not
+replicated here).
 
 ## Information It Can Consider
 

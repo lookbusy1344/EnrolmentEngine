@@ -1,8 +1,8 @@
 namespace EnrolmentRules.Tests;
 
 using System.Text.Json;
+using AwesomeAssertions;
 using Domain;
-using FluentAssertions;
 
 /// <summary>Pins the JSON contract for the domain enums and the severity ordering of <see cref="Rating" />.</summary>
 public sealed class DomainTests
@@ -51,6 +51,17 @@ public sealed class DomainTests
 		var act = () => Subject.Parse("Drama");
 
 		act.Should().Throw<FormatException>().WithMessage("*not a valid subject name*");
+	}
+
+	[Theory]
+	[InlineData("")]
+	[InlineData("Drama")]
+	[InlineData("drama_")]
+	public void subject_constructor_rejects_an_invalid_name(string value)
+	{
+		var act = () => new Subject(value);
+
+		act.Should().Throw<ArgumentException>().WithParameterName(nameof(value));
 	}
 
 	[Fact]

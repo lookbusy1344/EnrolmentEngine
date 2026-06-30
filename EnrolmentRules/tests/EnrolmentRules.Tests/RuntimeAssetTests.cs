@@ -2,9 +2,9 @@ namespace EnrolmentRules.Tests;
 
 using System.Diagnostics;
 using System.Text.Json;
+using AwesomeAssertions;
 using Cli;
 using Domain;
-using FluentAssertions;
 
 /// <summary>
 ///     Phase 10 — published CLI runtime assets. The deployed executable must carry the shipped

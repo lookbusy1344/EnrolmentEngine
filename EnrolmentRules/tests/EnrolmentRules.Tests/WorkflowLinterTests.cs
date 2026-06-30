@@ -1,9 +1,9 @@
 namespace EnrolmentRules.Tests;
 
+using AwesomeAssertions;
 using Cli;
 using Domain;
 using Engine;
-using FluentAssertions;
 using RulesEngine.Models;
 
 /// <summary>
@@ -188,10 +188,7 @@ public sealed class WorkflowLinterTests
 					new() {
 						RuleName = "parent",
 						Rules = [
-							new() {
-								RuleName = "child",
-								Expression = "facts.Gcse(\"mathz\") >= Thresholds.TopEntry",
-							},
+							new() { RuleName = "child", Expression = "facts.Gcse(\"mathz\") >= Thresholds.TopEntry" },
 						],
 					},
 				],

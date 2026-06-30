@@ -67,5 +67,6 @@ public readonly struct EquatableDictionary<TKey, TValue>(IDictionary<TKey, TValu
 
 	public static bool operator !=(EquatableDictionary<TKey, TValue> left, EquatableDictionary<TKey, TValue> right) => !left.Equals(right);
 
-	public static implicit operator EquatableDictionary<TKey, TValue>(Dictionary<TKey, TValue> entries) => new(entries);
+	public static implicit operator EquatableDictionary<TKey, TValue>(Dictionary<TKey, TValue>? entries) =>
+		entries is null ? default : new(entries);
 }

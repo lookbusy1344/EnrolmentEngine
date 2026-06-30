@@ -1,9 +1,9 @@
 namespace EnrolmentRules.Tests;
 
+using AwesomeAssertions;
 using Domain;
 using Engine;
 using Extensions.DependencyInjection;
-using FluentAssertions;
 using Microsoft.Extensions.DependencyInjection;
 
 /// <summary>
@@ -55,7 +55,7 @@ public sealed class DependencyInjectionTests
 				.UseDataDirectory(Harness.DataDir);
 		});
 
-		await act.Should().ThrowAsync<ArgumentException>().WithParameterName("WorkflowsDirectory");
+		await act.Should().ThrowAsync<ArgumentException>().WithParameterName("workflowsDirectory");
 	}
 
 	[Fact]
@@ -68,7 +68,29 @@ public sealed class DependencyInjectionTests
 				.UseDataDirectory(string.Empty);
 		});
 
-		await act.Should().ThrowAsync<ArgumentException>().WithParameterName("DataDirectory");
+		await act.Should().ThrowAsync<ArgumentException>().WithParameterName("dataDirectory");
+	}
+
+	[Theory]
+	[InlineData(null)]
+	[InlineData("")]
+	[InlineData(" ")]
+	public void options_reject_an_invalid_workflows_directory(string? workflowsDirectory)
+	{
+		var act = () => new EnrolmentEngineOptions().UseWorkflowsDirectory(workflowsDirectory!);
+
+		act.Should().Throw<ArgumentException>().WithParameterName(nameof(workflowsDirectory));
+	}
+
+	[Theory]
+	[InlineData(null)]
+	[InlineData("")]
+	[InlineData(" ")]
+	public void options_reject_an_invalid_data_directory(string? dataDirectory)
+	{
+		var act = () => new EnrolmentEngineOptions().UseDataDirectory(dataDirectory!);
+
+		act.Should().Throw<ArgumentException>().WithParameterName(nameof(dataDirectory));
 	}
 
 	[Fact]

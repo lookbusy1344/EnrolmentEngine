@@ -1,9 +1,9 @@
 namespace EnrolmentRules.Tests;
 
 using System.Text;
+using AwesomeAssertions;
 using Domain;
 using Engine;
-using FluentAssertions;
 
 /// <summary>
 ///     The subject catalogue is now rules-as-data: <c>data/catalogue.yaml</c>, loaded and schema-validated

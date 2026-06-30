@@ -2,10 +2,10 @@ namespace EnrolmentRules.Tests;
 
 using System.Globalization;
 using System.Text.Json;
+using AwesomeAssertions;
 using Cli;
 using Domain;
 using Engine;
-using FluentAssertions;
 using Prediction;
 
 /// <summary>

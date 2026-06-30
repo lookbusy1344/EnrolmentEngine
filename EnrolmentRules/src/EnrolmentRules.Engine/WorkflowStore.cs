@@ -101,7 +101,7 @@ public static class WorkflowStore
 	///     Read, schema-validate and deserialize workflow files from arbitrary streams.
 	/// </summary>
 	public static IReadOnlyList<Workflow> LoadAndValidate(
-		IReadOnlyList<(string FileName, Stream Content)> files,
+		IReadOnlyList<WorkflowContent> files,
 		Stream schemaStream)
 	{
 		using var schemaReader = new StreamReader(schemaStream, Encoding.UTF8, true, 1024, true);
@@ -181,7 +181,7 @@ public static class WorkflowStore
 	///     built from the supplied policy and scale.
 	/// </summary>
 	public static async Task<IRulesEngine> LoadValidateBuildAndProbeAsync(
-		IReadOnlyList<(string FileName, Stream Content)> files,
+		IReadOnlyList<WorkflowContent> files,
 		Stream schemaStream,
 		CatalogueData catalogue,
 		PolicyThresholds thresholds,

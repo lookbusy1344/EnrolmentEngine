@@ -20,6 +20,7 @@ public sealed class EnrolmentEngineOptions
 	/// <summary>Point the engine at the directory holding the workflow YAML files.</summary>
 	public EnrolmentEngineOptions UseWorkflowsDirectory(string workflowsDirectory)
 	{
+		ArgumentException.ThrowIfNullOrWhiteSpace(workflowsDirectory);
 		WorkflowsDirectory = workflowsDirectory;
 		return this;
 	}
@@ -27,6 +28,7 @@ public sealed class EnrolmentEngineOptions
 	/// <summary>Point the engine at the data directory holding the catalogue, thresholds and matrices.</summary>
 	public EnrolmentEngineOptions UseDataDirectory(string dataDirectory)
 	{
+		ArgumentException.ThrowIfNullOrWhiteSpace(dataDirectory);
 		DataDirectory = dataDirectory;
 		return this;
 	}

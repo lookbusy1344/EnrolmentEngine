@@ -1,10 +1,10 @@
 namespace EnrolmentRules.Tests;
 
 using System.Text;
+using AwesomeAssertions;
 using Cli;
 using Domain;
 using Engine;
-using FluentAssertions;
 using Prediction;
 
 /// <summary>
@@ -112,7 +112,7 @@ public sealed class TransitionMatrixTests
 	{
 		var act = () => DfeTransitionMatrix.Load(new StringReader(
 			Header + "\n" +
-			ValidRow(band: "7+")));
+			ValidRow("7+")));
 
 		act.Should().Throw<TransitionMatrixException>()
 			.WithMessage("*prior_attainment_band*7+*");
@@ -206,8 +206,8 @@ public sealed class TransitionMatrixTests
 		var path = Path.Combine(Path.GetTempPath(), "enrolmentrules-tests", Guid.NewGuid().ToString("N") + ".json");
 		Directory.CreateDirectory(Path.GetDirectoryName(path)!);
 		File.WriteAllText(path, """
-		                   {"student":{"id":"S-MATRIX","gcses":{"english_language":6,"maths":6,"physics":6,"chemistry":6,"biology":6},"hobbies":[],"date_of_birth":"2009-09-01"}}
-		                   """);
+								{"student":{"id":"S-MATRIX","gcses":{"english_language":6,"maths":6,"physics":6,"chemistry":6,"biology":6},"hobbies":[],"date_of_birth":"2009-09-01"}}
+								""");
 		return path;
 	}
 
@@ -246,8 +246,8 @@ public sealed class TransitionMatrixTests
 		byte[] thresholdsSchema,
 		byte[] transitionMatrix) : IEnrolmentDataSource
 	{
-		public IReadOnlyList<(string FileName, Stream Content)> OpenWorkflows() =>
-			[.. workflows.Select(static workflow => (workflow.FileName, (Stream)new MemoryStream(workflow.Bytes, false)))];
+		public IReadOnlyList<WorkflowContent> OpenWorkflows() =>
+			[.. workflows.Select(static workflow => new WorkflowContent(workflow.FileName, new MemoryStream(workflow.Bytes, false)))];
 
 		public Stream OpenWorkflowSchema() => new MemoryStream(workflowSchema, false);
 

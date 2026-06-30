@@ -1,8 +1,8 @@
 namespace EnrolmentRules.Tests;
 
+using AwesomeAssertions;
 using Domain;
 using Engine;
-using FluentAssertions;
 using Prediction;
 
 /// <summary>Locks the shared startup-data exception hierarchy exposed by the packable surface.</summary>

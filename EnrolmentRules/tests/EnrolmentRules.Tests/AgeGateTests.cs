@@ -1,8 +1,8 @@
 namespace EnrolmentRules.Tests;
 
+using AwesomeAssertions;
 using Domain;
 using Engine;
-using FluentAssertions;
 
 /// <summary>
 ///     The age-gated entry demonstration (§1.1 per-student attributes): <c>date_of_birth</c> is the raw

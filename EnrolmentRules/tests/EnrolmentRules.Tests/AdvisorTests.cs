@@ -1,10 +1,10 @@
 namespace EnrolmentRules.Tests;
 
 using System.Text.Json;
+using AwesomeAssertions;
 using Cli;
 using Domain;
 using Engine;
-using FluentAssertions;
 
 /// <summary>
 ///     Counterfactual advisor tests. These exercise the public advice surface through the real engine
@@ -497,6 +497,7 @@ public sealed class AdvisorTests
 		const int TripAfter = 3;
 		using var cts = new CancellationTokenSource();
 		var evaluations = 0;
+
 		void OnEvaluation()
 		{
 			if (++evaluations >= TripAfter) {

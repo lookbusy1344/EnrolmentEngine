@@ -47,9 +47,9 @@ public readonly struct EquatableArray<T>(ImmutableArray<T> items) : IReadOnlyLis
 
 	public static implicit operator EquatableArray<T>(ImmutableArray<T> items) => new(items);
 
-	public static implicit operator EquatableArray<T>(T[] items) => new([.. items]);
+	public static implicit operator EquatableArray<T>(T[]? items) => items is null ? default : new([.. items]);
 
-	public static implicit operator EquatableArray<T>(List<T> items) => new([.. items]);
+	public static implicit operator EquatableArray<T>(List<T>? items) => items is null ? default : new([.. items]);
 }
 
 /// <summary>The collection-expression builder for <see cref="EquatableArray{T}" /> (<c>[]</c> / <c>[.. xs]</c>).</summary>

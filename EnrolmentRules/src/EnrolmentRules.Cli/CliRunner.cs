@@ -115,7 +115,8 @@ public static class CliRunner
 				return ExitInput;
 			}
 
-			var profile = GradePredictor.Predict(student, student.ToGcseResults(), Today, catalogue, DfeTransitionMatrix.LoadFromDataDirectory(loadedDataDirectory), scale);
+			var profile = GradePredictor.Predict(student, student.ToGcseResults(), Today, catalogue,
+				DfeTransitionMatrix.LoadFromDataDirectory(loadedDataDirectory), scale);
 			stdout.WriteLine(JsonSerializer.Serialize(profile, EnrolmentJsonContext.Default.StudentProfile));
 			return ExitOk;
 		}
