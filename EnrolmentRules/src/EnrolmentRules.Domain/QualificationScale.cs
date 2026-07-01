@@ -86,14 +86,19 @@ public sealed class QualificationScale
 	}
 
 	/// <summary>The ordinal of <paramref name="grade" /> within <paramref name="type" />.</summary>
-	public int Ordinal(QualificationType type, string grade) =>
+	public int Ordinal(QualificationType type, string? grade) =>
 		TryOrdinal(type, grade, out var ordinal)
 			? ordinal
 			: throw new InvalidDataException($"Unknown qualification {EnumNames.NameOf(type)} grade '{grade}'.");
 
 	/// <summary>Try to resolve the ordinal of <paramref name="grade" /> within <paramref name="type" />.</summary>
-	public bool TryOrdinal(QualificationType type, string grade, out int ordinal)
+	public bool TryOrdinal(QualificationType type, string? grade, out int ordinal)
 	{
+		if (string.IsNullOrWhiteSpace(grade)) {
+			ordinal = default;
+			return false;
+		}
+
 		if (byType.TryGetValue(type, out var grades) && grades.TryGetValue(grade, out var entry)) {
 			ordinal = entry.Ordinal;
 			return true;
@@ -104,7 +109,7 @@ public sealed class QualificationScale
 	}
 
 	/// <summary>The A-level-points equivalence of <paramref name="grade" /> within <paramref name="type" />.</summary>
-	public double Equivalence(QualificationType type, string grade) => Lookup(type, grade).Equivalence;
+	public double Equivalence(QualificationType type, string? grade) => Lookup(type, grade).Equivalence;
 
 	/// <summary>Whether <paramref name="qualification" /> satisfies <paramref name="entryEquivalent" />.</summary>
 	public bool Satisfies(Qualification qualification, EntryEquivalent entryEquivalent) =>
@@ -164,8 +169,13 @@ public sealed class QualificationScale
 		}
 	}
 
-	private QualificationScaleEntry Lookup(QualificationType type, string grade)
+	private QualificationScaleEntry Lookup(QualificationType type, string? grade)
 	{
+		if (string.IsNullOrWhiteSpace(grade)) {
+			throw new InvalidDataException(
+				$"Unknown qualification {EnumNames.NameOf(type)} grade '{grade}'.");
+		}
+
 		if (byType.TryGetValue(type, out var grades) && grades.TryGetValue(grade, out var entry)) {
 			return entry;
 		}

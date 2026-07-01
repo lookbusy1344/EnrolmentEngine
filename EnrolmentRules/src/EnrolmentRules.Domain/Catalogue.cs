@@ -84,7 +84,7 @@ public sealed class CatalogueData
 		order = Subjects
 			.Select(static (subject, index) => (subject, index))
 			.ToFrozenDictionary(static pair => pair.subject, static pair => pair.index);
-		Validate(this.entries, scale);
+		Validate(this.entries, order, scale);
 
 		// Each mutual-exclusion pair once, as an ordered tuple (lower enum value first) so the symmetric
 		// SubjectMeta.Exclusions listing is not double-counted. Materialised once: the table is fixed for
@@ -105,20 +105,46 @@ public sealed class CatalogueData
 	/// <summary>Each mutual-exclusion pair once, lower enum value first.</summary>
 	public IReadOnlyList<ExclusionPair> ExclusionPairs { get; }
 
-	/// <summary>The metadata for <paramref name="subject" /> (guaranteed present by the coverage invariant).</summary>
-	public SubjectMeta Meta(Subject subject) => entries[subject];
+	/// <summary>The metadata for <paramref name="subject" /> (guaranteed present when the bound catalogue invariant holds).</summary>
+	public SubjectMeta Meta(Subject subject) =>
+		entries.TryGetValue(subject, out var meta)
+			? meta
+			: throw new CatalogueDataException(
+				$"Catalogue metadata for subject '{EnumNames.NameOf(subject)}' is missing from the bound catalogue.");
 
 	// Coverage: every subject has exactly one entry (a missing subject would silently never rate; a
 	// duplicate is ambiguous). Symmetry: an exclusion edge A→B must be mirrored B→A with the same severity,
 	// because the constraint pass treats clashes as undirected — an asymmetric listing would demote one
 	// direction only depending on which subject happened to qualify.
-	private static void Validate(FrozenDictionary<Subject, SubjectMeta> entries, QualificationScale scale)
+	private static void Validate(
+		FrozenDictionary<Subject, SubjectMeta> entries,
+		FrozenDictionary<Subject, int> order,
+		QualificationScale scale)
 	{
+		foreach (var subject in order.Keys) {
+			if (!entries.ContainsKey(subject)) {
+				throw new InvalidDataException(
+					$"Catalogue subjects list declares subject '{EnumNames.NameOf(subject)}' without metadata.");
+			}
+		}
+
+		foreach (var subject in entries.Keys) {
+			if (!order.ContainsKey(subject)) {
+				throw new InvalidDataException(
+					$"Catalogue subjects list omits declared subject '{EnumNames.NameOf(subject)}'.");
+			}
+		}
+
 		foreach (var (subject, meta) in entries) {
 			foreach (var exclusion in meta.Exclusions) {
 				if (!entries.TryGetValue(exclusion.Other, out var otherMeta)) {
 					throw new InvalidDataException(
 						$"Catalogue references undefined subject '{EnumNames.NameOf(exclusion.Other)}' in an exclusion from '{EnumNames.NameOf(subject)}'.");
+				}
+
+				if (!order.ContainsKey(exclusion.Other)) {
+					throw new InvalidDataException(
+						$"Catalogue subjects list omits subject '{EnumNames.NameOf(exclusion.Other)}' referenced by an exclusion from '{EnumNames.NameOf(subject)}'.");
 				}
 
 				var mirrored = otherMeta.Exclusions
@@ -141,6 +167,11 @@ public sealed class CatalogueData
 				if (!entries.ContainsKey(required)) {
 					throw new InvalidDataException(
 						$"Catalogue references undefined subject '{EnumNames.NameOf(required)}' in prerequisites for '{EnumNames.NameOf(subject)}'.");
+				}
+
+				if (!order.ContainsKey(required)) {
+					throw new InvalidDataException(
+						$"Catalogue subjects list omits subject '{EnumNames.NameOf(required)}' referenced in prerequisites for '{EnumNames.NameOf(subject)}'.");
 				}
 			}
 

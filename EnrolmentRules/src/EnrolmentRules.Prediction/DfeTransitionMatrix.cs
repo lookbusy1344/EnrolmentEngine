@@ -129,9 +129,15 @@ public sealed class DfeTransitionMatrix
 		}
 
 		var bandIndex = Array.IndexOf(Bands, band);
-		for (var i = bandIndex - 1; i >= 0; i--) {
-			if (subjectBands.Contains(Bands[i])) {
-				return rows[(subject, Bands[i])];
+		for (var distance = 1; distance < Bands.Length; distance++) {
+			var lower = bandIndex - distance;
+			if (lower >= 0 && subjectBands.Contains(Bands[lower])) {
+				return rows[(subject, Bands[lower])];
+			}
+
+			var upper = bandIndex + distance;
+			if (upper < Bands.Length && subjectBands.Contains(Bands[upper])) {
+				return rows[(subject, Bands[upper])];
 			}
 		}
 

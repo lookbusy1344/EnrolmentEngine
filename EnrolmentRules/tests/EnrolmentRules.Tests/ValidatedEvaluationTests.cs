@@ -32,6 +32,11 @@ public sealed class ValidatedEvaluationTests : IAsyncLifetime
 
 	private static StudentInput EligibleStudent() => StudentWithMathsGrade(6);
 
+	private static CatalogueData MathsOnlyCatalogue() =>
+		new(
+			new Dictionary<Subject, SubjectMeta> { [Subject.Maths] = Harness.Catalogue.Meta(Subject.Maths) },
+			[Subject.Maths]);
+
 	[Fact]
 	public async Task evaluate_async_does_not_validate_out_of_range_grades()
 	{
@@ -40,6 +45,22 @@ public sealed class ValidatedEvaluationTests : IAsyncLifetime
 		var result = await engine.EvaluateAsync(student);
 
 		result.Recommendations.Should().NotBeEmpty();
+	}
+
+	[Fact]
+	public async Task evaluate_async_fails_loud_when_chosen_subject_is_outside_the_bound_catalogue()
+	{
+		var (_, rulesEngine) = await Harness.BuildFromShippedWorkflowsAsync();
+		var limitedEngine = new EnrolmentEngine(rulesEngine, Harness.Thresholds, MathsOnlyCatalogue(), Harness.AsOf, Harness.Scale);
+		var student = new StudentInput(
+			"S-BAD",
+			new Dictionary<string, int> { ["english_language"] = 6, ["maths"] = 6 },
+			[]) { DateOfBirth = ValidDob, ChosenALevels = [Subject.Physics] };
+
+		var act = () => limitedEngine.EvaluateAsync(student);
+
+		await act.Should().ThrowAsync<CatalogueDataException>()
+			.WithMessage("*physics*bound catalogue*");
 	}
 
 	[Fact]

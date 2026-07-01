@@ -60,8 +60,8 @@ public static class ServiceCollectionExtensions
 		var options = new EnrolmentEngineOptions();
 		configure(options);
 		var factory = await options.CreateFactoryAsync(cancellationToken).ConfigureAwait(false);
-		_ = services.AddSingleton(factory);
-		_ = services.AddSingleton<IEnrolmentEngineFactory>(factory);
+		_ = services.AddSingleton<EnrolmentEngineFactory>(_ => factory);
+		_ = services.AddSingleton<IEnrolmentEngineFactory>(static provider => provider.GetRequiredService<EnrolmentEngineFactory>());
 		_ = services.AddSingleton<ReloadingEnrolmentEngineProxy>();
 		_ = services.AddSingleton<IEnrolmentEvaluator>(static provider => provider.GetRequiredService<ReloadingEnrolmentEngineProxy>());
 		_ = services.AddSingleton<IEnrolmentAdvisor>(static provider => provider.GetRequiredService<ReloadingEnrolmentEngineProxy>());

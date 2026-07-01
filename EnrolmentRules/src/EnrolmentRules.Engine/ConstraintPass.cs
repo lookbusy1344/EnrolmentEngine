@@ -57,19 +57,17 @@ public static class ConstraintPass
 		IReadOnlyList<SubjectRating> ratings,
 		IReadOnlyList<Adjustment> adjustments)
 	{
-		// Every adjustment downgrades (its To is at least as severe as its From, and From is the subject's
-		// base rating), so the deciding adjustment is the most-severe To. When severities tie, a stable
-		// reason precedence keeps the more specific hard bars ahead of generic prerequisite/own-time reasons;
-		// equal keys still fall back to the first emitted adjustment. The winner's To is therefore always at
-		// least as severe as the base rating — including the equal-severity no-op cases (own-time amber→amber,
-		// veto/restudy red→red) where only the reason is replaced.
+		// Producers still emit the deciding adjustment by To-severity and reason precedence, but Apply owns the
+		// monotonicity invariant and defensively ignores a winner less severe than the base. That keeps
+		// same-severity reason replacement (own-time amber→amber, veto/restudy red→red) without allowing an
+		// invalid adjustment to relabel or upgrade a more-severe base.
 		var worst = adjustments
 			.GroupBy(static a => a.Subject)
 			.ToDictionary(static g => g.Key, static g => g.MaxBy(static a => ((int)a.To, (int)ReasonPrecedence(a)))!);
 
 		return [
 			.. ratings.Select(r =>
-				worst.TryGetValue(r.Subject, out var adjustment)
+				worst.TryGetValue(r.Subject, out var adjustment) && adjustment.To >= r.Rating
 					? r with { Rating = adjustment.To, Reason = adjustment.Reason }
 					: r),
 		];
@@ -203,8 +201,8 @@ public static class ConstraintPass
 	// Veto (→ red): a subject is barred outright by an incompatible activity, overriding entry/green/amber.
 	// The single-student, single-subject mirror of own-time — same hobbies input, but presence triggers a
 	// red veto rather than absence triggering an amber downgrade. Unlike the other rules it fires even on an
-	// already-red base: the rating is red either way, and Apply's reason precedence keeps this named bar
-	// ahead of a generic prerequisite reason when both land on the same subject.
+	// already-red base: Apply preserves the red severity either way, and its reason precedence keeps this
+	// named bar ahead of a generic prerequisite reason when both land on the same subject.
 	private static IEnumerable<Adjustment> Vetoes(
 		Dictionary<Subject, Rating> ratings,
 		IReadOnlyList<string> hobbies,
@@ -218,9 +216,9 @@ public static class ConstraintPass
 	}
 
 	// Restudy bar (→ red/amber): if the student already holds a barred prior qualification in the same
-	// subject, the subject is downgraded to the configured severity. Like the veto, this is a factual
-	// downgrade over immutable input, so it composes by most-severe-wins and may replace an already-red
-	// base with a more informative reason.
+	// subject, the subject is downgraded to the configured severity. Equal-severity bars replace the base
+	// reason with the more informative named bar; bars less severe than the base emit no adjustment because
+	// they neither determine the rating nor explain it.
 	private static IEnumerable<Adjustment> RestudyBars(
 		Dictionary<Subject, Rating> ratings,
 		IReadOnlyList<Qualification> priorQualifications,
@@ -233,12 +231,18 @@ public static class ConstraintPass
 			}
 
 			var subjectName = EnumNames.NameOf(subject);
-			if (priorQualifications.Any(qualification =>
-					string.Equals(qualification.Subject, subjectName, StringComparison.OrdinalIgnoreCase)
-					&& bar.Types.Contains(qualification.Type))) {
+			var hasBarredQualification = priorQualifications.Any(qualification =>
+				string.Equals(qualification.Subject, subjectName, StringComparison.OrdinalIgnoreCase)
+				&& bar.Types.Contains(qualification.Type));
+			if (hasBarredQualification) {
+				var baseRating = RequireRating(ratings, subject);
+				if (bar.Severity < baseRating) {
+					continue;
+				}
+
 				yield return new(
 					subject,
-					RequireRating(ratings, subject),
+					baseRating,
 					bar.Severity,
 					$"{RestudyBarReasonPrefix}{subjectName}");
 			}

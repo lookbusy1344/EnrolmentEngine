@@ -137,6 +137,10 @@ public sealed class DependencyInjectionTests
 	}
 
 	[Fact]
+	public void add_enrolment_engine_has_no_disposable_concrete_engine_lifetime_to_own() =>
+		typeof(EnrolmentEngine).Should().NotBeAssignableTo<IDisposable>();
+
+	[Fact]
 	public async Task resolved_engine_evaluates_a_real_student()
 	{
 		var services = new ServiceCollection();
@@ -226,6 +230,26 @@ public sealed class DependencyInjectionTests
 		finally {
 			Directory.Delete(fixture, true);
 		}
+	}
+
+	[Fact]
+	public async Task disposing_the_service_provider_disposes_the_registered_enrolment_engine_factory()
+	{
+		var services = new ServiceCollection();
+		_ = await services.AddEnrolmentEngineFactoryAsync(options => {
+			options.UseWorkflowsDirectory(Harness.WorkflowsDir)
+				.UseDataDirectory(Harness.DataDir)
+				.UseFixedAsOf(Harness.AsOf);
+		});
+
+		var provider = services.BuildServiceProvider();
+		var factory = provider.GetRequiredService<EnrolmentEngineFactory>();
+
+		await provider.DisposeAsync();
+
+		var act = () => factory.ReloadAsync();
+
+		await act.Should().ThrowAsync<ObjectDisposedException>();
 	}
 
 	[Fact]

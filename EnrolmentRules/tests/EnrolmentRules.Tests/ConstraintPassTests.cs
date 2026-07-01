@@ -73,6 +73,41 @@ public sealed class ConstraintPassTests
 	}
 
 	[Fact]
+	public void an_amber_restudy_bar_does_not_override_a_red_base_rating_or_reason()
+	{
+		var profile = new StudentProfile(
+			"S-RB-AMBER",
+			7.5,
+			[],
+			[],
+			[]) { PriorQualifications = [new(Subject.Biology.Value, QualificationType.ALevel, "e")] };
+		var catalogue =
+			new CatalogueData(
+				new Dictionary<Subject, SubjectMeta> {
+					[Subject.Biology] = Harness.Catalogue.Meta(Subject.Biology) with { RestudyBar = new([QualificationType.ALevel], Rating.Amber) },
+				}, [Subject.Biology]);
+		SubjectRating[] ratings = [new(Subject.Biology, Rating.Red, "failed entry requirement")];
+
+		var adjustments = ConstraintPass.Evaluate(ratings, profile, catalogue);
+		var applied = ConstraintPass.Apply(ratings, adjustments);
+
+		adjustments.Should().BeEmpty();
+		applied.Should().ContainSingle().Which.Should()
+			.Be(new SubjectRating(Subject.Biology, Rating.Red, "failed entry requirement"));
+	}
+
+	[Fact]
+	public void apply_ignores_an_adjustment_that_would_upgrade_the_base_rating()
+	{
+		SubjectRating[] ratings = [new(Subject.Biology, Rating.Red, "failed entry requirement")];
+		Adjustment[] adjustments = [new(Subject.Biology, Rating.Red, Rating.Amber, "less severe reason")];
+
+		var applied = ConstraintPass.Apply(ratings, adjustments);
+
+		applied.Should().Equal(ratings);
+	}
+
+	[Fact]
 	public void apply_leaves_subjects_without_adjustments_untouched()
 	{
 		SubjectRating[] ratings = [new(Subject.Maths, Rating.Green, "base reason")];

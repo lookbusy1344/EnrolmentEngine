@@ -130,6 +130,46 @@ public sealed class TransitionMatrixTests
 	}
 
 	[Fact]
+	public void sparse_low_band_falls_back_to_the_nearest_higher_populated_band()
+	{
+		var matrix = DfeTransitionMatrix.Load(new StringReader(
+			Header + "\n" +
+			ValidRow("5 to < 6", "1.0", "0.0", "0.0", "0.0", "0.0", "0.0", "0.0")));
+
+		var evidence = matrix.EvidenceFor(1.5, SingleSubjectCatalogue(Subject.Maths)).Single();
+
+		evidence.PriorAttainmentBand.Should().Be("5 to < 6");
+		evidence.ProbabilityU.Should().Be(1.0);
+	}
+
+	[Fact]
+	public void sparse_high_band_still_falls_back_to_the_nearest_lower_populated_band()
+	{
+		var matrix = DfeTransitionMatrix.Load(new StringReader(
+			Header + "\n" +
+			ValidRow("1 to < 2", "0.0", "1.0", "0.0", "0.0", "0.0", "0.0", "0.0")));
+
+		var evidence = matrix.EvidenceFor(8.5, SingleSubjectCatalogue(Subject.Maths)).Single();
+
+		evidence.PriorAttainmentBand.Should().Be("1 to < 2");
+		evidence.ProbabilityE.Should().Be(1.0);
+	}
+
+	[Fact]
+	public void equidistant_sparse_gap_prefers_the_lower_populated_band()
+	{
+		var matrix = DfeTransitionMatrix.Load(new StringReader(
+			Header + "\n" +
+			ValidRow("< 1", "0.0", "0.0", "1.0", "0.0", "0.0", "0.0", "0.0") + "\n" +
+			ValidRow("2 to < 3", "0.0", "0.0", "0.0", "1.0", "0.0", "0.0", "0.0")));
+
+		var evidence = matrix.EvidenceFor(1.5, SingleSubjectCatalogue(Subject.Maths)).Single();
+
+		evidence.PriorAttainmentBand.Should().Be("< 1");
+		evidence.ProbabilityD.Should().Be(1.0);
+	}
+
+	[Fact]
 	public async Task create_async_rejects_a_syntactically_readable_but_invalid_transition_matrix()
 	{
 		var source = InMemoryDataSource.WithTransitionMatrix(
@@ -234,6 +274,9 @@ public sealed class TransitionMatrixTests
 
 		return destination;
 	}
+
+	private static CatalogueData SingleSubjectCatalogue(Subject subject) =>
+		new(new Dictionary<Subject, SubjectMeta> { [subject] = Harness.Catalogue.Meta(subject) }, [subject]);
 
 	private sealed class InMemoryDataSource(
 		IReadOnlyList<(string FileName, byte[] Bytes)> workflows,

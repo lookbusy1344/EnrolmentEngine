@@ -54,7 +54,8 @@ public sealed class WorkflowProbeException : WorkflowException
 ///     A schema-valid, probe-compiling workflow failed semantic lint at startup. This captures the
 ///     aggregated lint findings in deterministic order so bootstrap and CLI lint report the same facts.
 /// </summary>
-public sealed class WorkflowLintException(IReadOnlyList<LintFinding> findings) : WorkflowException($"Workflow lint failed at startup: {string.Join("; ", findings.Select(FormatFinding))}")
+public sealed class WorkflowLintException(IReadOnlyList<LintFinding> findings)
+	: WorkflowException($"Workflow lint failed at startup: {string.Join("; ", findings.Select(FormatFinding))}")
 {
 	public IReadOnlyList<LintFinding> Findings { get; } = findings;
 

@@ -4,6 +4,9 @@ using System.Text.Json;
 using AwesomeAssertions;
 using Domain;
 using Engine;
+using FsCheck;
+using FsCheck.Fluent;
+using FsCheck.Xunit;
 
 /// <summary>
 ///     Typed prior qualifications — entry qualifiers, qualification scale resolution, and the restudy bar.
@@ -217,6 +220,29 @@ public sealed class QualificationScaleResolutionTests
 	}
 
 	[Fact]
+	public void student_document_deserialisation_allows_a_prior_qualification_grade_to_be_missing()
+	{
+		const string json = """
+							{
+							  "student": {
+							    "id": "S-QUAL",
+							    "gcses": { "maths": 6 },
+							    "hobbies": [],
+							    "prior_qualifications": [
+							      { "subject": "biology", "type": "a_level" }
+							    ]
+							  }
+							}
+							""";
+
+		var document = JsonSerializer.Deserialize(json, EnrolmentJsonContext.Default.StudentDocument);
+
+		document.Should().NotBeNull();
+		document!.Student.PriorQualifications.Should().ContainSingle();
+		document.Student.PriorQualifications[0].Grade.Should().BeNull();
+	}
+
+	[Fact]
 	public void qualification_scale_resolves_ordinal_and_equivalence()
 	{
 		var scale = new QualificationScale([
@@ -261,6 +287,23 @@ public sealed class QualificationScaleResolutionTests
 	}
 
 	[Fact]
+	public void qualification_scale_treats_a_null_grade_as_unknown_in_both_try_and_hard_lookups()
+	{
+		var scale = new QualificationScale([
+			new(QualificationType.ALevel, "u", 0, ALevelGrade.U),
+		]);
+
+		scale.TryOrdinal(QualificationType.ALevel, null, out var ordinal).Should().BeFalse();
+		ordinal.Should().Be(0);
+
+		var ordinalAct = () => scale.Ordinal(QualificationType.ALevel, null);
+		var equivalenceAct = () => scale.Equivalence(QualificationType.ALevel, null);
+
+		ordinalAct.Should().Throw<InvalidDataException>().WithMessage("*unknown qualification*a_level grade*");
+		equivalenceAct.Should().Throw<InvalidDataException>().WithMessage("*unknown qualification*a_level grade*");
+	}
+
+	[Fact]
 	public void student_validator_rejects_an_unresolvable_prior_qualification_grade()
 	{
 		var student = new StudentInput(
@@ -279,23 +322,50 @@ public sealed class QualificationScaleResolutionTests
 	}
 
 	[Fact]
+	public void student_validator_returns_a_message_for_a_null_prior_qualification_grade()
+	{
+		var student = new StudentInput(
+			"S-BAD",
+			new Dictionary<string, int> { ["maths"] = 6 },
+			[]) { DateOfBirth = new DateOnly(2009, 9, 1), PriorQualifications = [new("biology", QualificationType.ALevel, null!)] };
+
+		var act = () => StudentValidator.Validate(student, Harness.Catalogue, Harness.Scale);
+
+		act.Should().NotThrow();
+		act().Should().ContainSingle().Which.Should()
+			.Contain("prior_qualifications")
+			.And.Contain("biology")
+			.And.Contain("unknown qualification")
+			.And.Contain("''");
+	}
+
+	[Property(Arbitrary = new[] { typeof(MalformedStudentArbitraries) }, MaxTest = 200)]
+	public bool student_validator_validate_is_total_for_malformed_student_documents(StudentInput student)
+	{
+		var act = () => StudentValidator.Validate(student, Harness.Catalogue, Harness.Scale);
+
+		act.Should().NotThrow();
+		return true;
+	}
+
+	[Fact]
 	public void load_and_validate_rejects_a_scale_missing_a_known_qualification_type()
 	{
 		const string missingNvq = """
-						 qualifications:
-						   - type: gcse
-						     grades:
-						       - { grade: "1", ordinal: 1, equivalence: 0.0 }
-						   - type: a_level
-						     grades:
-						       - { grade: u, ordinal: 0, equivalence: 0.0 }
-						   - type: btec_extended_certificate
-						     grades:
-						       - { grade: pass, ordinal: 0, equivalence: 2.0 }
-						   - type: btec_diploma
-						     grades:
-						       - { grade: pass, ordinal: 0, equivalence: 3.0 }
-						 """;
+								  qualifications:
+								    - type: gcse
+								      grades:
+								        - { grade: "1", ordinal: 1, equivalence: 0.0 }
+								    - type: a_level
+								      grades:
+								        - { grade: u, ordinal: 0, equivalence: 0.0 }
+								    - type: btec_extended_certificate
+								      grades:
+								        - { grade: pass, ordinal: 0, equivalence: 2.0 }
+								    - type: btec_diploma
+								      grades:
+								        - { grade: pass, ordinal: 0, equivalence: 3.0 }
+								  """;
 
 		var act = () => QualificationScaleStore.LoadAndValidate(
 			new StringReader(missingNvq),
@@ -311,26 +381,26 @@ public sealed class QualificationScaleResolutionTests
 	public void load_and_validate_rejects_duplicate_type_entries_with_a_startup_exception()
 	{
 		const string duplicateType = """
-							qualifications:
-							  - type: gcse
-							    grades:
-							      - { grade: "1", ordinal: 1, equivalence: 0.0 }
-							  - type: gcse
-							    grades:
-							      - { grade: "1", ordinal: 1, equivalence: 0.0 }
-							  - type: a_level
-							    grades:
-							      - { grade: u, ordinal: 0, equivalence: 0.0 }
-							  - type: btec_extended_certificate
-							    grades:
-							      - { grade: pass, ordinal: 0, equivalence: 2.0 }
-							  - type: btec_diploma
-							    grades:
-							      - { grade: pass, ordinal: 0, equivalence: 3.0 }
-							  - type: nvq
-							    grades:
-							      - { grade: level_1, ordinal: 1, equivalence: 1.0 }
-							""";
+									 qualifications:
+									   - type: gcse
+									     grades:
+									       - { grade: "1", ordinal: 1, equivalence: 0.0 }
+									   - type: gcse
+									     grades:
+									       - { grade: "1", ordinal: 1, equivalence: 0.0 }
+									   - type: a_level
+									     grades:
+									       - { grade: u, ordinal: 0, equivalence: 0.0 }
+									   - type: btec_extended_certificate
+									     grades:
+									       - { grade: pass, ordinal: 0, equivalence: 2.0 }
+									   - type: btec_diploma
+									     grades:
+									       - { grade: pass, ordinal: 0, equivalence: 3.0 }
+									   - type: nvq
+									     grades:
+									       - { grade: level_1, ordinal: 1, equivalence: 1.0 }
+									 """;
 
 		var act = () => QualificationScaleStore.LoadAndValidate(
 			new StringReader(duplicateType),
@@ -421,4 +491,36 @@ public sealed class RestudyBarConstraintTests
 		biology.Rating.Should().Be(Rating.Red);
 		biology.Reason.Should().Contain("already holds");
 	}
+}
+
+public static class MalformedStudentArbitraries
+{
+	private static readonly Gen<string?> OptionalText =
+		Gen.Elements(null, string.Empty, " ", "biology", "S-MALFORMED", "not-a-grade");
+
+	private static readonly Gen<Qualification> Qualification =
+		from subject in OptionalText
+		from type in Gen.Elements([.. Enum.GetValues<QualificationType>()])
+		from grade in OptionalText
+		select new Qualification(subject!, type, grade!);
+
+	private static readonly Gen<string> Hobby =
+		Gen.Elements<string>(null!, string.Empty, " ", "plays_piano", "gaming");
+
+	public static Arbitrary<StudentInput> StudentInput() =>
+		Arb.From(
+			from id in OptionalText
+			from includeGcses in Gen.Elements(true, false)
+			from includeHobbies in Gen.Elements(true, false)
+			from hobbies in includeHobbies
+				? Hobby.ListOf().Select(static items => (EquatableArray<string>?)items.ToArray())
+				: Gen.Constant<EquatableArray<string>?>(null)
+			from priorQualifications in Qualification.ListOf()
+			from includeBirthDate in Gen.Elements(true, false)
+			select new StudentInput(
+				id!,
+				includeGcses
+					? new Dictionary<string, int>(StringComparer.OrdinalIgnoreCase) { ["maths"] = 6 }
+					: null,
+				hobbies) { DateOfBirth = includeBirthDate ? new DateOnly(2009, 9, 1) : null, PriorQualifications = [.. priorQualifications] });
 }

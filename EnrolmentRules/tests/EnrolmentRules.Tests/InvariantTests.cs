@@ -8,6 +8,7 @@ using Engine;
 using FsCheck;
 using FsCheck.Fluent;
 using FsCheck.Xunit;
+using RulesEngine.Interfaces;
 
 /// <summary>
 ///     Phase 9 — property tests and workflow/catalogue drift. The invariants here are the executable
@@ -23,9 +24,17 @@ public sealed partial class InvariantTests : IAsyncLifetime
 	private static readonly double MaxProjectedTariff =
 		Catalogue.Subjects.Sum(static subject => Catalogue.Meta(subject).UcasWeight);
 
-	private EnrolmentEngine engine = null!;
+	private static readonly Qualification BiologyPriorALevel =
+		new(Subject.Biology.Value, QualificationType.ALevel, "e");
 
-	public async Task InitializeAsync() => engine = await Harness.ShippedEngineAsync();
+	private EnrolmentEngine engine = null!;
+	private IRulesEngine rulesEngine = null!;
+
+	public async Task InitializeAsync()
+	{
+		engine = await Harness.ShippedEngineAsync();
+		rulesEngine = (await Harness.BuildFromShippedWorkflowsAsync()).Engine;
+	}
 
 	public Task DisposeAsync() => Task.CompletedTask;
 
@@ -160,6 +169,25 @@ public sealed partial class InvariantTests : IAsyncLifetime
 		return true;
 	}
 
+	[Property(Arbitrary = new[] { typeof(StudentArbitraries) }, MaxTest = 100)]
+	public async Task<bool> random_valid_students_are_not_upgraded_by_an_amber_restudy_bar(StudentInput student)
+	{
+		StudentValidator.Validate(student, Harness.Catalogue, Harness.Scale).Should().BeEmpty();
+
+		var catalogue = CatalogueWithRestudyBarSeverity(Subject.Biology, Rating.Amber);
+		var constrainedStudent = student with { PriorQualifications = [BiologyPriorALevel] };
+		var constrainedEngine = new EnrolmentEngine(rulesEngine, Harness.Thresholds, catalogue, Harness.AsOf, Harness.Scale);
+
+		var explained = await constrainedEngine.ExplainAsync(constrainedStudent);
+		var biology = explained.Explanations.Single(static explanation => explanation.Subject == Subject.Biology);
+
+		((int)biology.Rating).Should().BeGreaterThanOrEqualTo(
+			(int)biology.BaseRating,
+			"an amber restudy bar must not upgrade an already-red base rating");
+
+		return true;
+	}
+
 	private static bool IsKnownSubject(string name) => Subject.TryParse(name, out var subject) && Catalogue.Subjects.Contains(subject);
 
 	[GeneratedRegex(@">=\s*\d")]
@@ -200,6 +228,15 @@ public sealed partial class InvariantTests : IAsyncLifetime
 				break;
 		}
 	}
+
+	private static CatalogueData CatalogueWithRestudyBarSeverity(Subject subject, Rating severity) =>
+		new(
+			Catalogue.Subjects.ToDictionary(
+				static subject => subject,
+				subject_ => subject_ == subject
+					? Catalogue.Meta(subject_) with { RestudyBar = new([QualificationType.ALevel], severity) }
+					: Catalogue.Meta(subject_)),
+			Catalogue.Subjects);
 
 	public static class StudentArbitraries
 	{

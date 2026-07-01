@@ -156,6 +156,49 @@ public sealed class CatalogueTests
 	}
 
 	[Fact]
+	public void a_restudy_bar_can_be_configured_with_amber_severity()
+	{
+		const string yaml = """
+							subjects:
+							  - subject: biology
+							    ucas_weight: 44
+							    regression: { slope: 0.90, intercept: -2.30 }
+							    restudy_bar:
+							      types: [a_level]
+							      severity: amber
+							""";
+
+		var data = Catalogue.Load(yaml);
+
+		data.Meta(Subject.Biology).RestudyBar.Should().Be(new RestudyBar([QualificationType.ALevel], Rating.Amber));
+	}
+
+	[Fact]
+	public void catalogue_construction_rejects_a_subjects_list_that_omits_a_referenced_entry()
+	{
+		var entries = new Dictionary<Subject, SubjectMeta> {
+			[Subject.Maths] = Harness.Catalogue.Meta(Subject.Maths) with { Exclusions = [new(Subject.Physics, Rating.Red)] },
+			[Subject.Physics] = Harness.Catalogue.Meta(Subject.Physics) with { Exclusions = [new(Subject.Maths, Rating.Red)] },
+		};
+
+		var act = () => new CatalogueData(entries, [Subject.Maths]);
+
+		act.Should().Throw<InvalidDataException>()
+			.WithMessage("*subjects list omits declared subject*physics*");
+	}
+
+	[Fact]
+	public void catalogue_construction_rejects_a_subjects_list_entry_without_metadata()
+	{
+		var entries = new Dictionary<Subject, SubjectMeta> { [Subject.Maths] = Harness.Catalogue.Meta(Subject.Maths) };
+
+		var act = () => new CatalogueData(entries, [Subject.Maths, Subject.Physics]);
+
+		act.Should().Throw<InvalidDataException>()
+			.WithMessage("*subjects list declares subject*physics*without metadata*");
+	}
+
+	[Fact]
 	public void an_exclusion_to_an_undefined_subject_is_rejected()
 	{
 		const string yaml = """
