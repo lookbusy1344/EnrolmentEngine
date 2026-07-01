@@ -227,7 +227,7 @@ public sealed class WorkflowLinterTests
 		await using var stdout = new StringWriter();
 		await using var stderr = new StringWriter();
 
-		var exit = await CliRunner.RunAsync(["--lint-workflows"], stdout, stderr);
+		var exit = CliRunner.Run(["--lint-workflows"], stdout, stderr);
 
 		exit.Should().Be(CliRunner.ExitOk);
 		stderr.ToString().Should().BeEmpty();
@@ -246,7 +246,7 @@ public sealed class WorkflowLinterTests
 			await using var stdout = new StringWriter();
 			await using var stderr = new StringWriter();
 
-			var exit = await CliRunner.RunAsync(["--lint-workflows", brokenDir], stdout, stderr);
+			var exit = CliRunner.Run(["--lint-workflows", brokenDir], stdout, stderr);
 
 			exit.Should().Be(CliRunner.ExitLint);
 			stdout.ToString().Should().Contain("facts.Prediced");
@@ -264,7 +264,7 @@ public sealed class WorkflowLinterTests
 			await using var stdout = new StringWriter();
 			await using var stderr = new StringWriter();
 
-			var exit = await CliRunner.RunAsync(["--lint-workflows", Path.Combine(fixture, "workflows")], stdout, stderr);
+			var exit = CliRunner.Run(["--lint-workflows", Path.Combine(fixture, "workflows")], stdout, stderr);
 
 			exit.Should().Be(CliRunner.ExitOk);
 			stdout.ToString().Should().BeEmpty();

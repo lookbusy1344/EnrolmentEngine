@@ -24,11 +24,11 @@ public sealed class EnrolmentEngineFactory : IEnrolmentEngineFactory, IDisposabl
 	public IEnrolmentEngine Current => Volatile.Read(ref current);
 
 	/// <inheritdoc />
-	public async Task ReloadAsync(CancellationToken cancellationToken = default)
+	public void Reload(CancellationToken cancellationToken = default)
 	{
-		await reloadGate.WaitAsync(cancellationToken).ConfigureAwait(false);
+		reloadGate.Wait(cancellationToken);
 		try {
-			var rebuilt = await EnrolmentEngine.CreateAsync(source, asOf, cancellationToken).ConfigureAwait(false);
+			var rebuilt = EnrolmentEngine.Create(source, asOf, cancellationToken);
 			Volatile.Write(ref current, rebuilt);
 		}
 		finally {
@@ -37,37 +37,37 @@ public sealed class EnrolmentEngineFactory : IEnrolmentEngineFactory, IDisposabl
 	}
 
 	/// <summary>Bootstrap a factory from directory paths and a fixed reference date.</summary>
-	public static Task<EnrolmentEngineFactory> CreateAsync(
+	public static EnrolmentEngineFactory Create(
 		string workflowsDirectory,
 		string dataDirectory,
 		DateOnly asOf,
 		CancellationToken cancellationToken = default)
-		=> CreateAsync(new DirectoryDataSource(workflowsDirectory, dataDirectory), () => asOf, cancellationToken);
+		=> Create(new DirectoryDataSource(workflowsDirectory, dataDirectory), () => asOf, cancellationToken);
 
 	/// <summary>Bootstrap a factory from directory paths and a live reference-date source.</summary>
-	public static Task<EnrolmentEngineFactory> CreateAsync(
+	public static EnrolmentEngineFactory Create(
 		string workflowsDirectory,
 		string dataDirectory,
 		Func<DateOnly> asOf,
 		CancellationToken cancellationToken = default)
-		=> CreateAsync(new DirectoryDataSource(workflowsDirectory, dataDirectory), asOf, cancellationToken);
+		=> Create(new DirectoryDataSource(workflowsDirectory, dataDirectory), asOf, cancellationToken);
 
 	/// <summary>Bootstrap a factory from a stream-backed data source and a fixed reference date.</summary>
-	public static Task<EnrolmentEngineFactory> CreateAsync(
+	public static EnrolmentEngineFactory Create(
 		IEnrolmentDataSource source,
 		DateOnly asOf,
 		CancellationToken cancellationToken = default)
-		=> CreateAsync(source, () => asOf, cancellationToken);
+		=> Create(source, () => asOf, cancellationToken);
 
 	/// <summary>Bootstrap a factory from a stream-backed data source and a reference-date source.</summary>
-	public static async Task<EnrolmentEngineFactory> CreateAsync(
+	public static EnrolmentEngineFactory Create(
 		IEnrolmentDataSource source,
 		Func<DateOnly> asOf,
 		CancellationToken cancellationToken = default)
 	{
 		ArgumentNullException.ThrowIfNull(source);
 		ArgumentNullException.ThrowIfNull(asOf);
-		var engine = await EnrolmentEngine.CreateAsync(source, asOf, cancellationToken).ConfigureAwait(false);
+		var engine = EnrolmentEngine.Create(source, asOf, cancellationToken);
 		return new(source, asOf, engine);
 	}
 }

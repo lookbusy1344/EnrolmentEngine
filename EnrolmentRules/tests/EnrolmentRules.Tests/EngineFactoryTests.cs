@@ -22,22 +22,22 @@ public sealed class EngineFactoryTests
 			[]) { DateOfBirth = new(2009, 9, 1) };
 
 	[Fact]
-	public async Task reload_picks_up_threshold_changes_from_disk()
+	public void reload_picks_up_threshold_changes_from_disk()
 	{
 		var fixture = CopyShippedLayout();
 		try {
-			var factory = await EnrolmentEngineFactory.CreateAsync(
+			using var factory = EnrolmentEngineFactory.Create(
 				Path.Combine(fixture, "workflows"),
 				Path.Combine(fixture, "data"),
 				Harness.AsOf);
 			var student = EligibleStudent();
 
-			(await factory.Current.TryEvaluateAsync(student)).Value!.Eligible.Should().BeTrue();
+			factory.Current.TryEvaluate(student).Value!.Eligible.Should().BeTrue();
 
 			RaisePassGrade(Path.Combine(fixture, "data", "thresholds.yaml"), 7);
-			await factory.ReloadAsync();
+			factory.Reload();
 
-			var afterPassGradeReload = (await factory.Current.TryEvaluateAsync(student)).Value!;
+			var afterPassGradeReload = factory.Current.TryEvaluate(student).Value!;
 			afterPassGradeReload.Eligible.Should().BeFalse();
 			afterPassGradeReload.EligibilityReasons.Should().Equal(
 				"GCSE English Language below the pass grade (7)",
@@ -45,9 +45,9 @@ public sealed class EngineFactoryTests
 				"Fewer than the required number of GCSE passes (5 at grade 7 or above)");
 
 			RaiseMinPasses(Path.Combine(fixture, "data", "thresholds.yaml"), 6);
-			await factory.ReloadAsync();
+			factory.Reload();
 
-			var afterMinPassesReload = (await factory.Current.TryEvaluateAsync(StudentForPassGradeBoundary())).Value!;
+			var afterMinPassesReload = factory.Current.TryEvaluate(StudentForPassGradeBoundary()).Value!;
 			afterMinPassesReload.Eligible.Should().BeFalse();
 			afterMinPassesReload.EligibilityReasons.Should().ContainSingle()
 				.Which.Should().Be("Fewer than the required number of GCSE passes (6 at grade 7 or above)");
@@ -58,11 +58,11 @@ public sealed class EngineFactoryTests
 	}
 
 	[Fact]
-	public async Task reload_leaves_current_unchanged_when_bootstrap_fails()
+	public void reload_leaves_current_unchanged_when_bootstrap_fails()
 	{
 		var fixture = CopyShippedLayout();
 		try {
-			var factory = await EnrolmentEngineFactory.CreateAsync(
+			using var factory = EnrolmentEngineFactory.Create(
 				Path.Combine(fixture, "workflows"),
 				Path.Combine(fixture, "data"),
 				Harness.AsOf);
@@ -70,8 +70,8 @@ public sealed class EngineFactoryTests
 
 			File.WriteAllText(Path.Combine(fixture, "workflows", "eligibility.yaml"), "not: valid");
 
-			var act = () => factory.ReloadAsync();
-			await act.Should().ThrowAsync<WorkflowException>();
+			var act = () => factory.Reload();
+			act.Should().Throw<WorkflowException>();
 			factory.Current.Should().BeSameAs(before);
 		}
 		finally {
@@ -82,15 +82,15 @@ public sealed class EngineFactoryTests
 	[Fact]
 	public async Task concurrent_evaluations_during_reload_do_not_throw()
 	{
-		var factory = await EnrolmentEngineFactory.CreateAsync(Harness.WorkflowsDir, Harness.DataDir, Harness.AsOf);
+		using var factory = EnrolmentEngineFactory.Create(Harness.WorkflowsDir, Harness.DataDir, Harness.AsOf);
 		var student = EligibleStudent();
-		var reloads = Task.Run(async () => {
+		var reloads = Task.Run(() => {
 			for (var i = 0; i < 5; i++) {
-				await factory.ReloadAsync();
+				factory.Reload();
 			}
 		});
 		var evaluations = Enumerable.Range(0, 50)
-			.Select(_ => factory.Current.TryEvaluateAsync(student))
+			.Select(_ => Task.FromResult(factory.Current.TryEvaluate(student)))
 			.ToArray();
 
 		await Task.WhenAll(reloads, Task.WhenAll(evaluations));
@@ -106,13 +106,13 @@ public sealed class EngineFactoryTests
 			true,
 			ThresholdsBytes("min_passes", "4"),
 			ThresholdsBytes("min_passes", "6"));
-		var factory = await EnrolmentEngineFactory.CreateAsync(source, Harness.AsOf);
+		using var factory = EnrolmentEngineFactory.Create(source, Harness.AsOf);
 		var student = StudentForPassGradeBoundary();
 
-		var firstReload = Task.Run(() => factory.ReloadAsync());
+		var firstReload = Task.Run(() => factory.Reload());
 		await EventuallyAsync(() => source.IsFirstReloadBlocked);
 
-		var secondReload = Task.Run(() => factory.ReloadAsync());
+		var secondReload = Task.Run(() => factory.Reload());
 		source.HasSecondReloadEnteredBuild.Should().BeFalse();
 		source.MaxConcurrentReloadBuilds.Should().Be(1);
 
@@ -120,11 +120,11 @@ public sealed class EngineFactoryTests
 		await Task.WhenAll(firstReload, secondReload);
 
 		source.MaxConcurrentReloadBuilds.Should().Be(1);
-		(await factory.Current.TryEvaluateAsync(student)).Value!.Eligible.Should().BeFalse();
+		factory.Current.TryEvaluate(student).Value!.Eligible.Should().BeFalse();
 	}
 
 	[Fact]
-	public async Task failed_reload_releases_the_gate_and_keeps_current_until_a_later_success()
+	public void failed_reload_releases_the_gate_and_keeps_current_until_a_later_success()
 	{
 		using var source = ControlledReloadDataSource.WithReloadThresholds(
 			Harness.WorkflowsDir,
@@ -132,19 +132,19 @@ public sealed class EngineFactoryTests
 			false,
 			InvalidThresholdsBytes(),
 			ThresholdsBytes("min_passes", "4"));
-		var factory = await EnrolmentEngineFactory.CreateAsync(source, Harness.AsOf);
+		using var factory = EnrolmentEngineFactory.Create(source, Harness.AsOf);
 		var before = factory.Current;
 		var student = StudentForPassGradeBoundary();
 
-		var act = () => factory.ReloadAsync();
-		await act.Should().ThrowAsync<PolicyThresholdsException>();
+		var act = () => factory.Reload();
+		act.Should().Throw<PolicyThresholdsException>();
 		factory.Current.Should().BeSameAs(before);
-		(await factory.Current.TryEvaluateAsync(student)).Value!.Eligible.Should().BeTrue();
+		factory.Current.TryEvaluate(student).Value!.Eligible.Should().BeTrue();
 
-		await factory.ReloadAsync();
+		factory.Reload();
 
 		factory.Current.Should().NotBeSameAs(before);
-		(await factory.Current.TryEvaluateAsync(student)).Value!.Eligible.Should().BeTrue();
+		factory.Current.TryEvaluate(student).Value!.Eligible.Should().BeTrue();
 		source.MaxConcurrentReloadBuilds.Should().Be(1);
 	}
 

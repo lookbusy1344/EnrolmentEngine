@@ -9,7 +9,7 @@ public static class ServiceCollectionExtensions
 	/// <summary>
 	///     Register a pre-bootstrapped singleton engine. The instance is stateless and safe to reuse across
 	///     requests. Use this when the host has already bootstrapped an engine (for example via
-	///     <c>EnrolmentEngine.CreateAsync</c> or <see cref="AddEnrolmentEngineAsync" />).
+	///     <c>EnrolmentEngine.Create</c> or <see cref="AddEnrolmentEngine(IServiceCollection,Action{EnrolmentEngineOptions},CancellationToken)" />).
 	/// </summary>
 	public static IServiceCollection AddEnrolmentEngine(this IServiceCollection services, IEnrolmentEngine engine)
 	{
@@ -28,9 +28,9 @@ public static class ServiceCollectionExtensions
 
 	/// <summary>
 	///     Bootstrap and register a singleton <see cref="EnrolmentEngine" /> from the configured workflows and
-	///     data directories. Await this before <c>BuildServiceProvider</c> so startup I/O stays async end-to-end.
+	///     data directories.
 	/// </summary>
-	public static async Task<IServiceCollection> AddEnrolmentEngineAsync(
+	public static IServiceCollection AddEnrolmentEngine(
 		this IServiceCollection services,
 		Action<EnrolmentEngineOptions> configure,
 		CancellationToken cancellationToken = default)
@@ -40,7 +40,7 @@ public static class ServiceCollectionExtensions
 
 		var options = new EnrolmentEngineOptions();
 		configure(options);
-		var engine = await options.CreateEngineAsync(cancellationToken).ConfigureAwait(false);
+		var engine = options.CreateEngine(cancellationToken);
 		return services.AddEnrolmentEngine(engine);
 	}
 
@@ -49,7 +49,7 @@ public static class ServiceCollectionExtensions
 	///     <see cref="IEnrolmentEngine" /> proxy that forwards each call to
 	///     <see cref="IEnrolmentEngineFactory.Current" />.
 	/// </summary>
-	public static async Task<IServiceCollection> AddEnrolmentEngineFactoryAsync(
+	public static IServiceCollection AddEnrolmentEngineFactory(
 		this IServiceCollection services,
 		Action<EnrolmentEngineOptions> configure,
 		CancellationToken cancellationToken = default)
@@ -59,14 +59,20 @@ public static class ServiceCollectionExtensions
 
 		var options = new EnrolmentEngineOptions();
 		configure(options);
-		var factory = await options.CreateFactoryAsync(cancellationToken).ConfigureAwait(false);
-		_ = services.AddSingleton<EnrolmentEngineFactory>(_ => factory);
-		_ = services.AddSingleton<IEnrolmentEngineFactory>(static provider => provider.GetRequiredService<EnrolmentEngineFactory>());
-		_ = services.AddSingleton<ReloadingEnrolmentEngineProxy>();
-		_ = services.AddSingleton<IEnrolmentEvaluator>(static provider => provider.GetRequiredService<ReloadingEnrolmentEngineProxy>());
-		_ = services.AddSingleton<IEnrolmentAdvisor>(static provider => provider.GetRequiredService<ReloadingEnrolmentEngineProxy>());
-		_ = services.AddSingleton<IEnrolmentEngine>(static provider => provider.GetRequiredService<ReloadingEnrolmentEngineProxy>());
-
-		return services;
+		var factory = options.CreateFactory(cancellationToken);
+		try {
+			var ownedFactory = factory;
+			_ = services.AddSingleton<EnrolmentEngineFactory>(_ => ownedFactory);
+			_ = services.AddSingleton<IEnrolmentEngineFactory>(static provider => provider.GetRequiredService<EnrolmentEngineFactory>());
+			_ = services.AddSingleton<ReloadingEnrolmentEngineProxy>();
+			_ = services.AddSingleton<IEnrolmentEvaluator>(static provider => provider.GetRequiredService<ReloadingEnrolmentEngineProxy>());
+			_ = services.AddSingleton<IEnrolmentAdvisor>(static provider => provider.GetRequiredService<ReloadingEnrolmentEngineProxy>());
+			_ = services.AddSingleton<IEnrolmentEngine>(static provider => provider.GetRequiredService<ReloadingEnrolmentEngineProxy>());
+			factory = null;
+			return services;
+		}
+		finally {
+			factory?.Dispose();
+		}
 	}
 }

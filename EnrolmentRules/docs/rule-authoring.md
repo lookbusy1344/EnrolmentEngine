@@ -538,7 +538,7 @@ The mistakes that pass a casual review — worth a deliberate check.
   error — run `--lint-workflows` to catch it before a student does.
 - **A typo'd subject key is a lint error.** `facts.Gcse("physis")` compiles and would otherwise
   rate the student incorrectly, but the linter flags it as off-vocabulary — and that lint now runs
-  inside `CreateAsync`, so such a workflow fails startup rather than shipping. `--lint-workflows` is
+  inside `Create`, so such a workflow fails startup rather than shipping. `--lint-workflows` is
   the cheaper pre-check that surfaces the same finding without booting an engine, so never skip it.
 - **Magic numbers.** A literal `4` or `5.0` or `0.6` in a rule will not survive review — pull it
   from `policy.*` / `facts.*` (sourced from `thresholds.yaml`) or `ALevelGrade.*`.

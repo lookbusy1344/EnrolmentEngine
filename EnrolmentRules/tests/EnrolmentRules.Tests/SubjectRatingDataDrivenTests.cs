@@ -13,7 +13,7 @@ using Prediction;
 public sealed class SubjectRatingDataDrivenTests
 {
 	[Fact]
-	public async Task adding_a_subject_in_data_only_flows_through_prediction_and_final_recommendations()
+	public void adding_a_subject_in_data_only_flows_through_prediction_and_final_recommendations()
 	{
 		var fixture = WriteFixture();
 		try {
@@ -35,7 +35,7 @@ public sealed class SubjectRatingDataDrivenTests
 			var probeGcses = probeStudent.ToGcseResults();
 			var probeProfile = GradePredictor.Predict(probeStudent, probeGcses, Harness.AsOf, catalogue, QualificationScale.Default);
 			var engine = WorkflowStore.BuildEngine(workflows);
-			await WorkflowStore.ProbeCompileAsync(
+			WorkflowStore.ProbeCompile(
 				engine,
 				workflows,
 				[
@@ -56,7 +56,7 @@ public sealed class SubjectRatingDataDrivenTests
 				[]);
 
 			var profile = GradePredictor.Predict(student, student.ToGcseResults(), Harness.AsOf, catalogue, QualificationScale.Default);
-			var result = await new EnrolmentEngine(engine, thresholds, catalogue, Harness.AsOf).EvaluateAsync(student);
+			var result = new EnrolmentEngine(engine, thresholds, catalogue, Harness.AsOf).Evaluate(student);
 
 			profile.PredictedGrades.Select(static grade => grade.Subject).Should().Contain(subject);
 			result.Recommendations.Should().HaveCount(catalogue.Subjects.Count);

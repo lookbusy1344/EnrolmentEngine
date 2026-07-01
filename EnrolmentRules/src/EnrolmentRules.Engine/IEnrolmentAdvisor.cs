@@ -9,22 +9,22 @@ public interface IEnrolmentAdvisor
 
 	QualificationScale Scale { get; }
 
-	Task<AdviceResult> AdviseAsync(StudentInput student, CancellationToken cancellationToken = default);
+	AdviceResult Advise(StudentInput student, CancellationToken cancellationToken = default);
 
-	Task<AdviceResult> AdviseAsync(StudentInput student, DateOnly asOf, CancellationToken cancellationToken = default);
+	AdviceResult Advise(StudentInput student, DateOnly asOf, CancellationToken cancellationToken = default);
 
-	Task<AdviceResult> AdviseAsync(StudentInput student, bool considerUnsatGcses, CancellationToken cancellationToken = default);
+	AdviceResult Advise(StudentInput student, bool considerUnsatGcses, CancellationToken cancellationToken = default);
 
-	Task<AdviceResult> AdviseAsync(StudentInput student, DateOnly asOf, bool considerUnsatGcses, CancellationToken cancellationToken = default);
+	AdviceResult Advise(StudentInput student, DateOnly asOf, bool considerUnsatGcses, CancellationToken cancellationToken = default);
 
-	Task<ValidatedEvaluation<AdviceResult>> TryAdviseAsync(StudentInput student, CancellationToken cancellationToken = default);
+	ValidatedEvaluation<AdviceResult> TryAdvise(StudentInput student, CancellationToken cancellationToken = default);
 
-	Task<ValidatedEvaluation<AdviceResult>> TryAdviseAsync(StudentInput student, DateOnly asOf, CancellationToken cancellationToken = default);
+	ValidatedEvaluation<AdviceResult> TryAdvise(StudentInput student, DateOnly asOf, CancellationToken cancellationToken = default);
 
-	Task<ValidatedEvaluation<AdviceResult>> TryAdviseAsync(StudentInput student, bool considerUnsatGcses,
+	ValidatedEvaluation<AdviceResult> TryAdvise(StudentInput student, bool considerUnsatGcses,
 		CancellationToken cancellationToken = default);
 
-	Task<ValidatedEvaluation<AdviceResult>> TryAdviseAsync(
+	ValidatedEvaluation<AdviceResult> TryAdvise(
 		StudentInput student,
 		DateOnly asOf,
 		bool considerUnsatGcses,

@@ -19,7 +19,7 @@ public sealed class ExplanationRendererTests
 		await using var stdout = new StringWriter();
 		await using var stderr = new StringWriter();
 
-		var exit = await CliRunner.RunAsync(["--explain-text", path], stdout, stderr);
+		var exit = CliRunner.Run(["--explain-text", path], stdout, stderr);
 
 		exit.Should().Be(CliRunner.ExitOk);
 		stderr.ToString().Should().BeEmpty();
@@ -34,7 +34,7 @@ public sealed class ExplanationRendererTests
 	public async Task ineligible_explanations_render_the_gate_reasons()
 	{
 		var engine = await Harness.ShippedEngineAsync();
-		var explained = await engine.ExplainAsync(new("S-INELIGIBLE", new Dictionary<string, int> { ["maths"] = 6 }, []));
+		var explained = engine.Explain(new("S-INELIGIBLE", new Dictionary<string, int> { ["maths"] = 6 }, []));
 		await using var stdout = new StringWriter();
 
 		ExplanationRenderer.Render(explained, stdout);

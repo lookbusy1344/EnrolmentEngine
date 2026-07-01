@@ -100,8 +100,8 @@ public sealed class PriorQualificationTests
 		});
 		var withEquivalent = withoutEquivalent with { PriorQualifications = [new("applied_science", QualificationType.BtecDiploma, "distinction")] };
 
-		var without = await engine.EvaluateAsync(withoutEquivalent);
-		var with = await engine.EvaluateAsync(withEquivalent);
+		var without = engine.Evaluate(withoutEquivalent);
+		var with = engine.Evaluate(withEquivalent);
 
 		without.Recommendations.Single(r => r.Subject == Subject.Biology).Rating.Should().Be(Rating.Red);
 		with.Recommendations.Single(r => r.Subject == Subject.Biology).Rating.Should().Be(Rating.Green);
@@ -148,8 +148,8 @@ public sealed class PriorQualificationTests
 		var engineA = new EnrolmentEngine(new(rulesEngine, thresholds, catalogue, scaleA), catalogue, Harness.AsOf);
 		var engineB = new EnrolmentEngine(new(rulesEngine, thresholds, catalogue, scaleB), catalogue, Harness.AsOf);
 
-		var resultA = await engineA.EvaluateAsync(student);
-		var resultB = await engineB.EvaluateAsync(student);
+		var resultA = engineA.Evaluate(student);
+		var resultB = engineB.Evaluate(student);
 
 		resultA.Recommendations.Single(r => r.Subject == Subject.Biology).Rating.Should().Be(Rating.Green);
 		resultB.Recommendations.Single(r => r.Subject == Subject.Biology).Rating.Should().Be(Rating.Red);
@@ -484,7 +484,7 @@ public sealed class RestudyBarConstraintTests
 	public async Task the_restudy_bar_overrides_biology_through_the_engine()
 	{
 		var engine = await Harness.ShippedEngineAsync();
-		var result = await engine.EvaluateAsync(StrongStudent(
+		var result = engine.Evaluate(StrongStudent(
 			new Qualification(Subject.Biology.Value, QualificationType.ALevel, "e")));
 
 		var biology = result.Recommendations.Single(r => r.Subject == Subject.Biology);

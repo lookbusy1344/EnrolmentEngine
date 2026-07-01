@@ -40,7 +40,7 @@ public sealed class GoldenFileTests
 		await using var stream = File.OpenRead(Path.Combine(GoldenDir, fixture + ".json"));
 		var document = JsonSerializer.Deserialize(stream, EnrolmentJsonContext.Default.StudentDocument)!;
 		var engine = await Harness.ShippedEngineAsync();
-		return await engine.EvaluateAsync(document.Student);
+		return engine.Evaluate(document.Student);
 	}
 
 	[Theory]
@@ -142,7 +142,7 @@ public sealed class GoldenFileTests
 		var rules = (await Harness.BuildFromShippedWorkflowsAsync()).Engine;
 		var cappedEngine = new EnrolmentEngine(rules, Harness.Thresholds with { MaxGreenChoices = cap }, Harness.Catalogue, Harness.AsOf);
 
-		var result = await cappedEngine.EvaluateAsync(document.Student);
+		var result = cappedEngine.Evaluate(document.Student);
 
 		result.Eligible.Should().BeTrue();
 		result.Summary.GreenCount.Should().Be(cap);

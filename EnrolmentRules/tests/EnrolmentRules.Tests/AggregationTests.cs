@@ -205,7 +205,7 @@ public sealed class AggregationTests
 		var engine = await Harness.ShippedEngineAsync();
 		var student = StrongStudent() with { ChosenALevels = [Subject.French, Subject.German] };
 
-		var result = await engine.EvaluateAsync(student);
+		var result = engine.Evaluate(student);
 
 		result.Eligible.Should().BeTrue();
 		result.Recommendations.Should().ContainSingle(r => r.Subject == Subject.French && r.Rating == Rating.Red);

@@ -10,7 +10,7 @@ using Engine;
 public sealed class WorkflowBootstrapLintTests
 {
 	[Fact]
-	public async Task create_async_rejects_amber_before_green()
+	public void create_rejects_amber_before_green()
 	{
 		var fixture = CopyShippedLayout();
 		try {
@@ -39,9 +39,9 @@ public sealed class WorkflowBootstrapLintTests
 					""",
 					StringComparison.Ordinal));
 
-			var act = () => EnrolmentEngine.CreateAsync(WorkflowsDir(fixture), DataDir(fixture), Harness.AsOf);
+			var act = () => EnrolmentEngine.Create(WorkflowsDir(fixture), DataDir(fixture), Harness.AsOf);
 
-			await act.Should().ThrowAsync<WorkflowLintException>()
+			act.Should().Throw<WorkflowLintException>()
 				.WithMessage("*maths rules must be ordered green → amber → red*");
 		}
 		finally {
@@ -50,7 +50,7 @@ public sealed class WorkflowBootstrapLintTests
 	}
 
 	[Fact]
-	public async Task create_async_rejects_a_missing_subject_tier()
+	public void create_rejects_a_missing_subject_tier()
 	{
 		var fixture = CopyShippedLayout();
 		try {
@@ -66,9 +66,9 @@ public sealed class WorkflowBootstrapLintTests
 					string.Empty,
 					StringComparison.Ordinal));
 
-			var act = () => EnrolmentEngine.CreateAsync(WorkflowsDir(fixture), DataDir(fixture), Harness.AsOf);
+			var act = () => EnrolmentEngine.Create(WorkflowsDir(fixture), DataDir(fixture), Harness.AsOf);
 
-			await act.Should().ThrowAsync<WorkflowLintException>()
+			act.Should().Throw<WorkflowLintException>()
 				.WithMessage("*maths is missing its amber rule*");
 		}
 		finally {
@@ -77,7 +77,7 @@ public sealed class WorkflowBootstrapLintTests
 	}
 
 	[Fact]
-	public async Task create_async_rejects_a_duplicate_subject_tier()
+	public void create_rejects_a_duplicate_subject_tier()
 	{
 		var fixture = CopyShippedLayout();
 		try {
@@ -96,9 +96,9 @@ public sealed class WorkflowBootstrapLintTests
 					""",
 					StringComparison.Ordinal));
 
-			var act = () => EnrolmentEngine.CreateAsync(WorkflowsDir(fixture), DataDir(fixture), Harness.AsOf);
+			var act = () => EnrolmentEngine.Create(WorkflowsDir(fixture), DataDir(fixture), Harness.AsOf);
 
-			await act.Should().ThrowAsync<WorkflowLintException>()
+			act.Should().Throw<WorkflowLintException>()
 				.WithMessage("*maths has 2 amber rules*");
 		}
 		finally {
@@ -107,7 +107,7 @@ public sealed class WorkflowBootstrapLintTests
 	}
 
 	[Fact]
-	public async Task create_async_rejects_a_conditional_red_rule()
+	public void create_rejects_a_conditional_red_rule()
 	{
 		var fixture = CopyShippedLayout();
 		try {
@@ -128,9 +128,9 @@ public sealed class WorkflowBootstrapLintTests
 					""",
 					StringComparison.Ordinal));
 
-			var act = () => EnrolmentEngine.CreateAsync(WorkflowsDir(fixture), DataDir(fixture), Harness.AsOf);
+			var act = () => EnrolmentEngine.Create(WorkflowsDir(fixture), DataDir(fixture), Harness.AsOf);
 
-			await act.Should().ThrowAsync<WorkflowLintException>()
+			act.Should().Throw<WorkflowLintException>()
 				.WithMessage("*maths:red must be an unconditional true catch-all*");
 		}
 		finally {
@@ -139,7 +139,7 @@ public sealed class WorkflowBootstrapLintTests
 	}
 
 	[Fact]
-	public async Task create_async_rejects_an_unknown_subject_key_that_still_compiles()
+	public void create_rejects_an_unknown_subject_key_that_still_compiles()
 	{
 		var fixture = CopyShippedLayout();
 		try {
@@ -148,9 +148,9 @@ public sealed class WorkflowBootstrapLintTests
 				static content => content.Replace("facts.Predicted(\"maths\") >= ALevelGrade.A", "facts.Predicted(\"mathz\") >= ALevelGrade.A",
 					StringComparison.Ordinal));
 
-			var act = () => EnrolmentEngine.CreateAsync(WorkflowsDir(fixture), DataDir(fixture), Harness.AsOf);
+			var act = () => EnrolmentEngine.Create(WorkflowsDir(fixture), DataDir(fixture), Harness.AsOf);
 
-			await act.Should().ThrowAsync<WorkflowLintException>()
+			act.Should().Throw<WorkflowLintException>()
 				.WithMessage("*unknown subject key 'mathz'*");
 		}
 		finally {
@@ -159,13 +159,13 @@ public sealed class WorkflowBootstrapLintTests
 	}
 
 	[Fact]
-	public async Task failed_lint_reload_preserves_current_and_later_clean_reload_succeeds()
+	public void failed_lint_reload_preserves_current_and_later_clean_reload_succeeds()
 	{
 		var fixture = CopyShippedLayout();
 		try {
 			var ratingsPath = Path.Combine(WorkflowsDir(fixture), "subject-ratings.yaml");
 			var clean = File.ReadAllText(ratingsPath);
-			var factory = await EnrolmentEngineFactory.CreateAsync(WorkflowsDir(fixture), DataDir(fixture), Harness.AsOf);
+			using var factory = EnrolmentEngineFactory.Create(WorkflowsDir(fixture), DataDir(fixture), Harness.AsOf);
 			var before = factory.Current;
 
 			File.WriteAllText(
@@ -185,12 +185,12 @@ public sealed class WorkflowBootstrapLintTests
 					""",
 					StringComparison.Ordinal));
 
-			var act = () => factory.ReloadAsync();
-			await act.Should().ThrowAsync<WorkflowLintException>();
+			var act = () => factory.Reload();
+			act.Should().Throw<WorkflowLintException>();
 			factory.Current.Should().BeSameAs(before);
 
 			File.WriteAllText(ratingsPath, clean);
-			await factory.ReloadAsync();
+			factory.Reload();
 
 			factory.Current.Should().NotBeSameAs(before);
 		}

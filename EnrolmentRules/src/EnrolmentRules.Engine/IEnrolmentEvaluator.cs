@@ -9,19 +9,19 @@ public interface IEnrolmentEvaluator
 
 	QualificationScale Scale { get; }
 
-	Task<EnrolmentResult> EvaluateAsync(StudentInput student, CancellationToken cancellationToken = default);
+	EnrolmentResult Evaluate(StudentInput student, CancellationToken cancellationToken = default);
 
-	Task<EnrolmentResult> EvaluateAsync(StudentInput student, DateOnly asOf, CancellationToken cancellationToken = default);
+	EnrolmentResult Evaluate(StudentInput student, DateOnly asOf, CancellationToken cancellationToken = default);
 
-	Task<ExplainedResult> ExplainAsync(StudentInput student, CancellationToken cancellationToken = default);
+	ExplainedResult Explain(StudentInput student, CancellationToken cancellationToken = default);
 
-	Task<ExplainedResult> ExplainAsync(StudentInput student, DateOnly asOf, CancellationToken cancellationToken = default);
+	ExplainedResult Explain(StudentInput student, DateOnly asOf, CancellationToken cancellationToken = default);
 
-	Task<ValidatedEvaluation<EnrolmentResult>> TryEvaluateAsync(StudentInput student, CancellationToken cancellationToken = default);
+	ValidatedEvaluation<EnrolmentResult> TryEvaluate(StudentInput student, CancellationToken cancellationToken = default);
 
-	Task<ValidatedEvaluation<EnrolmentResult>> TryEvaluateAsync(StudentInput student, DateOnly asOf, CancellationToken cancellationToken = default);
+	ValidatedEvaluation<EnrolmentResult> TryEvaluate(StudentInput student, DateOnly asOf, CancellationToken cancellationToken = default);
 
-	Task<ValidatedEvaluation<ExplainedResult>> TryExplainAsync(StudentInput student, CancellationToken cancellationToken = default);
+	ValidatedEvaluation<ExplainedResult> TryExplain(StudentInput student, CancellationToken cancellationToken = default);
 
-	Task<ValidatedEvaluation<ExplainedResult>> TryExplainAsync(StudentInput student, DateOnly asOf, CancellationToken cancellationToken = default);
+	ValidatedEvaluation<ExplainedResult> TryExplain(StudentInput student, DateOnly asOf, CancellationToken cancellationToken = default);
 }

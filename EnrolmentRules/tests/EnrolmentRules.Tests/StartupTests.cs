@@ -22,9 +22,9 @@ public sealed class StartupTests
 	}
 
 	[Fact]
-	public async Task shipped_engine_construction_probe_compiles_at_startup()
+	public void shipped_engine_construction_probe_compiles_at_startup()
 	{
-		var engine = await WorkflowStore.LoadValidateBuildAndProbeAsync(Harness.WorkflowsDir, Harness.Catalogue, Harness.SchemaPath);
+		var engine = WorkflowStore.LoadValidateBuildAndProbe(Harness.WorkflowsDir, Harness.Catalogue, Harness.SchemaPath);
 
 		engine.Should().NotBeNull();
 	}
@@ -68,7 +68,7 @@ public sealed class StartupTests
 	}
 
 	[Fact]
-	public async Task bad_lambda_field_is_rejected_at_startup()
+	public void bad_lambda_field_is_rejected_at_startup()
 	{
 		// Schema-valid, but the lambda references a field the probe input does not have:
 		// the schema cannot see this — only probe-evaluation catches it.
@@ -85,9 +85,9 @@ public sealed class StartupTests
 		var engine = WorkflowStore.BuildEngine(workflows);
 
 		var probe = new RuleParameter("input1", new ProbeInput(1.0));
-		var act = async () => await WorkflowStore.ProbeCompileAsync(engine, workflows, probe);
+		var act = () => WorkflowStore.ProbeCompile(engine, workflows, probe);
 
-		await act.Should().ThrowAsync<WorkflowProbeException>()
+		act.Should().Throw<WorkflowProbeException>()
 			.WithMessage("*bad-field*");
 	}
 
@@ -110,7 +110,7 @@ public sealed class StartupTests
 		var engine = WorkflowStore.BuildEngine(workflows);
 		var probe = new RuleParameter("input1", new ProbeInput(value));
 
-		await WorkflowStore.ProbeCompileAsync(engine, workflows, new RuleParameter("input1", new ProbeInput(0.0)));
+		WorkflowStore.ProbeCompile(engine, workflows, new RuleParameter("input1", new ProbeInput(0.0)));
 
 		var results = await engine.ExecuteAllRulesAsync("trivial", probe);
 
@@ -133,7 +133,7 @@ public sealed class StartupTests
 		var workflows = WorkflowStore.LoadAndValidate(dir, Harness.SchemaPath);
 		var engine = WorkflowStore.BuildEngine(workflows);
 
-		await WorkflowStore.ProbeCompileAsync(engine, workflows, new RuleParameter("input1", new ProbeInput(0.0)));
+		WorkflowStore.ProbeCompile(engine, workflows, new RuleParameter("input1", new ProbeInput(0.0)));
 
 		var results = await engine.ExecuteAllRulesAsync("defaulted", new RuleParameter("input1", new ProbeInput(1.0)));
 

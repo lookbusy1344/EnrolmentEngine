@@ -62,7 +62,7 @@ public sealed class ExplanationTests
 	public async Task explanation_names_the_winning_rule_and_cites_the_predicted_grade()
 	{
 		var engine = await Harness.ShippedEngineAsync();
-		var explained = await engine.ExplainAsync(StrongStudent("plays_piano"));
+		var explained = engine.Explain(StrongStudent("plays_piano"));
 
 		var physics = Of(explained, Subject.Physics);
 
@@ -81,7 +81,7 @@ public sealed class ExplanationTests
 	public async Task explanation_cites_the_constraint_that_overrode_the_base_rule()
 	{
 		var engine = await Harness.ShippedEngineAsync();
-		var explained = await engine.ExplainAsync(StrongStudent("plays_piano"));
+		var explained = engine.Explain(StrongStudent("plays_piano"));
 
 		// History ↔ Art clash: both green at base, Art is the lower-weight loser → amber. The explanation
 		// must cite the exclusion adjustment, not just the base art:green rule.
@@ -102,7 +102,7 @@ public sealed class ExplanationTests
 	public async Task explanation_mentions_the_prior_qualification_that_opened_entry()
 	{
 		var engine = await Harness.ShippedEngineAsync();
-		var explained = await engine.ExplainAsync(StrongBiologyEquivalentStudent());
+		var explained = engine.Explain(StrongBiologyEquivalentStudent());
 
 		var biology = Of(explained, Subject.Biology);
 
@@ -118,7 +118,7 @@ public sealed class ExplanationTests
 		var student = new StudentInput("S-INELIGIBLE", new Dictionary<string, int> { ["maths"] = 6 }, []);
 
 		var engine = await Harness.ShippedEngineAsync();
-		var explained = await engine.ExplainAsync(student);
+		var explained = engine.Explain(student);
 
 		explained.Eligible.Should().BeFalse();
 		explained.Explanations.Should().OnlyContain(e => e.Rating == Rating.Red);
@@ -132,8 +132,8 @@ public sealed class ExplanationTests
 		var student = StrongStudent("plays_piano");
 		var engine = await Harness.ShippedEngineAsync();
 
-		var result = await engine.EvaluateAsync(student);
-		var explained = await engine.ExplainAsync(student);
+		var result = engine.Evaluate(student);
+		var explained = engine.Explain(student);
 
 		// The two views are projections of one evaluation: same eligibility, same summary, and the same
 		// final rating per subject in the same ranked order.
@@ -150,7 +150,7 @@ public sealed class ExplanationTests
 		await using var stdout = new StringWriter();
 		await using var stderr = new StringWriter();
 
-		var exit = await CliRunner.RunAsync(["--explain", path], stdout, stderr);
+		var exit = CliRunner.Run(["--explain", path], stdout, stderr);
 
 		exit.Should().Be(CliRunner.ExitOk);
 		stderr.ToString().Should().BeEmpty();
@@ -168,7 +168,7 @@ public sealed class ExplanationTests
 		await using var stdout = new StringWriter();
 		await using var stderr = new StringWriter();
 
-		var exit = await CliRunner.RunAsync(["--json", path], stdout, stderr);
+		var exit = CliRunner.Run(["--json", path], stdout, stderr);
 
 		exit.Should().Be(CliRunner.ExitOk);
 		var result = JsonSerializer.Deserialize(stdout.ToString(), EnrolmentJsonContext.Default.EnrolmentResult);

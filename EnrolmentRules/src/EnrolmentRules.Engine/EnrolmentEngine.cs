@@ -7,7 +7,7 @@ using RulesEngine.Interfaces;
 /// <summary>
 ///     The façade over the whole pipeline (§1.7): predict → engine (eligibility + per-subject tiers) →
 ///     constraint pass → optional green cap → aggregate, composed into an <see cref="EnrolmentResult" />.
-///     Construct via <c>EnrolmentEngine.CreateAsync</c> or dependency-injection registration — not via <c>new</c>.
+///     Construct via <c>EnrolmentEngine.Create</c> or dependency-injection registration — not via <c>new</c>.
 /// </summary>
 public sealed class EnrolmentEngine : IEnrolmentEngine
 {
@@ -22,8 +22,8 @@ public sealed class EnrolmentEngine : IEnrolmentEngine
 	}
 
 	/// <summary>
-	///     Bind a live reference-date source: the parameterless <see cref="EvaluateAsync(StudentInput, CancellationToken)" />,
-	///     <see cref="ExplainAsync(StudentInput, CancellationToken)" /> and <see cref="AdviseAsync(StudentInput, CancellationToken)" /> overloads
+	///     Bind a live reference-date source: the parameterless <see cref="Evaluate(StudentInput, CancellationToken)" />,
+	///     <see cref="Explain(StudentInput, CancellationToken)" /> and <see cref="Advise(StudentInput, CancellationToken)" /> overloads
 	///     resolve <paramref name="asOf" /> afresh on every call, so a long-running singleton tracks the wall
 	///     clock instead of freezing the date at construction. The engine stays stateless: the source is a pure
 	///     read, and callers wanting an explicit date use the per-call overloads.
@@ -71,101 +71,101 @@ public sealed class EnrolmentEngine : IEnrolmentEngine
 	public QualificationScale Scale => evaluator.Scale;
 
 	/// <summary>The whole-student §1.7 verdict (the document the golden-file suite locks), as of the bound date.</summary>
-	public Task<EnrolmentResult> EvaluateAsync(StudentInput student, CancellationToken cancellationToken = default) =>
-		EvaluateAsync(student, asOf(), cancellationToken);
+	public EnrolmentResult Evaluate(StudentInput student, CancellationToken cancellationToken = default) =>
+		Evaluate(student, asOf(), cancellationToken);
 
 	/// <summary>The whole-student §1.7 verdict as of an explicit reference date (per-request hosting).</summary>
-	public async Task<EnrolmentResult> EvaluateAsync(StudentInput student, DateOnly asOf, CancellationToken cancellationToken = default) =>
-		ToResult(await RunAsync(student, asOf, cancellationToken).ConfigureAwait(false));
+	public EnrolmentResult Evaluate(StudentInput student, DateOnly asOf, CancellationToken cancellationToken = default) =>
+		ToResult(Run(student, asOf, cancellationToken));
 
 	/// <summary>The same verdict with per-recommendation provenance attached (<c>--explain</c>).</summary>
-	public Task<ExplainedResult> ExplainAsync(StudentInput student, CancellationToken cancellationToken = default) =>
-		ExplainAsync(student, asOf(), cancellationToken);
+	public ExplainedResult Explain(StudentInput student, CancellationToken cancellationToken = default) =>
+		Explain(student, asOf(), cancellationToken);
 
 	/// <summary>The explained verdict as of an explicit reference date.</summary>
-	public async Task<ExplainedResult> ExplainAsync(StudentInput student, DateOnly asOf, CancellationToken cancellationToken = default) =>
-		ToExplained(await RunAsync(student, asOf, cancellationToken).ConfigureAwait(false));
+	public ExplainedResult Explain(StudentInput student, DateOnly asOf, CancellationToken cancellationToken = default) =>
+		ToExplained(Run(student, asOf, cancellationToken));
 
 	/// <summary>
 	///     Counterfactual guidance over the same pipeline: for an eligible student, propose the minimal
 	///     GCSE grade moves that would lift each amber/red subject to the next rating; for an ineligible
 	///     student, propose the minimal bundle that clears the eligibility gate.
 	/// </summary>
-	public Task<AdviceResult> AdviseAsync(StudentInput student, CancellationToken cancellationToken = default) =>
-		AdviseAsync(student, asOf(), cancellationToken);
+	public AdviceResult Advise(StudentInput student, CancellationToken cancellationToken = default) =>
+		Advise(student, asOf(), cancellationToken);
 
 	/// <summary>Counterfactual guidance as of an explicit reference date.</summary>
-	public Task<AdviceResult> AdviseAsync(StudentInput student, DateOnly asOf, CancellationToken cancellationToken = default) =>
-		AdviseAsync(student, asOf, evaluator.Thresholds.AdviceConsidersUnsatGcses, cancellationToken);
+	public AdviceResult Advise(StudentInput student, DateOnly asOf, CancellationToken cancellationToken = default) =>
+		Advise(student, asOf, evaluator.Thresholds.AdviceConsidersUnsatGcses, cancellationToken);
 
 	/// <summary>
 	///     Counterfactual guidance with an explicit <paramref name="considerUnsatGcses" /> override of the
 	///     loaded <see cref="PolicyThresholds.AdviceConsidersUnsatGcses" /> default — the diagnostic mode that
 	///     lets the search also propose sitting GCSEs the student never took. As of the bound reference date.
 	/// </summary>
-	public Task<AdviceResult> AdviseAsync(StudentInput student, bool considerUnsatGcses, CancellationToken cancellationToken = default) =>
-		AdviseAsync(student, asOf(), considerUnsatGcses, cancellationToken);
+	public AdviceResult Advise(StudentInput student, bool considerUnsatGcses, CancellationToken cancellationToken = default) =>
+		Advise(student, asOf(), considerUnsatGcses, cancellationToken);
 
 	/// <summary>Counterfactual guidance with an explicit diagnostic override, as of an explicit reference date.</summary>
-	public Task<AdviceResult> AdviseAsync(
+	public AdviceResult Advise(
 		StudentInput student,
 		DateOnly asOf,
 		bool considerUnsatGcses,
 		CancellationToken cancellationToken = default) =>
-		CounterfactualAdvisor.AdviseAsync(this, student, evaluator.Thresholds, asOf, considerUnsatGcses, cancellationToken: cancellationToken);
+		CounterfactualAdvisor.Advise(this, student, evaluator.Thresholds, asOf, considerUnsatGcses, cancellationToken: cancellationToken);
 
-	/// <inheritdoc cref="IEnrolmentEvaluator.TryEvaluateAsync(StudentInput, CancellationToken)" />
-	public Task<ValidatedEvaluation<EnrolmentResult>> TryEvaluateAsync(StudentInput student, CancellationToken cancellationToken = default) =>
-		TryEvaluateAsync(student, asOf(), cancellationToken);
+	/// <inheritdoc cref="IEnrolmentEvaluator.TryEvaluate(StudentInput, CancellationToken)" />
+	public ValidatedEvaluation<EnrolmentResult> TryEvaluate(StudentInput student, CancellationToken cancellationToken = default) =>
+		TryEvaluate(student, asOf(), cancellationToken);
 
-	/// <inheritdoc cref="IEnrolmentEvaluator.TryEvaluateAsync(StudentInput, DateOnly, CancellationToken)" />
-	public async Task<ValidatedEvaluation<EnrolmentResult>> TryEvaluateAsync(
+	/// <inheritdoc cref="IEnrolmentEvaluator.TryEvaluate(StudentInput, DateOnly, CancellationToken)" />
+	public ValidatedEvaluation<EnrolmentResult> TryEvaluate(
 		StudentInput student,
 		DateOnly asOf,
 		CancellationToken cancellationToken = default)
 	{
 		var validation = ValidateInput(student);
 		return validation.IsValid
-			? new(validation, await EvaluateAsync(student, asOf, cancellationToken).ConfigureAwait(false))
+			? new(validation, Evaluate(student, asOf, cancellationToken))
 			: new(validation, null);
 	}
 
-	/// <inheritdoc cref="IEnrolmentEvaluator.TryExplainAsync(StudentInput, CancellationToken)" />
-	public Task<ValidatedEvaluation<ExplainedResult>> TryExplainAsync(StudentInput student, CancellationToken cancellationToken = default) =>
-		TryExplainAsync(student, asOf(), cancellationToken);
+	/// <inheritdoc cref="IEnrolmentEvaluator.TryExplain(StudentInput, CancellationToken)" />
+	public ValidatedEvaluation<ExplainedResult> TryExplain(StudentInput student, CancellationToken cancellationToken = default) =>
+		TryExplain(student, asOf(), cancellationToken);
 
-	/// <inheritdoc cref="IEnrolmentEvaluator.TryExplainAsync(StudentInput, DateOnly, CancellationToken)" />
-	public async Task<ValidatedEvaluation<ExplainedResult>> TryExplainAsync(
+	/// <inheritdoc cref="IEnrolmentEvaluator.TryExplain(StudentInput, DateOnly, CancellationToken)" />
+	public ValidatedEvaluation<ExplainedResult> TryExplain(
 		StudentInput student,
 		DateOnly asOf,
 		CancellationToken cancellationToken = default)
 	{
 		var validation = ValidateInput(student);
 		return validation.IsValid
-			? new(validation, await ExplainAsync(student, asOf, cancellationToken).ConfigureAwait(false))
+			? new(validation, Explain(student, asOf, cancellationToken))
 			: new(validation, null);
 	}
 
-	/// <inheritdoc cref="IEnrolmentAdvisor.TryAdviseAsync(StudentInput, CancellationToken)" />
-	public Task<ValidatedEvaluation<AdviceResult>> TryAdviseAsync(StudentInput student, CancellationToken cancellationToken = default) =>
-		TryAdviseAsync(student, asOf(), cancellationToken);
+	/// <inheritdoc cref="IEnrolmentAdvisor.TryAdvise(StudentInput, CancellationToken)" />
+	public ValidatedEvaluation<AdviceResult> TryAdvise(StudentInput student, CancellationToken cancellationToken = default) =>
+		TryAdvise(student, asOf(), cancellationToken);
 
-	/// <inheritdoc cref="IEnrolmentAdvisor.TryAdviseAsync(StudentInput, DateOnly, CancellationToken)" />
-	public Task<ValidatedEvaluation<AdviceResult>> TryAdviseAsync(
+	/// <inheritdoc cref="IEnrolmentAdvisor.TryAdvise(StudentInput, DateOnly, CancellationToken)" />
+	public ValidatedEvaluation<AdviceResult> TryAdvise(
 		StudentInput student,
 		DateOnly asOf,
 		CancellationToken cancellationToken = default) =>
-		TryAdviseAsync(student, asOf, evaluator.Thresholds.AdviceConsidersUnsatGcses, cancellationToken);
+		TryAdvise(student, asOf, evaluator.Thresholds.AdviceConsidersUnsatGcses, cancellationToken);
 
-	/// <inheritdoc cref="IEnrolmentAdvisor.TryAdviseAsync(StudentInput, bool, CancellationToken)" />
-	public Task<ValidatedEvaluation<AdviceResult>> TryAdviseAsync(
+	/// <inheritdoc cref="IEnrolmentAdvisor.TryAdvise(StudentInput, bool, CancellationToken)" />
+	public ValidatedEvaluation<AdviceResult> TryAdvise(
 		StudentInput student,
 		bool considerUnsatGcses,
 		CancellationToken cancellationToken = default) =>
-		TryAdviseAsync(student, asOf(), considerUnsatGcses, cancellationToken);
+		TryAdvise(student, asOf(), considerUnsatGcses, cancellationToken);
 
-	/// <inheritdoc cref="IEnrolmentAdvisor.TryAdviseAsync(StudentInput, DateOnly, bool, CancellationToken)" />
-	public async Task<ValidatedEvaluation<AdviceResult>> TryAdviseAsync(
+	/// <inheritdoc cref="IEnrolmentAdvisor.TryAdvise(StudentInput, DateOnly, bool, CancellationToken)" />
+	public ValidatedEvaluation<AdviceResult> TryAdvise(
 		StudentInput student,
 		DateOnly asOf,
 		bool considerUnsatGcses,
@@ -173,7 +173,7 @@ public sealed class EnrolmentEngine : IEnrolmentEngine
 	{
 		var validation = ValidateInput(student);
 		return validation.IsValid
-			? new(validation, await AdviseAsync(student, asOf, considerUnsatGcses, cancellationToken).ConfigureAwait(false))
+			? new(validation, Advise(student, asOf, considerUnsatGcses, cancellationToken))
 			: new(validation, null);
 	}
 
@@ -185,24 +185,24 @@ public sealed class EnrolmentEngine : IEnrolmentEngine
 	/// <exception cref="WorkflowException">A workflow file failed schema validation or probe compilation.</exception>
 	/// <exception cref="CatalogueException">The catalogue failed schema validation or load-time invariant checks.</exception>
 	/// <exception cref="PolicyThresholdsException">The thresholds file failed schema validation or load-time invariant checks.</exception>
-	public static Task<EnrolmentEngine> CreateAsync(
+	public static EnrolmentEngine Create(
 		string workflowsDirectory,
 		string dataDirectory,
 		DateOnly asOf,
 		CancellationToken cancellationToken = default)
-		=> CreateAsync(new DirectoryDataSource(workflowsDirectory, dataDirectory), asOf, cancellationToken);
+		=> Create(new DirectoryDataSource(workflowsDirectory, dataDirectory), asOf, cancellationToken);
 
-	/// <inheritdoc cref="CreateAsync(string, string, DateOnly, CancellationToken)" />
+	/// <inheritdoc cref="Create(string, string, DateOnly, CancellationToken)" />
 	/// <remarks>
 	///     The <paramref name="asOf" /> source is resolved per evaluation, so a singleton built this way tracks
 	///     a live clock (e.g. <c>() =&gt; DateOnly.FromDateTime(timeProvider.GetLocalNow().DateTime)</c>).
 	/// </remarks>
-	public static Task<EnrolmentEngine> CreateAsync(
+	public static EnrolmentEngine Create(
 		string workflowsDirectory,
 		string dataDirectory,
 		Func<DateOnly> asOf,
 		CancellationToken cancellationToken = default)
-		=> CreateAsync(new DirectoryDataSource(workflowsDirectory, dataDirectory), asOf, cancellationToken);
+		=> Create(new DirectoryDataSource(workflowsDirectory, dataDirectory), asOf, cancellationToken);
 
 	/// <summary>
 	///     Create a fully bootstrapped engine from a stream-backed data source. This is the shared startup
@@ -212,44 +212,43 @@ public sealed class EnrolmentEngine : IEnrolmentEngine
 	/// <exception cref="WorkflowException">A workflow file failed schema validation or probe compilation.</exception>
 	/// <exception cref="CatalogueException">The catalogue failed schema validation or load-time invariant checks.</exception>
 	/// <exception cref="PolicyThresholdsException">The thresholds file failed schema validation or load-time invariant checks.</exception>
-	public static Task<EnrolmentEngine> CreateAsync(
+	public static EnrolmentEngine Create(
 		IEnrolmentDataSource source,
 		DateOnly asOf,
 		CancellationToken cancellationToken = default)
-		=> CreateAsync(source, () => asOf, cancellationToken);
+		=> Create(source, () => asOf, cancellationToken);
 
-	/// <inheritdoc cref="CreateAsync(IEnrolmentDataSource, DateOnly, CancellationToken)" />
+	/// <inheritdoc cref="Create(IEnrolmentDataSource, DateOnly, CancellationToken)" />
 	/// <remarks>
 	///     The <paramref name="asOf" /> source is resolved per evaluation, so a singleton built this way tracks
 	///     a live clock (e.g. <c>() =&gt; DateOnly.FromDateTime(timeProvider.GetLocalNow().DateTime)</c>).
 	/// </remarks>
-	public static async Task<EnrolmentEngine> CreateAsync(
+	public static EnrolmentEngine Create(
 		IEnrolmentDataSource source,
 		Func<DateOnly> asOf,
 		CancellationToken cancellationToken = default)
 	{
 		ArgumentNullException.ThrowIfNull(source);
 		cancellationToken.ThrowIfCancellationRequested();
-		await using var thresholdsStream = source.OpenThresholds();
-		await using var thresholdsSchemaStream = source.OpenThresholdsSchema();
+		using var thresholdsStream = source.OpenThresholds();
+		using var thresholdsSchemaStream = source.OpenThresholdsSchema();
 		var thresholds = PolicyThresholdsStore.LoadAndValidate(thresholdsStream, thresholdsSchemaStream);
 		cancellationToken.ThrowIfCancellationRequested();
-		await using var qualificationsStream = source.OpenQualifications();
-		await using var qualificationsSchemaStream = source.OpenQualificationsSchema();
+		using var qualificationsStream = source.OpenQualifications();
+		using var qualificationsSchemaStream = source.OpenQualificationsSchema();
 		var scale = QualificationScaleStore.LoadAndValidate(qualificationsStream, qualificationsSchemaStream);
 		cancellationToken.ThrowIfCancellationRequested();
-		await using var catalogueStream = source.OpenCatalogue();
-		await using var catalogueSchemaStream = source.OpenCatalogueSchema();
+		using var catalogueStream = source.OpenCatalogue();
+		using var catalogueSchemaStream = source.OpenCatalogueSchema();
 		var catalogue = CatalogueStore.LoadAndValidate(catalogueStream, catalogueSchemaStream, scale);
 		cancellationToken.ThrowIfCancellationRequested();
-		await using var matrixStream = source.OpenTransitionMatrix();
+		using var matrixStream = source.OpenTransitionMatrix();
 		var matrix = DfeTransitionMatrix.Load(matrixStream);
 		cancellationToken.ThrowIfCancellationRequested();
 		var workflowFiles = source.OpenWorkflows();
 		try {
-			await using var workflowSchemaStream = source.OpenWorkflowSchema();
-			var engine = await WorkflowStore.LoadValidateBuildAndProbeAsync(workflowFiles, workflowSchemaStream, catalogue, thresholds, matrix, scale)
-				.ConfigureAwait(false);
+			using var workflowSchemaStream = source.OpenWorkflowSchema();
+			var engine = WorkflowStore.LoadValidateBuildAndProbe(workflowFiles, workflowSchemaStream, catalogue, thresholds, matrix, scale);
 			cancellationToken.ThrowIfCancellationRequested();
 			return new(new(engine, thresholds, catalogue, scale), catalogue, asOf, matrix);
 		}
@@ -266,13 +265,13 @@ public sealed class EnrolmentEngine : IEnrolmentEngine
 	///     downgrades, so it must read the constraint pass's result. The two adjustment stages compose by
 	///     most-severe-wins into the final ratings.
 	/// </summary>
-	private async Task<Evaluation> RunAsync(StudentInput student, DateOnly asOf, CancellationToken cancellationToken)
+	private Evaluation Run(StudentInput student, DateOnly asOf, CancellationToken cancellationToken)
 	{
 		cancellationToken.ThrowIfCancellationRequested();
 		var gcses = student.ToGcseResults();
 		var profile = GradePredictor.Predict(student, gcses, asOf, Catalogue, matrix, Scale);
 		cancellationToken.ThrowIfCancellationRequested();
-		var (gate, baseRatings) = await evaluator.EvaluateWithGateAsync(profile, gcses, cancellationToken).ConfigureAwait(false);
+		var (gate, baseRatings) = evaluator.EvaluateWithGate(profile, gcses, cancellationToken);
 		cancellationToken.ThrowIfCancellationRequested();
 
 		var constraintAdjustments = ConstraintPass.Evaluate(baseRatings, profile, Catalogue);

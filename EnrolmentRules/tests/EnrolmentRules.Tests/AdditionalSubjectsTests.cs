@@ -36,7 +36,7 @@ public sealed class AdditionalSubjectsTests
 	{
 		var student = new StudentInput("S-TEST", gcses.ToDictionary(g => g.Subject, g => g.Grade), []);
 		var evaluator = await Harness.ShippedEvaluatorAsync();
-		return await evaluator.EvaluateRatingsAsync(Harness.Predict(student), student.ToGcseResults());
+		return evaluator.EvaluateRatings(Harness.Predict(student), student.ToGcseResults());
 	}
 
 	private static Rating Of(IEnumerable<SubjectRating> ratings, Subject subject) =>
@@ -117,7 +117,7 @@ public sealed class AdditionalSubjectsTests
 		var engine = await Harness.ShippedEngineAsync();
 		var student = new StudentInput("S-CLASH", Uniform(9).ToDictionary(g => g.Item1, g => g.Item2), []);
 
-		var result = await engine.EvaluateAsync(student);
+		var result = engine.Evaluate(student);
 		var economics = result.Recommendations.Single(r => r.Subject == Subject.Economics);
 		var business = result.Recommendations.Single(r => r.Subject == Subject.BusinessStudies);
 

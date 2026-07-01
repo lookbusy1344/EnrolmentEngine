@@ -37,28 +37,28 @@ public static class CliRunner
 	/// </summary>
 	private static DateOnly Today => DateOnly.FromDateTime(DateTime.Today);
 
-	public static Task<int> RunAsync(IReadOnlyList<string> args, TextWriter stdout, TextWriter stderr) =>
-		RunAsync(args, stdout, stderr, WorkflowsDirectory, DataDirectory);
+	public static int Run(IReadOnlyList<string> args, TextWriter stdout, TextWriter stderr) =>
+		Run(args, stdout, stderr, WorkflowsDirectory, DataDirectory);
 
-	public static Task<int> RunAsync(
+	public static int Run(
 		IReadOnlyList<string> args,
 		TextWriter stdout,
 		TextWriter stderr,
 		Func<string> workflowsDirectory,
 		Func<string> dataDirectory) =>
 		args switch {
-			["--lint-workflows"] => Task.FromResult(RunLint(null, stdout, stderr)),
-			["--lint-workflows", var dir] => Task.FromResult(RunLint(dir, stdout, stderr)),
-			[var path] => Task.FromResult(RunProfile(path, stdout, stderr, dataDirectory)),
-			["--table", var path] => RunEvaluationAsync(path, Output.Table, stdout, stderr, null, workflowsDirectory, dataDirectory),
-			["--json", var path] => RunEvaluationAsync(path, Output.Json, stdout, stderr, null, workflowsDirectory, dataDirectory),
-			["--explain", var path] => RunEvaluationAsync(path, Output.Explain, stdout, stderr, null, workflowsDirectory, dataDirectory),
-			["--explain-text", var path] => RunEvaluationAsync(path, Output.ExplainText, stdout, stderr, null, workflowsDirectory, dataDirectory),
-			["--advise", var path] => RunEvaluationAsync(path, Output.Advise, stdout, stderr, null, workflowsDirectory, dataDirectory),
+			["--lint-workflows"] => RunLint(null, stdout, stderr),
+			["--lint-workflows", var dir] => RunLint(dir, stdout, stderr),
+			[var path] => RunProfile(path, stdout, stderr, dataDirectory),
+			["--table", var path] => RunEvaluation(path, Output.Table, stdout, stderr, null, workflowsDirectory, dataDirectory),
+			["--json", var path] => RunEvaluation(path, Output.Json, stdout, stderr, null, workflowsDirectory, dataDirectory),
+			["--explain", var path] => RunEvaluation(path, Output.Explain, stdout, stderr, null, workflowsDirectory, dataDirectory),
+			["--explain-text", var path] => RunEvaluation(path, Output.ExplainText, stdout, stderr, null, workflowsDirectory, dataDirectory),
+			["--advise", var path] => RunEvaluation(path, Output.Advise, stdout, stderr, null, workflowsDirectory, dataDirectory),
 			["--advise", "--all-gcses", var path] =>
-				RunEvaluationAsync(path, Output.Advise, stdout, stderr, true, workflowsDirectory, dataDirectory),
-			["--batch", var path] => RunBatchAsync(path, stdout, stderr, workflowsDirectory, dataDirectory),
-			_ => Task.FromResult(Usage(stderr)),
+				RunEvaluation(path, Output.Advise, stdout, stderr, true, workflowsDirectory, dataDirectory),
+			["--batch", var path] => RunBatch(path, stdout, stderr, workflowsDirectory, dataDirectory),
+			_ => Usage(stderr),
 		};
 
 	private static int Usage(TextWriter stderr)
@@ -129,7 +129,7 @@ public static class CliRunner
 
 	// considerUnsatGcses is null in normal use so --advise honours the loaded thresholds default; the
 	// --all-gcses flag passes true to force the diagnostic search over every known GCSE for this run only.
-	private static async Task<int> RunEvaluationAsync(
+	private static int RunEvaluation(
 		string path,
 		Output output,
 		TextWriter stdout,
@@ -138,7 +138,7 @@ public static class CliRunner
 		Func<string> workflowsDirectory,
 		Func<string> dataDirectory)
 	{
-		if (await BuildEngineAsync(stderr, workflowsDirectory, dataDirectory) is not { } engine) {
+		if (BuildEngine(stderr, workflowsDirectory, dataDirectory) is not { } engine) {
 			return ExitInput;
 		}
 
@@ -149,7 +149,7 @@ public static class CliRunner
 		var useExplanation = output is Output.Explain or Output.ExplainText;
 		var useAdvice = output == Output.Advise;
 		if (useExplanation) {
-			var outcome = await engine.TryExplainAsync(document.Student);
+			var outcome = engine.TryExplain(document.Student);
 			if (!outcome.Validation.IsValid) {
 				WriteValidationErrors(stderr, outcome.Validation);
 				return ExitInput;
@@ -169,8 +169,8 @@ public static class CliRunner
 
 		if (useAdvice) {
 			var outcome = considerUnsatGcses is { } flag
-				? await engine.TryAdviseAsync(document.Student, flag)
-				: await engine.TryAdviseAsync(document.Student);
+				? engine.TryAdvise(document.Student, flag)
+				: engine.TryAdvise(document.Student);
 			if (!outcome.Validation.IsValid) {
 				WriteValidationErrors(stderr, outcome.Validation);
 				return ExitInput;
@@ -180,7 +180,7 @@ public static class CliRunner
 			return outcome.Value!.Eligible ? ExitOk : ExitIneligible;
 		}
 
-		var evaluation = await engine.TryEvaluateAsync(document.Student);
+		var evaluation = engine.TryEvaluate(document.Student);
 		if (!evaluation.Validation.IsValid) {
 			WriteValidationErrors(stderr, evaluation.Validation);
 			return ExitInput;
@@ -206,7 +206,7 @@ public static class CliRunner
 	///     order preserved in the output. A parse or validation failure on one line is isolated to that
 	///     line's <see cref="BatchOutcome" /> rather than aborting the whole run.
 	/// </summary>
-	private static async Task<int> RunBatchAsync(
+	private static int RunBatch(
 		string path,
 		TextWriter stdout,
 		TextWriter stderr,
@@ -222,7 +222,7 @@ public static class CliRunner
 			return ExitInput;
 		}
 
-		if (await BuildEngineAsync(stderr, workflowsDirectory, dataDirectory) is not { } engine) {
+		if (BuildEngine(stderr, workflowsDirectory, dataDirectory) is not { } engine) {
 			return ExitInput;
 		}
 
@@ -231,11 +231,11 @@ public static class CliRunner
 			.ToArray();
 		var outcomes = new BatchOutcome[students.Length];
 
-		await Parallel.ForAsync(
+		_ = Parallel.For(
 			0,
 			students.Length,
-			new ParallelOptions { MaxDegreeOfParallelism = Environment.ProcessorCount },
-			async (index, _) => outcomes[index] = await EvaluateLineAsync(students[index], engine));
+			new() { MaxDegreeOfParallelism = Environment.ProcessorCount },
+			index => outcomes[index] = EvaluateLine(students[index], engine));
 
 		foreach (var outcome in outcomes) {
 			stdout.WriteLine(JsonSerializer.Serialize(outcome, BatchJsonContext.Default.BatchOutcome));
@@ -244,7 +244,7 @@ public static class CliRunner
 		return ExitOk;
 	}
 
-	private static async Task<BatchOutcome> EvaluateLineAsync(string line, EnrolmentEngine engine)
+	private static BatchOutcome EvaluateLine(string line, EnrolmentEngine engine)
 	{
 		StudentDocument? document;
 		try {
@@ -258,7 +258,7 @@ public static class CliRunner
 			return new("?", null, "student document was empty or null");
 		}
 
-		var outcome = await engine.TryEvaluateAsync(document.Student);
+		var outcome = engine.TryEvaluate(document.Student);
 		if (!outcome.Validation.IsValid) {
 			return new(document.Student?.Id ?? "?", null, string.Join("; ", outcome.Validation.Errors));
 		}
@@ -267,13 +267,13 @@ public static class CliRunner
 	}
 
 	/// <summary>Build the façade over the shipped workflows, reporting a load failure as an input error.</summary>
-	private static async Task<EnrolmentEngine?> BuildEngineAsync(
+	private static EnrolmentEngine? BuildEngine(
 		TextWriter stderr,
 		Func<string> workflowsDirectory,
 		Func<string> dataDirectory)
 	{
 		try {
-			return await EnrolmentEngine.CreateAsync(workflowsDirectory(), dataDirectory(), Today);
+			return EnrolmentEngine.Create(workflowsDirectory(), dataDirectory(), Today);
 		}
 		catch (Exception ex) when (ex is WorkflowException or CatalogueException or QualificationScaleException
 									   or PolicyThresholdsException or TransitionMatrixException

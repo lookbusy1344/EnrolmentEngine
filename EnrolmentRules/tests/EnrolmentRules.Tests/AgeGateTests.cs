@@ -37,7 +37,7 @@ public sealed class AgeGateTests
 			[]) { DateOfBirth = dateOfBirth };
 
 		var evaluator = await Harness.ShippedEvaluatorAsync();
-		var ratings = await evaluator.EvaluateRatingsAsync(Harness.Predict(student), student.ToGcseResults());
+		var ratings = evaluator.EvaluateRatings(Harness.Predict(student), student.ToGcseResults());
 		return ratings.Single(r => r.Subject == Subject.Art).Rating;
 	}
 

@@ -50,7 +50,7 @@ public sealed class EligibilityShortCircuitTests
 		var gcses = IneligibleGcses();
 
 		var evaluator = await Harness.ShippedEvaluatorAsync();
-		var ratings = await evaluator.EvaluateAsync(ProfileFor(gcses), gcses);
+		var ratings = evaluator.Evaluate(ProfileFor(gcses), gcses);
 
 		// Every catalogue subject is present exactly once and red — no subject can dodge the gate.
 		ratings.Select(r => r.Subject).Should().BeEquivalentTo(Catalogue.Subjects);
@@ -68,7 +68,7 @@ public sealed class EligibilityShortCircuitTests
 		var spy = new RecordingEngine((await Harness.BuildFromShippedWorkflowsAsync()).Engine);
 		var thresholds = PolicyThresholdsStore.LoadAndValidate(Harness.DataDir);
 
-		await new RatingEvaluator(spy, thresholds).EvaluateAsync(ProfileFor(gcses), gcses);
+		new RatingEvaluator(spy, thresholds).Evaluate(ProfileFor(gcses), gcses);
 
 		spy.ExecutedWorkflows.Should().Contain(RatingEvaluator.EligibilityWorkflow);
 		spy.ExecutedWorkflows.Should().NotContain(RatingEvaluator.SubjectRatingsWorkflow);
@@ -82,7 +82,7 @@ public sealed class EligibilityShortCircuitTests
 		var spy = new RecordingEngine((await Harness.BuildFromShippedWorkflowsAsync()).Engine);
 		var thresholds = PolicyThresholdsStore.LoadAndValidate(Harness.DataDir);
 
-		var ratings = await new RatingEvaluator(spy, thresholds).EvaluateAsync(Harness.Predict(student), gcses);
+		var ratings = new RatingEvaluator(spy, thresholds).Evaluate(Harness.Predict(student), gcses);
 
 		spy.ExecutedWorkflows.Should().Contain(RatingEvaluator.SubjectRatingsWorkflow);
 		ratings.Should().NotContain(r => r.Rating == Rating.Red);

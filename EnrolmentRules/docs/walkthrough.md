@@ -661,7 +661,7 @@ accept a YAML document (chosen by file extension); `--batch` is JSONL only.
 ### From code
 
 The whole pipeline is behind one façade. Build the engine **once** with
-`EnrolmentEngine.CreateAsync` (schema-validating thresholds, the qualification scale, catalogue,
+`EnrolmentEngine.Create` (schema-validating thresholds, the qualification scale, catalogue,
 and workflows; loading the DfE transition matrix; then building and probe-compiling every workflow),
 then reuse it across students — it is stateless and parallel-safe. The reference ("as-of") date is
 read at this edge, so the engine stays a pure function of `(document, as-of date)`:
@@ -670,15 +670,15 @@ read at this edge, so the engine stays a pure function of `(document, as-of date
 using EnrolmentRules.Engine;
 
 var asOf      = DateOnly.FromDateTime(DateTime.Today);
-var enrolment = await EnrolmentEngine.CreateAsync("workflows/", "data/", asOf);
+var enrolment = EnrolmentEngine.Create("workflows/", "data/", asOf);
 
-EnrolmentResult result    = await enrolment.EvaluateAsync(student);
-ExplainedResult explained = await enrolment.ExplainAsync(student);
+EnrolmentResult result    = enrolment.Evaluate(student);
+ExplainedResult explained = enrolment.Explain(student);
 ```
 
 All bootstrap and evaluate/explain/advise overloads accept an optional `CancellationToken`. For
 long-running hosts (live clock per evaluation), the `IEnrolmentEngine` abstraction, DI registration
-via `AddEnrolmentEngineAsync`, and stream-backed `IEnrolmentDataSource` bootstrap, see
+via `AddEnrolmentEngine`, and stream-backed `IEnrolmentDataSource` bootstrap, see
 [Using EnrolmentRules as a library](technical-reference.md#using-enrolmentrules-as-a-library).
 
 ---
@@ -698,11 +698,11 @@ schema-validated at startup (`PolicyThresholdsStore`) and threaded in as `Policy
 new value flows to *both* the eligibility lambda and the host pass (optional green cap, tariff, advice).
 No recompile — but **you must add or update a test that drives the change through the engine** (see
 [defence in depth](#7-why-you-can-trust-untyped-rules-defence-in-depth)). A long-running host must
-also call `IEnrolmentEngineFactory.ReloadAsync` (or rebuild the engine) to pick up the edit; the
+also call `IEnrolmentEngineFactory.Reload` (or rebuild the engine) to pick up the edit; the
 library does not watch the filesystem.
 
 ```csharp
-await factory.ReloadAsync(); // same startup recipe as CreateAsync; Current unchanged on failure
+factory.Reload(); // same startup recipe as Create; Current unchanged on failure
 ```
 
 **Changing a tier's shape (the "rules-as-data" path).** Edit the YAML in `workflows/`. To make
@@ -788,7 +788,7 @@ weaknesses into loud boot-time failures rather than silent mis-enrolments:
   passes schema.
 - **Probe-evaluation** is the real lambda guard. RulesEngine compiles expressions lazily on
   first execution, so a bad field reference would otherwise only blow up when that rule first
-  fires for some unlucky student. `WorkflowStore.ProbeCompileAsync` therefore **runs every
+  fires for some unlucky student. `WorkflowStore.ProbeCompile` therefore **runs every
   workflow once at startup against a fully-populated canonical student**, forcing eager
   compilation. A typo'd field or malformed expression becomes a `WorkflowProbeException` at
   boot.

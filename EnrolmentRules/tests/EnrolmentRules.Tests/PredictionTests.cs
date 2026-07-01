@@ -150,8 +150,8 @@ public sealed class PredictionTests
 		var withPrerequisite = new EnrolmentEngine(rulesEngine, Harness.Thresholds, FurtherMathsPrerequisiteCatalogue(true), Harness.AsOf);
 		var withoutPrerequisite = new EnrolmentEngine(rulesEngine, Harness.Thresholds, FurtherMathsPrerequisiteCatalogue(false), Harness.AsOf);
 
-		var constrained = await withPrerequisite.EvaluateAsync(student);
-		var unconstrained = await withoutPrerequisite.EvaluateAsync(student);
+		var constrained = withPrerequisite.Evaluate(student);
+		var unconstrained = withoutPrerequisite.Evaluate(student);
 
 		constrained.Recommendations.Single(r => r.Subject == Subject.FurtherMaths).Rating.Should().Be(Rating.Red);
 		unconstrained.Recommendations.Single(r => r.Subject == Subject.FurtherMaths).Rating.Should().Be(Rating.Green);
@@ -310,7 +310,7 @@ public sealed class PredictionTests
 		await using var stdout = new StringWriter();
 		await using var stderr = new StringWriter();
 
-		var exit = await CliRunner.RunAsync([examplePath], stdout, stderr);
+		var exit = CliRunner.Run([examplePath], stdout, stderr);
 
 		exit.Should().Be(CliRunner.ExitOk);
 		stderr.ToString().Should().BeEmpty();
@@ -330,7 +330,7 @@ public sealed class PredictionTests
 		await using var stdout = new StringWriter();
 		await using var stderr = new StringWriter();
 
-		(await CliRunner.RunAsync([], stdout, stderr)).Should().Be(CliRunner.ExitUsage);
+		CliRunner.Run([], stdout, stderr).Should().Be(CliRunner.ExitUsage);
 	}
 
 	[Fact]
@@ -340,6 +340,6 @@ public sealed class PredictionTests
 		await using var stderr = new StringWriter();
 		var missing = Path.Combine(Path.GetTempPath(), "does-not-exist-" + Guid.NewGuid().ToString("N") + ".json");
 
-		(await CliRunner.RunAsync([missing], stdout, stderr)).Should().Be(CliRunner.ExitInput);
+		CliRunner.Run([missing], stdout, stderr).Should().Be(CliRunner.ExitInput);
 	}
 }

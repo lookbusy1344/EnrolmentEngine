@@ -148,9 +148,9 @@ public sealed class ConstraintPassScenarioTests : IAsyncLifetime
 		}, []) { DateOfBirth = new(2009, 9, 1) };
 
 	[Fact]
-	public async Task further_maths_without_chosen_maths_is_red_from_prerequisite_constraint()
+	public void further_maths_without_chosen_maths_is_red_from_prerequisite_constraint()
 	{
-		var explained = await engine.ExplainAsync(StrongEligibleStudent());
+		var explained = engine.Explain(StrongEligibleStudent());
 
 		explained.Eligible.Should().BeTrue();
 		var furtherMaths = explained.Explanations.Single(explanation => explanation.Subject == Subject.FurtherMaths);
@@ -161,9 +161,9 @@ public sealed class ConstraintPassScenarioTests : IAsyncLifetime
 	}
 
 	[Fact]
-	public async Task qualifying_french_and_german_mutual_exclusion_demotes_german_to_red()
+	public void qualifying_french_and_german_mutual_exclusion_demotes_german_to_red()
 	{
-		var explained = await engine.ExplainAsync(StrongEligibleStudent());
+		var explained = engine.Explain(StrongEligibleStudent());
 
 		explained.Eligible.Should().BeTrue();
 		var french = explained.Explanations.Single(explanation => explanation.Subject == Subject.French);

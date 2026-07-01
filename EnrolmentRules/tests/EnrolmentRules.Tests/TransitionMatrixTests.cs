@@ -170,14 +170,14 @@ public sealed class TransitionMatrixTests
 	}
 
 	[Fact]
-	public async Task create_async_rejects_a_syntactically_readable_but_invalid_transition_matrix()
+	public void create_rejects_a_syntactically_readable_but_invalid_transition_matrix()
 	{
 		var source = InMemoryDataSource.WithTransitionMatrix(
 			Encoding.UTF8.GetBytes(Header + "\n" + ValidRow(probabilityA: "NaN")));
 
-		var act = () => EnrolmentEngine.CreateAsync(source, Harness.AsOf);
+		var act = () => EnrolmentEngine.Create(source, Harness.AsOf);
 
-		await act.Should().ThrowAsync<TransitionMatrixException>();
+		act.Should().Throw<TransitionMatrixException>();
 	}
 
 	[Fact]
@@ -187,7 +187,7 @@ public sealed class TransitionMatrixTests
 		await using var stdout = new StringWriter();
 		await using var stderr = new StringWriter();
 
-		var exit = await CliRunner.RunAsync(
+		var exit = CliRunner.Run(
 			["--json", path],
 			stdout,
 			stderr,
@@ -206,7 +206,7 @@ public sealed class TransitionMatrixTests
 		await using var stdout = new StringWriter();
 		await using var stderr = new StringWriter();
 
-		var exit = await CliRunner.RunAsync(
+		var exit = CliRunner.Run(
 			[path],
 			stdout,
 			stderr,

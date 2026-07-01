@@ -141,14 +141,14 @@ public static class WorkflowStore
 	///     reusable engine, then probe-compile every workflow against a canonical fully-populated input.
 	///     The probe thresholds are inferred from the workflows' sibling <c>data/</c> directory; callers that
 	///     already hold the thresholds (and may keep data in a non-sibling location) should pass them via the
-	///     <see cref="LoadValidateBuildAndProbeAsync(string, CatalogueData, PolicyThresholds, DfeTransitionMatrix?, QualificationScale?, string?)" />
+	///     <see cref="LoadValidateBuildAndProbe(string, CatalogueData, PolicyThresholds, DfeTransitionMatrix?, QualificationScale?, string?)" />
 	///     overload so the probe and the engine agree on one source.
 	/// </summary>
-	public static Task<IRulesEngine> LoadValidateBuildAndProbeAsync(
+	public static IRulesEngine LoadValidateBuildAndProbe(
 		string directory,
 		CatalogueData catalogue,
 		string? schemaPath = null)
-		=> LoadValidateBuildAndProbeAsync(directory, catalogue, LoadDefaultThresholds(directory), null, null, schemaPath);
+		=> LoadValidateBuildAndProbe(directory, catalogue, LoadDefaultThresholds(directory), null, null, schemaPath);
 
 	/// <summary>
 	///     The production startup path with explicit catalogue, thresholds and (optionally) transition matrix:
@@ -158,7 +158,7 @@ public static class WorkflowStore
 	///     siblings. The matrix only feeds the probe's transition evidence (irrelevant to lambda compilation),
 	///     so it defaults to the shipped extract.
 	/// </summary>
-	public static async Task<IRulesEngine> LoadValidateBuildAndProbeAsync(
+	public static IRulesEngine LoadValidateBuildAndProbe(
 		string directory,
 		CatalogueData catalogue,
 		PolicyThresholds thresholds,
@@ -169,9 +169,8 @@ public static class WorkflowStore
 		var workflows = LoadAndValidate(directory, schemaPath);
 		ThrowOnLintErrors(workflows, catalogue);
 		var engine = BuildEngine(workflows);
-		await ProbeCompileAsync(engine, workflows,
-				CanonicalProbe(thresholds, catalogue, matrix ?? DfeTransitionMatrix.LoadDefault(), scale ?? QualificationScale.Default))
-			.ConfigureAwait(false);
+		ProbeCompile(engine, workflows,
+			CanonicalProbe(thresholds, catalogue, matrix ?? DfeTransitionMatrix.LoadDefault(), scale ?? QualificationScale.Default));
 		return engine;
 	}
 
@@ -180,7 +179,7 @@ public static class WorkflowStore
 	///     build the reusable engine, then probe-compile every workflow against a canonical fully-populated input
 	///     built from the supplied policy and scale.
 	/// </summary>
-	public static async Task<IRulesEngine> LoadValidateBuildAndProbeAsync(
+	public static IRulesEngine LoadValidateBuildAndProbe(
 		IReadOnlyList<WorkflowContent> files,
 		Stream schemaStream,
 		CatalogueData catalogue,
@@ -191,9 +190,8 @@ public static class WorkflowStore
 		var workflows = LoadAndValidate(files, schemaStream);
 		ThrowOnLintErrors(workflows, catalogue);
 		var engine = BuildEngine(workflows);
-		await ProbeCompileAsync(engine, workflows,
-				CanonicalProbe(thresholds, catalogue, matrix ?? DfeTransitionMatrix.LoadDefault(), scale ?? QualificationScale.Default))
-			.ConfigureAwait(false);
+		ProbeCompile(engine, workflows,
+			CanonicalProbe(thresholds, catalogue, matrix ?? DfeTransitionMatrix.LoadDefault(), scale ?? QualificationScale.Default));
 		return engine;
 	}
 
@@ -203,7 +201,7 @@ public static class WorkflowStore
 	///     <see cref="RuleResultTree.ExceptionMessage" />; we turn that into a loud
 	///     <see cref="WorkflowProbeException" /> at startup.
 	/// </summary>
-	public static async Task ProbeCompileAsync(
+	public static void ProbeCompile(
 		IRulesEngine engine,
 		IEnumerable<Workflow> workflows,
 		params RuleParameter[] probeInputs)
@@ -211,7 +209,7 @@ public static class WorkflowStore
 		foreach (var workflow in workflows) {
 			List<RuleResultTree> results;
 			try {
-				results = await engine.ExecuteAllRulesAsync(workflow.WorkflowName, probeInputs).ConfigureAwait(false);
+				results = ExecuteAllRules(engine, workflow.WorkflowName, probeInputs);
 			}
 			catch (Exception ex) {
 				throw new WorkflowProbeException(workflow.WorkflowName, ex.Message, ex);
@@ -227,6 +225,19 @@ public static class WorkflowStore
 				throw new WorkflowProbeException(workflow.WorkflowName, string.Join("; ", failures));
 			}
 		}
+	}
+
+	private static List<RuleResultTree> ExecuteAllRules(IRulesEngine engine, string workflow, params RuleParameter[] facts)
+	{
+		var execution = engine.ExecuteAllRulesAsync(workflow, facts);
+		if (!execution.IsCompletedSuccessfully) {
+			throw new InvalidOperationException(
+				$"RulesEngine workflow '{workflow}' completed asynchronously during startup probe compilation.");
+		}
+
+#pragma warning disable VSTHRD002 // The completion guard above guarantees this ValueTask has already finished.
+		return execution.Result;
+#pragma warning restore VSTHRD002
 	}
 
 	private static IEnumerable<RuleResultTree> Flatten(RuleResultTree result)

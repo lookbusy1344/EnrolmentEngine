@@ -67,7 +67,7 @@ internal static class Harness
 
 			var workflows = WorkflowStore.LoadAndValidate(WorkflowsDir, SchemaPath);
 			var engine = WorkflowStore.BuildEngine(workflows);
-			await WorkflowStore.ProbeCompileAsync(engine, workflows, CanonicalProbe()).ConfigureAwait(false);
+			WorkflowStore.ProbeCompile(engine, workflows, CanonicalProbe());
 			shipped = new(workflows, engine);
 			return (workflows, engine);
 		}
@@ -86,7 +86,7 @@ internal static class Harness
 
 	/// <summary>
 	///     The canonical probe input — the <em>union</em> of every shipped workflow's bound parameters, so
-	///     <see cref="WorkflowStore.ProbeCompileAsync" /> can force eager lambda compilation across all of
+	///     <see cref="WorkflowStore.ProbeCompile" /> can force eager lambda compilation across all of
 	///     them in one pass. Grows as new workflows add new inputs.
 	/// </summary>
 	public static RuleParameter[] CanonicalProbe() => CanonicalProbe(PolicyThresholdsStore.LoadAndValidate(DataDir));

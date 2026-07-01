@@ -80,17 +80,17 @@ public sealed class EnrolmentEngineOptions
 	}
 
 	/// <summary>Run the full startup recipe for these options and return a reusable engine.</summary>
-	internal Task<EnrolmentEngine> CreateEngineAsync(CancellationToken cancellationToken = default)
+	internal EnrolmentEngine CreateEngine(CancellationToken cancellationToken = default)
 	{
 		Validate();
-		return EnrolmentEngine.CreateAsync(WorkflowsDirectory, DataDirectory, AsOfSource(), cancellationToken);
+		return EnrolmentEngine.Create(WorkflowsDirectory, DataDirectory, AsOfSource(), cancellationToken);
 	}
 
 	/// <summary>Run the full startup recipe and return a reloadable factory.</summary>
-	internal Task<EnrolmentEngineFactory> CreateFactoryAsync(CancellationToken cancellationToken = default)
+	internal EnrolmentEngineFactory CreateFactory(CancellationToken cancellationToken = default)
 	{
 		Validate();
-		return EnrolmentEngineFactory.CreateAsync(
+		return EnrolmentEngineFactory.Create(
 			new DirectoryDataSource(WorkflowsDirectory, DataDirectory),
 			AsOfSource(),
 			cancellationToken);

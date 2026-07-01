@@ -136,7 +136,7 @@ public sealed class CliTests
 		await using var stdout = new StringWriter();
 		await using var stderr = new StringWriter();
 
-		var exit = await CliRunner.RunAsync(["--json", path], stdout, stderr);
+		var exit = CliRunner.Run(["--json", path], stdout, stderr);
 
 		exit.Should().Be(CliRunner.ExitInput);
 		stdout.ToString().Should().BeEmpty();
@@ -150,7 +150,7 @@ public sealed class CliTests
 		await using var stdout = new StringWriter();
 		await using var stderr = new StringWriter();
 
-		var exit = await CliRunner.RunAsync(["--table", path], stdout, stderr);
+		var exit = CliRunner.Run(["--table", path], stdout, stderr);
 
 		exit.Should().Be(CliRunner.ExitInput);
 		stderr.ToString().Should().Contain("quidditch");
@@ -163,7 +163,7 @@ public sealed class CliTests
 		await using var stdout = new StringWriter();
 		await using var stderr = new StringWriter();
 
-		var exit = await CliRunner.RunAsync(["--json", path], stdout, stderr);
+		var exit = CliRunner.Run(["--json", path], stdout, stderr);
 
 		exit.Should().Be(CliRunner.ExitInput);
 		stdout.ToString().Should().BeEmpty();
@@ -177,7 +177,7 @@ public sealed class CliTests
 		await using var stdout = new StringWriter();
 		await using var stderr = new StringWriter();
 
-		var exit = await CliRunner.RunAsync(["--json", path], stdout, stderr);
+		var exit = CliRunner.Run(["--json", path], stdout, stderr);
 
 		exit.Should().Be(CliRunner.ExitInput);
 		stdout.ToString().Should().BeEmpty();
@@ -194,7 +194,7 @@ public sealed class CliTests
 		await using var stdout = new StringWriter();
 		await using var stderr = new StringWriter();
 
-		var exit = await CliRunner.RunAsync(["--json", path], stdout, stderr);
+		var exit = CliRunner.Run(["--json", path], stdout, stderr);
 
 		exit.Should().Be(CliRunner.ExitIneligible);
 		var result = JsonSerializer.Deserialize(stdout.ToString(), EnrolmentJsonContext.Default.EnrolmentResult);
@@ -209,7 +209,7 @@ public sealed class CliTests
 		await using var stdout = new StringWriter();
 		await using var stderr = new StringWriter();
 
-		(await CliRunner.RunAsync(["--json", path], stdout, stderr)).Should().Be(CliRunner.ExitOk);
+		CliRunner.Run(["--json", path], stdout, stderr).Should().Be(CliRunner.ExitOk);
 	}
 
 	// ---- coloured table ----------------------------------------------------------------------
@@ -221,7 +221,7 @@ public sealed class CliTests
 		await using var stdout = new StringWriter();
 		await using var stderr = new StringWriter();
 
-		var exit = await CliRunner.RunAsync(["--table", path], stdout, stderr);
+		var exit = CliRunner.Run(["--table", path], stdout, stderr);
 
 		exit.Should().Be(CliRunner.ExitOk);
 		var output = stdout.ToString();
@@ -252,7 +252,7 @@ public sealed class CliTests
 		await using var stdout = new StringWriter();
 		await using var stderr = new StringWriter();
 
-		var exit = await CliRunner.RunAsync(["--batch", path], stdout, stderr);
+		var exit = CliRunner.Run(["--batch", path], stdout, stderr);
 
 		exit.Should().Be(CliRunner.ExitOk);
 		var outcomes = ParseOutcomes(stdout.ToString());
@@ -277,7 +277,7 @@ public sealed class CliTests
 		await using var stdout = new StringWriter();
 		await using var stderr = new StringWriter();
 
-		var exit = await CliRunner.RunAsync(["--batch", path], stdout, stderr);
+		var exit = CliRunner.Run(["--batch", path], stdout, stderr);
 
 		exit.Should().Be(CliRunner.ExitOk);
 		var outcomes = ParseOutcomes(stdout.ToString());
@@ -300,7 +300,7 @@ public sealed class CliTests
 		await using var stdout = new StringWriter();
 		await using var stderr = new StringWriter();
 
-		var exit = await CliRunner.RunAsync(["--batch", path], stdout, stderr);
+		var exit = CliRunner.Run(["--batch", path], stdout, stderr);
 
 		exit.Should().Be(CliRunner.ExitOk);
 		var outcomes = ParseOutcomes(stdout.ToString());
@@ -322,7 +322,7 @@ public sealed class CliTests
 		await using var stdout = new StringWriter();
 		await using var stderr = new StringWriter();
 
-		var exit = await CliRunner.RunAsync(["--batch", path], stdout, stderr);
+		var exit = CliRunner.Run(["--batch", path], stdout, stderr);
 
 		exit.Should().Be(CliRunner.ExitOk);
 		var outcomes = ParseOutcomes(stdout.ToString());
@@ -341,7 +341,7 @@ public sealed class CliTests
 		await using var stdout = new StringWriter();
 		await using var stderr = new StringWriter();
 
-		(await CliRunner.RunAsync(["--batch", missing], stdout, stderr)).Should().Be(CliRunner.ExitInput);
+		CliRunner.Run(["--batch", missing], stdout, stderr).Should().Be(CliRunner.ExitInput);
 	}
 
 	// ---- YAML input (single-student modes) ---------------------------------------------------
@@ -367,7 +367,7 @@ public sealed class CliTests
 		await using var stdout = new StringWriter();
 		await using var stderr = new StringWriter();
 
-		var exit = await CliRunner.RunAsync(["--json", path], stdout, stderr);
+		var exit = CliRunner.Run(["--json", path], stdout, stderr);
 
 		exit.Should().Be(CliRunner.ExitOk);
 		var result = JsonSerializer.Deserialize(stdout.ToString(), EnrolmentJsonContext.Default.EnrolmentResult);
@@ -398,7 +398,7 @@ public sealed class CliTests
 		await using var stdout = new StringWriter();
 		await using var stderr = new StringWriter();
 
-		var exit = await CliRunner.RunAsync(["--table", path], stdout, stderr);
+		var exit = CliRunner.Run(["--table", path], stdout, stderr);
 
 		exit.Should().Be(CliRunner.ExitInput);
 		stderr.ToString().Should().Contain("out of range");
@@ -412,7 +412,7 @@ public sealed class CliTests
 		await using var stdout = new StringWriter();
 		await using var stderr = new StringWriter();
 
-		var exit = await CliRunner.RunAsync(["--json", path], stdout, stderr);
+		var exit = CliRunner.Run(["--json", path], stdout, stderr);
 
 		exit.Should().Be(CliRunner.ExitInput);
 		stdout.ToString().Should().BeEmpty();
@@ -422,7 +422,7 @@ public sealed class CliTests
 	{
 		await using var stdout = new StringWriter();
 		await using var stderr = new StringWriter();
-		(await CliRunner.RunAsync(["--json", path], stdout, stderr)).Should().Be(CliRunner.ExitOk);
+		CliRunner.Run(["--json", path], stdout, stderr).Should().Be(CliRunner.ExitOk);
 		return stdout.ToString();
 	}
 

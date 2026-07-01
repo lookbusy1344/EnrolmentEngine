@@ -38,17 +38,17 @@ public sealed class ValidatedEvaluationTests : IAsyncLifetime
 			[Subject.Maths]);
 
 	[Fact]
-	public async Task evaluate_async_does_not_validate_out_of_range_grades()
+	public void evaluate_does_not_validate_out_of_range_grades()
 	{
 		var student = StudentWithMathsGrade(99);
 
-		var result = await engine.EvaluateAsync(student);
+		var result = engine.Evaluate(student);
 
 		result.Recommendations.Should().NotBeEmpty();
 	}
 
 	[Fact]
-	public async Task evaluate_async_fails_loud_when_chosen_subject_is_outside_the_bound_catalogue()
+	public async Task evaluate_fails_loud_when_chosen_subject_is_outside_the_bound_catalogue()
 	{
 		var (_, rulesEngine) = await Harness.BuildFromShippedWorkflowsAsync();
 		var limitedEngine = new EnrolmentEngine(rulesEngine, Harness.Thresholds, MathsOnlyCatalogue(), Harness.AsOf, Harness.Scale);
@@ -57,18 +57,18 @@ public sealed class ValidatedEvaluationTests : IAsyncLifetime
 			new Dictionary<string, int> { ["english_language"] = 6, ["maths"] = 6 },
 			[]) { DateOfBirth = ValidDob, ChosenALevels = [Subject.Physics] };
 
-		var act = () => limitedEngine.EvaluateAsync(student);
+		var act = () => limitedEngine.Evaluate(student);
 
-		await act.Should().ThrowAsync<CatalogueDataException>()
+		act.Should().Throw<CatalogueDataException>()
 			.WithMessage("*physics*bound catalogue*");
 	}
 
 	[Fact]
-	public async Task try_evaluate_async_rejects_out_of_range_grades_without_running_the_pipeline()
+	public void try_evaluate_rejects_out_of_range_grades_without_running_the_pipeline()
 	{
 		var student = StudentWithMathsGrade(99);
 
-		var outcome = await engine.TryEvaluateAsync(student);
+		var outcome = engine.TryEvaluate(student);
 
 		outcome.Validation.IsValid.Should().BeFalse();
 		outcome.Value.Should().BeNull();
@@ -77,11 +77,11 @@ public sealed class ValidatedEvaluationTests : IAsyncLifetime
 	}
 
 	[Fact]
-	public async Task try_evaluate_async_rejects_a_missing_date_of_birth()
+	public void try_evaluate_rejects_a_missing_date_of_birth()
 	{
 		var student = new StudentInput("S-BAD", new Dictionary<string, int> { ["maths"] = 6 }, []);
 
-		var outcome = await engine.TryEvaluateAsync(student);
+		var outcome = engine.TryEvaluate(student);
 
 		outcome.Validation.IsValid.Should().BeFalse();
 		outcome.Value.Should().BeNull();
@@ -90,58 +90,58 @@ public sealed class ValidatedEvaluationTests : IAsyncLifetime
 	}
 
 	[Fact]
-	public async Task try_evaluate_async_matches_evaluate_async_for_a_valid_student()
+	public void try_evaluate_matches_evaluate_for_a_valid_student()
 	{
 		var student = EligibleStudent();
 
-		var tryOutcome = await engine.TryEvaluateAsync(student);
-		var direct = await engine.EvaluateAsync(student);
+		var tryOutcome = engine.TryEvaluate(student);
+		var direct = engine.Evaluate(student);
 
 		tryOutcome.Validation.IsValid.Should().BeTrue();
 		tryOutcome.Value.Should().BeEquivalentTo(direct);
 	}
 
 	[Fact]
-	public async Task try_explain_async_rejects_invalid_input()
+	public void try_explain_rejects_invalid_input()
 	{
 		var student = StudentWithMathsGrade(99);
 
-		var outcome = await engine.TryExplainAsync(student);
+		var outcome = engine.TryExplain(student);
 
 		outcome.Validation.IsValid.Should().BeFalse();
 		outcome.Value.Should().BeNull();
 	}
 
 	[Fact]
-	public async Task try_explain_async_matches_explain_async_for_a_valid_student()
+	public void try_explain_matches_explain_for_a_valid_student()
 	{
 		var student = EligibleStudent();
 
-		var tryOutcome = await engine.TryExplainAsync(student);
-		var direct = await engine.ExplainAsync(student);
+		var tryOutcome = engine.TryExplain(student);
+		var direct = engine.Explain(student);
 
 		tryOutcome.Validation.IsValid.Should().BeTrue();
 		tryOutcome.Value.Should().BeEquivalentTo(direct);
 	}
 
 	[Fact]
-	public async Task try_advise_async_rejects_invalid_input()
+	public void try_advise_rejects_invalid_input()
 	{
 		var student = StudentWithMathsGrade(99);
 
-		var outcome = await engine.TryAdviseAsync(student);
+		var outcome = engine.TryAdvise(student);
 
 		outcome.Validation.IsValid.Should().BeFalse();
 		outcome.Value.Should().BeNull();
 	}
 
 	[Fact]
-	public async Task try_advise_async_matches_advise_async_for_a_valid_student()
+	public void try_advise_matches_advise_for_a_valid_student()
 	{
 		var student = EligibleStudent();
 
-		var tryOutcome = await engine.TryAdviseAsync(student);
-		var direct = await engine.AdviseAsync(student);
+		var tryOutcome = engine.TryAdvise(student);
+		var direct = engine.Advise(student);
 
 		tryOutcome.Validation.IsValid.Should().BeTrue();
 		tryOutcome.Value.Should().BeEquivalentTo(direct);

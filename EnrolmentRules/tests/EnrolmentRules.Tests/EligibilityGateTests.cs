@@ -86,7 +86,7 @@ public sealed class EligibilityGateTests
 			("biology", Harness.Thresholds.PassGrade));
 
 		var evaluator = await Harness.ShippedEvaluatorAsync();
-		var gate = await evaluator.EvaluateEligibilityAsync(gcses);
+		var gate = evaluator.EvaluateEligibility(gcses);
 
 		gate.Eligible.Should().BeTrue();
 		gate.Reasons.Should().BeEmpty();
@@ -102,7 +102,7 @@ public sealed class EligibilityGateTests
 			("history", Harness.Thresholds.PassGrade));
 
 		var evaluator = await Harness.ShippedEvaluatorAsync();
-		var gate = await evaluator.EvaluateEligibilityAsync(gcses);
+		var gate = evaluator.EvaluateEligibility(gcses);
 
 		gate.Eligible.Should().BeFalse();
 		gate.Reasons.Should().ContainSingle().Which.Should().Contain("English");
@@ -114,7 +114,7 @@ public sealed class EligibilityGateTests
 		var thresholds = Harness.Thresholds with { PassGrade = 7 };
 		var evaluator = await EvaluatorAsync(thresholds);
 
-		var gate = await evaluator.EvaluateEligibilityAsync(Gcses(
+		var gate = evaluator.EvaluateEligibility(Gcses(
 			("english_language", 6), ("maths", 7), ("physics", 7), ("chemistry", 7), ("biology", 7),
 			("history", 7), ("geography", 7)));
 
@@ -128,7 +128,7 @@ public sealed class EligibilityGateTests
 		var thresholds = Harness.Thresholds with { PassGrade = 7 };
 		var evaluator = await EvaluatorAsync(thresholds);
 
-		var gate = await evaluator.EvaluateEligibilityAsync(Gcses(
+		var gate = evaluator.EvaluateEligibility(Gcses(
 			("english_language", 7), ("maths", 6), ("physics", 7), ("chemistry", 7), ("biology", 7),
 			("history", 7), ("geography", 7)));
 
@@ -141,7 +141,7 @@ public sealed class EligibilityGateTests
 	{
 		// Only Maths present: English fails, pass-count fails, Maths passes. Precedence puts English first.
 		var evaluator = await Harness.ShippedEvaluatorAsync();
-		var gate = await evaluator.EvaluateEligibilityAsync(Gcses(("maths", Harness.Thresholds.PassGrade)));
+		var gate = evaluator.EvaluateEligibility(Gcses(("maths", Harness.Thresholds.PassGrade)));
 
 		gate.Eligible.Should().BeFalse();
 		gate.Reasons.Should().HaveCount(2);
@@ -155,7 +155,7 @@ public sealed class EligibilityGateTests
 		var thresholds = Harness.Thresholds with { PassGrade = 7, MinPasses = 6 };
 		var evaluator = await EvaluatorAsync(thresholds);
 
-		var gate = await evaluator.EvaluateEligibilityAsync(Gcses(("maths", 7), ("physics", 7), ("chemistry", 7)));
+		var gate = evaluator.EvaluateEligibility(Gcses(("maths", 7), ("physics", 7), ("chemistry", 7)));
 
 		gate.Eligible.Should().BeFalse();
 		gate.Reasons.Should().Equal(
@@ -173,7 +173,7 @@ public sealed class EligibilityGateTests
 			("physics", below), ("chemistry", below), ("biology", below));
 
 		var evaluator = await Harness.ShippedEvaluatorAsync();
-		var gate = await evaluator.EvaluateEligibilityAsync(gcses);
+		var gate = evaluator.EvaluateEligibility(gcses);
 
 		gate.Eligible.Should().BeFalse();
 		gate.Reasons.Should().ContainSingle().Which.Should().Contain("passes");
@@ -185,7 +185,7 @@ public sealed class EligibilityGateTests
 		var thresholds = Harness.Thresholds with { PassGrade = 7, MinPasses = 6 };
 		var evaluator = await EvaluatorAsync(thresholds);
 
-		var gate = await evaluator.EvaluateEligibilityAsync(Gcses(
+		var gate = evaluator.EvaluateEligibility(Gcses(
 			("english_language", 7), ("maths", 7), ("physics", 7), ("chemistry", 7), ("biology", 7)));
 
 		gate.Eligible.Should().BeFalse();
@@ -202,7 +202,7 @@ public sealed class EligibilityGateTests
 			("biology", Harness.Thresholds.PassGrade));
 
 		var evaluator = await Harness.ShippedEvaluatorAsync();
-		var gate = await evaluator.EvaluateEligibilityAsync(gcses);
+		var gate = evaluator.EvaluateEligibility(gcses);
 
 		gate.Eligible.Should().BeTrue();
 	}
@@ -221,13 +221,13 @@ public sealed class EligibilityGateTests
 		new GcseFacts(gcses).Grade("physics").Should().Be(Harness.Thresholds.PassGrade);
 
 		var evaluator = await Harness.ShippedEvaluatorAsync();
-		var gate = await evaluator.EvaluateEligibilityAsync(gcses);
+		var gate = evaluator.EvaluateEligibility(gcses);
 
 		gate.Eligible.Should().BeTrue();
 	}
 
 	[Fact]
-	public async Task threshold_is_editable_in_yaml_without_a_recompile()
+	public void threshold_is_editable_in_yaml_without_a_recompile()
 	{
 		// Hot-swap: raise the pass-count threshold in a copied thresholds file. A student that was exactly
 		// eligible becomes ineligible — the rules-as-data property, no rebuild.
@@ -241,10 +241,10 @@ public sealed class EligibilityGateTests
 
 		var workflows = WorkflowStore.LoadAndValidate(Harness.WorkflowsDir, Harness.SchemaPath);
 		var engine = WorkflowStore.BuildEngine(workflows);
-		await WorkflowStore.ProbeCompileAsync(engine, workflows, Harness.CanonicalProbe(raisedThresholds));
+		WorkflowStore.ProbeCompile(engine, workflows, Harness.CanonicalProbe(raisedThresholds));
 		var evaluator = new RatingEvaluator(engine, raisedThresholds);
 
-		var gate = await evaluator.EvaluateEligibilityAsync(fiveExactPasses);
+		var gate = evaluator.EvaluateEligibility(fiveExactPasses);
 
 		gate.Eligible.Should().BeFalse();
 		gate.Reasons.Should().ContainSingle().Which.Should().Contain("passes");
@@ -256,9 +256,9 @@ public sealed class EligibilityGateTests
 		// The boot guard: the real eligibility lambdas compile and bind against the canonical probe.
 		var (workflows, engine) = await Harness.BuildFromShippedWorkflowsAsync();
 
-		var act = async () => await WorkflowStore.ProbeCompileAsync(engine, workflows, Harness.CanonicalProbe());
+		var act = () => WorkflowStore.ProbeCompile(engine, workflows, Harness.CanonicalProbe());
 
-		await act.Should().NotThrowAsync();
+		act.Should().NotThrow();
 	}
 
 	[Fact]
@@ -290,8 +290,8 @@ public sealed class EligibilityGateTests
 	public void evaluation_surface_accepts_a_terminal_cancellation_token()
 	{
 		typeof(IEnrolmentEngine).GetMethods()
-			.Where(static method => method.Name is nameof(IEnrolmentEngine.EvaluateAsync) or nameof(IEnrolmentEngine.ExplainAsync)
-				or nameof(IEnrolmentEngine.AdviseAsync))
+			.Where(static method => method.Name is nameof(IEnrolmentEngine.Evaluate) or nameof(IEnrolmentEngine.Explain)
+				or nameof(IEnrolmentEngine.Advise))
 			.Should()
 			.OnlyContain(static method => method.GetParameters().Last().ParameterType == typeof(CancellationToken));
 	}
@@ -329,8 +329,8 @@ public sealed class EligibilityGateTests
 		// Engine bound to the adult date; the per-call overload must win over that binding.
 		var engine = new EnrolmentEngine(rulesEngine, Harness.Thresholds, Harness.Catalogue, asAdult);
 
-		var minorVerdict = await engine.EvaluateAsync(student, asMinor);
-		var boundVerdict = await engine.EvaluateAsync(student);
+		var minorVerdict = engine.Evaluate(student, asMinor);
+		var boundVerdict = engine.Evaluate(student);
 
 		ArtRating(minorVerdict).Should().NotBe(ArtRating(boundVerdict));
 		((int)ArtRating(minorVerdict)).Should().BeLessThan((int)ArtRating(boundVerdict));
@@ -346,24 +346,24 @@ public sealed class EligibilityGateTests
 		var evaluator = new RatingEvaluator(rulesEngine, Harness.Thresholds, Harness.Catalogue);
 		var engine = new EnrolmentEngine(evaluator, Harness.Catalogue, () => today);
 
-		var beforeBirthday = await engine.EvaluateAsync(student);
+		var beforeBirthday = engine.Evaluate(student);
 		today = new(2026, 9, 2); // mutate the source: age 19
-		var afterBirthday = await engine.EvaluateAsync(student);
+		var afterBirthday = engine.Evaluate(student);
 
 		((int)ArtRating(beforeBirthday)).Should().BeLessThan((int)ArtRating(afterBirthday));
 	}
 
 	[Fact]
-	public async Task create_async_exposes_the_catalogue_it_built()
+	public void create_exposes_the_catalogue_it_built()
 	{
-		var created = await EnrolmentEngine.CreateAsync(Harness.WorkflowsDir, DataDir, Harness.AsOf);
+		var created = EnrolmentEngine.Create(Harness.WorkflowsDir, DataDir, Harness.AsOf);
 
 		// The CLI validates student input against this instance instead of reloading or reading the global.
 		created.Catalogue.Subjects.Should().BeEquivalentTo(CatalogueStore.LoadAndValidate(DataDir).Subjects);
 	}
 
 	[Fact]
-	public async Task create_async_honours_a_data_directory_that_is_not_the_workflows_sibling()
+	public void create_honours_a_data_directory_that_is_not_the_workflows_sibling()
 	{
 		// A library host may ship workflows and data in unrelated locations. The probe step must use the
 		// thresholds from the explicit data directory, not re-derive a sibling `data/` from the workflows
@@ -371,11 +371,11 @@ public sealed class EligibilityGateTests
 		var workflowsDir = CopyDirectory(Harness.WorkflowsDir);
 		var dataDir = CopyDirectory(DataDir);
 		try {
-			var created = await EnrolmentEngine.CreateAsync(workflowsDir, dataDir, Harness.AsOf);
+			var created = EnrolmentEngine.Create(workflowsDir, dataDir, Harness.AsOf);
 
-			var expected = await (await EnrolmentEngine.CreateAsync(Harness.WorkflowsDir, DataDir, Harness.AsOf))
-				.EvaluateAsync(ExampleStudent());
-			var actual = await created.EvaluateAsync(ExampleStudent());
+			var expected = EnrolmentEngine.Create(Harness.WorkflowsDir, DataDir, Harness.AsOf)
+				.Evaluate(ExampleStudent());
+			var actual = created.Evaluate(ExampleStudent());
 			actual.Should().BeEquivalentTo(expected);
 		}
 		finally {
@@ -385,7 +385,7 @@ public sealed class EligibilityGateTests
 	}
 
 	[Fact]
-	public async Task create_async_sources_the_transition_matrix_from_the_data_directory()
+	public void create_sources_the_transition_matrix_from_the_data_directory()
 	{
 		// The DfE transition matrix is data like the catalogue and thresholds: an engine pointed at a data
 		// directory whose matrix is degraded must reflect that, not silently fall back to the bundled file.
@@ -393,12 +393,12 @@ public sealed class EligibilityGateTests
 		ZeroTransitionProbabilities(Path.Combine(
 			degradedData, "dfe-transition-matrices", "gce-a-level-2019-transition-probabilities.csv"));
 		try {
-			var pristine = await EnrolmentEngine.CreateAsync(Harness.WorkflowsDir, DataDir, Harness.AsOf);
-			var degraded = await EnrolmentEngine.CreateAsync(Harness.WorkflowsDir, degradedData, Harness.AsOf);
+			var pristine = EnrolmentEngine.Create(Harness.WorkflowsDir, DataDir, Harness.AsOf);
+			var degraded = EnrolmentEngine.Create(Harness.WorkflowsDir, degradedData, Harness.AsOf);
 
 			var student = ExampleStudent();
-			var pristineResult = await pristine.EvaluateAsync(student);
-			var degradedResult = await degraded.EvaluateAsync(student);
+			var pristineResult = pristine.Evaluate(student);
+			var degradedResult = degraded.Evaluate(student);
 
 			// Zeroed transition probabilities fail every probability-gated tier, so no subject can be green.
 			pristineResult.Summary.GreenCount.Should().BeGreaterThan(0);
@@ -449,20 +449,20 @@ public sealed class EligibilityGateTests
 	}
 
 	[Fact]
-	public async Task create_async_matches_the_hand_wired_bootstrap_for_a_real_student()
+	public void create_matches_the_hand_wired_bootstrap_for_a_real_student()
 	{
 		var student = ExampleStudent();
 		var manualWorkflows = WorkflowStore.LoadAndValidate(Harness.WorkflowsDir, Harness.SchemaPath);
 		var manualCatalogue = CatalogueStore.LoadAndValidate(DataDir);
 		var manualThresholds = PolicyThresholdsStore.LoadAndValidate(DataDir);
 		var manualEngine = WorkflowStore.BuildEngine(manualWorkflows);
-		await WorkflowStore.ProbeCompileAsync(manualEngine, manualWorkflows, Harness.CanonicalProbe(manualThresholds));
+		WorkflowStore.ProbeCompile(manualEngine, manualWorkflows, Harness.CanonicalProbe(manualThresholds));
 		var manual = new EnrolmentEngine(manualEngine, manualThresholds, manualCatalogue, Harness.AsOf);
 
-		var created = await EnrolmentEngine.CreateAsync(Harness.WorkflowsDir, DataDir, Harness.AsOf);
+		var created = EnrolmentEngine.Create(Harness.WorkflowsDir, DataDir, Harness.AsOf);
 
-		var expected = await manual.EvaluateAsync(student);
-		var actual = await created.EvaluateAsync(student);
+		var expected = manual.Evaluate(student);
+		var actual = created.Evaluate(student);
 
 		actual.Should().BeEquivalentTo(expected);
 	}

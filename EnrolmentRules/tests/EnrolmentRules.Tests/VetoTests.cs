@@ -117,7 +117,7 @@ public sealed class VetoTests
 	{
 		var engine = await Harness.ShippedEngineAsync();
 
-		var result = await engine.EvaluateAsync(StrongStudent(TromboneHobby));
+		var result = engine.Evaluate(StrongStudent(TromboneHobby));
 
 		// Without the trombone Music is green for this student; the veto must force it red through the
 		// whole pipeline (engine tier → constraint pass → cap), citing the incompatible activity.

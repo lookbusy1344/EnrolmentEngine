@@ -124,11 +124,11 @@ public sealed partial class InvariantTests : IAsyncLifetime
 	}
 
 	[Property(Arbitrary = new[] { typeof(StudentArbitraries) }, MaxTest = 250)]
-	public async Task<bool> random_valid_students_never_throw_and_preserve_phase_nine_invariants(StudentInput student)
+	public Task<bool> random_valid_students_never_throw_and_preserve_phase_nine_invariants(StudentInput student)
 	{
 		StudentValidator.Validate(student, Harness.Catalogue, Harness.Scale).Should().BeEmpty();
 
-		var explained = await engine.ExplainAsync(student);
+		var explained = engine.Explain(student);
 
 		explained.Explanations.Should().HaveCount(Catalogue.Subjects.Count);
 		explained.Explanations.Select(static explanation => explanation.Subject)
@@ -138,7 +138,7 @@ public sealed partial class InvariantTests : IAsyncLifetime
 		explained.Summary.ProjectedTariff.Should().BeInRange(0, MaxProjectedTariff);
 
 		if (!explained.Eligible) {
-			return true;
+			return Task.FromResult(true);
 		}
 
 		// No green-count ceiling: the green cap is an optional feature, disabled in the shipped config, so
@@ -166,11 +166,11 @@ public sealed partial class InvariantTests : IAsyncLifetime
 				"a downgrade to red must be explained by at least one red adjustment");
 		}
 
-		return true;
+		return Task.FromResult(true);
 	}
 
 	[Property(Arbitrary = new[] { typeof(StudentArbitraries) }, MaxTest = 100)]
-	public async Task<bool> random_valid_students_are_not_upgraded_by_an_amber_restudy_bar(StudentInput student)
+	public Task<bool> random_valid_students_are_not_upgraded_by_an_amber_restudy_bar(StudentInput student)
 	{
 		StudentValidator.Validate(student, Harness.Catalogue, Harness.Scale).Should().BeEmpty();
 
@@ -178,14 +178,14 @@ public sealed partial class InvariantTests : IAsyncLifetime
 		var constrainedStudent = student with { PriorQualifications = [BiologyPriorALevel] };
 		var constrainedEngine = new EnrolmentEngine(rulesEngine, Harness.Thresholds, catalogue, Harness.AsOf, Harness.Scale);
 
-		var explained = await constrainedEngine.ExplainAsync(constrainedStudent);
+		var explained = constrainedEngine.Explain(constrainedStudent);
 		var biology = explained.Explanations.Single(static explanation => explanation.Subject == Subject.Biology);
 
 		((int)biology.Rating).Should().BeGreaterThanOrEqualTo(
 			(int)biology.BaseRating,
 			"an amber restudy bar must not upgrade an already-red base rating");
 
-		return true;
+		return Task.FromResult(true);
 	}
 
 	private static bool IsKnownSubject(string name) => Subject.TryParse(name, out var subject) && Catalogue.Subjects.Contains(subject);

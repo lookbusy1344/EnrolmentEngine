@@ -16,7 +16,7 @@ public sealed class SubjectRatingTests
 	{
 		var student = new StudentInput("S-TEST", gcses.ToDictionary(g => g.Subject, g => g.Grade), []);
 		var evaluator = await Harness.ShippedEvaluatorAsync();
-		return await evaluator.EvaluateRatingsAsync(Harness.Predict(student), student.ToGcseResults());
+		return evaluator.EvaluateRatings(Harness.Predict(student), student.ToGcseResults());
 	}
 
 	private static Rating Of(IEnumerable<SubjectRating> ratings, Subject subject) =>
@@ -103,7 +103,7 @@ public sealed class SubjectRatingTests
 			[]);
 		var evaluator = await Harness.ShippedEvaluatorAsync();
 
-		var ratings = await evaluator.EvaluateRatingsAsync(profile, [new("maths", Harness.Thresholds.TopEntry)]);
+		var ratings = evaluator.EvaluateRatings(profile, [new("maths", Harness.Thresholds.TopEntry)]);
 
 		// The point prediction clears green and amber, but both tiers now consume DfE probability evidence.
 		// With no matrix row on the profile, both tiers are blocked and red wins.
@@ -121,7 +121,7 @@ public sealed class SubjectRatingTests
 			[]);
 		var evaluator = await Harness.ShippedEvaluatorAsync();
 
-		var ratings = await evaluator.EvaluateRatingsAsync(
+		var ratings = evaluator.EvaluateRatings(
 			profile,
 			[new("maths", Harness.Thresholds.TopEntry), new("physics", Harness.Thresholds.StrongEntry)]);
 
@@ -140,7 +140,7 @@ public sealed class SubjectRatingTests
 			[]);
 		var evaluator = await Harness.ShippedEvaluatorAsync();
 
-		var ratings = await evaluator.EvaluateRatingsAsync(profile, []);
+		var ratings = evaluator.EvaluateRatings(profile, []);
 
 		// History clears average entry and the predicted C amber tier, but amber is blocked without DfE evidence.
 		Of(ratings, Subject.History).Should().Be(Rating.Red);
@@ -182,8 +182,8 @@ public sealed class SubjectRatingTests
 	{
 		var (workflows, engine) = await Harness.BuildFromShippedWorkflowsAsync();
 
-		var act = async () => await WorkflowStore.ProbeCompileAsync(engine, workflows, Harness.CanonicalProbe());
+		var act = () => WorkflowStore.ProbeCompile(engine, workflows, Harness.CanonicalProbe());
 
-		await act.Should().NotThrowAsync();
+		act.Should().NotThrow();
 	}
 }

@@ -31,7 +31,7 @@ public sealed class DependencyInjectionTests
 	public async Task add_enrolment_engine_registers_a_singleton()
 	{
 		var services = new ServiceCollection();
-		_ = await services.AddEnrolmentEngineAsync(options => {
+		_ = services.AddEnrolmentEngine(options => {
 			options.UseWorkflowsDirectory(Harness.WorkflowsDir)
 				.UseDataDirectory(Harness.DataDir)
 				.UseFixedAsOf(Harness.AsOf);
@@ -46,29 +46,29 @@ public sealed class DependencyInjectionTests
 	}
 
 	[Fact]
-	public async Task add_enrolment_engine_rejects_an_empty_workflows_directory()
+	public void add_enrolment_engine_rejects_an_empty_workflows_directory()
 	{
 		var services = new ServiceCollection();
 
-		var act = () => services.AddEnrolmentEngineAsync(options => {
+		var act = () => services.AddEnrolmentEngine(options => {
 			options.UseWorkflowsDirectory(string.Empty)
 				.UseDataDirectory(Harness.DataDir);
 		});
 
-		await act.Should().ThrowAsync<ArgumentException>().WithParameterName("workflowsDirectory");
+		act.Should().Throw<ArgumentException>().WithParameterName("workflowsDirectory");
 	}
 
 	[Fact]
-	public async Task add_enrolment_engine_rejects_an_empty_data_directory()
+	public void add_enrolment_engine_rejects_an_empty_data_directory()
 	{
 		var services = new ServiceCollection();
 
-		var act = () => services.AddEnrolmentEngineAsync(options => {
+		var act = () => services.AddEnrolmentEngine(options => {
 			options.UseWorkflowsDirectory(Harness.WorkflowsDir)
 				.UseDataDirectory(string.Empty);
 		});
 
-		await act.Should().ThrowAsync<ArgumentException>().WithParameterName("dataDirectory");
+		act.Should().Throw<ArgumentException>().WithParameterName("dataDirectory");
 	}
 
 	[Theory]
@@ -97,7 +97,7 @@ public sealed class DependencyInjectionTests
 	public async Task registers_the_interface_against_the_same_singleton()
 	{
 		var services = new ServiceCollection();
-		_ = await services.AddEnrolmentEngineAsync(options => {
+		_ = services.AddEnrolmentEngine(options => {
 			options.UseWorkflowsDirectory(Harness.WorkflowsDir)
 				.UseDataDirectory(Harness.DataDir)
 				.UseFixedAsOf(Harness.AsOf);
@@ -112,12 +112,12 @@ public sealed class DependencyInjectionTests
 	}
 
 	[Fact]
-	public async Task interface_can_be_substituted_by_a_consumer_fake()
+	public void interface_can_be_substituted_by_a_consumer_fake()
 	{
 		// The seam exists so consumer code can depend on IEnrolmentEngine and inject a stub in their own tests.
 		IEnrolmentEngine fake = new StubEngine(Harness.Catalogue);
 
-		var result = await fake.EvaluateAsync(ArtAgeGatedStudent());
+		var result = fake.Evaluate(ArtAgeGatedStudent());
 
 		result.Eligible.Should().BeFalse();
 		result.Recommendations.Should().BeEmpty();
@@ -126,7 +126,7 @@ public sealed class DependencyInjectionTests
 	[Fact]
 	public async Task add_enrolment_engine_accepts_a_pre_built_engine()
 	{
-		var engine = await EnrolmentEngine.CreateAsync(Harness.WorkflowsDir, Harness.DataDir, Harness.AsOf);
+		var engine = EnrolmentEngine.Create(Harness.WorkflowsDir, Harness.DataDir, Harness.AsOf);
 		var services = new ServiceCollection();
 		services.AddEnrolmentEngine(engine);
 
@@ -144,7 +144,7 @@ public sealed class DependencyInjectionTests
 	public async Task resolved_engine_evaluates_a_real_student()
 	{
 		var services = new ServiceCollection();
-		_ = await services.AddEnrolmentEngineAsync(options => {
+		_ = services.AddEnrolmentEngine(options => {
 			options.UseWorkflowsDirectory(Harness.WorkflowsDir)
 				.UseDataDirectory(Harness.DataDir)
 				.UseFixedAsOf(Harness.AsOf);
@@ -153,7 +153,7 @@ public sealed class DependencyInjectionTests
 		await using var provider = services.BuildServiceProvider();
 		var engine = provider.GetRequiredService<EnrolmentEngine>();
 
-		var result = await engine.EvaluateAsync(ArtAgeGatedStudent());
+		var result = engine.Evaluate(ArtAgeGatedStudent());
 
 		result.Eligible.Should().BeTrue();
 		result.Recommendations.Should().HaveCount(Harness.Catalogue.Subjects.Count);
@@ -164,7 +164,7 @@ public sealed class DependencyInjectionTests
 	{
 		var clock = new MutableClock(new(2026, 6, 25, 12, 0, 0, TimeSpan.Zero)); // student is 18
 		var services = new ServiceCollection();
-		_ = await services.AddEnrolmentEngineAsync(options => {
+		_ = services.AddEnrolmentEngine(options => {
 			options.UseWorkflowsDirectory(Harness.WorkflowsDir)
 				.UseDataDirectory(Harness.DataDir)
 				.UseTimeProvider(clock);
@@ -174,9 +174,9 @@ public sealed class DependencyInjectionTests
 		var engine = provider.GetRequiredService<EnrolmentEngine>();
 		var student = ArtAgeGatedStudent();
 
-		var beforeBirthday = await engine.EvaluateAsync(student);
+		var beforeBirthday = engine.Evaluate(student);
 		clock.Now = new(2026, 9, 2, 12, 0, 0, TimeSpan.Zero); // crossed the birthday → 19
-		var afterBirthday = await engine.EvaluateAsync(student);
+		var afterBirthday = engine.Evaluate(student);
 
 		// A frozen-at-startup date would give the same Art rating both times; a live clock downgrades it.
 		((int)ArtRating(beforeBirthday)).Should().BeLessThan((int)ArtRating(afterBirthday));
@@ -186,7 +186,7 @@ public sealed class DependencyInjectionTests
 	public async Task add_enrolment_engine_factory_registers_a_live_interface_proxy()
 	{
 		var services = new ServiceCollection();
-		_ = await services.AddEnrolmentEngineFactoryAsync(options => {
+		_ = services.AddEnrolmentEngineFactory(options => {
 			options.UseWorkflowsDirectory(Harness.WorkflowsDir)
 				.UseDataDirectory(Harness.DataDir)
 				.UseFixedAsOf(Harness.AsOf);
@@ -209,7 +209,7 @@ public sealed class DependencyInjectionTests
 		var fixture = CopyShippedLayout();
 		try {
 			var services = new ServiceCollection();
-			_ = await services.AddEnrolmentEngineFactoryAsync(options => {
+			_ = services.AddEnrolmentEngineFactory(options => {
 				options.UseWorkflowsDirectory(Path.Combine(fixture, "workflows"))
 					.UseDataDirectory(Path.Combine(fixture, "data"))
 					.UseFixedAsOf(Harness.AsOf);
@@ -220,12 +220,12 @@ public sealed class DependencyInjectionTests
 			var factory = provider.GetRequiredService<IEnrolmentEngineFactory>();
 			var student = ReloadEligibleStudent();
 
-			(await engine.TryEvaluateAsync(student)).Value!.Eligible.Should().BeTrue();
+			engine.TryEvaluate(student).Value!.Eligible.Should().BeTrue();
 
 			RaisePassGrade(Path.Combine(fixture, "data", "thresholds.yaml"), 7);
-			await factory.ReloadAsync();
+			factory.Reload();
 
-			(await engine.TryEvaluateAsync(student)).Value!.Eligible.Should().BeFalse();
+			engine.TryEvaluate(student).Value!.Eligible.Should().BeFalse();
 		}
 		finally {
 			Directory.Delete(fixture, true);
@@ -236,7 +236,7 @@ public sealed class DependencyInjectionTests
 	public async Task disposing_the_service_provider_disposes_the_registered_enrolment_engine_factory()
 	{
 		var services = new ServiceCollection();
-		_ = await services.AddEnrolmentEngineFactoryAsync(options => {
+		_ = services.AddEnrolmentEngineFactory(options => {
 			options.UseWorkflowsDirectory(Harness.WorkflowsDir)
 				.UseDataDirectory(Harness.DataDir)
 				.UseFixedAsOf(Harness.AsOf);
@@ -247,16 +247,16 @@ public sealed class DependencyInjectionTests
 
 		await provider.DisposeAsync();
 
-		var act = () => factory.ReloadAsync();
+		var act = () => factory.Reload();
 
-		await act.Should().ThrowAsync<ObjectDisposedException>();
+		act.Should().Throw<ObjectDisposedException>();
 	}
 
 	[Fact]
 	public async Task resolved_engine_try_evaluate_rejects_invalid_input()
 	{
 		var services = new ServiceCollection();
-		_ = await services.AddEnrolmentEngineAsync(options => {
+		_ = services.AddEnrolmentEngine(options => {
 			options.UseWorkflowsDirectory(Harness.WorkflowsDir)
 				.UseDataDirectory(Harness.DataDir)
 				.UseFixedAsOf(Harness.AsOf);
@@ -266,7 +266,7 @@ public sealed class DependencyInjectionTests
 		var engine = provider.GetRequiredService<IEnrolmentEngine>();
 		var student = new StudentInput("S-BAD", new Dictionary<string, int> { ["maths"] = 99 }, []) { DateOfBirth = new(2009, 9, 1) };
 
-		var outcome = await engine.TryEvaluateAsync(student);
+		var outcome = engine.TryEvaluate(student);
 
 		outcome.Validation.IsValid.Should().BeFalse();
 		outcome.Value.Should().BeNull();
@@ -334,61 +334,61 @@ public sealed class DependencyInjectionTests
 
 		public QualificationScale Scale => QualificationScale.Default;
 
-		public Task<EnrolmentResult> EvaluateAsync(StudentInput student, CancellationToken cancellationToken = default) =>
-			EvaluateAsync(student, default, CancellationToken.None);
+		public EnrolmentResult Evaluate(StudentInput student, CancellationToken cancellationToken = default) =>
+			Evaluate(student, default, CancellationToken.None);
 
-		public Task<EnrolmentResult> EvaluateAsync(StudentInput student, DateOnly asOf, CancellationToken cancellationToken = default) =>
-			Task.FromResult(new EnrolmentResult(false, [], [], new(0, 0, 0.0), []));
+		public EnrolmentResult Evaluate(StudentInput student, DateOnly asOf, CancellationToken cancellationToken = default) =>
+			new(false, [], [], new(0, 0, 0.0), []);
 
-		public Task<ExplainedResult> ExplainAsync(StudentInput student, CancellationToken cancellationToken = default) =>
-			ExplainAsync(student, default, CancellationToken.None);
+		public ExplainedResult Explain(StudentInput student, CancellationToken cancellationToken = default) =>
+			Explain(student, default, CancellationToken.None);
 
-		public Task<ExplainedResult> ExplainAsync(StudentInput student, DateOnly asOf, CancellationToken cancellationToken = default) =>
-			Task.FromResult(new ExplainedResult(false, [], [], new(0, 0, 0.0)));
+		public ExplainedResult Explain(StudentInput student, DateOnly asOf, CancellationToken cancellationToken = default) =>
+			new(false, [], [], new(0, 0, 0.0));
 
-		public Task<AdviceResult> AdviseAsync(StudentInput student, CancellationToken cancellationToken = default) =>
-			AdviseAsync(student, default(DateOnly), CancellationToken.None);
+		public AdviceResult Advise(StudentInput student, CancellationToken cancellationToken = default) =>
+			Advise(student, default(DateOnly), CancellationToken.None);
 
-		public Task<AdviceResult> AdviseAsync(StudentInput student, DateOnly asOf, CancellationToken cancellationToken = default) =>
-			Task.FromResult(new AdviceResult(false, [], [], null));
+		public AdviceResult Advise(StudentInput student, DateOnly asOf, CancellationToken cancellationToken = default) =>
+			new(false, [], [], null);
 
-		public Task<AdviceResult> AdviseAsync(StudentInput student, bool considerUnsatGcses, CancellationToken cancellationToken = default) =>
-			AdviseAsync(student, default(DateOnly), CancellationToken.None);
+		public AdviceResult Advise(StudentInput student, bool considerUnsatGcses, CancellationToken cancellationToken = default) =>
+			Advise(student, default(DateOnly), CancellationToken.None);
 
-		public Task<AdviceResult> AdviseAsync(StudentInput student, DateOnly asOf, bool considerUnsatGcses,
+		public AdviceResult Advise(StudentInput student, DateOnly asOf, bool considerUnsatGcses,
 			CancellationToken cancellationToken = default) =>
-			AdviseAsync(student, asOf, CancellationToken.None);
+			Advise(student, asOf, CancellationToken.None);
 
-		public Task<ValidatedEvaluation<EnrolmentResult>> TryEvaluateAsync(StudentInput student, CancellationToken cancellationToken = default) =>
-			TryEvaluateAsync(student, default, cancellationToken);
+		public ValidatedEvaluation<EnrolmentResult> TryEvaluate(StudentInput student, CancellationToken cancellationToken = default) =>
+			TryEvaluate(student, default, cancellationToken);
 
-		public Task<ValidatedEvaluation<EnrolmentResult>> TryEvaluateAsync(StudentInput student, DateOnly asOf,
+		public ValidatedEvaluation<EnrolmentResult> TryEvaluate(StudentInput student, DateOnly asOf,
 			CancellationToken cancellationToken = default) =>
-			Task.FromResult(new ValidatedEvaluation<EnrolmentResult>(ValidationOutcome.Valid, null));
+			new(ValidationOutcome.Valid, null);
 
-		public Task<ValidatedEvaluation<ExplainedResult>> TryExplainAsync(StudentInput student, CancellationToken cancellationToken = default) =>
-			TryExplainAsync(student, default, cancellationToken);
+		public ValidatedEvaluation<ExplainedResult> TryExplain(StudentInput student, CancellationToken cancellationToken = default) =>
+			TryExplain(student, default, cancellationToken);
 
-		public Task<ValidatedEvaluation<ExplainedResult>> TryExplainAsync(StudentInput student, DateOnly asOf,
+		public ValidatedEvaluation<ExplainedResult> TryExplain(StudentInput student, DateOnly asOf,
 			CancellationToken cancellationToken = default) =>
-			Task.FromResult(new ValidatedEvaluation<ExplainedResult>(ValidationOutcome.Valid, null));
+			new(ValidationOutcome.Valid, null);
 
-		public Task<ValidatedEvaluation<AdviceResult>> TryAdviseAsync(StudentInput student, CancellationToken cancellationToken = default) =>
-			TryAdviseAsync(student, default(DateOnly), cancellationToken);
+		public ValidatedEvaluation<AdviceResult> TryAdvise(StudentInput student, CancellationToken cancellationToken = default) =>
+			TryAdvise(student, default(DateOnly), cancellationToken);
 
-		public Task<ValidatedEvaluation<AdviceResult>> TryAdviseAsync(StudentInput student, DateOnly asOf,
+		public ValidatedEvaluation<AdviceResult> TryAdvise(StudentInput student, DateOnly asOf,
 			CancellationToken cancellationToken = default) =>
-			TryAdviseAsync(student, asOf, false, cancellationToken);
+			TryAdvise(student, asOf, false, cancellationToken);
 
-		public Task<ValidatedEvaluation<AdviceResult>> TryAdviseAsync(StudentInput student, bool considerUnsatGcses,
+		public ValidatedEvaluation<AdviceResult> TryAdvise(StudentInput student, bool considerUnsatGcses,
 			CancellationToken cancellationToken = default) =>
-			TryAdviseAsync(student, default, considerUnsatGcses, cancellationToken);
+			TryAdvise(student, default, considerUnsatGcses, cancellationToken);
 
-		public Task<ValidatedEvaluation<AdviceResult>> TryAdviseAsync(
+		public ValidatedEvaluation<AdviceResult> TryAdvise(
 			StudentInput student,
 			DateOnly asOf,
 			bool considerUnsatGcses,
 			CancellationToken cancellationToken = default) =>
-			Task.FromResult(new ValidatedEvaluation<AdviceResult>(ValidationOutcome.Valid, null));
+			new(ValidationOutcome.Valid, null);
 	}
 }

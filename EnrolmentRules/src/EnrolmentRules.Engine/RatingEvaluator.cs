@@ -67,10 +67,10 @@ public sealed class RatingEvaluator(
 	///     preserving the rules' declared order so the reasons keep the English → Maths → pass-count
 	///     precedence.
 	/// </summary>
-	public async Task<EligibilityGate> EvaluateEligibilityAsync(IReadOnlyList<GcseResult> gcses, CancellationToken cancellationToken = default)
+	public EligibilityGate EvaluateEligibility(IReadOnlyList<GcseResult> gcses, CancellationToken cancellationToken = default)
 	{
 		cancellationToken.ThrowIfCancellationRequested();
-		var results = await engine.ExecuteAllRulesAsync(EligibilityWorkflow, EligibilityParameters(gcses, Thresholds)).ConfigureAwait(false);
+		var results = ExecuteAllRules(EligibilityWorkflow, EligibilityParameters(gcses, Thresholds));
 
 		var reasons = results
 			.Where(static r => !r.IsSuccess)
@@ -87,28 +87,28 @@ public sealed class RatingEvaluator(
 	///     re-running the eligibility workflow. An ineligible student is red in every <see cref="Subject" />
 	///     carrying the gate reason and the per-subject workflow is never run.
 	/// </summary>
-	public async Task<(EligibilityGate Gate, IReadOnlyList<SubjectRating> Ratings)> EvaluateWithGateAsync(
+	public (EligibilityGate Gate, IReadOnlyList<SubjectRating> Ratings) EvaluateWithGate(
 		StudentProfile profile,
 		IReadOnlyList<GcseResult> gcses,
 		CancellationToken cancellationToken = default)
 	{
-		var gate = await EvaluateEligibilityAsync(gcses, cancellationToken).ConfigureAwait(false);
+		var gate = EvaluateEligibility(gcses, cancellationToken);
 		cancellationToken.ThrowIfCancellationRequested();
 		var ratings = gate.Eligible
-			? await EvaluateRatingsAsync(profile, gcses, cancellationToken).ConfigureAwait(false)
+			? EvaluateRatings(profile, gcses, cancellationToken)
 			: AllRed(gate.Reasons[0]);
 		return (gate, ratings);
 	}
 
 	/// <summary>
 	///     The base per-subject ratings (Phase 4), discarding the gate. Convenience over
-	///     <see cref="EvaluateWithGateAsync" /> for callers that only need the ratings.
+	///     <see cref="EvaluateWithGate" /> for callers that only need the ratings.
 	/// </summary>
-	public async Task<IReadOnlyList<SubjectRating>> EvaluateAsync(
+	public IReadOnlyList<SubjectRating> Evaluate(
 		StudentProfile profile,
 		IReadOnlyList<GcseResult> gcses,
 		CancellationToken cancellationToken = default) =>
-		(await EvaluateWithGateAsync(profile, gcses, cancellationToken).ConfigureAwait(false)).Ratings;
+		EvaluateWithGate(profile, gcses, cancellationToken).Ratings;
 
 	/// <summary>
 	///     The ineligible short-circuit output: one red <see cref="SubjectRating" /> per <see cref="Subject" />
@@ -125,14 +125,14 @@ public sealed class RatingEvaluator(
 	///     tiers are authored green → amber → catch-all red, and a green-eligible student also satisfies the
 	///     amber rule — taking the first is what makes green win).
 	/// </summary>
-	public async Task<IReadOnlyList<SubjectRating>> EvaluateRatingsAsync(
+	public IReadOnlyList<SubjectRating> EvaluateRatings(
 		StudentProfile profile,
 		IReadOnlyList<GcseResult> gcses,
 		CancellationToken cancellationToken = default)
 	{
 		cancellationToken.ThrowIfCancellationRequested();
-		var results = await engine.ExecuteAllRulesAsync(
-			SubjectRatingsWorkflow, new RuleParameter("facts", new RatingFacts(profile, gcses, policy, Catalogue, Scale))).ConfigureAwait(false);
+		var results = ExecuteAllRules(
+			SubjectRatingsWorkflow, new RuleParameter("facts", new RatingFacts(profile, gcses, policy, Catalogue, Scale)));
 
 		var winners = new Dictionary<Subject, SubjectRating>();
 		foreach (var result in results.Where(static r => r.IsSuccess)) {
@@ -149,6 +149,22 @@ public sealed class RatingEvaluator(
 					: throw new WorkflowProbeException(
 						SubjectRatingsWorkflow, $"no rule produced a rating for subject '{EnumNames.NameOf(subject)}'")),
 		];
+	}
+
+	// RulesEngine evaluates the compiled lambdas synchronously here (no I/O and no configured action
+	// workflows). If that ever stops being true, fail fast rather than silently reintroducing a hidden
+	// blocking wait on the hot path.
+	private List<RuleResultTree> ExecuteAllRules(string workflow, params RuleParameter[] facts)
+	{
+		var execution = engine.ExecuteAllRulesAsync(workflow, facts);
+		if (!execution.IsCompletedSuccessfully) {
+			throw new InvalidOperationException(
+				$"RulesEngine workflow '{workflow}' completed asynchronously on the synchronous evaluation path.");
+		}
+
+#pragma warning disable VSTHRD002 // The completion guard above guarantees this ValueTask has already finished.
+		return execution.Result;
+#pragma warning restore VSTHRD002
 	}
 
 	/// <summary>

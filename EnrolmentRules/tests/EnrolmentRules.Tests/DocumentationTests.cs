@@ -34,7 +34,7 @@ public sealed partial class DocumentationTests
 	{
 		typeof(EnrolmentEngine).GetConstructors(BindingFlags.Instance | BindingFlags.Public)
 			.Should()
-			.BeEmpty("library hosts should construct via CreateAsync or DI, not new EnrolmentEngine(...)");
+			.BeEmpty("library hosts should construct via Create or DI, not new EnrolmentEngine(...)");
 	}
 
 	[Fact]

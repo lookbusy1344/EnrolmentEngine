@@ -35,7 +35,7 @@ public sealed class AdvisorTests
 	{
 		var engine = await Harness.ShippedEngineAsync();
 
-		var advice = await engine.AdviseAsync(new("S-ADVISE", new Dictionary<string, int> {
+		var advice = engine.Advise(new("S-ADVISE", new Dictionary<string, int> {
 			["english_language"] = 7,
 			["maths"] = 5,
 			["physics"] = 5,
@@ -55,7 +55,7 @@ public sealed class AdvisorTests
 			["chemistry"] = 5,
 			["biology"] = 5,
 		}, []), chemistry.Changes);
-		var explained = await engine.ExplainAsync(improved);
+		var explained = engine.Explain(improved);
 		explained.Explanations.Single(e => e.Subject == Subject.Chemistry).Rating.Should().Be(Rating.Amber);
 	}
 
@@ -72,7 +72,7 @@ public sealed class AdvisorTests
 			["history"] = 9,
 		}, []) { DateOfBirth = new DateOnly(2009, 9, 1) };
 
-		var advice = await engine.AdviseAsync(student);
+		var advice = engine.Advise(student);
 		var chemistry = advice.Advice.Single(a => a.Subject == Subject.Chemistry);
 
 		chemistry.Reachable.Should().BeTrue();
@@ -80,7 +80,7 @@ public sealed class AdvisorTests
 		chemistry.Changes.Should().BeEquivalentTo([new GradeChange("chemistry", 5, 6)]);
 
 		var improved = ApplyChanges(student, chemistry.Changes);
-		var explained = await engine.ExplainAsync(improved);
+		var explained = engine.Explain(improved);
 		((int)explained.Explanations.Single(e => e.Subject == Subject.Chemistry).Rating).Should().BeLessThanOrEqualTo((int)chemistry.Target);
 	}
 
@@ -97,14 +97,14 @@ public sealed class AdvisorTests
 			["art"] = Harness.Thresholds.StrongEntry,
 		}, []) { DateOfBirth = Harness.AsOf.AddYears(-Harness.Thresholds.AdultAge) };
 
-		var advice = await engine.AdviseAsync(student);
+		var advice = engine.Advise(student);
 		var art = advice.Advice.Single(a => a.Subject == Subject.Art);
 
 		art.Reachable.Should().BeTrue();
 		art.Changes.Should().NotBeEmpty();
 
 		var improved = ApplyChanges(student, art.Changes);
-		var explained = await engine.ExplainAsync(improved);
+		var explained = engine.Explain(improved);
 		((int)explained.Explanations.Single(e => e.Subject == Subject.Art).Rating).Should().BeLessThanOrEqualTo((int)art.Target);
 	}
 
@@ -120,7 +120,7 @@ public sealed class AdvisorTests
 			["biology"] = 5,
 		}, []);
 
-		var advice = await engine.AdviseAsync(student);
+		var advice = engine.Advise(student);
 
 		// The counterfactual search proposes raising GCSEs the student already holds, never sitting a brand
 		// new one: a grade bump is actionable advice, "go and take another GCSE from scratch" is not.
@@ -149,7 +149,7 @@ public sealed class AdvisorTests
 			["biology"] = 5,
 		}, []) { ChosenALevels = [Subject.Maths] };
 
-		var advice = await engine.AdviseAsync(student, true);
+		var advice = engine.Advise(student, true);
 
 		// Diagnostic mode reverts to the old, heavier behaviour: Spanish, gated on a French or German GCSE
 		// the student never sat, becomes reachable by proposing those brand-new GCSEs.
@@ -175,7 +175,7 @@ public sealed class AdvisorTests
 		}, []) { ChosenALevels = [Subject.Maths] };
 
 		// No per-call override: the diagnostic knob is read from the loaded thresholds, so Spanish is reachable.
-		var advice = await engine.AdviseAsync(student);
+		var advice = engine.Advise(student);
 
 		advice.Advice.Single(a => a.Subject == Subject.Spanish).Reachable.Should().BeTrue();
 	}
@@ -185,7 +185,7 @@ public sealed class AdvisorTests
 	{
 		var engine = await Harness.ShippedEngineAsync();
 
-		var advice = await engine.AdviseAsync(StrongStudent("plays_trombone"));
+		var advice = engine.Advise(StrongStudent("plays_trombone"));
 		var music = advice.Advice.Single(a => a.Subject == Subject.Music);
 
 		music.Reachable.Should().BeFalse();
@@ -198,7 +198,7 @@ public sealed class AdvisorTests
 	{
 		var engine = await Harness.ShippedEngineAsync();
 
-		var advice = await engine.AdviseAsync(new("S-RESTUDY", new Dictionary<string, int> {
+		var advice = engine.Advise(new("S-RESTUDY", new Dictionary<string, int> {
 			["english_language"] = 8,
 			["maths"] = 8,
 			["physics"] = 8,
@@ -236,13 +236,13 @@ public sealed class AdvisorTests
 			PriorQualifications = [new("applied_science", QualificationType.BtecDiploma, "distinction")],
 		};
 
-		var advice = await engine.AdviseAsync(student);
+		var advice = engine.Advise(student);
 		var biology = advice.Advice.Single(a => a.Subject == Subject.Biology);
 
 		biology.Reachable.Should().BeTrue();
 
 		var improved = ApplyChanges(student, biology.Changes);
-		var explained = await engine.ExplainAsync(improved);
+		var explained = engine.Explain(improved);
 		((int)explained.Explanations.Single(e => e.Subject == Subject.Biology).Rating).Should().BeLessThanOrEqualTo((int)biology.Target);
 	}
 
@@ -258,7 +258,7 @@ public sealed class AdvisorTests
 		var rules = (await Harness.BuildFromShippedWorkflowsAsync()).Engine;
 		var engine = new EnrolmentEngine(rules, Harness.Thresholds with { MaxGreenChoices = cap }, Harness.Catalogue, Harness.AsOf);
 
-		var advice = await engine.AdviseAsync(StrongStudent("plays_piano"));
+		var advice = engine.Advise(StrongStudent("plays_piano"));
 		var computerStudies = advice.Advice.Single(a => a.Subject == Subject.ComputerStudies);
 
 		computerStudies.Reachable.Should().BeFalse();
@@ -273,7 +273,7 @@ public sealed class AdvisorTests
 		// A strong student who has not committed to Maths: Further Maths clears its own tier but is held red
 		// by the chosen-Maths prerequisite, which no grade change can satisfy. The advisor must report that
 		// it is unreachable for the prerequisite reason — not the misleading "budget exhausted".
-		var advice = await engine.AdviseAsync(StrongStudent());
+		var advice = engine.Advise(StrongStudent());
 		var furtherMaths = advice.Advice.Single(a => a.Subject == Subject.FurtherMaths);
 
 		furtherMaths.Reachable.Should().BeFalse();
@@ -286,7 +286,7 @@ public sealed class AdvisorTests
 		var engine = await Harness.ShippedEngineAsync();
 		var student = new StudentInput("S-INELIGIBLE", new Dictionary<string, int> { ["maths"] = 8, ["physics"] = 7, ["chemistry"] = 6 }, []);
 
-		var advice = await engine.AdviseAsync(student);
+		var advice = engine.Advise(student);
 
 		advice.Eligible.Should().BeFalse();
 		advice.EligibilityReasons.Should().Contain(reason => reason.Contains("passes", StringComparison.Ordinal));
@@ -294,7 +294,7 @@ public sealed class AdvisorTests
 		advice.Gate.Should().NotBeNull();
 
 		var improved = ApplyChanges(student, advice.Gate!.Changes);
-		var explained = await engine.ExplainAsync(improved);
+		var explained = engine.Explain(improved);
 		explained.Eligible.Should().BeTrue();
 	}
 
@@ -315,14 +315,14 @@ public sealed class AdvisorTests
 			["biology"] = Harness.Thresholds.PassGrade,
 		}, []);
 
-		var advice = await engine.AdviseAsync(student);
+		var advice = engine.Advise(student);
 
 		advice.Eligible.Should().BeFalse();
 		advice.Gate.Should().NotBeNull();
 		advice.Gate!.Changes.Should().NotBeEmpty();
 
 		var improved = ApplyChanges(student, advice.Gate.Changes);
-		(await engine.ExplainAsync(improved)).Eligible.Should().BeTrue();
+		engine.Explain(improved).Eligible.Should().BeTrue();
 	}
 
 	[Fact]
@@ -334,7 +334,7 @@ public sealed class AdvisorTests
 		// budget as the block. Further Maths needs both maths ≥ 7 and average ≥ 7. From an all-grade-4 start
 		// the search can lift at most three subjects within the 12-grade-step budget (max average ≈ 6.4), so
 		// the average entry can never be cleared ⇒ unreachable, blocked by the budget rather than an adjustment.
-		var advice = await engine.AdviseAsync(new("S-BUDGET", new Dictionary<string, int> {
+		var advice = engine.Advise(new("S-BUDGET", new Dictionary<string, int> {
 			["english_language"] = 4,
 			["maths"] = 4,
 			["physics"] = 4,
@@ -356,7 +356,7 @@ public sealed class AdvisorTests
 		await using var stdout = new StringWriter();
 		await using var stderr = new StringWriter();
 
-		var exit = await CliRunner.RunAsync(["--advise", path], stdout, stderr);
+		var exit = CliRunner.Run(["--advise", path], stdout, stderr);
 
 		exit.Should().Be(CliRunner.ExitOk);
 		stderr.ToString().Should().BeEmpty();
@@ -399,7 +399,7 @@ public sealed class AdvisorTests
 		await using var stdout = new StringWriter();
 		await using var stderr = new StringWriter();
 
-		var exit = await CliRunner.RunAsync(["--advise", "--all-gcses", path], stdout, stderr);
+		var exit = CliRunner.Run(["--advise", "--all-gcses", path], stdout, stderr);
 
 		exit.Should().Be(CliRunner.ExitOk);
 		stderr.ToString().Should().BeEmpty();
@@ -423,7 +423,7 @@ public sealed class AdvisorTests
 			["biology"] = 5,
 		}, []);
 
-		var advice = await engine.AdviseAsync(student);
+		var advice = engine.Advise(student);
 		var chemistry = advice.Advice.Single(a => a.Subject == Subject.Chemistry);
 
 		chemistry.Reachable.Should().BeFalse();
@@ -445,12 +445,12 @@ public sealed class AdvisorTests
 		// Evaluate without the cap to establish the expected full advice size.
 		var uncapped = new EnrolmentEngine(
 			rules, Harness.Thresholds, Harness.Catalogue, Harness.AsOf);
-		var fullAdvice = await uncapped.AdviseAsync(student);
+		var fullAdvice = uncapped.Advise(student);
 
 		// Evaluate with an aggressive cap: 1 pipeline evaluation.
 		var capped = new EnrolmentEngine(
 			rules, Harness.Thresholds with { AdviceMaxPipelineEvaluations = 1 }, Harness.Catalogue, Harness.AsOf);
-		var truncated = await capped.AdviseAsync(student);
+		var truncated = capped.Advise(student);
 
 		truncated.TruncationReason.Should().Be("advice truncated");
 		truncated.Advice.Count.Should().BeLessThan(fullAdvice.Advice.Count);
@@ -473,8 +473,8 @@ public sealed class AdvisorTests
 
 		// An already-cancelled token is observed at the first ThrowIfCancellationRequested in the advisor
 		// entry guard, before any search state is allocated.
-		var act = () => engine.AdviseAsync(student, true, cts.Token);
-		_ = await act.Should().ThrowAsync<OperationCanceledException>();
+		var act = () => engine.Advise(student, true, cts.Token);
+		act.Should().Throw<OperationCanceledException>();
 	}
 
 	[Fact]
@@ -505,9 +505,9 @@ public sealed class AdvisorTests
 			}
 		}
 
-		var act = () => CounterfactualAdvisor.AdviseAsync(
+		var act = () => CounterfactualAdvisor.Advise(
 			engine, student, Harness.Thresholds, Harness.AsOf, true, OnEvaluation, cts.Token);
-		_ = await act.Should().ThrowAsync<OperationCanceledException>();
+		act.Should().Throw<OperationCanceledException>();
 		evaluations.Should().BeGreaterThanOrEqualTo(TripAfter);
 	}
 

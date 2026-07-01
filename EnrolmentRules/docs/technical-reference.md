@@ -106,7 +106,7 @@ Start with the [guided walk-through](walkthrough.md).
 | `src/EnrolmentRules.Domain`                         | Immutable domain inputs, outputs, subject/rating vocabulary, thresholds, the `Catalogue` (loads/validates `data/catalogue.yaml`), and JSON source generation.                           |
 | `src/EnrolmentRules.Prediction`                     | GCSE averaging and linear prediction from raw student facts to `StudentProfile`.                                                                                                        |
 | `src/EnrolmentRules.Engine`                         | Workflow and catalogue loading, schema validation, probe compilation, rating evaluation, constraints, aggregation, the `EnrolmentEngine` facade and its `IEnrolmentEngine` abstraction. |
-| `src/EnrolmentRules.Extensions.DependencyInjection` | `AddEnrolmentEngineAsync` / `AddEnrolmentEngine` registration helpers for `Microsoft.Extensions.DependencyInjection` hosts.                                                             |
+| `src/EnrolmentRules.Extensions.DependencyInjection` | `AddEnrolmentEngineFactory` / `AddEnrolmentEngine` registration helpers for `Microsoft.Extensions.DependencyInjection` hosts.                                                           |
 | `src/EnrolmentRules.Cli`                            | `enrolment` executable and table/JSON/batch command line modes.                                                                                                                         |
 | `src/EnrolmentRules.Benchmarks`                     | BenchmarkDotNet harness for engine throughput.                                                                                                                                          |
 | `tests/EnrolmentRules.Tests`                        | xUnit and Awesome Assertions coverage, including engine-driven rule tests, invariants, and golden files.                                                                                |
@@ -336,7 +336,7 @@ dotnet run --project src/EnrolmentRules.Cli -- --advise --all-gcses examples/stu
 
 Statically lint the shipped workflows for structural faults (missing/duplicate tiers, tier
 ordering, off-vocabulary field references, eligibility shape) — input-independent, so it catches a
-typo before any student exercises it. The same lint runs inside `CreateAsync`/`ReloadAsync`, so a
+typo before any student exercises it. The same lint runs inside `Create`/`Reload`, so a
 misordered or off-vocabulary workflow fails startup; `--lint-workflows` is the cheaper authoring
 pre-check that surfaces the identical findings without booting an engine:
 
@@ -379,9 +379,9 @@ ship from this solution:
 | `EnrolmentRules.Domain`                         | Immutable inputs/results, validation, catalogue and qualification-scale domain types.                               |
 | `EnrolmentRules.Prediction`                     | GCSE averaging, DfE transition evidence, and A-level prediction.                                                    |
 | `EnrolmentRules.Engine`                         | The pipeline façade, workflow bootstrap, constraints, aggregation, explanation, and advice.                         |
-| `EnrolmentRules.Extensions.DependencyInjection` | `AddEnrolmentEngineAsync` / `AddEnrolmentEngine` registration for `Microsoft.Extensions.DependencyInjection` hosts. |
+| `EnrolmentRules.Extensions.DependencyInjection` | `AddEnrolmentEngineFactory` / `AddEnrolmentEngine` registration for `Microsoft.Extensions.DependencyInjection` hosts. |
 
-Build the engine **once** — `CreateAsync` runs the full startup recipe (schema-validating thresholds,
+Build the engine **once** — `Create` runs the full startup recipe (schema-validating thresholds,
 the qualification scale, catalogue, and workflows; loading and validating the DfE transition matrix
 — header shape, finite in-range probabilities, per-row totals, and no duplicate subject/band rows;
 semantically linting the workflows; then building and probe-compiling them) — then reuse it across
@@ -394,19 +394,19 @@ using EnrolmentRules.Engine;
 
 // Read the wall clock at this edge; the engine stays a pure function of (document, as-of date).
 var asOf      = DateOnly.FromDateTime(DateTime.Today);
-var enrolment = await EnrolmentEngine.CreateAsync("workflows/", "data/", asOf);
+var enrolment = EnrolmentEngine.Create("workflows/", "data/", asOf);
 
-EnrolmentResult result    = await enrolment.EvaluateAsync(student);
-ExplainedResult explained = await enrolment.ExplainAsync(student);
-AdviceResult    advice    = await enrolment.AdviseAsync(student);
+EnrolmentResult result    = enrolment.Evaluate(student);
+ExplainedResult explained = enrolment.Explain(student);
+AdviceResult    advice    = enrolment.Advise(student);
 ```
 
-For HTTP or other request boundaries, prefer **`TryEvaluateAsync`** (and the matching `TryExplainAsync`
-/ `TryAdviseAsync` overloads): invalid student documents return a structured `ValidationOutcome` instead
+For HTTP or other request boundaries, prefer **`TryEvaluate`** (and the matching `TryExplain`
+/ `TryAdvise` overloads): invalid student documents return a structured `ValidationOutcome` instead
 of throwing, so the host can map problems to 400 responses without a catch block.
 
 ```csharp
-ValidatedEvaluation<EnrolmentResult> validated = await enrolment.TryEvaluateAsync(student);
+ValidatedEvaluation<EnrolmentResult> validated = enrolment.TryEvaluate(student);
 if (!validated.Validation.IsValid)
 {
     return Results.ValidationProblem(validated.Validation.Errors);
@@ -420,10 +420,10 @@ go stale across midnight). Either bind a live source resolved per evaluation, or
 call:
 
 ```csharp
-var live = await EnrolmentEngine.CreateAsync(
+var live = EnrolmentEngine.Create(
     "workflows/", "data/", () => DateOnly.FromDateTime(DateTime.Today));
 
-EnrolmentResult atDate = await enrolment.EvaluateAsync(student, new DateOnly(2026, 1, 15));
+EnrolmentResult atDate = enrolment.Evaluate(student, new DateOnly(2026, 1, 15));
 ```
 
 Depend on **`IEnrolmentEngine`** (the evaluate/explain/advise surface plus the bound `Catalogue` and
@@ -434,11 +434,11 @@ an optional `CancellationToken`.
 
 #### Catalogue and scale snapshots
 
-`EnrolmentEngine.CreateAsync` binds one immutable `CatalogueData` and `QualificationScale` for the
+`EnrolmentEngine.Create` binds one immutable `CatalogueData` and `QualificationScale` for the
 engine's lifetime. Every evaluation path threads those snapshots through prediction, the constraint
 pass, and aggregation. If your host loads a custom `data/` tree (or boots via `IEnrolmentDataSource`),
 **always** pass `enrolment.Catalogue` and `enrolment.Scale` — or the snapshots you passed to
-`CreateAsync` — into boundary validation and any direct calls to `GradePredictor`, `ConstraintPass`,
+`Create` — into boundary validation and any direct calls to `GradePredictor`, `ConstraintPass`,
 `Aggregator`, `WorkflowLinter`, or `StudentValidator`. There are no implicit defaults on those APIs:
 `Catalogue.Default` / `QualificationScale.Default` remain for the shipped reference tables only
 (zero-wiring tests and CLI tooling).
@@ -449,16 +449,16 @@ var problems = StudentValidator.Validate(student, enrolment.Catalogue, enrolment
 ```
 
 For hosts that ship data as embedded resources or another non-filesystem source, implement
-`IEnrolmentDataSource` and call `EnrolmentEngine.CreateAsync(source, ...)`. The bootstrapper consumes
+`IEnrolmentDataSource` and call `EnrolmentEngine.Create(source, ...)`. The bootstrapper consumes
 fresh streams for workflows, all schemas and YAML tables, and the transition matrix, then disposes
 them after constructing the immutable engine snapshot.
 
-In a DI host, bootstrap asynchronously before building the container:
+In a DI host, bootstrap before building the container:
 
 ```csharp
 using EnrolmentRules.Extensions.DependencyInjection;
 
-await services.AddEnrolmentEngineAsync(options => {
+services.AddEnrolmentEngine(options => {
     options.UseWorkflowsDirectory("workflows/");
     options.UseDataDirectory("data/");
     options.UseTimeProvider();        // live clock, resolved per evaluation; or UseFixedAsOf(date)
@@ -466,36 +466,36 @@ await services.AddEnrolmentEngineAsync(options => {
 var provider = services.BuildServiceProvider();
 ```
 
-If the host has already called `EnrolmentEngine.CreateAsync`, register the result with
+If the host has already called `EnrolmentEngine.Create`, register the result with
 `services.AddEnrolmentEngine(engine)` instead. Both paths serve the same stateless singleton through
 `EnrolmentEngine` and `IEnrolmentEngine`.
 
 Workflows and policy YAML are **editable without recompile**, but a running process keeps the snapshot
 loaded at bootstrap until you reload. For hosts that edit `workflows/` or `data/` at runtime, register
-`IEnrolmentEngineFactory` and call `ReloadAsync` after each coherent edit (the library does not watch
+`IEnrolmentEngineFactory` and call `Reload` after each coherent edit (the library does not watch
 the filesystem — scheduling is the host's job). The DI package serves a stable interface proxy that
 reads `Current` on each call, so existing `IEnrolmentEngine` / `IEnrolmentEvaluator` /
 `IEnrolmentAdvisor` resolutions see the reloaded policy without rebuilding the container:
 
 ```csharp
-await services.AddEnrolmentEngineFactoryAsync(options => {
+services.AddEnrolmentEngineFactory(options => {
     options.UseWorkflowsDirectory("workflows/");
     options.UseDataDirectory("data/");
 });
 var factory = provider.GetRequiredService<IEnrolmentEngineFactory>();
-await factory.ReloadAsync(); // re-runs the full startup recipe; leaves Current unchanged on failure
+factory.Reload(); // re-runs the full startup recipe; leaves Current unchanged on failure
 ```
 
 #### Hosting Advise
 
-`AdviseAsync` runs many full pipeline evaluations per subject (grade-cost search × counterfactual
+`Advise` runs many full pipeline evaluations per subject (grade-cost search × counterfactual
 swaps). Treat it as a **diagnostic** operation: never map it to a synchronous hot HTTP path, always
 pass a `CancellationToken` linked to request abort, and rate-limit or queue it. Limits live in
 `data/thresholds.yaml` (`advice_max_grade_cost`, `advice_max_subjects_changed`, optional
 `advice_max_pipeline_evaluations`); when the pipeline cap is hit, `AdviceResult.TruncationReason` is
 `"advice truncated"`. Prefer `IEnrolmentAdvisor` only in tools that need this surface.
 
-For the per-request and batch costs this design delivers — and why `AdviseAsync` is the one call to
+For the per-request and batch costs this design delivers — and why `Advise` is the one call to
 keep off a hot path — see the [performance & benchmarks note](benchmarks.md).
 
 ## Deeper References
@@ -513,7 +513,7 @@ keep off a hot path — see the [performance & benchmarks note](benchmarks.md).
 This project is built to be embedded as a **high-performance, stateless library**: construct the
 engine once at startup, then reuse a single instance across requests — including concurrently. A
 warm single-student evaluation costs roughly **13 µs / 59 KB** (all Gen0), and batch evaluation
-scales linearly over the shared engine with no reuse overhead. The one exception is `AdviseAsync`
+scales linearly over the shared engine with no reuse overhead. The one exception is `Advise`
 (counterfactual advice), which is orders of magnitude heavier and should be treated as an isolated,
 rate-limited operation rather than a hot-path call.
 

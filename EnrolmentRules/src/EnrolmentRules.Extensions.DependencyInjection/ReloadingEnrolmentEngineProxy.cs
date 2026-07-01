@@ -17,71 +17,71 @@ internal sealed class ReloadingEnrolmentEngineProxy(IEnrolmentEngineFactory fact
 
 	public QualificationScale Scale => Evaluator.Scale;
 
-	public Task<EnrolmentResult> EvaluateAsync(StudentInput student, CancellationToken cancellationToken = default) =>
-		Evaluator.EvaluateAsync(student, cancellationToken);
+	public EnrolmentResult Evaluate(StudentInput student, CancellationToken cancellationToken = default) =>
+		Evaluator.Evaluate(student, cancellationToken);
 
-	public Task<EnrolmentResult> EvaluateAsync(StudentInput student, DateOnly asOf, CancellationToken cancellationToken = default) =>
-		Evaluator.EvaluateAsync(student, asOf, cancellationToken);
+	public EnrolmentResult Evaluate(StudentInput student, DateOnly asOf, CancellationToken cancellationToken = default) =>
+		Evaluator.Evaluate(student, asOf, cancellationToken);
 
-	public Task<ExplainedResult> ExplainAsync(StudentInput student, CancellationToken cancellationToken = default) =>
-		Evaluator.ExplainAsync(student, cancellationToken);
+	public ExplainedResult Explain(StudentInput student, CancellationToken cancellationToken = default) =>
+		Evaluator.Explain(student, cancellationToken);
 
-	public Task<ExplainedResult> ExplainAsync(StudentInput student, DateOnly asOf, CancellationToken cancellationToken = default) =>
-		Evaluator.ExplainAsync(student, asOf, cancellationToken);
+	public ExplainedResult Explain(StudentInput student, DateOnly asOf, CancellationToken cancellationToken = default) =>
+		Evaluator.Explain(student, asOf, cancellationToken);
 
-	public Task<AdviceResult> AdviseAsync(StudentInput student, CancellationToken cancellationToken = default) =>
-		Advisor.AdviseAsync(student, cancellationToken);
+	public AdviceResult Advise(StudentInput student, CancellationToken cancellationToken = default) =>
+		Advisor.Advise(student, cancellationToken);
 
-	public Task<AdviceResult> AdviseAsync(StudentInput student, DateOnly asOf, CancellationToken cancellationToken = default) =>
-		Advisor.AdviseAsync(student, asOf, cancellationToken);
+	public AdviceResult Advise(StudentInput student, DateOnly asOf, CancellationToken cancellationToken = default) =>
+		Advisor.Advise(student, asOf, cancellationToken);
 
-	public Task<AdviceResult> AdviseAsync(StudentInput student, bool considerUnsatGcses, CancellationToken cancellationToken = default) =>
-		Advisor.AdviseAsync(student, considerUnsatGcses, cancellationToken);
+	public AdviceResult Advise(StudentInput student, bool considerUnsatGcses, CancellationToken cancellationToken = default) =>
+		Advisor.Advise(student, considerUnsatGcses, cancellationToken);
 
-	public Task<AdviceResult> AdviseAsync(
+	public AdviceResult Advise(
 		StudentInput student,
 		DateOnly asOf,
 		bool considerUnsatGcses,
 		CancellationToken cancellationToken = default) =>
-		Advisor.AdviseAsync(student, asOf, considerUnsatGcses, cancellationToken);
+		Advisor.Advise(student, asOf, considerUnsatGcses, cancellationToken);
 
-	public Task<ValidatedEvaluation<EnrolmentResult>> TryEvaluateAsync(StudentInput student, CancellationToken cancellationToken = default) =>
-		Evaluator.TryEvaluateAsync(student, cancellationToken);
+	public ValidatedEvaluation<EnrolmentResult> TryEvaluate(StudentInput student, CancellationToken cancellationToken = default) =>
+		Evaluator.TryEvaluate(student, cancellationToken);
 
-	public Task<ValidatedEvaluation<EnrolmentResult>> TryEvaluateAsync(
+	public ValidatedEvaluation<EnrolmentResult> TryEvaluate(
 		StudentInput student,
 		DateOnly asOf,
 		CancellationToken cancellationToken = default) =>
-		Evaluator.TryEvaluateAsync(student, asOf, cancellationToken);
+		Evaluator.TryEvaluate(student, asOf, cancellationToken);
 
-	public Task<ValidatedEvaluation<ExplainedResult>> TryExplainAsync(StudentInput student, CancellationToken cancellationToken = default) =>
-		Evaluator.TryExplainAsync(student, cancellationToken);
+	public ValidatedEvaluation<ExplainedResult> TryExplain(StudentInput student, CancellationToken cancellationToken = default) =>
+		Evaluator.TryExplain(student, cancellationToken);
 
-	public Task<ValidatedEvaluation<ExplainedResult>> TryExplainAsync(
+	public ValidatedEvaluation<ExplainedResult> TryExplain(
 		StudentInput student,
 		DateOnly asOf,
 		CancellationToken cancellationToken = default) =>
-		Evaluator.TryExplainAsync(student, asOf, cancellationToken);
+		Evaluator.TryExplain(student, asOf, cancellationToken);
 
-	public Task<ValidatedEvaluation<AdviceResult>> TryAdviseAsync(StudentInput student, CancellationToken cancellationToken = default) =>
-		Advisor.TryAdviseAsync(student, cancellationToken);
+	public ValidatedEvaluation<AdviceResult> TryAdvise(StudentInput student, CancellationToken cancellationToken = default) =>
+		Advisor.TryAdvise(student, cancellationToken);
 
-	public Task<ValidatedEvaluation<AdviceResult>> TryAdviseAsync(
+	public ValidatedEvaluation<AdviceResult> TryAdvise(
 		StudentInput student,
 		DateOnly asOf,
 		CancellationToken cancellationToken = default) =>
-		Advisor.TryAdviseAsync(student, asOf, cancellationToken);
+		Advisor.TryAdvise(student, asOf, cancellationToken);
 
-	public Task<ValidatedEvaluation<AdviceResult>> TryAdviseAsync(
+	public ValidatedEvaluation<AdviceResult> TryAdvise(
 		StudentInput student,
 		bool considerUnsatGcses,
 		CancellationToken cancellationToken = default) =>
-		Advisor.TryAdviseAsync(student, considerUnsatGcses, cancellationToken);
+		Advisor.TryAdvise(student, considerUnsatGcses, cancellationToken);
 
-	public Task<ValidatedEvaluation<AdviceResult>> TryAdviseAsync(
+	public ValidatedEvaluation<AdviceResult> TryAdvise(
 		StudentInput student,
 		DateOnly asOf,
 		bool considerUnsatGcses,
 		CancellationToken cancellationToken = default) =>
-		Advisor.TryAdviseAsync(student, asOf, considerUnsatGcses, cancellationToken);
+		Advisor.TryAdvise(student, asOf, considerUnsatGcses, cancellationToken);
 }
