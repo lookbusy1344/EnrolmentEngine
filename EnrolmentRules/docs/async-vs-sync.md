@@ -171,6 +171,46 @@ enough** — the statelessness makes scale-out affinity-free. Because results ar
 immutable inputs, they are also memoizable; caching is often the largest win before any of the above.
 None of that is an argument for `async` on the evaluation path.
 
+### Calling a slow path from an ASP.NET action without tying up the request thread
+
+`Task.Run` is not a blanket wrapper for the engine — it is worth reaching for only when the call
+is genuinely slow enough that freeing the request thread for its duration matters. `Advise`'s
+counterfactual search is the case that qualifies: the benchmarks above show it re-running the
+predict → engine pipeline tens of thousands of times per call (≈43,000 internal evaluations for
+the worst-case student), giving wall-clock time in the millisecond-to-second range rather than
+`Evaluate`/`Explain`'s microseconds. The controller action stays `async` for the framework's own
+I/O; it just doesn't `await` the engine directly, because there is nothing to await — instead it
+offloads the slow, synchronous, CPU-bound call to a thread-pool worker thread and awaits that:
+
+```csharp
+public sealed class AdvisorController(IEnrolmentAdvisor advisor) : ControllerBase
+{
+	[HttpPost("advise")]
+	public async Task<ActionResult<AdviceResult>> Advise(
+		StudentInput student,
+		CancellationToken cancellationToken)
+	{
+		// Task.Run hands the synchronous, CPU-bound counterfactual search to a thread-pool
+		// worker thread and frees the request thread while it runs; the state machine's
+		// continuation resumes here once the search completes.
+		var result = await Task.Run(
+			() => advisor.Advise(student, cancellationToken),
+			cancellationToken);
+
+		return Ok(result);
+	}
+}
+```
+
+This is not "making the engine async" — `Advise` itself is still the honest synchronous call
+described above. `Task.Run` is the caller's choice to spend a thread-pool thread now in exchange
+for freeing the request thread during the computation. **Do not apply the same wrapper to
+`Evaluate`/`Explain`/`TryEvaluate`/`TryExplain`:** those return in microseconds, so the `Task.Run`
+scheduling overhead would exceed the work being offloaded, and the request thread was never tied
+up long enough to matter — call them inline in the action body instead. Reach for lever 1
+(caching) before reaching for `Task.Run` at all; a memoized `Advise` result needs no thread
+offloaded.
+
 ### Mitigations, in order of reach
 
 When the engine is under heavy load behind ASP.NET, reach for these — cheapest and highest-leverage

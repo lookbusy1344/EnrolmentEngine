@@ -496,7 +496,10 @@ pass a `CancellationToken` linked to request abort, and rate-limit or queue it. 
 `"advice truncated"`. Prefer `IEnrolmentAdvisor` only in tools that need this surface.
 
 For the per-request and batch costs this design delivers — and why `Advise` is the one call to
-keep off a hot path — see the [performance & benchmarks note](benchmarks.md).
+keep off a hot path — see the [performance & benchmarks note](benchmarks.md). For why the engine's
+API is synchronous despite that cost, and a worked example of offloading a slow `Advise` call from
+an ASP.NET request thread with `Task.Run`, see the
+[async vs. synchronous note](async-vs-sync.md#calling-a-slow-path-from-an-aspnet-action-without-tying-up-the-request-thread).
 
 ## Deeper References
 
@@ -507,6 +510,8 @@ keep off a hot path — see the [performance & benchmarks note](benchmarks.md).
   rather than NRules/RETE.
 - [Performance & benchmarks note](benchmarks.md) records the per-request and batch costs that
   back the "high-performance, reusable library" design, with hosting guidance.
+- [Async vs. synchronous note](async-vs-sync.md) explains why the evaluation path is synchronous
+  end to end, and how to keep a slow `Advise` call off an ASP.NET request thread.
 
 ## Benchmarks
 

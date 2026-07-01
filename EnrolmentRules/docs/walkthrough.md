@@ -159,7 +159,7 @@ those rules can express → C#.
 
 ## 4. Step-by-step: how one student flows through
 
-This is the order in `EnrolmentEngine.RunAsync`. The order is fixed because each step consumes
+This is the order in `EnrolmentEngine.Run`. The order is fixed because each step consumes
 the previous step's output.
 
 ### Step 1 — Prediction (`GradePredictor.Predict`)
@@ -310,7 +310,7 @@ A small workflow of three independent rules:
 | `MathsPass` | Maths GCSE ≥ `policy.PassGrade` (4) |
 | `EnoughPasses` | count of GCSEs at grade ≥ 4 is ≥ `policy.MinPasses` (5) |
 
-The engine reports each rule's pass/fail. `RatingEvaluator.EvaluateEligibilityAsync` then
+The engine reports each rule's pass/fail. `RatingEvaluator.EvaluateEligibility` then
 *assembles the verdict in host code*: if any rule failed, the student is ineligible and each
 failed rule's reason is projected from the loaded thresholds (keyed by `RuleName`), kept in
 declared order. Projecting the text from `PolicyThresholds` rather than reading a static
@@ -485,7 +485,7 @@ so a probability-gated green or amber rule cannot pass accidentally.
 
 **"First hit wins" is enforced by host code, not the engine.** The engine runs *every* rule
 and returns all results — there is no built-in short-circuit. A green-eligible student also
-satisfies the amber rule (and the always-true red rule). So `RatingEvaluator.EvaluateRatingsAsync`
+satisfies the amber rule (and the always-true red rule). So `RatingEvaluator.EvaluateRatings`
 scans the results **in declared order and takes the first success** per subject. Authoring the
 rules green → amber → red is therefore the *intended policy*, and the host scan is what
 *realises* it.
@@ -802,7 +802,7 @@ change is a code change, and it must keep all seven layers green
 
 ## 8. Where to read next
 
-- `src/EnrolmentRules.Engine/EnrolmentEngine.cs` — the façade; read `RunAsync` to see the
+- `src/EnrolmentRules.Engine/EnrolmentEngine.cs` — the façade; read `Run` to see the
   pipeline order in one place.
 - `src/EnrolmentRules.Engine/WorkflowStore.cs` — loading, schema validation, and probe
   compilation.

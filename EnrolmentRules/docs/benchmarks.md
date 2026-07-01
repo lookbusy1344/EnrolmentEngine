@@ -72,6 +72,8 @@ your target hardware for absolute numbers.
 - **Treat `Advise` as a heavyweight, isolated operation.** Do **not** place it on a hot or
   uncontrolled HTTP path. Rate-limit it, run it on a background queue, cache results, and bound the
   search where you can. It is an occasional advisory operation, not part of the throughput budget.
+  See the [async vs. synchronous note](async-vs-sync.md#calling-a-slow-path-from-an-aspnet-action-without-tying-up-the-request-thread)
+  for a worked `Task.Run` example that frees the request thread for the duration of the search.
 - **Reference date at the edge.** For long-running hosts bind a live `Func<DateOnly>` (resolved per
   evaluation) or pass an explicit `asOf` per call, so a student's age cannot freeze at construction.
 
