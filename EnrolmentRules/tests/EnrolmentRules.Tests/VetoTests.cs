@@ -113,9 +113,9 @@ public sealed class VetoTests
 	}
 
 	[Fact]
-	public async Task veto_overrides_a_green_music_end_to_end()
+	public void veto_overrides_a_green_music_end_to_end()
 	{
-		var engine = await Harness.ShippedEngineAsync();
+		var engine = Harness.ShippedEngine();
 
 		var result = engine.Evaluate(StrongStudent(TromboneHobby));
 

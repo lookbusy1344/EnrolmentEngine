@@ -16,15 +16,13 @@ internal static class Harness
 	///     The shipped engine, built once and memoised for the whole suite. Loading + JSON-schema
 	///     validation + RulesEngine construction + probe-compilation of every lambda (Roslyn) is the
 	///     dominant cost; it is identical on every call and the engine is read-only after build, so a
-	///     single cached instance is reused across all tests — including the parallel ones. Held behind a
-	///     reference-typed field (reference writes are atomic, so the lock-free fast path can never read a
-	///     torn value) and built under <see cref="buildGate" /> so the build runs exactly once even when
-	///     several test classes race the first call. After the build, RulesEngine's compiled-lambda cache
-	///     is fully warm, so the concurrent evaluations the parallel suite drives are pure reads.
+	///     single cached instance is reused across all tests — including the parallel ones. Published
+	///     through <see cref="Lazy{T}" /> with <see cref="LazyThreadSafetyMode.ExecutionAndPublication" />
+	///     so the build runs exactly once, publishes only a fully probe-compiled engine, and preserves
+	///     exception propagation if startup fails. After the build, RulesEngine's compiled-lambda cache is
+	///     fully warm, so the concurrent evaluations the parallel suite drives are pure reads.
 	/// </summary>
-	private static Built? shipped;
-
-	private static readonly SemaphoreSlim buildGate = new(1, 1);
+	private static readonly Lazy<Built> shipped = new(BuildShipped, LazyThreadSafetyMode.ExecutionAndPublication);
 	public static string RepoRoot { get; } = FindRepoRoot();
 
 	/// <summary>
@@ -53,36 +51,16 @@ internal static class Harness
 		GradePredictor.Predict(student, student.ToGcseResults(), AsOf, Catalogue, Scale);
 
 	/// <summary>Load + validate + probe-compile the shipped workflows and construct the engine over them.</summary>
-	public static async Task<(IReadOnlyList<Workflow> Workflows, IRulesEngine Engine)> BuildFromShippedWorkflowsAsync()
-	{
-		if (shipped is { } cached) {
-			return (cached.Workflows, cached.Engine);
-		}
-
-		await buildGate.WaitAsync().ConfigureAwait(false);
-		try {
-			if (shipped is { } raced) {
-				return (raced.Workflows, raced.Engine);
-			}
-
-			var workflows = WorkflowStore.LoadAndValidate(WorkflowsDir, SchemaPath);
-			var engine = WorkflowStore.BuildEngine(workflows);
-			WorkflowStore.ProbeCompile(engine, workflows, CanonicalProbe());
-			shipped = new(workflows, engine);
-			return (workflows, engine);
-		}
-		finally {
-			_ = buildGate.Release();
-		}
-	}
+	public static (IReadOnlyList<Workflow> Workflows, IRulesEngine Engine) BuildFromShippedWorkflows() =>
+		(shipped.Value.Workflows, shipped.Value.Engine);
 
 	/// <summary>A <see cref="RatingEvaluator" /> over the shipped workflows for the host-side verdict tests.</summary>
-	public static async Task<RatingEvaluator> ShippedEvaluatorAsync() =>
-		new((await BuildFromShippedWorkflowsAsync()).Engine, Thresholds, Catalogue, Scale);
+	public static RatingEvaluator ShippedEvaluator() =>
+		new(BuildFromShippedWorkflows().Engine, Thresholds, Catalogue, Scale);
 
 	/// <summary>The full <see cref="EnrolmentEngine" /> façade over the shipped workflows (end-to-end tests).</summary>
-	public static async Task<EnrolmentEngine> ShippedEngineAsync() =>
-		new((await BuildFromShippedWorkflowsAsync()).Engine, Thresholds, Catalogue, AsOf, Scale);
+	public static EnrolmentEngine ShippedEngine() =>
+		new(BuildFromShippedWorkflows().Engine, Thresholds, Catalogue, AsOf, Scale);
 
 	/// <summary>
 	///     The canonical probe input — the <em>union</em> of every shipped workflow's bound parameters, so
@@ -95,11 +73,12 @@ internal static class Harness
 	{
 		var student = WorkflowStore.CanonicalProbeStudent(thresholds);
 		var gcses = student.ToGcseResults();
+		var lookup = new GcseFacts(gcses);
 		var profile = GradePredictor.Predict(student, gcses, AsOf, Catalogue, Scale);
 
 		return [
-			.. RatingEvaluator.EligibilityParameters(gcses, thresholds),
-			new("facts", new RatingFacts(profile, gcses, new(thresholds), Catalogue, Scale)),
+			.. RatingEvaluator.EligibilityParameters(gcses, lookup, new(thresholds)),
+			new("facts", new RatingFacts(profile, lookup, new(thresholds), Catalogue, Scale)),
 		];
 	}
 
@@ -110,6 +89,14 @@ internal static class Harness
 		Directory.CreateDirectory(dir);
 		File.WriteAllText(Path.Combine(dir, fileName), content);
 		return dir;
+	}
+
+	private static Built BuildShipped()
+	{
+		var workflows = WorkflowStore.LoadAndValidate(WorkflowsDir, SchemaPath);
+		var engine = WorkflowStore.BuildEngine(workflows);
+		WorkflowStore.ProbeCompile(engine, workflows, CanonicalProbe());
+		return new(workflows, engine);
 	}
 
 	private static string FindRepoRoot()

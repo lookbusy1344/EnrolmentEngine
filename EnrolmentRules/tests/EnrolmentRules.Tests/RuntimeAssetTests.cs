@@ -13,14 +13,17 @@ using Domain;
 /// </summary>
 public sealed class RuntimeAssetTests
 {
+	private const int ProcessTimeoutMilliseconds = 30_000;
+	private const int ThreadJoinTimeoutMilliseconds = 5_000;
+
 	[Fact]
-	public async Task published_cli_contains_its_runtime_assets_and_can_evaluate_outside_the_source_tree()
+	public void published_cli_contains_its_runtime_assets_and_can_evaluate_outside_the_source_tree()
 	{
 		var publishDir = Path.Combine(Path.GetTempPath(), "enrolmentrules-tests", "publish-" + Guid.NewGuid().ToString("N"));
 		Directory.CreateDirectory(publishDir);
 
 		var cliProject = Path.Combine(Harness.RepoRoot, "src", "EnrolmentRules.Cli", "EnrolmentRules.Cli.csproj");
-		var publish = await RunProcessAsync(
+		var publish = RunProcess(
 			"dotnet",
 			["publish", cliProject, "-c", "Debug", "--no-restore", "-o", publishDir],
 			Harness.RepoRoot);
@@ -40,13 +43,13 @@ public sealed class RuntimeAssetTests
 		File.Exists(executable).Should().BeTrue();
 
 		var inputPath = Path.Combine(publishDir, "student.json");
-		await File.WriteAllTextAsync(
+		File.WriteAllText(
 			inputPath,
 			"""
 			{"student":{"id":"S-OK","gcses":{"english_language":6,"maths":6,"physics":6,"chemistry":6,"biology":6},"hobbies":[],"date_of_birth":"2009-09-01"}}
 			""");
 
-		var run = await RunProcessAsync(executable, ["--json", inputPath], publishDir);
+		var run = RunProcess(executable, ["--json", inputPath], publishDir);
 
 		run.ExitCode.Should().Be(CliRunner.ExitOk, run.Stderr);
 		run.Stderr.Should().BeEmpty();
@@ -55,7 +58,7 @@ public sealed class RuntimeAssetTests
 		result!.Eligible.Should().BeTrue();
 	}
 
-	private static async Task<ProcessResult> RunProcessAsync(
+	private static ProcessResult RunProcess(
 		string fileName,
 		IEnumerable<string> arguments,
 		string workingDirectory,
@@ -76,12 +79,38 @@ public sealed class RuntimeAssetTests
 		using var process = Process.Start(startInfo);
 		process.Should().NotBeNull();
 
-		timeout ??= TimeSpan.FromSeconds(30);
-		var outputTask = process!.StandardOutput.ReadToEndAsync();
-		var errorTask = process.StandardError.ReadToEndAsync();
-		await process.WaitForExitAsync().WaitAsync(timeout.Value);
+		timeout ??= TimeSpan.FromMilliseconds(ProcessTimeoutMilliseconds);
+		var stdout = string.Empty;
+		var stderr = string.Empty;
 
-		return new(process.ExitCode, await outputTask, await errorTask);
+		var outputThread = new Thread(() => stdout = process!.StandardOutput.ReadToEnd()) { IsBackground = true };
+		var errorThread = new Thread(() => stderr = process!.StandardError.ReadToEnd()) { IsBackground = true };
+		outputThread.Start();
+		errorThread.Start();
+
+		if (!process!.WaitForExit((int)timeout.Value.TotalMilliseconds)) {
+			try {
+				process.Kill(entireProcessTree: true);
+			}
+			catch (InvalidOperationException) {
+			}
+
+			_ = process.WaitForExit(ThreadJoinTimeoutMilliseconds);
+			JoinThread(outputThread, "stdout reader");
+			JoinThread(errorThread, "stderr reader");
+			throw new TimeoutException($"Process '{fileName}' did not exit within {timeout.Value.TotalSeconds:N0} seconds.");
+		}
+
+		JoinThread(outputThread, "stdout reader");
+		JoinThread(errorThread, "stderr reader");
+		return new(process.ExitCode, stdout, stderr);
+	}
+
+	private static void JoinThread(Thread thread, string description)
+	{
+		if (!thread.Join(ThreadJoinTimeoutMilliseconds)) {
+			throw new TimeoutException($"{description} did not finish within {ThreadJoinTimeoutMilliseconds}ms.");
+		}
 	}
 
 	private sealed record ProcessResult(int ExitCode, string Stdout, string Stderr);

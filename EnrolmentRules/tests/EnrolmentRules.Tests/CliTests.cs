@@ -4,6 +4,7 @@ using System.Text.Json;
 using AwesomeAssertions;
 using Cli;
 using Domain;
+using Engine;
 
 /// <summary>
 ///     Phase 8 — CLI polish, input validation, and parallel batch evaluation. Input validation is the
@@ -130,11 +131,11 @@ public sealed class CliTests
 	// ---- CLI validation gating ---------------------------------------------------------------
 
 	[Fact]
-	public async Task cli_rejects_an_out_of_range_grade_with_an_input_error_not_a_silent_rating()
+	public void cli_rejects_an_out_of_range_grade_with_an_input_error_not_a_silent_rating()
 	{
 		var path = WriteTemp(StudentLine("S-BAD", """{"maths":10}"""), ".json");
-		await using var stdout = new StringWriter();
-		await using var stderr = new StringWriter();
+		using var stdout = new StringWriter();
+		using var stderr = new StringWriter();
 
 		var exit = CliRunner.Run(["--json", path], stdout, stderr);
 
@@ -144,11 +145,11 @@ public sealed class CliTests
 	}
 
 	[Fact]
-	public async Task cli_rejects_an_unknown_subject_with_an_input_error()
+	public void cli_rejects_an_unknown_subject_with_an_input_error()
 	{
 		var path = WriteTemp(StudentLine("S-BAD", """{"quidditch":6}"""), ".json");
-		await using var stdout = new StringWriter();
-		await using var stderr = new StringWriter();
+		using var stdout = new StringWriter();
+		using var stderr = new StringWriter();
 
 		var exit = CliRunner.Run(["--table", path], stdout, stderr);
 
@@ -157,11 +158,11 @@ public sealed class CliTests
 	}
 
 	[Fact]
-	public async Task cli_rejects_missing_required_student_members_with_an_input_error()
+	public void cli_rejects_missing_required_student_members_with_an_input_error()
 	{
 		var path = WriteTemp("""{"student":{"id":"S-BAD","gcses":{"maths":6}}}""", ".json");
-		await using var stdout = new StringWriter();
-		await using var stderr = new StringWriter();
+		using var stdout = new StringWriter();
+		using var stderr = new StringWriter();
 
 		var exit = CliRunner.Run(["--json", path], stdout, stderr);
 
@@ -171,11 +172,11 @@ public sealed class CliTests
 	}
 
 	[Fact]
-	public async Task cli_rejects_an_unknown_chosen_a_level_value_with_an_input_error()
+	public void cli_rejects_an_unknown_chosen_a_level_value_with_an_input_error()
 	{
 		var path = WriteTemp("""{"student":{"id":"S-BAD","gcses":{"maths":6},"hobbies":[],"chosen_a_levels":["philosophy"]}}""", ".json");
-		await using var stdout = new StringWriter();
-		await using var stderr = new StringWriter();
+		using var stdout = new StringWriter();
+		using var stderr = new StringWriter();
 
 		var exit = CliRunner.Run(["--json", path], stdout, stderr);
 
@@ -187,12 +188,12 @@ public sealed class CliTests
 	// ---- ineligible exit code (single-student modes) -----------------------------------------
 
 	[Fact]
-	public async Task cli_json_on_an_ineligible_student_exits_ineligible_but_still_emits_the_result()
+	public void cli_json_on_an_ineligible_student_exits_ineligible_but_still_emits_the_result()
 	{
 		// Only Maths present ⇒ no English pass and too few passes ⇒ ineligible.
 		var path = WriteTemp(StudentLine("S-INELIGIBLE", """{"maths":6}"""), ".json");
-		await using var stdout = new StringWriter();
-		await using var stderr = new StringWriter();
+		using var stdout = new StringWriter();
+		using var stderr = new StringWriter();
 
 		var exit = CliRunner.Run(["--json", path], stdout, stderr);
 
@@ -203,11 +204,11 @@ public sealed class CliTests
 	}
 
 	[Fact]
-	public async Task cli_json_on_an_eligible_student_exits_ok()
+	public void cli_json_on_an_eligible_student_exits_ok()
 	{
 		var path = WriteTemp(EligibleLine("S-OK"), ".json");
-		await using var stdout = new StringWriter();
-		await using var stderr = new StringWriter();
+		using var stdout = new StringWriter();
+		using var stderr = new StringWriter();
 
 		CliRunner.Run(["--json", path], stdout, stderr).Should().Be(CliRunner.ExitOk);
 	}
@@ -215,11 +216,11 @@ public sealed class CliTests
 	// ---- coloured table ----------------------------------------------------------------------
 
 	[Fact]
-	public async Task cli_table_renders_every_subject_with_its_rating()
+	public void cli_table_renders_every_subject_with_its_rating()
 	{
 		var path = Path.Combine(Harness.RepoRoot, "examples", "student.json");
-		await using var stdout = new StringWriter();
-		await using var stderr = new StringWriter();
+		using var stdout = new StringWriter();
+		using var stderr = new StringWriter();
 
 		var exit = CliRunner.Run(["--table", path], stdout, stderr);
 
@@ -244,13 +245,13 @@ public sealed class CliTests
 	// ---- batch -------------------------------------------------------------------------------
 
 	[Fact]
-	public async Task cli_batch_emits_one_well_formed_result_per_line_in_input_order()
+	public void cli_batch_emits_one_well_formed_result_per_line_in_input_order()
 	{
 		var ids = new[] { "S-A", "S-B", "S-C" };
 		var jsonl = string.Join('\n', ids.Select(EligibleLine));
 		var path = WriteTemp(jsonl, ".jsonl");
-		await using var stdout = new StringWriter();
-		await using var stderr = new StringWriter();
+		using var stdout = new StringWriter();
+		using var stderr = new StringWriter();
 
 		var exit = CliRunner.Run(["--batch", path], stdout, stderr);
 
@@ -266,7 +267,7 @@ public sealed class CliTests
 	}
 
 	[Fact]
-	public async Task cli_batch_isolates_a_bad_line_without_aborting_the_run()
+	public void cli_batch_isolates_a_bad_line_without_aborting_the_run()
 	{
 		// A valid student, then one with an out-of-range grade, then another valid student.
 		var jsonl = string.Join('\n',
@@ -274,8 +275,8 @@ public sealed class CliTests
 			StudentLine("S-BAD", """{"maths":99}"""),
 			EligibleLine("S-C"));
 		var path = WriteTemp(jsonl, ".jsonl");
-		await using var stdout = new StringWriter();
-		await using var stderr = new StringWriter();
+		using var stdout = new StringWriter();
+		using var stderr = new StringWriter();
 
 		var exit = CliRunner.Run(["--batch", path], stdout, stderr);
 
@@ -290,15 +291,15 @@ public sealed class CliTests
 	}
 
 	[Fact]
-	public async Task cli_batch_isolates_a_line_with_missing_required_members()
+	public void cli_batch_isolates_a_line_with_missing_required_members()
 	{
 		var jsonl = string.Join('\n',
 			EligibleLine("S-A"),
 			"""{"student":{"id":"S-BAD","gcses":{"maths":6}}}""",
 			EligibleLine("S-C"));
 		var path = WriteTemp(jsonl, ".jsonl");
-		await using var stdout = new StringWriter();
-		await using var stderr = new StringWriter();
+		using var stdout = new StringWriter();
+		using var stderr = new StringWriter();
 
 		var exit = CliRunner.Run(["--batch", path], stdout, stderr);
 
@@ -312,15 +313,15 @@ public sealed class CliTests
 	}
 
 	[Fact]
-	public async Task cli_batch_isolates_a_line_with_an_unknown_chosen_a_level_value()
+	public void cli_batch_isolates_a_line_with_an_unknown_chosen_a_level_value()
 	{
 		var jsonl = string.Join('\n',
 			EligibleLine("S-A"),
 			"""{"student":{"id":"S-BAD","gcses":{"maths":6},"hobbies":[],"chosen_a_levels":["philosophy"]}}""",
 			EligibleLine("S-C"));
 		var path = WriteTemp(jsonl, ".jsonl");
-		await using var stdout = new StringWriter();
-		await using var stderr = new StringWriter();
+		using var stdout = new StringWriter();
+		using var stderr = new StringWriter();
 
 		var exit = CliRunner.Run(["--batch", path], stdout, stderr);
 
@@ -335,11 +336,11 @@ public sealed class CliTests
 	}
 
 	[Fact]
-	public async Task cli_batch_on_a_missing_file_is_an_input_error()
+	public void cli_batch_on_a_missing_file_is_an_input_error()
 	{
 		var missing = Path.Combine(Path.GetTempPath(), "no-such-batch-" + Guid.NewGuid().ToString("N") + ".jsonl");
-		await using var stdout = new StringWriter();
-		await using var stderr = new StringWriter();
+		using var stdout = new StringWriter();
+		using var stderr = new StringWriter();
 
 		CliRunner.Run(["--batch", missing], stdout, stderr).Should().Be(CliRunner.ExitInput);
 	}
@@ -361,11 +362,11 @@ public sealed class CliTests
 													  """;
 
 	[Fact]
-	public async Task cli_json_accepts_a_yaml_student_document()
+	public void cli_json_accepts_a_yaml_student_document()
 	{
 		var path = WriteTemp(EligibleYaml("S-YAML"), ".yaml");
-		await using var stdout = new StringWriter();
-		await using var stderr = new StringWriter();
+		using var stdout = new StringWriter();
+		using var stderr = new StringWriter();
 
 		var exit = CliRunner.Run(["--json", path], stdout, stderr);
 
@@ -376,16 +377,16 @@ public sealed class CliTests
 	}
 
 	[Fact]
-	public async Task cli_json_on_equivalent_yaml_and_json_documents_produces_identical_output()
+	public void cli_json_on_equivalent_yaml_and_json_documents_produces_identical_output()
 	{
-		var jsonOut = await CaptureJsonAsync(Path.Combine(Harness.RepoRoot, "examples", "student.json"));
-		var yamlOut = await CaptureJsonAsync(Path.Combine(Harness.RepoRoot, "examples", "student.yaml"));
+		var jsonOut = CaptureJson(Path.Combine(Harness.RepoRoot, "examples", "student.json"));
+		var yamlOut = CaptureJson(Path.Combine(Harness.RepoRoot, "examples", "student.yaml"));
 
 		yamlOut.Should().Be(jsonOut);
 	}
 
 	[Fact]
-	public async Task cli_applies_input_validation_to_yaml_documents_too()
+	public void cli_applies_input_validation_to_yaml_documents_too()
 	{
 		const string yaml = """
 							student:
@@ -395,8 +396,8 @@ public sealed class CliTests
 							  hobbies: []
 							""";
 		var path = WriteTemp(yaml, ".yml");
-		await using var stdout = new StringWriter();
-		await using var stderr = new StringWriter();
+		using var stdout = new StringWriter();
+		using var stderr = new StringWriter();
 
 		var exit = CliRunner.Run(["--table", path], stdout, stderr);
 
@@ -405,12 +406,12 @@ public sealed class CliTests
 	}
 
 	[Fact]
-	public async Task cli_rejects_malformed_yaml_with_an_input_error()
+	public void cli_rejects_malformed_yaml_with_an_input_error()
 	{
 		// Unbalanced flow mapping ⇒ a YAML parse error, surfaced as an input error rather than a crash.
 		var path = WriteTemp("student: {id: S-BAD", ".yaml");
-		await using var stdout = new StringWriter();
-		await using var stderr = new StringWriter();
+		using var stdout = new StringWriter();
+		using var stderr = new StringWriter();
 
 		var exit = CliRunner.Run(["--json", path], stdout, stderr);
 
@@ -418,10 +419,71 @@ public sealed class CliTests
 		stdout.ToString().Should().BeEmpty();
 	}
 
-	private static async Task<string> CaptureJsonAsync(string path)
+	[Fact]
+	public void cli_reports_malformed_catalogue_yaml_as_an_input_error_for_evaluation_modes()
 	{
-		await using var stdout = new StringWriter();
-		await using var stderr = new StringWriter();
+		var fixture = WriteMalformedDataFixture();
+		try {
+			var path = WriteTemp(EligibleLine("S-OK"), ".json");
+			using var stdout = new StringWriter();
+			using var stderr = new StringWriter();
+
+			var exit = CliRunner.Run(["--json", path], stdout, stderr, () => Harness.WorkflowsDir, () => fixture.Item2);
+
+			exit.Should().Be(CliRunner.ExitInput);
+			stdout.ToString().Should().BeEmpty();
+			stderr.ToString().Should().Contain("could not load enrolment rules").And.Contain("catalogue.yaml");
+		}
+		finally {
+			Directory.Delete(fixture.Item1, true);
+		}
+	}
+
+	[Fact]
+	public void cli_lint_workflows_uses_the_sibling_qualification_scale_for_catalogue_validation()
+	{
+		var fixture = WriteScaleAlignedLintFixture();
+		try {
+			using var stdout = new StringWriter();
+			using var stderr = new StringWriter();
+
+			var engine = EnrolmentEngine.Create(fixture.WorkflowsDir, fixture.DataDir, Harness.AsOf);
+			engine.Should().NotBeNull();
+
+			var exit = CliRunner.Run(["--lint-workflows", fixture.WorkflowsDir], stdout, stderr);
+
+			exit.Should().Be(CliRunner.ExitOk);
+			stdout.ToString().Should().BeEmpty();
+			stderr.ToString().Should().BeEmpty();
+		}
+		finally {
+			Directory.Delete(fixture.Root, true);
+		}
+	}
+
+	[Fact]
+	public void cli_reports_malformed_catalogue_yaml_as_an_input_error_for_lint_workflows()
+	{
+		var fixture = WriteMalformedDataFixture();
+		try {
+			using var stdout = new StringWriter();
+			using var stderr = new StringWriter();
+
+			var exit = CliRunner.Run(["--lint-workflows", fixture.Item3], stdout, stderr);
+
+			exit.Should().Be(CliRunner.ExitInput);
+			stdout.ToString().Should().BeEmpty();
+			stderr.ToString().Should().Contain("could not load enrolment workflows").And.Contain("catalogue.yaml");
+		}
+		finally {
+			Directory.Delete(fixture.Item1, true);
+		}
+	}
+
+	private static string CaptureJson(string path)
+	{
+		using var stdout = new StringWriter();
+		using var stderr = new StringWriter();
 		CliRunner.Run(["--json", path], stdout, stderr).Should().Be(CliRunner.ExitOk);
 		return stdout.ToString();
 	}
@@ -430,4 +492,54 @@ public sealed class CliTests
 		.. stdout.Split('\n', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries)
 			.Select(static line => JsonSerializer.Deserialize(line, BatchJsonContext.Default.BatchOutcome)!),
 	];
+
+	private static (string Root, string DataDir, string WorkflowsDir) WriteMalformedDataFixture()
+	{
+		var dir = Path.Combine(Path.GetTempPath(), "enrolmentrules-tests", Guid.NewGuid().ToString("N"));
+		var dataDir = Path.Combine(dir, "data");
+		var workflowsDir = Path.Combine(dir, "workflows");
+
+		CopyTree(Harness.DataDir, dataDir);
+		CopyTree(Harness.WorkflowsDir, workflowsDir);
+
+		File.WriteAllText(Path.Combine(dataDir, CatalogueStore.CatalogueFileName), "subjects: [");
+
+		return (dir, dataDir, workflowsDir);
+	}
+
+	private static (string Root, string DataDir, string WorkflowsDir) WriteScaleAlignedLintFixture()
+	{
+		var dir = Path.Combine(Path.GetTempPath(), "enrolmentrules-tests", Guid.NewGuid().ToString("N"));
+		var dataDir = Path.Combine(dir, "data");
+		var workflowsDir = Path.Combine(dir, "workflows");
+
+		CopyTree(Harness.DataDir, dataDir);
+		CopyTree(Harness.WorkflowsDir, workflowsDir);
+
+		File.WriteAllText(
+			Path.Combine(dataDir, QualificationScaleStore.QualificationsFileName),
+			File.ReadAllText(Path.Combine(Harness.DataDir, QualificationScaleStore.QualificationsFileName))
+			.Replace(
+				"      - { grade: distinction_star, ordinal: 3, equivalence: 6.0 }",
+				"      - { grade: distinction_star, ordinal: 3, equivalence: 6.0 }\n      - { grade: platinum, ordinal: 4, equivalence: 6.0 }",
+				StringComparison.Ordinal));
+
+		File.WriteAllText(
+			Path.Combine(dataDir, CatalogueStore.CatalogueFileName),
+			File.ReadAllText(Path.Combine(Harness.DataDir, CatalogueStore.CatalogueFileName))
+			.Replace("min_grade: distinction", "min_grade: platinum", StringComparison.Ordinal));
+
+		return (dir, dataDir, workflowsDir);
+	}
+
+	private static void CopyTree(string source, string destination)
+	{
+		Directory.CreateDirectory(destination);
+		foreach (var file in Directory.EnumerateFiles(source, "*", SearchOption.AllDirectories)) {
+			var relative = Path.GetRelativePath(source, file);
+			var target = Path.Combine(destination, relative);
+			Directory.CreateDirectory(Path.GetDirectoryName(target)!);
+			File.Copy(file, target, true);
+		}
+	}
 }

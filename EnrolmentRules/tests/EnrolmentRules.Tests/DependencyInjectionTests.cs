@@ -28,7 +28,7 @@ public sealed class DependencyInjectionTests
 		result.Recommendations.Single(r => r.Subject == Subject.Art).Rating;
 
 	[Fact]
-	public async Task add_enrolment_engine_registers_a_singleton()
+	public void add_enrolment_engine_registers_a_singleton()
 	{
 		var services = new ServiceCollection();
 		_ = services.AddEnrolmentEngine(options => {
@@ -37,7 +37,7 @@ public sealed class DependencyInjectionTests
 				.UseFixedAsOf(Harness.AsOf);
 		});
 
-		await using var provider = services.BuildServiceProvider();
+		using var provider = services.BuildServiceProvider();
 
 		var first = provider.GetRequiredService<EnrolmentEngine>();
 		var second = provider.GetRequiredService<EnrolmentEngine>();
@@ -94,7 +94,7 @@ public sealed class DependencyInjectionTests
 	}
 
 	[Fact]
-	public async Task registers_the_interface_against_the_same_singleton()
+	public void registers_the_interface_against_the_same_singleton()
 	{
 		var services = new ServiceCollection();
 		_ = services.AddEnrolmentEngine(options => {
@@ -103,7 +103,7 @@ public sealed class DependencyInjectionTests
 				.UseFixedAsOf(Harness.AsOf);
 		});
 
-		await using var provider = services.BuildServiceProvider();
+		using var provider = services.BuildServiceProvider();
 
 		var asInterface = provider.GetRequiredService<IEnrolmentEngine>();
 		var asConcrete = provider.GetRequiredService<EnrolmentEngine>();
@@ -124,13 +124,13 @@ public sealed class DependencyInjectionTests
 	}
 
 	[Fact]
-	public async Task add_enrolment_engine_accepts_a_pre_built_engine()
+	public void add_enrolment_engine_accepts_a_pre_built_engine()
 	{
 		var engine = EnrolmentEngine.Create(Harness.WorkflowsDir, Harness.DataDir, Harness.AsOf);
 		var services = new ServiceCollection();
 		services.AddEnrolmentEngine(engine);
 
-		await using var provider = services.BuildServiceProvider();
+		using var provider = services.BuildServiceProvider();
 
 		provider.GetRequiredService<EnrolmentEngine>().Should().BeSameAs(engine);
 		provider.GetRequiredService<IEnrolmentEngine>().Should().BeSameAs(engine);
@@ -141,7 +141,7 @@ public sealed class DependencyInjectionTests
 		typeof(EnrolmentEngine).Should().NotBeAssignableTo<IDisposable>();
 
 	[Fact]
-	public async Task resolved_engine_evaluates_a_real_student()
+	public void resolved_engine_evaluates_a_real_student()
 	{
 		var services = new ServiceCollection();
 		_ = services.AddEnrolmentEngine(options => {
@@ -150,7 +150,7 @@ public sealed class DependencyInjectionTests
 				.UseFixedAsOf(Harness.AsOf);
 		});
 
-		await using var provider = services.BuildServiceProvider();
+		using var provider = services.BuildServiceProvider();
 		var engine = provider.GetRequiredService<EnrolmentEngine>();
 
 		var result = engine.Evaluate(ArtAgeGatedStudent());
@@ -160,7 +160,7 @@ public sealed class DependencyInjectionTests
 	}
 
 	[Fact]
-	public async Task time_provider_registration_tracks_the_clock_per_request_not_at_startup()
+	public void time_provider_registration_tracks_the_clock_per_request_not_at_startup()
 	{
 		var clock = new MutableClock(new(2026, 6, 25, 12, 0, 0, TimeSpan.Zero)); // student is 18
 		var services = new ServiceCollection();
@@ -170,7 +170,7 @@ public sealed class DependencyInjectionTests
 				.UseTimeProvider(clock);
 		});
 
-		await using var provider = services.BuildServiceProvider();
+		using var provider = services.BuildServiceProvider();
 		var engine = provider.GetRequiredService<EnrolmentEngine>();
 		var student = ArtAgeGatedStudent();
 
@@ -183,7 +183,7 @@ public sealed class DependencyInjectionTests
 	}
 
 	[Fact]
-	public async Task add_enrolment_engine_factory_registers_a_live_interface_proxy()
+	public void add_enrolment_engine_factory_registers_a_live_interface_proxy()
 	{
 		var services = new ServiceCollection();
 		_ = services.AddEnrolmentEngineFactory(options => {
@@ -192,7 +192,7 @@ public sealed class DependencyInjectionTests
 				.UseFixedAsOf(Harness.AsOf);
 		});
 
-		await using var provider = services.BuildServiceProvider();
+		using var provider = services.BuildServiceProvider();
 		var factory = provider.GetRequiredService<IEnrolmentEngineFactory>();
 		var resolved = provider.GetRequiredService<IEnrolmentEngine>();
 		var evaluator = (IEnrolmentEvaluator)resolved;
@@ -204,7 +204,7 @@ public sealed class DependencyInjectionTests
 	}
 
 	[Fact]
-	public async Task add_enrolment_engine_factory_keeps_interface_resolution_live_across_reload()
+	public void add_enrolment_engine_factory_keeps_interface_resolution_live_across_reload()
 	{
 		var fixture = CopyShippedLayout();
 		try {
@@ -215,7 +215,7 @@ public sealed class DependencyInjectionTests
 					.UseFixedAsOf(Harness.AsOf);
 			});
 
-			await using var provider = services.BuildServiceProvider();
+			using var provider = services.BuildServiceProvider();
 			var engine = provider.GetRequiredService<IEnrolmentEngine>();
 			var factory = provider.GetRequiredService<IEnrolmentEngineFactory>();
 			var student = ReloadEligibleStudent();
@@ -233,7 +233,7 @@ public sealed class DependencyInjectionTests
 	}
 
 	[Fact]
-	public async Task disposing_the_service_provider_disposes_the_registered_enrolment_engine_factory()
+	public void disposing_the_service_provider_disposes_the_registered_enrolment_engine_factory()
 	{
 		var services = new ServiceCollection();
 		_ = services.AddEnrolmentEngineFactory(options => {
@@ -245,7 +245,7 @@ public sealed class DependencyInjectionTests
 		var provider = services.BuildServiceProvider();
 		var factory = provider.GetRequiredService<EnrolmentEngineFactory>();
 
-		await provider.DisposeAsync();
+		provider.Dispose();
 
 		var act = () => factory.Reload();
 
@@ -253,7 +253,7 @@ public sealed class DependencyInjectionTests
 	}
 
 	[Fact]
-	public async Task resolved_engine_try_evaluate_rejects_invalid_input()
+	public void resolved_engine_try_evaluate_rejects_invalid_input()
 	{
 		var services = new ServiceCollection();
 		_ = services.AddEnrolmentEngine(options => {
@@ -262,7 +262,7 @@ public sealed class DependencyInjectionTests
 				.UseFixedAsOf(Harness.AsOf);
 		});
 
-		await using var provider = services.BuildServiceProvider();
+		using var provider = services.BuildServiceProvider();
 		var engine = provider.GetRequiredService<IEnrolmentEngine>();
 		var student = new StudentInput("S-BAD", new Dictionary<string, int> { ["maths"] = 99 }, []) { DateOfBirth = new(2009, 9, 1) };
 

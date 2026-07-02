@@ -62,6 +62,12 @@ public sealed class RatingEvaluator(
 		new("policy", new PolicyFacts(thresholds)),
 	];
 
+	internal static RuleParameter[] EligibilityParameters(IReadOnlyList<GcseResult> gcses, GcseFacts lookup, PolicyFacts policy) => [
+		new("gcses", gcses.ToArray()),
+		new("lookup", lookup),
+		new("policy", policy),
+	];
+
 	/// <summary>
 	///     Evaluate the §1.3 gate. Composes <see cref="EligibilityGate" /> from the workflow results,
 	///     preserving the rules' declared order so the reasons keep the English → Maths → pass-count
@@ -70,11 +76,16 @@ public sealed class RatingEvaluator(
 	public EligibilityGate EvaluateEligibility(IReadOnlyList<GcseResult> gcses, CancellationToken cancellationToken = default)
 	{
 		cancellationToken.ThrowIfCancellationRequested();
-		var results = ExecuteAllRules(EligibilityWorkflow, EligibilityParameters(gcses, Thresholds));
+		var lookup = new GcseFacts(gcses);
+		var results = ExecuteAllRules(EligibilityWorkflow, EligibilityParameters(gcses, lookup, policy));
+		return EvaluateEligibility(results);
+	}
 
+	private EligibilityGate EvaluateEligibility(IReadOnlyList<RuleResultTree> results)
+	{
 		var reasons = results
 			.Where(static r => !r.IsSuccess)
-			.Select(EligibilityFailureReason)
+			.Select(result => EligibilityFailureReason(result))
 			.ToList();
 
 		return new(reasons.Count == 0, reasons);
@@ -92,17 +103,38 @@ public sealed class RatingEvaluator(
 		IReadOnlyList<GcseResult> gcses,
 		CancellationToken cancellationToken = default)
 	{
-		var gate = EvaluateEligibility(gcses, cancellationToken);
+		var lookup = new GcseFacts(gcses);
+		return EvaluateWithGate(profile, gcses, lookup, cancellationToken);
+	}
+
+	internal (EligibilityGate Gate, IReadOnlyList<SubjectRating> Ratings) EvaluateWithGate(
+		StudentProfile profile,
+		IReadOnlyList<GcseResult> gcses,
+		GcseFacts lookup,
+		CancellationToken cancellationToken = default)
+	{
+		var gate = EvaluateEligibility(gcses, lookup, cancellationToken);
 		cancellationToken.ThrowIfCancellationRequested();
 		var ratings = gate.Eligible
-			? EvaluateRatings(profile, gcses, cancellationToken)
+			? EvaluateRatings(profile, lookup, cancellationToken)
 			: AllRed(gate.Reasons[0]);
 		return (gate, ratings);
 	}
 
+	internal EligibilityGate EvaluateEligibility(
+		IReadOnlyList<GcseResult> gcses,
+		GcseFacts lookup,
+		CancellationToken cancellationToken = default)
+	{
+		cancellationToken.ThrowIfCancellationRequested();
+		var results = ExecuteAllRules(EligibilityWorkflow, EligibilityParameters(gcses, lookup, policy));
+		return EvaluateEligibility(results);
+	}
+
 	/// <summary>
 	///     The base per-subject ratings (Phase 4), discarding the gate. Convenience over
-	///     <see cref="EvaluateWithGate" /> for callers that only need the ratings.
+	///     <see cref="EvaluateWithGate(StudentProfile, IReadOnlyList{GcseResult}, CancellationToken)" /> for
+	///     callers that only need the ratings.
 	/// </summary>
 	public IReadOnlyList<SubjectRating> Evaluate(
 		StudentProfile profile,
@@ -130,6 +162,15 @@ public sealed class RatingEvaluator(
 		IReadOnlyList<GcseResult> gcses,
 		CancellationToken cancellationToken = default)
 	{
+		var lookup = new GcseFacts(gcses);
+		return EvaluateRatings(profile, lookup, cancellationToken);
+	}
+
+	internal IReadOnlyList<SubjectRating> EvaluateRatings(
+		StudentProfile profile,
+		GcseFacts gcses,
+		CancellationToken cancellationToken = default)
+	{
 		cancellationToken.ThrowIfCancellationRequested();
 		var results = ExecuteAllRules(
 			SubjectRatingsWorkflow, new RuleParameter("facts", new RatingFacts(profile, gcses, policy, Catalogue, Scale)));
@@ -152,19 +193,19 @@ public sealed class RatingEvaluator(
 	}
 
 	// RulesEngine evaluates the compiled lambdas synchronously here (no I/O and no configured action
-	// workflows). If that ever stops being true, fail fast rather than silently reintroducing a hidden
-	// blocking wait on the hot path.
+	// workflows). If the task is still incomplete, fail fast rather than silently reintroducing a hidden
+	// blocking wait on the hot path. If it already completed, GetResult preserves the original fault.
 	private List<RuleResultTree> ExecuteAllRules(string workflow, params RuleParameter[] facts)
 	{
 		var execution = engine.ExecuteAllRulesAsync(workflow, facts);
-		if (!execution.IsCompletedSuccessfully) {
-			throw new InvalidOperationException(
-				$"RulesEngine workflow '{workflow}' completed asynchronously on the synchronous evaluation path.");
+		if (execution.IsCompleted) {
+#pragma warning disable VSTHRD002 // The completion guard above guarantees this ValueTask has already finished.
+			return execution.GetAwaiter().GetResult();
+#pragma warning restore VSTHRD002
 		}
 
-#pragma warning disable VSTHRD002 // The completion guard above guarantees this ValueTask has already finished.
-		return execution.Result;
-#pragma warning restore VSTHRD002
+		throw new InvalidOperationException(
+			$"RulesEngine workflow '{workflow}' did not complete synchronously on the synchronous evaluation path.");
 	}
 
 	/// <summary>
@@ -231,13 +272,12 @@ public sealed class GcseFacts(IEnumerable<GcseResult> gcses)
 /// </summary>
 public sealed class RatingFacts(
 	StudentProfile profile,
-	IEnumerable<GcseResult> gcses,
+	GcseFacts gcses,
 	PolicyFacts policy,
 	CatalogueData catalogue,
 	QualificationScale scale)
 {
 	private readonly HashSet<string> entryEquivalentSubjects = BuildEntryEquivalentSubjects(profile, catalogue, scale);
-	private readonly GcseFacts gcses = new(gcses);
 	private readonly PolicyFacts policy = policy;
 
 	private readonly IReadOnlyDictionary<string, double> predicted = profile.PredictedGrades.ToDictionary(

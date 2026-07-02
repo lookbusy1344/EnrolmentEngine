@@ -16,7 +16,7 @@ using RulesEngine.Interfaces;
 ///     verdict must preserve the finite rating lattice, and the shipped workflow YAML must stay aligned
 ///     with the catalogue as the single source of truth.
 /// </summary>
-public sealed partial class InvariantTests : IAsyncLifetime
+public sealed partial class InvariantTests
 {
 	// With the green cap disabled (the shipped default), the projected tariff is maximised when every
 	// subject is green — each contributing its full UCAS weight, with no amber discount. That sum is the
@@ -27,16 +27,8 @@ public sealed partial class InvariantTests : IAsyncLifetime
 	private static readonly Qualification BiologyPriorALevel =
 		new(Subject.Biology.Value, QualificationType.ALevel, "e");
 
-	private EnrolmentEngine engine = null!;
-	private IRulesEngine rulesEngine = null!;
-
-	public async Task InitializeAsync()
-	{
-		engine = await Harness.ShippedEngineAsync();
-		rulesEngine = (await Harness.BuildFromShippedWorkflowsAsync()).Engine;
-	}
-
-	public Task DisposeAsync() => Task.CompletedTask;
+	private readonly EnrolmentEngine engine = Harness.ShippedEngine();
+	private readonly IRulesEngine rulesEngine = Harness.BuildFromShippedWorkflows().Engine;
 
 	[Fact]
 	public void every_catalogue_subject_has_a_named_rule_group_in_subject_ratings()
@@ -124,7 +116,7 @@ public sealed partial class InvariantTests : IAsyncLifetime
 	}
 
 	[Property(Arbitrary = new[] { typeof(StudentArbitraries) }, MaxTest = 250)]
-	public Task<bool> random_valid_students_never_throw_and_preserve_phase_nine_invariants(StudentInput student)
+	public bool random_valid_students_never_throw_and_preserve_phase_nine_invariants(StudentInput student)
 	{
 		StudentValidator.Validate(student, Harness.Catalogue, Harness.Scale).Should().BeEmpty();
 
@@ -138,7 +130,7 @@ public sealed partial class InvariantTests : IAsyncLifetime
 		explained.Summary.ProjectedTariff.Should().BeInRange(0, MaxProjectedTariff);
 
 		if (!explained.Eligible) {
-			return Task.FromResult(true);
+			return true;
 		}
 
 		// No green-count ceiling: the green cap is an optional feature, disabled in the shipped config, so
@@ -166,11 +158,11 @@ public sealed partial class InvariantTests : IAsyncLifetime
 				"a downgrade to red must be explained by at least one red adjustment");
 		}
 
-		return Task.FromResult(true);
+		return true;
 	}
 
 	[Property(Arbitrary = new[] { typeof(StudentArbitraries) }, MaxTest = 100)]
-	public Task<bool> random_valid_students_are_not_upgraded_by_an_amber_restudy_bar(StudentInput student)
+	public bool random_valid_students_are_not_upgraded_by_an_amber_restudy_bar(StudentInput student)
 	{
 		StudentValidator.Validate(student, Harness.Catalogue, Harness.Scale).Should().BeEmpty();
 
@@ -185,7 +177,7 @@ public sealed partial class InvariantTests : IAsyncLifetime
 			(int)biology.BaseRating,
 			"an amber restudy bar must not upgrade an already-red base rating");
 
-		return Task.FromResult(true);
+		return true;
 	}
 
 	private static bool IsKnownSubject(string name) => Subject.TryParse(name, out var subject) && Catalogue.Subjects.Contains(subject);

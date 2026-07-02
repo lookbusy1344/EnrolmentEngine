@@ -200,9 +200,9 @@ public sealed class AggregationTests
 	}
 
 	[Fact]
-	public async Task french_and_german_both_chosen_are_red_with_mutual_exclusion_winning_for_german()
+	public void french_and_german_both_chosen_are_red_with_mutual_exclusion_winning_for_german()
 	{
-		var engine = await Harness.ShippedEngineAsync();
+		var engine = Harness.ShippedEngine();
 		var student = StrongStudent() with { ChosenALevels = [Subject.French, Subject.German] };
 
 		var result = engine.Evaluate(student);

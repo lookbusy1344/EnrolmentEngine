@@ -8,15 +8,11 @@ using Engine;
 ///     Pre-v1 integration hardening — <c>Try*</c> evaluation validates at the engine boundary before
 ///     entering the pipeline.
 /// </summary>
-public sealed class ValidatedEvaluationTests : IAsyncLifetime
+public sealed class ValidatedEvaluationTests
 {
 	private static readonly DateOnly ValidDob = new(2009, 9, 1);
 
-	private EnrolmentEngine engine = null!;
-
-	public async Task InitializeAsync() => engine = await Harness.ShippedEngineAsync();
-
-	public Task DisposeAsync() => Task.CompletedTask;
+	private readonly EnrolmentEngine engine = Harness.ShippedEngine();
 
 	private static StudentInput StudentWithMathsGrade(int mathsGrade) =>
 		new(
@@ -48,9 +44,9 @@ public sealed class ValidatedEvaluationTests : IAsyncLifetime
 	}
 
 	[Fact]
-	public async Task evaluate_fails_loud_when_chosen_subject_is_outside_the_bound_catalogue()
+	public void evaluate_fails_loud_when_chosen_subject_is_outside_the_bound_catalogue()
 	{
-		var (_, rulesEngine) = await Harness.BuildFromShippedWorkflowsAsync();
+		var (_, rulesEngine) = Harness.BuildFromShippedWorkflows();
 		var limitedEngine = new EnrolmentEngine(rulesEngine, Harness.Thresholds, MathsOnlyCatalogue(), Harness.AsOf, Harness.Scale);
 		var student = new StudentInput(
 			"S-BAD",

@@ -181,11 +181,11 @@ public sealed class TransitionMatrixTests
 	}
 
 	[Fact]
-	public async Task cli_reports_an_invalid_transition_matrix_as_an_input_error_for_evaluation_modes()
+	public void cli_reports_an_invalid_transition_matrix_as_an_input_error_for_evaluation_modes()
 	{
 		var path = WriteStudentJson();
-		await using var stdout = new StringWriter();
-		await using var stderr = new StringWriter();
+		using var stdout = new StringWriter();
+		using var stderr = new StringWriter();
 
 		var exit = CliRunner.Run(
 			["--json", path],
@@ -200,11 +200,11 @@ public sealed class TransitionMatrixTests
 	}
 
 	[Fact]
-	public async Task cli_reports_an_invalid_transition_matrix_as_an_input_error_for_profile_mode()
+	public void cli_reports_an_invalid_transition_matrix_as_an_input_error_for_profile_mode()
 	{
 		var path = WriteStudentJson();
-		await using var stdout = new StringWriter();
-		await using var stderr = new StringWriter();
+		using var stdout = new StringWriter();
+		using var stderr = new StringWriter();
 
 		var exit = CliRunner.Run(
 			[path],

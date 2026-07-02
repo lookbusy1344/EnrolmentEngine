@@ -78,20 +78,20 @@ public static class CatalogueStore
 		QualificationScale? scale,
 		string? cataloguePath = null)
 	{
-		var node = YamlConverter.ToJsonNode(catalogueReader.ReadToEnd());
-		var schemaText = schemaReader.ReadToEnd();
-		var schema = SchemaCache.GetOrAdd(
-			SchemaCacheKey(schemaText),
-			_ => new(() => JsonSchema.FromText(schemaText))).Value;
-
-		using var doc = JsonDocument.Parse(node.ToJsonString());
-		var results = schema.Evaluate(doc.RootElement, new() { OutputFormat = OutputFormat.List });
-		if (!results.IsValid) {
-			throw new CatalogueException(
-				$"Catalogue file '{cataloguePath ?? CatalogueFileName}' failed schema validation: {DescribeErrors(results)}");
-		}
-
 		try {
+			var node = YamlConverter.ToJsonNode(catalogueReader.ReadToEnd());
+			var schemaText = schemaReader.ReadToEnd();
+			var schema = SchemaCache.GetOrAdd(
+				SchemaCacheKey(schemaText),
+				_ => new(() => JsonSchema.FromText(schemaText))).Value;
+
+			using var doc = JsonDocument.Parse(node.ToJsonString());
+			var results = schema.Evaluate(doc.RootElement, new() { OutputFormat = OutputFormat.List });
+			if (!results.IsValid) {
+				throw new CatalogueException(
+					$"Catalogue file '{cataloguePath ?? CatalogueFileName}' failed schema validation: {DescribeErrors(results)}");
+			}
+
 			var catalogue = Catalogue.Build(node, scale ?? QualificationScale.Default);
 			// Coverage is guarded here (and in Catalogue.LoadFromFile), not in Build, on purpose: Build is also used
 			// to construct deliberately partial catalogues (e.g. the open-subject test fixtures), which a

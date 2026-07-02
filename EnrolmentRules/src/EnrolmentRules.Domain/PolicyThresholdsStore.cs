@@ -37,20 +37,20 @@ public static class PolicyThresholdsStore
 
 	public static PolicyThresholds LoadAndValidate(TextReader thresholdsReader, TextReader schemaReader, string? thresholdsPath = null)
 	{
-		var node = YamlConverter.ToJsonNode(thresholdsReader.ReadToEnd());
-		var schemaText = schemaReader.ReadToEnd();
-		var schema = SchemaCache.GetOrAdd(
-			SchemaCacheKey(schemaText),
-			_ => new(() => JsonSchema.FromText(schemaText))).Value;
-
-		using var doc = JsonDocument.Parse(node.ToJsonString());
-		var results = schema.Evaluate(doc.RootElement, new() { OutputFormat = OutputFormat.List });
-		if (!results.IsValid) {
-			throw new PolicyThresholdsException(
-				$"Thresholds file '{thresholdsPath ?? ThresholdsFileName}' failed schema validation: {DescribeErrors(results)}");
-		}
-
 		try {
+			var node = YamlConverter.ToJsonNode(thresholdsReader.ReadToEnd());
+			var schemaText = schemaReader.ReadToEnd();
+			var schema = SchemaCache.GetOrAdd(
+				SchemaCacheKey(schemaText),
+				_ => new(() => JsonSchema.FromText(schemaText))).Value;
+
+			using var doc = JsonDocument.Parse(node.ToJsonString());
+			var results = schema.Evaluate(doc.RootElement, new() { OutputFormat = OutputFormat.List });
+			if (!results.IsValid) {
+				throw new PolicyThresholdsException(
+					$"Thresholds file '{thresholdsPath ?? ThresholdsFileName}' failed schema validation: {DescribeErrors(results)}");
+			}
+
 			var thresholds = node.Deserialize(EnrolmentJsonContext.Default.PolicyThresholds)
 							 ?? throw new FormatException("Thresholds deserialized to null.");
 			Validate(thresholds);

@@ -83,10 +83,13 @@ public static class CliRunner
 		CatalogueData catalogue;
 		try {
 			var workflowsDirectory = directory ?? WorkflowsDirectory();
+			var loadedDataDirectory = CatalogueDirectoryForLint(workflowsDirectory);
+			var scale = QualificationScaleStore.LoadAndValidate(QualificationScaleDirectoryForLint(loadedDataDirectory));
 			workflows = WorkflowStore.LoadAndValidate(workflowsDirectory);
-			catalogue = CatalogueStore.LoadAndValidate(CatalogueDirectoryForLint(workflowsDirectory));
+			catalogue = CatalogueStore.LoadAndValidate(loadedDataDirectory, scale);
 		}
-		catch (Exception ex) when (ex is WorkflowException or CatalogueException or DirectoryNotFoundException) {
+		catch (Exception ex) when (ex is WorkflowException or CatalogueException or QualificationScaleException
+									   or DirectoryNotFoundException or FileNotFoundException) {
 			stderr.WriteLine($"error: could not load enrolment workflows: {ex.Message}");
 			return ExitInput;
 		}
@@ -104,6 +107,11 @@ public static class CliRunner
 		var sibling = Path.Combine(Directory.GetParent(Path.GetFullPath(workflowsDirectory))?.FullName ?? string.Empty, "data");
 		return Directory.Exists(sibling) ? sibling : DataDirectory();
 	}
+
+	private static string QualificationScaleDirectoryForLint(string catalogueDirectory) =>
+		File.Exists(Path.Combine(catalogueDirectory, QualificationScaleStore.QualificationsFileName))
+			? catalogueDirectory
+			: DataDirectory();
 
 	private static int RunProfile(string path, TextWriter stdout, TextWriter stderr, Func<string> dataDirectory)
 	{
@@ -315,7 +323,7 @@ public static class CliRunner
 
 	// A single-student document may be JSON or YAML; the extension selects the parser. YAML is normalized
 	// to the same JsonNode shape and deserialized through the same source-generated contract, so both
-	// formats share one validation path downstream. (--batch stays JSONL-only: see RunBatchAsync.)
+	// formats share one validation path downstream. (--batch stays JSONL-only: see RunBatch.)
 	private static StudentDocument? Load(string path, TextWriter stderr)
 	{
 		try {

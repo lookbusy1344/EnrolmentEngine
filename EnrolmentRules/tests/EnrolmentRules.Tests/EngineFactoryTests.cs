@@ -1,6 +1,9 @@
 namespace EnrolmentRules.Tests;
 
+using System.Collections.Concurrent;
+using System.Diagnostics;
 using System.Text;
+using System.Threading;
 using AwesomeAssertions;
 using Domain;
 using Engine;
@@ -9,6 +12,9 @@ using Prediction;
 /// <summary>Reloadable engine factory for policy edits without process restart.</summary>
 public sealed class EngineFactoryTests
 {
+	private const int ThreadJoinTimeoutMilliseconds = 5_000;
+	private const int SignalWaitTimeoutMilliseconds = 5_000;
+
 	private static StudentInput EligibleStudent() =>
 		new(
 			"S-RELOAD",
@@ -80,25 +86,64 @@ public sealed class EngineFactoryTests
 	}
 
 	[Fact]
-	public async Task concurrent_evaluations_during_reload_do_not_throw()
+	public void concurrent_evaluations_during_reload_do_not_throw()
 	{
-		using var factory = EnrolmentEngineFactory.Create(Harness.WorkflowsDir, Harness.DataDir, Harness.AsOf);
+		using var source = ControlledReloadDataSource.WithReloadThresholds(
+			Harness.WorkflowsDir,
+			Harness.DataDir,
+			true,
+			ThresholdsBytes("min_passes", "4"));
+		using var factory = EnrolmentEngineFactory.Create(source, Harness.AsOf);
 		var student = EligibleStudent();
-		var reloads = Task.Run(() => {
-			for (var i = 0; i < 5; i++) {
+		var errors = new ConcurrentQueue<Exception>();
+		var validationResults = new ConcurrentQueue<bool>();
+		using var startGate = new ManualResetEventSlim(false);
+
+		var reloadThread = new Thread(() => {
+			try {
+				WaitForSignal(startGate, "reload start gate");
 				factory.Reload();
 			}
+			catch (Exception exception) {
+				errors.Enqueue(exception);
+			}
 		});
-		var evaluations = Enumerable.Range(0, 50)
-			.Select(_ => Task.FromResult(factory.Current.TryEvaluate(student)))
+
+		var evaluationThreads = Enumerable.Range(0, 50)
+			.Select(_ => new Thread(() => {
+				try {
+					WaitForSignal(startGate, "evaluation start gate");
+					source.WaitForFirstReloadBlocked();
+					validationResults.Enqueue(factory.Current.TryEvaluate(student).Validation.IsValid);
+				}
+				catch (Exception exception) {
+					errors.Enqueue(exception);
+				}
+			}))
 			.ToArray();
 
-		await Task.WhenAll(reloads, Task.WhenAll(evaluations));
-		evaluations.Select(task => task.Result).Should().OnlyContain(outcome => outcome.Validation.IsValid);
+		reloadThread.Start();
+		foreach (var thread in evaluationThreads) {
+			thread.Start();
+		}
+
+		startGate.Set();
+		try {
+			source.WaitForFirstReloadBlocked();
+			JoinThreads(evaluationThreads, "evaluation thread");
+		}
+		finally {
+			source.ReleaseFirstReload();
+			JoinThread(reloadThread, "reload thread");
+		}
+
+		errors.Should().BeEmpty();
+		validationResults.Should().HaveCount(evaluationThreads.Length)
+			.And.OnlyContain(static isValid => isValid);
 	}
 
 	[Fact]
-	public async Task concurrent_reload_calls_are_serialized_and_publish_in_call_order()
+	public void concurrent_reload_calls_are_serialized_and_publish_in_call_order()
 	{
 		using var source = ControlledReloadDataSource.WithReloadThresholds(
 			Harness.WorkflowsDir,
@@ -108,19 +153,71 @@ public sealed class EngineFactoryTests
 			ThresholdsBytes("min_passes", "6"));
 		using var factory = EnrolmentEngineFactory.Create(source, Harness.AsOf);
 		var student = StudentForPassGradeBoundary();
+		var errors = new ConcurrentQueue<Exception>();
+		using var startGate = new ManualResetEventSlim(false);
 
-		var firstReload = Task.Run(() => factory.Reload());
-		await EventuallyAsync(() => source.IsFirstReloadBlocked);
+		var firstReload = new Thread(() => {
+			try {
+				WaitForSignal(startGate, "first reload start gate");
+				factory.Reload();
+			}
+			catch (Exception exception) {
+				errors.Enqueue(exception);
+			}
+		});
 
-		var secondReload = Task.Run(() => factory.Reload());
-		source.HasSecondReloadEnteredBuild.Should().BeFalse();
-		source.MaxConcurrentReloadBuilds.Should().Be(1);
+		var secondReload = new Thread(() => {
+			try {
+				WaitForSignal(startGate, "second reload start gate");
+				source.WaitForFirstReloadBlocked();
+				factory.Reload();
+			}
+			catch (Exception exception) {
+				errors.Enqueue(exception);
+			}
+		});
 
-		source.ReleaseFirstReload();
-		await Task.WhenAll(firstReload, secondReload);
+		firstReload.Start();
+		secondReload.Start();
+		startGate.Set();
+		try {
+			source.WaitForFirstReloadBlocked();
+			source.HasSecondReloadEnteredBuild.Should().BeFalse();
+			source.MaxConcurrentReloadBuilds.Should().Be(1);
+		}
+		finally {
+			source.ReleaseFirstReload();
+			JoinThreads([firstReload, secondReload], "reload thread");
+		}
 
+		errors.Should().BeEmpty();
 		source.MaxConcurrentReloadBuilds.Should().Be(1);
 		factory.Current.TryEvaluate(student).Value!.Eligible.Should().BeFalse();
+	}
+
+	[Fact]
+	public void joining_threads_applies_one_timeout_to_the_group()
+	{
+		const int groupTimeoutMilliseconds = 100;
+		using var release = new ManualResetEventSlim(false);
+		var threads = Enumerable.Range(0, 3)
+			.Select(_ => new Thread(release.Wait))
+			.ToArray();
+		foreach (var thread in threads) {
+			thread.Start();
+		}
+
+		var stopwatch = Stopwatch.StartNew();
+		try {
+			var act = () => JoinThreads(threads, "blocked thread", groupTimeoutMilliseconds);
+
+			act.Should().Throw<TimeoutException>();
+			stopwatch.Elapsed.Should().BeLessThan(TimeSpan.FromMilliseconds(groupTimeoutMilliseconds * 2));
+		}
+		finally {
+			release.Set();
+			JoinThreads(threads, "cleanup thread", ThreadJoinTimeoutMilliseconds);
+		}
 	}
 
 	[Fact]
@@ -218,17 +315,33 @@ public sealed class EngineFactoryTests
 	private static byte[] InvalidThresholdsBytes() =>
 		Encoding.UTF8.GetBytes("pass_grade: nope");
 
-	private static async Task EventuallyAsync(Func<bool> predicate)
+	private static void JoinThread(Thread thread, string description)
 	{
-		for (var attempt = 0; attempt < 50; attempt++) {
-			if (predicate()) {
-				return;
-			}
-
-			await Task.Delay(10);
+		if (!thread.Join(ThreadJoinTimeoutMilliseconds)) {
+			throw new TimeoutException($"{description} did not finish within {ThreadJoinTimeoutMilliseconds}ms.");
 		}
+	}
 
-		throw new TimeoutException("Condition was not met in time.");
+	private static void JoinThreads(
+		IEnumerable<Thread> threads,
+		string description,
+		int timeoutMilliseconds = ThreadJoinTimeoutMilliseconds)
+	{
+		var stopwatch = Stopwatch.StartNew();
+		var timedOut = threads.Count(thread => {
+			var remaining = TimeSpan.FromMilliseconds(timeoutMilliseconds) - stopwatch.Elapsed;
+			return !thread.Join(remaining > TimeSpan.Zero ? remaining : TimeSpan.Zero);
+		});
+		if (timedOut > 0) {
+			throw new TimeoutException($"{timedOut} {description}(s) did not finish within {timeoutMilliseconds}ms.");
+		}
+	}
+
+	private static void WaitForSignal(ManualResetEventSlim signal, string description)
+	{
+		if (!signal.Wait(SignalWaitTimeoutMilliseconds)) {
+			throw new TimeoutException($"{description} was not signalled within {SignalWaitTimeoutMilliseconds}ms.");
+		}
 	}
 
 	private sealed class ControlledReloadDataSource : IEnrolmentDataSource, IDisposable
@@ -245,6 +358,7 @@ public sealed class EngineFactoryTests
 		private readonly byte[] transitionMatrix;
 		private readonly IReadOnlyList<(string FileName, byte[] Bytes)> workflows;
 		private readonly byte[] workflowSchema;
+		private readonly ManualResetEventSlim firstReloadBlockedSignal = new(false);
 		private int activeReloadBuilds;
 		private int thresholdsOpenCount;
 
@@ -278,7 +392,11 @@ public sealed class EngineFactoryTests
 		public bool HasSecondReloadEnteredBuild { get; private set; }
 		public int MaxConcurrentReloadBuilds { get; private set; }
 
-		public void Dispose() => releaseFirstReloadSignal.Dispose();
+		public void Dispose()
+		{
+			firstReloadBlockedSignal.Dispose();
+			releaseFirstReloadSignal.Dispose();
+		}
 
 		public IReadOnlyList<WorkflowContent> OpenWorkflows() =>
 			[.. workflows.Select(static workflow => new WorkflowContent(workflow.FileName, new MemoryStream(workflow.Bytes, false)))];
@@ -305,7 +423,8 @@ public sealed class EngineFactoryTests
 			try {
 				if (openNumber == 2 && blockFirstReload) {
 					IsFirstReloadBlocked = true;
-					releaseFirstReloadSignal.Wait();
+					firstReloadBlockedSignal.Set();
+					WaitForSignal(releaseFirstReloadSignal, "first reload release signal");
 				} else if (openNumber == 3) {
 					HasSecondReloadEnteredBuild = true;
 				}
@@ -322,6 +441,8 @@ public sealed class EngineFactoryTests
 		public Stream OpenTransitionMatrix() => new MemoryStream(transitionMatrix, false);
 
 		public void ReleaseFirstReload() => releaseFirstReloadSignal.Set();
+
+		public void WaitForFirstReloadBlocked() => WaitForSignal(firstReloadBlockedSignal, "first reload blocked signal");
 
 		public static ControlledReloadDataSource WithReloadThresholds(
 			string workflowsDirectory,

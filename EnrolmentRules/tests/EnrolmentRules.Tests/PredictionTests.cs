@@ -125,7 +125,7 @@ public sealed class PredictionTests
 	}
 
 	[Fact]
-	public async Task two_engines_with_different_catalogues_can_disagree_without_global_state()
+	public void two_engines_with_different_catalogues_can_disagree_without_global_state()
 	{
 		var student = Student(new() {
 			["english_language"] = 9,
@@ -144,7 +144,7 @@ public sealed class PredictionTests
 		});
 		student = student with { ChosenALevels = [Subject.FurtherMaths] };
 
-		var (workflows, rulesEngine) = await Harness.BuildFromShippedWorkflowsAsync();
+		var (workflows, rulesEngine) = Harness.BuildFromShippedWorkflows();
 		_ = workflows;
 
 		var withPrerequisite = new EnrolmentEngine(rulesEngine, Harness.Thresholds, FurtherMathsPrerequisiteCatalogue(true), Harness.AsOf);
@@ -304,11 +304,11 @@ public sealed class PredictionTests
 	}
 
 	[Fact]
-	public async Task cli_runs_on_the_example_fixture_and_emits_a_parseable_profile()
+	public void cli_runs_on_the_example_fixture_and_emits_a_parseable_profile()
 	{
 		var examplePath = Path.Combine(Harness.RepoRoot, "examples", "student.json");
-		await using var stdout = new StringWriter();
-		await using var stderr = new StringWriter();
+		using var stdout = new StringWriter();
+		using var stderr = new StringWriter();
 
 		var exit = CliRunner.Run([examplePath], stdout, stderr);
 
@@ -325,19 +325,19 @@ public sealed class PredictionTests
 	}
 
 	[Fact]
-	public async Task cli_with_no_argument_is_a_usage_error()
+	public void cli_with_no_argument_is_a_usage_error()
 	{
-		await using var stdout = new StringWriter();
-		await using var stderr = new StringWriter();
+		using var stdout = new StringWriter();
+		using var stderr = new StringWriter();
 
 		CliRunner.Run([], stdout, stderr).Should().Be(CliRunner.ExitUsage);
 	}
 
 	[Fact]
-	public async Task cli_with_a_missing_file_is_an_input_error()
+	public void cli_with_a_missing_file_is_an_input_error()
 	{
-		await using var stdout = new StringWriter();
-		await using var stderr = new StringWriter();
+		using var stdout = new StringWriter();
+		using var stderr = new StringWriter();
 		var missing = Path.Combine(Path.GetTempPath(), "does-not-exist-" + Guid.NewGuid().ToString("N") + ".json");
 
 		CliRunner.Run([missing], stdout, stderr).Should().Be(CliRunner.ExitInput);

@@ -230,14 +230,14 @@ public static class WorkflowStore
 	private static List<RuleResultTree> ExecuteAllRules(IRulesEngine engine, string workflow, params RuleParameter[] facts)
 	{
 		var execution = engine.ExecuteAllRulesAsync(workflow, facts);
-		if (!execution.IsCompletedSuccessfully) {
-			throw new InvalidOperationException(
-				$"RulesEngine workflow '{workflow}' completed asynchronously during startup probe compilation.");
+		if (execution.IsCompleted) {
+#pragma warning disable VSTHRD002 // The completion guard above guarantees this ValueTask has already finished.
+			return execution.GetAwaiter().GetResult();
+#pragma warning restore VSTHRD002
 		}
 
-#pragma warning disable VSTHRD002 // The completion guard above guarantees this ValueTask has already finished.
-		return execution.Result;
-#pragma warning restore VSTHRD002
+		throw new InvalidOperationException(
+			$"RulesEngine workflow '{workflow}' did not complete synchronously during startup probe compilation.");
 	}
 
 	private static IEnumerable<RuleResultTree> Flatten(RuleResultTree result)
@@ -330,11 +330,12 @@ public static class WorkflowStore
 	{
 		var student = CanonicalProbeStudent(thresholds);
 		var gcses = student.ToGcseResults();
+		var lookup = new GcseFacts(gcses);
 		var profile = GradePredictor.Predict(student, gcses, default, catalogue, matrix, scale);
 
 		return [
-			.. RatingEvaluator.EligibilityParameters(gcses, thresholds),
-			new("facts", new RatingFacts(profile, gcses, new(thresholds), catalogue, scale)),
+			.. RatingEvaluator.EligibilityParameters(gcses, lookup, new(thresholds)),
+			new("facts", new RatingFacts(profile, lookup, new(thresholds), catalogue, scale)),
 		];
 	}
 

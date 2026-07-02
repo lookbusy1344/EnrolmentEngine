@@ -93,7 +93,9 @@ public sealed record SubjectAdvice(
 ///     The minimal bundle of GCSE grade changes that clears the eligibility gate for an ineligible
 ///     student. Present only when <see cref="AdviceResult.Eligible" /> is <c>false</c>; the per-subject
 ///     <see cref="AdviceResult.Advice" /> is empty in that case, since no subject tiers are reached behind
-///     a closed gate.
+///     a closed gate. This path may introduce brand-new GCSEs even when the diagnostic
+///     <see cref="PolicyThresholds.AdviceConsidersUnsatGcses" /> knob is off: if the student lacks enough
+///     passes, there is no grade-bump-only way to open the gate.
 /// </summary>
 public sealed record GateAdvice(EquatableArray<GradeChange> Changes);
 

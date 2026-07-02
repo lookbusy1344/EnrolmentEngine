@@ -169,6 +169,29 @@ public sealed class WorkflowLinterTests
 	}
 
 	[Fact]
+	public void orphan_subject_rating_block_is_reported_as_an_error()
+	{
+		Workflow[] workflows = [
+			new() {
+				WorkflowName = RatingEvaluator.SubjectRatingsWorkflow,
+				Rules = [
+					new() { RuleName = "philosophy:green", Expression = "true" },
+					new() { RuleName = "philosophy:amber", Expression = "true" },
+					new() { RuleName = "philosophy:red", Expression = "true" },
+				],
+			},
+		];
+
+		var findings = WorkflowLinter.Lint(workflows, Harness.Catalogue);
+
+		findings.Should().ContainSingle(finding =>
+			finding.Severity == LintSeverity.Error
+			&& finding.Rule == "philosophy"
+			&& finding.Message.Contains("philosophy", StringComparison.OrdinalIgnoreCase)
+			&& finding.Message.Contains("not in the catalogue", StringComparison.OrdinalIgnoreCase));
+	}
+
+	[Fact]
 	public void shipped_workflows_lint_clean()
 	{
 		var workflows = WorkflowStore.LoadAndValidate(Harness.WorkflowsDir, Harness.SchemaPath);
@@ -222,10 +245,10 @@ public sealed class WorkflowLinterTests
 	}
 
 	[Fact]
-	public async Task cli_lint_workflows_passes_on_shipped_workflows()
+	public void cli_lint_workflows_passes_on_shipped_workflows()
 	{
-		await using var stdout = new StringWriter();
-		await using var stderr = new StringWriter();
+		using var stdout = new StringWriter();
+		using var stderr = new StringWriter();
 
 		var exit = CliRunner.Run(["--lint-workflows"], stdout, stderr);
 
@@ -234,17 +257,17 @@ public sealed class WorkflowLinterTests
 	}
 
 	[Fact]
-	public async Task cli_lint_workflows_on_broken_dir_exits_lint_with_findings()
+	public void cli_lint_workflows_on_broken_dir_exits_lint_with_findings()
 	{
 		var brokenDir = CopyShippedWorkflows();
 		try {
 			var ratingsPath = Path.Combine(brokenDir, "subject-ratings.yaml");
-			var corrupted = (await File.ReadAllTextAsync(ratingsPath))
+			var corrupted = (File.ReadAllText(ratingsPath))
 				.Replace("facts.Predicted", "facts.Prediced", StringComparison.Ordinal);
-			await File.WriteAllTextAsync(ratingsPath, corrupted);
+			File.WriteAllText(ratingsPath, corrupted);
 
-			await using var stdout = new StringWriter();
-			await using var stderr = new StringWriter();
+			using var stdout = new StringWriter();
+			using var stderr = new StringWriter();
 
 			var exit = CliRunner.Run(["--lint-workflows", brokenDir], stdout, stderr);
 
@@ -257,12 +280,12 @@ public sealed class WorkflowLinterTests
 	}
 
 	[Fact]
-	public async Task cli_lint_workflows_uses_the_matching_catalogue_for_a_custom_subject_fixture()
+	public void cli_lint_workflows_uses_the_matching_catalogue_and_falls_back_to_the_shipped_scale()
 	{
 		var fixture = WriteCustomSubjectFixture();
 		try {
-			await using var stdout = new StringWriter();
-			await using var stderr = new StringWriter();
+			using var stdout = new StringWriter();
+			using var stderr = new StringWriter();
 
 			var exit = CliRunner.Run(["--lint-workflows", Path.Combine(fixture, "workflows")], stdout, stderr);
 

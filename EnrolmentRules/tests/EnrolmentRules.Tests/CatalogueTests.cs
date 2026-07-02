@@ -56,6 +56,45 @@ public sealed class CatalogueTests
 	}
 
 	[Fact]
+	public void mutually_excluding_subjects_must_have_distinct_ucas_weights()
+	{
+		var dir = Path.Combine(Path.GetTempPath(), "enrolmentrules-tests", "catalogue-" + Guid.NewGuid().ToString("N"));
+		Directory.CreateDirectory(dir);
+		File.Copy(Path.Combine(DataDir, CatalogueStore.SchemaFileName), Path.Combine(dir, CatalogueStore.SchemaFileName));
+
+		var catalogue = File.ReadAllText(Path.Combine(DataDir, CatalogueStore.CatalogueFileName))
+			.Replace("  - subject: german\n    ucas_weight: 37", "  - subject: german\n    ucas_weight: 39", StringComparison.Ordinal);
+		File.WriteAllText(Path.Combine(dir, CatalogueStore.CatalogueFileName), catalogue);
+
+		try {
+			var act = () => CatalogueStore.LoadAndValidate(dir);
+
+			act.Should().Throw<CatalogueException>()
+				.WithMessage("*distinct UCAS weights*")
+				.Which.InnerException.Should().BeOfType<InvalidDataException>()
+				.Which.Message.Should().Contain("french").And.Contain("german");
+		}
+		finally {
+			Directory.Delete(dir, true);
+		}
+	}
+
+	[Fact]
+	public void load_and_validate_rejects_malformed_yaml_with_the_catalogue_exception_type()
+	{
+		var schema = File.ReadAllText(Path.Combine(DataDir, CatalogueStore.SchemaFileName));
+
+		var act = () => CatalogueStore.LoadAndValidate(
+			new StringReader("subjects: ["),
+			new StringReader(schema),
+			"malformed-catalogue.yaml");
+
+		act.Should().Throw<CatalogueException>()
+			.WithMessage("*malformed-catalogue.yaml*")
+			.Which.InnerException.Should().BeOfType<FormatException>();
+	}
+
+	[Fact]
 	public void exclusion_pairs_use_a_named_public_type()
 	{
 		typeof(CatalogueData).GetProperty(nameof(CatalogueData.ExclusionPairs))!.PropertyType.GetGenericArguments()[0]

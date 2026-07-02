@@ -3,6 +3,7 @@ namespace EnrolmentRules.Tests;
 using AwesomeAssertions;
 using Domain;
 using Engine;
+using RulesEngine.Interfaces;
 using RulesEngine.Models;
 
 /// <summary>
@@ -13,9 +14,9 @@ using RulesEngine.Models;
 public sealed class StartupTests
 {
 	[Fact]
-	public async Task workflows_load_and_validate()
+	public void workflows_load_and_validate()
 	{
-		var (workflows, engine) = await Harness.BuildFromShippedWorkflowsAsync();
+		var (workflows, engine) = Harness.BuildFromShippedWorkflows();
 
 		workflows.Should().NotBeEmpty();
 		engine.Should().NotBeNull();
@@ -91,10 +92,25 @@ public sealed class StartupTests
 			.WithMessage("*bad-field*");
 	}
 
+	[Fact]
+	public void probe_compile_surfaces_the_engine_error_for_a_missing_workflow()
+	{
+		var (_, engine) = Harness.BuildFromShippedWorkflows();
+		Workflow[] missing = [new() { WorkflowName = "missing-workflow" }];
+
+		var act = () => WorkflowStore.ProbeCompile(engine, missing, Harness.CanonicalProbe());
+
+		var exception = act.Should().Throw<WorkflowProbeException>().Which;
+		exception.Message.Should().Contain("missing-workflow");
+		exception.Message.Should().NotContain("completed asynchronously");
+		exception.InnerException.Should().NotBeNull();
+		exception.InnerException!.Message.Should().Contain("missing-workflow");
+	}
+
 	[Theory]
 	[InlineData(5.0, true)]
 	[InlineData(-1.0, false)]
-	public async Task trivial_workflow_evaluates(double value, bool expectedSuccess)
+	public void trivial_workflow_evaluates(double value, bool expectedSuccess)
 	{
 		const string trivialYaml = """
 								   WorkflowName: trivial
@@ -112,14 +128,14 @@ public sealed class StartupTests
 
 		WorkflowStore.ProbeCompile(engine, workflows, new RuleParameter("input1", new ProbeInput(0.0)));
 
-		var results = await engine.ExecuteAllRulesAsync("trivial", probe);
+		var results = ExecuteAllRules(engine, "trivial", probe);
 
 		var rule = results.Should().ContainSingle(r => r.Rule.RuleName == "ValueIsNonNegative").Subject;
 		rule.IsSuccess.Should().Be(expectedSuccess);
 	}
 
 	[Fact]
-	public async Task yaml_workflow_defaults_missing_rule_expression_type_to_lambda_expression()
+	public void yaml_workflow_defaults_missing_rule_expression_type_to_lambda_expression()
 	{
 		const string defaultedYaml = """
 									 WorkflowName: defaulted
@@ -135,9 +151,21 @@ public sealed class StartupTests
 
 		WorkflowStore.ProbeCompile(engine, workflows, new RuleParameter("input1", new ProbeInput(0.0)));
 
-		var results = await engine.ExecuteAllRulesAsync("defaulted", new RuleParameter("input1", new ProbeInput(1.0)));
+		var results = ExecuteAllRules(engine, "defaulted", new RuleParameter("input1", new ProbeInput(1.0)));
 
 		results.Should().ContainSingle(r => r.Rule.RuleName == "ValueIsNonNegative")
 			.Which.IsSuccess.Should().BeTrue();
+	}
+
+	private static List<RuleResultTree> ExecuteAllRules(IRulesEngine engine, string workflowName, params RuleParameter[] ruleParams)
+	{
+		var execution = engine.ExecuteAllRulesAsync(workflowName, ruleParams);
+		if (!execution.IsCompletedSuccessfully) {
+			throw new InvalidOperationException($"Workflow '{workflowName}' did not complete synchronously.");
+		}
+
+#pragma warning disable VSTHRD002
+		return execution.Result;
+#pragma warning restore VSTHRD002
 	}
 }

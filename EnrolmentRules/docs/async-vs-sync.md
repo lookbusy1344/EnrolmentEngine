@@ -10,13 +10,13 @@ on the one path the benchmarks care about, and advertises an I/O contract the co
 
 ## What the call graph actually does
 
-Tracing `EnrolmentEngine.RunAsync` — the core of every evaluation — the whole chain is
+Tracing `EnrolmentEngine.Run` — the core of every evaluation — the whole chain is
 computational:
 
 | Stage | Work | Nature |
 |---|---|---|
 | `GradePredictor.Predict` | GCSE averaging + linear regression + prior-qual carry-through | Synchronous already |
-| `RatingEvaluator.EvaluateWithGate` | Eligibility gate + per-subject tiers | `await`s RulesEngine |
+| `RatingEvaluator.EvaluateWithGate` | Eligibility gate + per-subject tiers | Calls RulesEngine |
 | `RulesEngine.ExecuteAllRulesAsync` | Compiled-lambda evaluation over one student's facts | **CPU; completes synchronously** |
 | `ConstraintPass.Evaluate` / `Apply` | Cross-subject prerequisites, exclusions, vetoes | Synchronous already |
 | `Aggregator.CapGreens` / `Summarise` / `Rank` | Tariff fold, optional green cap, ordering | Synchronous already |
@@ -25,9 +25,9 @@ The only `await` that reaches a library boundary is `RulesEngine.ExecuteAllRules
 call does not actually go async: RulesEngine compiles the YAML lambdas to delegates and **invokes
 them synchronously**, returning an already-completed `Task`. Its sole async extension point is the
 success/failure *action* hook — which this project does not use. There is no I/O, no yield point,
-no thread ever released, no concurrency expressed. Every `async`/`await`/`ConfigureAwait(false)`
-from `EnrolmentEngine` down to `RatingEvaluator` exists only to propagate one leaf `Task` that is
-born completed.
+no thread ever released, no concurrency expressed. The `async`/`await`/`ConfigureAwait(false)` the
+earlier surface threaded from `EnrolmentEngine` down to `RatingEvaluator` existed only to propagate
+one leaf `Task` that is born completed.
 
 ## What `async` buys here — and doesn't
 
@@ -89,9 +89,9 @@ precise answer rather than a wave of the hand:
   thread (no I/O, and no success/failure actions configured), so the returned `Task` is already
   completed. `GetAwaiter().GetResult()` observes a finished result and returns immediately — it
   never blocks a thread that is waiting for another thread.
-- **No `SynchronizationContext` to deadlock against.** The library already uses
-  `ConfigureAwait(false)` throughout; there is no captured UI/request context for a continuation to
-  contend for. The classic sync-over-async deadlock requires exactly that captured context.
+- **No `SynchronizationContext` to deadlock against.** The bridge never awaits — it observes an
+  already-completed `Task` — so there is no continuation to post back to a captured UI/request
+  context. The classic sync-over-async deadlock requires exactly such a captured-context continuation.
 - **Not a server.** Blocking a pooled thread would matter under a request-servicing load that could
   exhaust the pool. A CLI and in-process library have no such pool pressure.
 
@@ -151,7 +151,7 @@ is a stateless pure function.** One student in, one result out; no shared mutabl
 memory, no locks. Concurrency is embarrassingly parallel: you do not parallelise *within* an
 evaluation, you run many independent evaluations at once and they never touch each other. The
 codebase already relies on this — the CLI batch runner shares a single engine instance across cores
-via `Parallel.ForAsync`, and the no-global-state tests pin it. On a server the shape is identical:
+via `Parallel.For`, and the no-global-state tests pin it. On a server the shape is identical:
 ASP.NET spreads concurrent requests across pool threads (hence cores) automatically; each request
 calls the shared engine synchronously on its own thread.
 

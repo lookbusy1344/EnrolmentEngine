@@ -77,7 +77,7 @@ public sealed class EligibilityGateTests
 	}
 
 	[Fact]
-	public async Task exactly_min_passes_including_english_and_maths_is_eligible()
+	public void exactly_min_passes_including_english_and_maths_is_eligible()
 	{
 		// Five passes (≥ PassGrade), English and Maths among them: the minimum eligible student.
 		var gcses = Gcses(
@@ -85,7 +85,7 @@ public sealed class EligibilityGateTests
 			("physics", Harness.Thresholds.PassGrade), ("chemistry", Harness.Thresholds.PassGrade),
 			("biology", Harness.Thresholds.PassGrade));
 
-		var evaluator = await Harness.ShippedEvaluatorAsync();
+		var evaluator = Harness.ShippedEvaluator();
 		var gate = evaluator.EvaluateEligibility(gcses);
 
 		gate.Eligible.Should().BeTrue();
@@ -93,7 +93,7 @@ public sealed class EligibilityGateTests
 	}
 
 	[Fact]
-	public async Task missing_english_is_ineligible_with_the_english_reason()
+	public void missing_english_is_ineligible_with_the_english_reason()
 	{
 		// Five passes, but English absent — absent ⇒ not a pass, so only the English requirement fails.
 		var gcses = Gcses(
@@ -101,7 +101,7 @@ public sealed class EligibilityGateTests
 			("chemistry", Harness.Thresholds.PassGrade), ("biology", Harness.Thresholds.PassGrade),
 			("history", Harness.Thresholds.PassGrade));
 
-		var evaluator = await Harness.ShippedEvaluatorAsync();
+		var evaluator = Harness.ShippedEvaluator();
 		var gate = evaluator.EvaluateEligibility(gcses);
 
 		gate.Eligible.Should().BeFalse();
@@ -109,10 +109,10 @@ public sealed class EligibilityGateTests
 	}
 
 	[Fact]
-	public async Task english_failure_reason_uses_the_loaded_pass_grade()
+	public void english_failure_reason_uses_the_loaded_pass_grade()
 	{
 		var thresholds = Harness.Thresholds with { PassGrade = 7 };
-		var evaluator = await EvaluatorAsync(thresholds);
+		var evaluator = Evaluator(thresholds);
 
 		var gate = evaluator.EvaluateEligibility(Gcses(
 			("english_language", 6), ("maths", 7), ("physics", 7), ("chemistry", 7), ("biology", 7),
@@ -123,10 +123,10 @@ public sealed class EligibilityGateTests
 	}
 
 	[Fact]
-	public async Task maths_failure_reason_uses_the_loaded_pass_grade()
+	public void maths_failure_reason_uses_the_loaded_pass_grade()
 	{
 		var thresholds = Harness.Thresholds with { PassGrade = 7 };
-		var evaluator = await EvaluatorAsync(thresholds);
+		var evaluator = Evaluator(thresholds);
 
 		var gate = evaluator.EvaluateEligibility(Gcses(
 			("english_language", 7), ("maths", 6), ("physics", 7), ("chemistry", 7), ("biology", 7),
@@ -137,10 +137,10 @@ public sealed class EligibilityGateTests
 	}
 
 	[Fact]
-	public async Task failing_english_and_pass_count_lists_english_first()
+	public void failing_english_and_pass_count_lists_english_first()
 	{
 		// Only Maths present: English fails, pass-count fails, Maths passes. Precedence puts English first.
-		var evaluator = await Harness.ShippedEvaluatorAsync();
+		var evaluator = Harness.ShippedEvaluator();
 		var gate = evaluator.EvaluateEligibility(Gcses(("maths", Harness.Thresholds.PassGrade)));
 
 		gate.Eligible.Should().BeFalse();
@@ -150,10 +150,10 @@ public sealed class EligibilityGateTests
 	}
 
 	[Fact]
-	public async Task multiple_failures_keep_declared_order_with_loaded_threshold_values()
+	public void multiple_failures_keep_declared_order_with_loaded_threshold_values()
 	{
 		var thresholds = Harness.Thresholds with { PassGrade = 7, MinPasses = 6 };
-		var evaluator = await EvaluatorAsync(thresholds);
+		var evaluator = Evaluator(thresholds);
 
 		var gate = evaluator.EvaluateEligibility(Gcses(("maths", 7), ("physics", 7), ("chemistry", 7)));
 
@@ -164,7 +164,7 @@ public sealed class EligibilityGateTests
 	}
 
 	[Fact]
-	public async Task grades_below_pass_grade_are_excluded_from_the_count()
+	public void grades_below_pass_grade_are_excluded_from_the_count()
 	{
 		// English + Maths pass, but the other three sit one below PassGrade, so only two count: ineligible.
 		var below = Harness.Thresholds.PassGrade - 1;
@@ -172,7 +172,7 @@ public sealed class EligibilityGateTests
 			("english_language", Harness.Thresholds.PassGrade), ("maths", Harness.Thresholds.PassGrade),
 			("physics", below), ("chemistry", below), ("biology", below));
 
-		var evaluator = await Harness.ShippedEvaluatorAsync();
+		var evaluator = Harness.ShippedEvaluator();
 		var gate = evaluator.EvaluateEligibility(gcses);
 
 		gate.Eligible.Should().BeFalse();
@@ -180,10 +180,10 @@ public sealed class EligibilityGateTests
 	}
 
 	[Fact]
-	public async Task pass_count_failure_reason_uses_the_loaded_thresholds()
+	public void pass_count_failure_reason_uses_the_loaded_thresholds()
 	{
 		var thresholds = Harness.Thresholds with { PassGrade = 7, MinPasses = 6 };
-		var evaluator = await EvaluatorAsync(thresholds);
+		var evaluator = Evaluator(thresholds);
 
 		var gate = evaluator.EvaluateEligibility(Gcses(
 			("english_language", 7), ("maths", 7), ("physics", 7), ("chemistry", 7), ("biology", 7)));
@@ -193,7 +193,7 @@ public sealed class EligibilityGateTests
 	}
 
 	[Fact]
-	public async Task grades_at_pass_grade_are_counted()
+	public void grades_at_pass_grade_are_counted()
 	{
 		// Same five subjects, now all exactly at PassGrade: the boundary is inclusive, so eligible.
 		var gcses = Gcses(
@@ -201,14 +201,14 @@ public sealed class EligibilityGateTests
 			("physics", Harness.Thresholds.PassGrade), ("chemistry", Harness.Thresholds.PassGrade),
 			("biology", Harness.Thresholds.PassGrade));
 
-		var evaluator = await Harness.ShippedEvaluatorAsync();
+		var evaluator = Harness.ShippedEvaluator();
 		var gate = evaluator.EvaluateEligibility(gcses);
 
 		gate.Eligible.Should().BeTrue();
 	}
 
 	[Fact]
-	public async Task pass_count_binds_to_the_array_not_a_deduplicated_lookup()
+	public void pass_count_binds_to_the_array_not_a_deduplicated_lookup()
 	{
 		// A list with duplicate passing entries: the array counts each (≥ MinPasses ⇒ eligible). Were the
 		// count re-pointed at the keyed accessor it would collapse the duplicates and fall under the bar.
@@ -220,7 +220,7 @@ public sealed class EligibilityGateTests
 		// Sanity-check the premise: the keyed accessor would collapse the three Physics entries to one.
 		new GcseFacts(gcses).Grade("physics").Should().Be(Harness.Thresholds.PassGrade);
 
-		var evaluator = await Harness.ShippedEvaluatorAsync();
+		var evaluator = Harness.ShippedEvaluator();
 		var gate = evaluator.EvaluateEligibility(gcses);
 
 		gate.Eligible.Should().BeTrue();
@@ -251,10 +251,10 @@ public sealed class EligibilityGateTests
 	}
 
 	[Fact]
-	public async Task shipped_eligibility_workflow_probe_compiles()
+	public void shipped_eligibility_workflow_probe_compiles()
 	{
 		// The boot guard: the real eligibility lambdas compile and bind against the canonical probe.
-		var (workflows, engine) = await Harness.BuildFromShippedWorkflowsAsync();
+		var (workflows, engine) = Harness.BuildFromShippedWorkflows();
 
 		var act = () => WorkflowStore.ProbeCompile(engine, workflows, Harness.CanonicalProbe());
 
@@ -314,14 +314,14 @@ public sealed class EligibilityGateTests
 	private static Rating ArtRating(EnrolmentResult result) =>
 		result.Recommendations.Single(r => r.Subject == Subject.Art).Rating;
 
-	private static async Task<RatingEvaluator> EvaluatorAsync(PolicyThresholds thresholds) =>
-		new((await Harness.BuildFromShippedWorkflowsAsync()).Engine, thresholds, Harness.Catalogue, Harness.Scale);
+	private static RatingEvaluator Evaluator(PolicyThresholds thresholds) =>
+		new((Harness.BuildFromShippedWorkflows()).Engine, thresholds, Harness.Catalogue, Harness.Scale);
 
 	[Fact]
-	public async Task per_call_asof_overrides_the_bound_construction_date()
+	public void per_call_asof_overrides_the_bound_construction_date()
 	{
 		var student = ArtAgeGatedStudent();
-		var (_, rulesEngine) = await Harness.BuildFromShippedWorkflowsAsync();
+		var (_, rulesEngine) = Harness.BuildFromShippedWorkflows();
 
 		var asMinor = new DateOnly(2026, 6, 25); // age 18 → Art held to strong-entry
 		var asAdult = new DateOnly(2026, 9, 2); // age 19 → Art held to top-entry
@@ -337,10 +337,10 @@ public sealed class EligibilityGateTests
 	}
 
 	[Fact]
-	public async Task live_date_source_is_resolved_afresh_on_each_evaluation()
+	public void live_date_source_is_resolved_afresh_on_each_evaluation()
 	{
 		var student = ArtAgeGatedStudent();
-		var (_, rulesEngine) = await Harness.BuildFromShippedWorkflowsAsync();
+		var (_, rulesEngine) = Harness.BuildFromShippedWorkflows();
 
 		var today = new DateOnly(2026, 6, 25); // age 18
 		var evaluator = new RatingEvaluator(rulesEngine, Harness.Thresholds, Harness.Catalogue);

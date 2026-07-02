@@ -22,7 +22,7 @@ public sealed class AgeGateTests
 
 	// A strong, eligible student whose art prediction comfortably clears its tiers, so the only swing factor
 	// left for art is the age-conditional GCSE entry threshold. Art GCSE and date of birth are caller-supplied.
-	private static async Task<Rating> RateArtAsync(DateOnly dateOfBirth, int artGcse)
+	private static Rating RateArt(DateOnly dateOfBirth, int artGcse)
 	{
 		var student = new StudentInput(
 			"S-AGE",
@@ -36,7 +36,7 @@ public sealed class AgeGateTests
 			},
 			[]) { DateOfBirth = dateOfBirth };
 
-		var evaluator = await Harness.ShippedEvaluatorAsync();
+		var evaluator = Harness.ShippedEvaluator();
 		var ratings = evaluator.EvaluateRatings(Harness.Predict(student), student.ToGcseResults());
 		return ratings.Single(r => r.Subject == Subject.Art).Rating;
 	}
@@ -52,17 +52,17 @@ public sealed class AgeGateTests
 	}
 
 	[Fact]
-	public async Task a_younger_student_clears_art_entry_at_the_strong_threshold() =>
+	public void a_younger_student_clears_art_entry_at_the_strong_threshold() =>
 		// Art GCSE exactly at StrongEntry: a sub-adult meets entry, so the rating is decided by prediction, not the gate.
-		(await RateArtAsync(YoungerDob, Harness.Thresholds.StrongEntry)).Should().NotBe(Rating.Red);
+		(RateArt(YoungerDob, Harness.Thresholds.StrongEntry)).Should().NotBe(Rating.Red);
 
 	[Fact]
-	public async Task an_adult_fails_art_entry_at_the_strong_threshold() =>
+	public void an_adult_fails_art_entry_at_the_strong_threshold() =>
 		// The same art GCSE that suffices for a younger student is below the adult's TopEntry bar ⇒ entry unmet ⇒ red.
-		(await RateArtAsync(AdultDob, Harness.Thresholds.StrongEntry)).Should().Be(Rating.Red);
+		(RateArt(AdultDob, Harness.Thresholds.StrongEntry)).Should().Be(Rating.Red);
 
 	[Fact]
-	public async Task an_adult_clears_art_entry_at_the_top_threshold() =>
+	public void an_adult_clears_art_entry_at_the_top_threshold() =>
 		// Raising the art GCSE to TopEntry meets the adult bar, so the gate no longer forces red.
-		(await RateArtAsync(AdultDob, Harness.Thresholds.TopEntry)).Should().NotBe(Rating.Red);
+		(RateArt(AdultDob, Harness.Thresholds.TopEntry)).Should().NotBe(Rating.Red);
 }

@@ -122,13 +122,9 @@ public sealed class ConstraintPassTests
 ///     Engine-driven constraint-pass scenarios through the full pipeline. Explicit regression anchors
 ///     for the cross-subject downgrades, kept alongside the unit tests for Apply.
 /// </summary>
-public sealed class ConstraintPassScenarioTests : IAsyncLifetime
+public sealed class ConstraintPassScenarioTests
 {
-	private EnrolmentEngine engine = null!;
-
-	public async Task InitializeAsync() => engine = await Harness.ShippedEngineAsync();
-
-	public Task DisposeAsync() => Task.CompletedTask;
+	private readonly EnrolmentEngine engine = Harness.ShippedEngine();
 
 	private static StudentInput StrongEligibleStudent() =>
 		new("S-MONOTONE", new Dictionary<string, int> {

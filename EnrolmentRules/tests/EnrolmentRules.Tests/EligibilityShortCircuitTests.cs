@@ -45,11 +45,11 @@ public sealed class EligibilityShortCircuitTests
 			Harness.Scale);
 
 	[Fact]
-	public async Task ineligible_student_is_red_in_every_subject_with_the_gate_reason()
+	public void ineligible_student_is_red_in_every_subject_with_the_gate_reason()
 	{
 		var gcses = IneligibleGcses();
 
-		var evaluator = await Harness.ShippedEvaluatorAsync();
+		var evaluator = Harness.ShippedEvaluator();
 		var ratings = evaluator.Evaluate(ProfileFor(gcses), gcses);
 
 		// Every catalogue subject is present exactly once and red — no subject can dodge the gate.
@@ -62,10 +62,10 @@ public sealed class EligibilityShortCircuitTests
 	}
 
 	[Fact]
-	public async Task ineligible_student_never_executes_the_subject_workflow()
+	public void ineligible_student_never_executes_the_subject_workflow()
 	{
 		var gcses = IneligibleGcses();
-		var spy = new RecordingEngine((await Harness.BuildFromShippedWorkflowsAsync()).Engine);
+		var spy = new RecordingEngine((Harness.BuildFromShippedWorkflows()).Engine);
 		var thresholds = PolicyThresholdsStore.LoadAndValidate(Harness.DataDir);
 
 		new RatingEvaluator(spy, thresholds).Evaluate(ProfileFor(gcses), gcses);
@@ -75,11 +75,11 @@ public sealed class EligibilityShortCircuitTests
 	}
 
 	[Fact]
-	public async Task eligible_student_runs_the_subject_workflow_and_is_not_all_red()
+	public void eligible_student_runs_the_subject_workflow_and_is_not_all_red()
 	{
 		var student = EligibleStudent();
 		var gcses = student.ToGcseResults();
-		var spy = new RecordingEngine((await Harness.BuildFromShippedWorkflowsAsync()).Engine);
+		var spy = new RecordingEngine((Harness.BuildFromShippedWorkflows()).Engine);
 		var thresholds = PolicyThresholdsStore.LoadAndValidate(Harness.DataDir);
 
 		var ratings = new RatingEvaluator(spy, thresholds).Evaluate(Harness.Predict(student), gcses);

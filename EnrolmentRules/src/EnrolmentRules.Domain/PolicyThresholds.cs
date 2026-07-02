@@ -13,8 +13,10 @@ namespace EnrolmentRules.Domain;
 ///         <see cref="AdviceConsidersUnsatGcses" /> is a diagnostic knob, off by default: when
 ///         <c>false</c> the counterfactual advisor only proposes raising GCSEs the student already sat;
 ///         when <c>true</c> it reverts to the old, much heavier search that may also propose sitting a
-///         brand-new GCSE. Retained for diagnosing why a subject is reachable/unreachable, not for normal
-///         operation.
+///         brand-new GCSE. The separate gate-clearing fallback for an ineligible student may still
+///         propose brand-new GCSEs even when this knob is off, because no grade bump can clear the gate
+///         without enough passes. Retained for diagnosing why a subject is reachable/unreachable, not
+///         for normal operation.
 ///     </para>
 /// </remarks>
 public sealed record PolicyThresholds(

@@ -12,12 +12,12 @@ using Domain;
 public sealed class ExplanationRendererTests
 {
 	[Fact]
-	public async Task cli_explain_text_matches_the_committed_markdown_golden()
+	public void cli_explain_text_matches_the_committed_markdown_golden()
 	{
 		var path = Path.Combine(Harness.RepoRoot, "examples", "golden", "strong-constraints.json");
 		var expectedPath = Path.Combine(Harness.RepoRoot, "examples", "golden", "strong-constraints.expected.md");
-		await using var stdout = new StringWriter();
-		await using var stderr = new StringWriter();
+		using var stdout = new StringWriter();
+		using var stderr = new StringWriter();
 
 		var exit = CliRunner.Run(["--explain-text", path], stdout, stderr);
 
@@ -25,17 +25,17 @@ public sealed class ExplanationRendererTests
 		stderr.ToString().Should().BeEmpty();
 		File.Exists(expectedPath).Should().BeTrue();
 
-		var expected = await File.ReadAllTextAsync(expectedPath);
+		var expected = File.ReadAllText(expectedPath);
 		stdout.ToString().ReplaceLineEndings().TrimEnd()
 			.Should().Be(expected.ReplaceLineEndings().TrimEnd());
 	}
 
 	[Fact]
-	public async Task ineligible_explanations_render_the_gate_reasons()
+	public void ineligible_explanations_render_the_gate_reasons()
 	{
-		var engine = await Harness.ShippedEngineAsync();
+		var engine = Harness.ShippedEngine();
 		var explained = engine.Explain(new("S-INELIGIBLE", new Dictionary<string, int> { ["maths"] = 6 }, []));
-		await using var stdout = new StringWriter();
+		using var stdout = new StringWriter();
 
 		ExplanationRenderer.Render(explained, stdout);
 

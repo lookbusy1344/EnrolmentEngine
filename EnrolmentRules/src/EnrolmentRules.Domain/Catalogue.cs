@@ -86,7 +86,7 @@ public sealed class CatalogueData
 			.ToFrozenDictionary(static pair => pair.subject, static pair => pair.index);
 		Validate(this.entries, order, scale);
 
-		// Each mutual-exclusion pair once, as an ordered tuple (lower enum value first) so the symmetric
+		// Each mutual-exclusion pair once, as an ordered tuple in catalogue declaration order so the symmetric
 		// SubjectMeta.Exclusions listing is not double-counted. Materialised once: the table is fixed for
 		// the process lifetime, so the constraint pass reads a cached array rather than re-running the
 		// cross-product.
@@ -102,7 +102,7 @@ public sealed class CatalogueData
 	/// <summary>The subjects declared by this catalogue, in file order.</summary>
 	public IReadOnlyList<Subject> Subjects { get; }
 
-	/// <summary>Each mutual-exclusion pair once, lower enum value first.</summary>
+	/// <summary>Each mutual-exclusion pair once, in catalogue declaration order.</summary>
 	public IReadOnlyList<ExclusionPair> ExclusionPairs { get; }
 
 	/// <summary>The metadata for <paramref name="subject" /> (guaranteed present when the bound catalogue invariant holds).</summary>
@@ -153,6 +153,15 @@ public sealed class CatalogueData
 					throw new InvalidDataException(
 						$"Catalogue exclusion {EnumNames.NameOf(subject)} → {EnumNames.NameOf(exclusion.Other)} "
 						+ $"({EnumNames.NameOf(exclusion.Severity)}) is not declared symmetrically.");
+				}
+
+				if (order.TryGetValue(subject, out var subjectOrder)
+					&& order.TryGetValue(exclusion.Other, out var otherOrder)
+					&& subjectOrder < otherOrder
+					&& meta.UcasWeight == otherMeta.UcasWeight) {
+					throw new InvalidDataException(
+						$"Catalogue exclusion pair {EnumNames.NameOf(subject)} ↔ {EnumNames.NameOf(exclusion.Other)} "
+						+ $"must have distinct UCAS weights, but both are {meta.UcasWeight}.");
 				}
 			}
 
@@ -223,7 +232,7 @@ public static class Catalogue
 	/// <summary>Every catalogue subject (the authoritative subject list, derived from the shipped data).</summary>
 	public static IReadOnlyList<Subject> Subjects => Default.Subjects;
 
-	/// <summary>Each mutual-exclusion pair once, lower enum value first.</summary>
+	/// <summary>Each mutual-exclusion pair once, in catalogue declaration order.</summary>
 	public static IReadOnlyList<ExclusionPair> ExclusionPairs => Default.ExclusionPairs;
 
 	/// <summary>Parse and validate a YAML catalogue document, returning the runtime table.</summary>

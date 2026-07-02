@@ -269,9 +269,10 @@ public sealed class EnrolmentEngine : IEnrolmentEngine
 	{
 		cancellationToken.ThrowIfCancellationRequested();
 		var gcses = student.ToGcseResults();
+		var lookup = new GcseFacts(gcses);
 		var profile = GradePredictor.Predict(student, gcses, asOf, Catalogue, matrix, Scale);
 		cancellationToken.ThrowIfCancellationRequested();
-		var (gate, baseRatings) = evaluator.EvaluateWithGate(profile, gcses, cancellationToken);
+		var (gate, baseRatings) = evaluator.EvaluateWithGate(profile, gcses, lookup, cancellationToken);
 		cancellationToken.ThrowIfCancellationRequested();
 
 		var constraintAdjustments = ConstraintPass.Evaluate(baseRatings, profile, Catalogue);

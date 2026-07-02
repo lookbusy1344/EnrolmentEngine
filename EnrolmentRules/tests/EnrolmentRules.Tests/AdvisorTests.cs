@@ -31,9 +31,9 @@ public sealed class AdvisorTests
 		}, hobbies);
 
 	[Fact]
-	public async Task advisor_finds_the_smallest_bump_that_flips_a_red_subject()
+	public void advisor_finds_the_smallest_bump_that_flips_a_red_subject()
 	{
-		var engine = await Harness.ShippedEngineAsync();
+		var engine = Harness.ShippedEngine();
 
 		var advice = engine.Advise(new("S-ADVISE", new Dictionary<string, int> {
 			["english_language"] = 7,
@@ -60,9 +60,9 @@ public sealed class AdvisorTests
 	}
 
 	[Fact]
-	public async Task advisor_accepts_a_red_to_green_step_as_hitting_an_amber_target()
+	public void advisor_accepts_a_red_to_green_step_as_hitting_an_amber_target()
 	{
-		var engine = await Harness.ShippedEngineAsync();
+		var engine = Harness.ShippedEngine();
 		var student = new StudentInput("S-RED-GREEN", new Dictionary<string, int> {
 			["english_language"] = 9,
 			["maths"] = 7,
@@ -85,9 +85,9 @@ public sealed class AdvisorTests
 	}
 
 	[Fact]
-	public async Task advisor_preserves_date_of_birth_when_searching_age_gated_art_counterfactuals()
+	public void advisor_preserves_date_of_birth_when_searching_age_gated_art_counterfactuals()
 	{
-		var engine = await Harness.ShippedEngineAsync();
+		var engine = Harness.ShippedEngine();
 		var student = new StudentInput("S-ADULT-ART", new Dictionary<string, int> {
 			["english_language"] = 9,
 			["maths"] = 9,
@@ -109,9 +109,9 @@ public sealed class AdvisorTests
 	}
 
 	[Fact]
-	public async Task advice_never_proposes_sitting_a_gcse_the_student_has_not_taken()
+	public void advice_never_proposes_sitting_a_gcse_the_student_has_not_taken()
 	{
-		var engine = await Harness.ShippedEngineAsync();
+		var engine = Harness.ShippedEngine();
 		var student = new StudentInput("S-HELD-ONLY", new Dictionary<string, int> {
 			["english_language"] = 7,
 			["maths"] = 5,
@@ -136,9 +136,9 @@ public sealed class AdvisorTests
 	}
 
 	[Fact]
-	public async Task advisor_considers_unsat_gcses_when_asked_for_diagnosis()
+	public void advisor_considers_unsat_gcses_when_asked_for_diagnosis()
 	{
-		var engine = await Harness.ShippedEngineAsync();
+		var engine = Harness.ShippedEngine();
 		// Maths is committed so Further Maths' prerequisite is met and its search returns early rather than
 		// exhausting the (now 13-wide) diagnostic candidate space — keeps this slow-by-design path quick here.
 		var student = new StudentInput("S-HELD-ONLY", new Dictionary<string, int> {
@@ -161,9 +161,9 @@ public sealed class AdvisorTests
 	}
 
 	[Fact]
-	public async Task advice_unsat_gcse_behaviour_defaults_from_thresholds()
+	public void advice_unsat_gcse_behaviour_defaults_from_thresholds()
 	{
-		var (_, rules) = await Harness.BuildFromShippedWorkflowsAsync();
+		var (_, rules) = Harness.BuildFromShippedWorkflows();
 		var engine = new EnrolmentEngine(
 			rules, Harness.Thresholds with { AdviceConsidersUnsatGcses = true }, Harness.Catalogue, Harness.AsOf);
 		var student = new StudentInput("S-HELD-ONLY", new Dictionary<string, int> {
@@ -181,9 +181,27 @@ public sealed class AdvisorTests
 	}
 
 	[Fact]
-	public async Task advisor_reports_a_veto_blocked_subject_as_unreachable()
+	public void gate_clearing_advice_can_propose_brand_new_gcses_when_the_student_lacks_enough_passes()
 	{
-		var engine = await Harness.ShippedEngineAsync();
+		var engine = Harness.ShippedEngine();
+		var student = new StudentInput("S-GATE", new Dictionary<string, int> {
+			["english_language"] = Harness.Thresholds.PassGrade,
+			["maths"] = Harness.Thresholds.PassGrade,
+		}, []) { DateOfBirth = new DateOnly(2009, 9, 1) };
+
+		var advice = engine.Advise(student);
+
+		advice.Eligible.Should().BeFalse();
+		advice.Gate.Should().NotBeNull();
+		advice.Gate!.Changes.Should().NotBeEmpty();
+		advice.Gate.Changes.Select(change => change.GcseSubject)
+			.Should().Contain(subject => subject != "english_language" && subject != "maths");
+	}
+
+	[Fact]
+	public void advisor_reports_a_veto_blocked_subject_as_unreachable()
+	{
+		var engine = Harness.ShippedEngine();
 
 		var advice = engine.Advise(StrongStudent("plays_trombone"));
 		var music = advice.Advice.Single(a => a.Subject == Subject.Music);
@@ -194,9 +212,9 @@ public sealed class AdvisorTests
 	}
 
 	[Fact]
-	public async Task advisor_reports_a_restudy_bar_blocked_subject_as_unreachable()
+	public void advisor_reports_a_restudy_bar_blocked_subject_as_unreachable()
 	{
-		var engine = await Harness.ShippedEngineAsync();
+		var engine = Harness.ShippedEngine();
 
 		var advice = engine.Advise(new("S-RESTUDY", new Dictionary<string, int> {
 			["english_language"] = 8,
@@ -222,9 +240,9 @@ public sealed class AdvisorTests
 	}
 
 	[Fact]
-	public async Task advisor_preserves_prior_qualifications_when_replaying_reported_changes()
+	public void advisor_preserves_prior_qualifications_when_replaying_reported_changes()
 	{
-		var engine = await Harness.ShippedEngineAsync();
+		var engine = Harness.ShippedEngine();
 		var student = new StudentInput("S-QUAL-EQUIV", new Dictionary<string, int> {
 			["english_language"] = 7,
 			["maths"] = 7,
@@ -247,7 +265,7 @@ public sealed class AdvisorTests
 	}
 
 	[Fact]
-	public async Task advisor_does_not_claim_a_cap_blocked_green_is_reachable()
+	public void advisor_does_not_claim_a_cap_blocked_green_is_reachable()
 	{
 		// The green cap is an optional feature, off in the shipped config; enable it here to exercise the
 		// advisor's cap-blocked handling. Further Maths is red under the chosen-mode prerequisite (Maths is
@@ -255,7 +273,7 @@ public sealed class AdvisorTests
 		// (5th by UCAS weight behind Maths, Physics, Chemistry, Biology). No grade change can free a cap slot,
 		// so it is unreachable.
 		const int cap = 4;
-		var rules = (await Harness.BuildFromShippedWorkflowsAsync()).Engine;
+		var rules = (Harness.BuildFromShippedWorkflows()).Engine;
 		var engine = new EnrolmentEngine(rules, Harness.Thresholds with { MaxGreenChoices = cap }, Harness.Catalogue, Harness.AsOf);
 
 		var advice = engine.Advise(StrongStudent("plays_piano"));
@@ -266,9 +284,9 @@ public sealed class AdvisorTests
 	}
 
 	[Fact]
-	public async Task advisor_names_a_prerequisite_block_rather_than_blaming_the_grade_budget()
+	public void advisor_names_a_prerequisite_block_rather_than_blaming_the_grade_budget()
 	{
-		var engine = await Harness.ShippedEngineAsync();
+		var engine = Harness.ShippedEngine();
 
 		// A strong student who has not committed to Maths: Further Maths clears its own tier but is held red
 		// by the chosen-Maths prerequisite, which no grade change can satisfy. The advisor must report that
@@ -281,9 +299,9 @@ public sealed class AdvisorTests
 	}
 
 	[Fact]
-	public async Task ineligible_student_gets_a_gate_clearing_bundle()
+	public void ineligible_student_gets_a_gate_clearing_bundle()
 	{
-		var engine = await Harness.ShippedEngineAsync();
+		var engine = Harness.ShippedEngine();
 		var student = new StudentInput("S-INELIGIBLE", new Dictionary<string, int> { ["maths"] = 8, ["physics"] = 7, ["chemistry"] = 6 }, []);
 
 		var advice = engine.Advise(student);
@@ -299,11 +317,11 @@ public sealed class AdvisorTests
 	}
 
 	[Fact]
-	public async Task gate_clearing_bundle_honours_a_loaded_min_passes_override()
+	public void gate_clearing_bundle_honours_a_loaded_min_passes_override()
 	{
 		// Raising the pass-count requirement via loaded data (no rebuild) must extend the gate-clearing
 		// bundle: a five-pass student who clears the shipped gate needs a sixth pass under the override.
-		var (_, rules) = await Harness.BuildFromShippedWorkflowsAsync();
+		var (_, rules) = Harness.BuildFromShippedWorkflows();
 		var raised = Harness.Thresholds with { MinPasses = Harness.Thresholds.MinPasses + 1 };
 		var engine = new EnrolmentEngine(rules, raised, Harness.AsOf);
 
@@ -326,9 +344,9 @@ public sealed class AdvisorTests
 	}
 
 	[Fact]
-	public async Task budget_exhaustion_returns_unreachable()
+	public void budget_exhaustion_returns_unreachable()
 	{
-		var engine = await Harness.ShippedEngineAsync();
+		var engine = Harness.ShippedEngine();
 
 		// Maths is committed so Further Maths' chosen-Maths prerequisite is satisfied, isolating the grade
 		// budget as the block. Further Maths needs both maths ≥ 7 and average ≥ 7. From an all-grade-4 start
@@ -349,12 +367,12 @@ public sealed class AdvisorTests
 	}
 
 	[Fact]
-	public async Task cli_advise_matches_the_committed_golden()
+	public void cli_advise_matches_the_committed_golden()
 	{
 		var path = Path.Combine(Harness.RepoRoot, "examples", "golden", "advise-counterfactual.json");
 		var expectedPath = Path.Combine(Harness.RepoRoot, "examples", "golden", "advise-counterfactual.expected.json");
-		await using var stdout = new StringWriter();
-		await using var stderr = new StringWriter();
+		using var stdout = new StringWriter();
+		using var stderr = new StringWriter();
 
 		var exit = CliRunner.Run(["--advise", path], stdout, stderr);
 
@@ -362,7 +380,7 @@ public sealed class AdvisorTests
 		stderr.ToString().Should().BeEmpty();
 		File.Exists(expectedPath).Should().BeTrue();
 
-		var expected = await File.ReadAllTextAsync(expectedPath);
+		var expected = File.ReadAllText(expectedPath);
 		stdout.ToString().ReplaceLineEndings().TrimEnd()
 			.Should().Be(expected.ReplaceLineEndings().TrimEnd());
 
@@ -385,19 +403,19 @@ public sealed class AdvisorTests
 	}
 
 	[Fact]
-	public async Task cli_advise_all_gcses_flag_enables_the_diagnostic_search()
+	public void cli_advise_all_gcses_flag_enables_the_diagnostic_search()
 	{
 		var dir = Path.Combine(Path.GetTempPath(), "enrolmentrules-tests", Guid.NewGuid().ToString("N"));
 		Directory.CreateDirectory(dir);
 		var path = Path.Combine(dir, "student.json");
-		await File.WriteAllTextAsync(path, """
+		File.WriteAllText(path, """
 										   { "student": { "id": "S-CLI-DIAG",
 										     "gcses": {"english_language":7,"maths":5,"physics":5,"chemistry":5,"biology":5},
 										     "hobbies": [], "chosen_a_levels": ["maths"], "date_of_birth": "2009-09-01" } }
 										   """);
 
-		await using var stdout = new StringWriter();
-		await using var stderr = new StringWriter();
+		using var stdout = new StringWriter();
+		using var stderr = new StringWriter();
 
 		var exit = CliRunner.Run(["--advise", "--all-gcses", path], stdout, stderr);
 
@@ -410,9 +428,9 @@ public sealed class AdvisorTests
 	}
 
 	[Fact]
-	public async Task low_grade_cost_budget_marks_subject_unreachable()
+	public void low_grade_cost_budget_marks_subject_unreachable()
 	{
-		var (_, rules) = await Harness.BuildFromShippedWorkflowsAsync();
+		var (_, rules) = Harness.BuildFromShippedWorkflows();
 		var engine = new EnrolmentEngine(
 			rules, Harness.Thresholds with { AdviceMaxGradeCost = 1 }, Harness.Catalogue, Harness.AsOf);
 		var student = new StudentInput("S-ADVISE", new Dictionary<string, int> {
@@ -431,9 +449,9 @@ public sealed class AdvisorTests
 	}
 
 	[Fact]
-	public async Task pipeline_evaluation_cap_truncates_advice()
+	public void pipeline_evaluation_cap_truncates_advice()
 	{
-		var (_, rules) = await Harness.BuildFromShippedWorkflowsAsync();
+		var (_, rules) = Harness.BuildFromShippedWorkflows();
 		var student = new StudentInput("S-ADVISE", new Dictionary<string, int> {
 			["english_language"] = 7,
 			["maths"] = 5,
@@ -457,9 +475,9 @@ public sealed class AdvisorTests
 	}
 
 	[Fact]
-	public async Task advise_honours_cancellation_at_the_entry_guard()
+	public void advise_honours_cancellation_at_the_entry_guard()
 	{
-		var engine = await Harness.ShippedEngineAsync();
+		var engine = Harness.ShippedEngine();
 		var student = new StudentInput("S-CANCEL", new Dictionary<string, int> {
 			["english_language"] = 7,
 			["maths"] = 5,
@@ -478,9 +496,9 @@ public sealed class AdvisorTests
 	}
 
 	[Fact]
-	public async Task advise_honours_cancellation_during_the_search()
+	public void advise_honours_cancellation_during_the_search()
 	{
-		var engine = await Harness.ShippedEngineAsync();
+		var engine = Harness.ShippedEngine();
 		var student = new StudentInput("S-CANCEL", new Dictionary<string, int> {
 			["english_language"] = 7,
 			["maths"] = 5,

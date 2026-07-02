@@ -136,6 +136,16 @@ public static partial class WorkflowLinter
 				}
 			}
 		}
+
+		foreach (var subject in parsedRules.Keys
+					 .Where(subject => !catalogue.Subjects.Contains(subject))
+					 .OrderBy(static subject => EnumNames.NameOf(subject), StringComparer.Ordinal)) {
+			yield return new(
+				workflowName,
+				EnumNames.NameOf(subject),
+				LintSeverity.Error,
+				$"rules exist for subject '{EnumNames.NameOf(subject)}' which is not in the catalogue; they will never produce a rating");
+		}
 	}
 
 	private static IEnumerable<LintFinding> LintEligibility(string workflowName, IReadOnlyList<Rule> rules)

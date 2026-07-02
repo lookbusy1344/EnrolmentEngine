@@ -33,14 +33,15 @@ public sealed class SubjectRatingDataDrivenTests
 				},
 				[]);
 			var probeGcses = probeStudent.ToGcseResults();
+			var probeLookup = new GcseFacts(probeGcses);
 			var probeProfile = GradePredictor.Predict(probeStudent, probeGcses, Harness.AsOf, catalogue, QualificationScale.Default);
 			var engine = WorkflowStore.BuildEngine(workflows);
 			WorkflowStore.ProbeCompile(
 				engine,
 				workflows,
 				[
-					.. RatingEvaluator.EligibilityParameters(probeGcses, thresholds),
-					new("facts", new RatingFacts(probeProfile, probeGcses, new(thresholds), catalogue, QualificationScale.Default)),
+					.. RatingEvaluator.EligibilityParameters(probeGcses, probeLookup, new(thresholds)),
+					new("facts", new RatingFacts(probeProfile, probeLookup, new(thresholds), catalogue, QualificationScale.Default)),
 				]);
 
 			var subject = new Subject("philosophy");

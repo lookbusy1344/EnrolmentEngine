@@ -59,9 +59,9 @@ public sealed class ExplanationTests
 		result.Explanations.Single(e => e.Subject == subject);
 
 	[Fact]
-	public async Task explanation_names_the_winning_rule_and_cites_the_predicted_grade()
+	public void explanation_names_the_winning_rule_and_cites_the_predicted_grade()
 	{
-		var engine = await Harness.ShippedEngineAsync();
+		var engine = Harness.ShippedEngine();
 		var explained = engine.Explain(StrongStudent("plays_piano"));
 
 		var physics = Of(explained, Subject.Physics);
@@ -78,9 +78,9 @@ public sealed class ExplanationTests
 	}
 
 	[Fact]
-	public async Task explanation_cites_the_constraint_that_overrode_the_base_rule()
+	public void explanation_cites_the_constraint_that_overrode_the_base_rule()
 	{
-		var engine = await Harness.ShippedEngineAsync();
+		var engine = Harness.ShippedEngine();
 		var explained = engine.Explain(StrongStudent("plays_piano"));
 
 		// History ↔ Art clash: both green at base, Art is the lower-weight loser → amber. The explanation
@@ -99,9 +99,9 @@ public sealed class ExplanationTests
 	}
 
 	[Fact]
-	public async Task explanation_mentions_the_prior_qualification_that_opened_entry()
+	public void explanation_mentions_the_prior_qualification_that_opened_entry()
 	{
-		var engine = await Harness.ShippedEngineAsync();
+		var engine = Harness.ShippedEngine();
 		var explained = engine.Explain(StrongBiologyEquivalentStudent());
 
 		var biology = Of(explained, Subject.Biology);
@@ -112,12 +112,12 @@ public sealed class ExplanationTests
 	}
 
 	[Fact]
-	public async Task ineligible_explanation_attributes_each_red_to_the_eligibility_gate()
+	public void ineligible_explanation_attributes_each_red_to_the_eligibility_gate()
 	{
 		// Only Maths present: English absent and too few passes ⇒ ineligible, every subject red.
 		var student = new StudentInput("S-INELIGIBLE", new Dictionary<string, int> { ["maths"] = 6 }, []);
 
-		var engine = await Harness.ShippedEngineAsync();
+		var engine = Harness.ShippedEngine();
 		var explained = engine.Explain(student);
 
 		explained.Eligible.Should().BeFalse();
@@ -127,10 +127,10 @@ public sealed class ExplanationTests
 	}
 
 	[Fact]
-	public async Task the_plain_and_explained_results_agree_on_ratings_and_summary()
+	public void the_plain_and_explained_results_agree_on_ratings_and_summary()
 	{
 		var student = StrongStudent("plays_piano");
-		var engine = await Harness.ShippedEngineAsync();
+		var engine = Harness.ShippedEngine();
 
 		var result = engine.Evaluate(student);
 		var explained = engine.Explain(student);
@@ -144,11 +144,11 @@ public sealed class ExplanationTests
 	}
 
 	[Fact]
-	public async Task cli_explain_emits_a_parseable_explained_result()
+	public void cli_explain_emits_a_parseable_explained_result()
 	{
 		var path = Path.Combine(Harness.RepoRoot, "examples", "student.json");
-		await using var stdout = new StringWriter();
-		await using var stderr = new StringWriter();
+		using var stdout = new StringWriter();
+		using var stderr = new StringWriter();
 
 		var exit = CliRunner.Run(["--explain", path], stdout, stderr);
 
@@ -162,11 +162,11 @@ public sealed class ExplanationTests
 	}
 
 	[Fact]
-	public async Task cli_json_emits_a_parseable_enrolment_result()
+	public void cli_json_emits_a_parseable_enrolment_result()
 	{
 		var path = Path.Combine(Harness.RepoRoot, "examples", "student.json");
-		await using var stdout = new StringWriter();
-		await using var stderr = new StringWriter();
+		using var stdout = new StringWriter();
+		using var stderr = new StringWriter();
 
 		var exit = CliRunner.Run(["--json", path], stdout, stderr);
 

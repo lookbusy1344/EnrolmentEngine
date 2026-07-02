@@ -43,7 +43,9 @@ internal static class CounterfactualAdvisor
 		// subjects is also what keeps the search tractable — its state space is exponential in the number of
 		// candidates. A subject gated on a GCSE the student never took is then unreachable by grade changes
 		// alone, which ClassifyBlockedReasonAsync surfaces as that entry rule's own reason. The
-		// considerUnsatGcses diagnostic knob reverts to the old, heavier search over every known GCSE.
+		// considerUnsatGcses diagnostic knob reverts to the old, heavier search over every known GCSE; the
+		// separate gate-clearing fallback for an ineligible student still considers every GCSE because there is
+		// no grade-bump-only way to open the gate when the student simply lacks enough passes.
 		var candidates = considerUnsatGcses ? AdvisorCandidates.AllSubjects : HeldSubjects(student);
 		var pipelineBudget = new PipelineEvaluationBudget(thresholds.AdviceMaxPipelineEvaluations, onPipelineEvaluation);
 		var advice = new List<SubjectAdvice>();

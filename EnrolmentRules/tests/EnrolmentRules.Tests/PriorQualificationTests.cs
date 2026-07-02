@@ -60,14 +60,14 @@ public sealed class PriorQualificationTests
 	}
 
 	[Fact]
-	public async Task validation_honours_the_engines_injected_scale_not_the_ambient_default()
+	public void validation_honours_the_engines_injected_scale_not_the_ambient_default()
 	{
 		// 'platinum' exists only in this custom scale, never in the shipped/ambient default. Validating a
 		// student carrying a platinum qualification must use the engine's own scale, not the shipped default.
 		var customScale = BuildDiplomaScale(
 			("pass", 0, ALevelGrade.C),
 			("platinum", 1, ALevelGrade.AStar));
-		var (_, rulesEngine) = await Harness.BuildFromShippedWorkflowsAsync();
+		var (_, rulesEngine) = Harness.BuildFromShippedWorkflows();
 		var engine = new EnrolmentEngine(
 			new(rulesEngine, Harness.Thresholds, Harness.Catalogue, customScale), Harness.Catalogue, Harness.AsOf);
 
@@ -80,9 +80,9 @@ public sealed class PriorQualificationTests
 	}
 
 	[Fact]
-	public async Task an_entry_equivalent_opens_the_biology_entry_path_through_the_engine()
+	public void an_entry_equivalent_opens_the_biology_entry_path_through_the_engine()
 	{
-		var engine = await Harness.ShippedEngineAsync();
+		var engine = Harness.ShippedEngine();
 		var withoutEquivalent = Student(new() {
 			["english_language"] = 8,
 			["maths"] = 8,
@@ -108,7 +108,7 @@ public sealed class PriorQualificationTests
 	}
 
 	[Fact]
-	public async Task the_engine_keeps_its_injected_qualification_scale_after_construction()
+	public void the_engine_keeps_its_injected_qualification_scale_after_construction()
 	{
 		var student = Student(new() {
 			["english_language"] = 9,
@@ -137,7 +137,7 @@ public sealed class PriorQualificationTests
 			("distinction_star", 2, ALevelGrade.AStar),
 			("distinction", 3, ALevelGrade.A));
 
-		var (_, rulesEngine) = await Harness.BuildFromShippedWorkflowsAsync();
+		var (_, rulesEngine) = Harness.BuildFromShippedWorkflows();
 		var catalogue = Harness.Catalogue;
 		var thresholds = Harness.Thresholds;
 
@@ -156,9 +156,9 @@ public sealed class PriorQualificationTests
 	}
 
 	[Fact]
-	public async Task the_engine_rejects_a_façade_catalogue_that_differs_from_the_evaluators_catalogue()
+	public void the_engine_rejects_a_façade_catalogue_that_differs_from_the_evaluators_catalogue()
 	{
-		var (_, rulesEngine) = await Harness.BuildFromShippedWorkflowsAsync();
+		var (_, rulesEngine) = Harness.BuildFromShippedWorkflows();
 		var catalogue = Harness.Catalogue;
 		var scale = BuildDiplomaScale(
 			("pass", 0, ALevelGrade.C),
@@ -413,6 +413,21 @@ public sealed class QualificationScaleResolutionTests
 	}
 
 	[Fact]
+	public void load_and_validate_rejects_malformed_yaml_with_the_qualification_scale_exception_type()
+	{
+		var schema = File.ReadAllText(Path.Combine(Harness.DataDir, QualificationScaleStore.SchemaFileName));
+
+		var act = () => QualificationScaleStore.LoadAndValidate(
+			new StringReader("qualifications: ["),
+			new StringReader(schema),
+			"malformed-qualifications.yaml");
+
+		act.Should().Throw<QualificationScaleException>()
+			.WithMessage("*malformed-qualifications.yaml*")
+			.Which.InnerException.Should().BeOfType<FormatException>();
+	}
+
+	[Fact]
 	public void constructor_allows_deliberately_partial_in_memory_scales()
 	{
 		var scale = new QualificationScale([
@@ -481,9 +496,9 @@ public sealed class RestudyBarConstraintTests
 	}
 
 	[Fact]
-	public async Task the_restudy_bar_overrides_biology_through_the_engine()
+	public void the_restudy_bar_overrides_biology_through_the_engine()
 	{
-		var engine = await Harness.ShippedEngineAsync();
+		var engine = Harness.ShippedEngine();
 		var result = engine.Evaluate(StrongStudent(
 			new Qualification(Subject.Biology.Value, QualificationType.ALevel, "e")));
 

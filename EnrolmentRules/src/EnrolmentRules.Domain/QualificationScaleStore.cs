@@ -37,20 +37,20 @@ public static class QualificationScaleStore
 
 	public static QualificationScale LoadAndValidate(TextReader qualificationsReader, TextReader schemaReader, string? qualificationsPath = null)
 	{
-		var node = YamlConverter.ToJsonNode(qualificationsReader.ReadToEnd());
-		var schemaText = schemaReader.ReadToEnd();
-		var schema = SchemaCache.GetOrAdd(
-			SchemaCacheKey(schemaText),
-			_ => new(() => JsonSchema.FromText(schemaText))).Value;
-
-		using var doc = JsonDocument.Parse(node.ToJsonString());
-		var results = schema.Evaluate(doc.RootElement, new() { OutputFormat = OutputFormat.List });
-		if (!results.IsValid) {
-			throw new QualificationScaleException(
-				$"qualification scale file '{qualificationsPath ?? QualificationsFileName}' failed schema validation: {DescribeErrors(results)}");
-		}
-
 		try {
+			var node = YamlConverter.ToJsonNode(qualificationsReader.ReadToEnd());
+			var schemaText = schemaReader.ReadToEnd();
+			var schema = SchemaCache.GetOrAdd(
+				SchemaCacheKey(schemaText),
+				_ => new(() => JsonSchema.FromText(schemaText))).Value;
+
+			using var doc = JsonDocument.Parse(node.ToJsonString());
+			var results = schema.Evaluate(doc.RootElement, new() { OutputFormat = OutputFormat.List });
+			if (!results.IsValid) {
+				throw new QualificationScaleException(
+					$"qualification scale file '{qualificationsPath ?? QualificationsFileName}' failed schema validation: {DescribeErrors(results)}");
+			}
+
 			return QualificationScale.RequireCompleteCoverage(QualificationScale.Build(node));
 		}
 		catch (Exception ex) when (ex is InvalidDataException or FormatException) {
