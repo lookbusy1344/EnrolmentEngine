@@ -184,10 +184,10 @@ public sealed class AdvisorTests
 	public void gate_clearing_advice_can_propose_brand_new_gcses_when_the_student_lacks_enough_passes()
 	{
 		var engine = Harness.ShippedEngine();
-		var student = new StudentInput("S-GATE", new Dictionary<string, int> {
-			["english_language"] = Harness.Thresholds.PassGrade,
-			["maths"] = Harness.Thresholds.PassGrade,
-		}, []) { DateOfBirth = new DateOnly(2009, 9, 1) };
+		var student = new StudentInput("S-GATE",
+			new Dictionary<string, int> { ["english_language"] = Harness.Thresholds.PassGrade, ["maths"] = Harness.Thresholds.PassGrade }, []) {
+			DateOfBirth = new DateOnly(2009, 9, 1),
+		};
 
 		var advice = engine.Advise(student);
 
@@ -273,7 +273,7 @@ public sealed class AdvisorTests
 		// (5th by UCAS weight behind Maths, Physics, Chemistry, Biology). No grade change can free a cap slot,
 		// so it is unreachable.
 		const int cap = 4;
-		var rules = (Harness.BuildFromShippedWorkflows()).Engine;
+		var rules = Harness.BuildFromShippedWorkflows().Engine;
 		var engine = new EnrolmentEngine(rules, Harness.Thresholds with { MaxGreenChoices = cap }, Harness.Catalogue, Harness.AsOf);
 
 		var advice = engine.Advise(StrongStudent("plays_piano"));
@@ -403,16 +403,34 @@ public sealed class AdvisorTests
 	}
 
 	[Fact]
+	public void reachable_cli_golden_advice_changes_attain_their_stated_targets()
+	{
+		var path = Path.Combine(Harness.RepoRoot, "examples", "golden", "advise-counterfactual.json");
+		using var stream = File.OpenRead(path);
+		var student = JsonSerializer.Deserialize(stream, EnrolmentJsonContext.Default.StudentDocument)!.Student;
+		var engine = Harness.ShippedEngine();
+		var advice = engine.Advise(student);
+
+		foreach (var subjectAdvice in advice.Advice.Where(static subjectAdvice => subjectAdvice.Reachable)) {
+			var improved = ApplyChanges(student, subjectAdvice.Changes);
+			var explained = engine.Explain(improved);
+			((int)explained.Explanations.Single(explanation => explanation.Subject == subjectAdvice.Subject).Rating)
+				.Should()
+				.BeLessThanOrEqualTo((int)subjectAdvice.Target);
+		}
+	}
+
+	[Fact]
 	public void cli_advise_all_gcses_flag_enables_the_diagnostic_search()
 	{
 		var dir = Path.Combine(Path.GetTempPath(), "enrolmentrules-tests", Guid.NewGuid().ToString("N"));
 		Directory.CreateDirectory(dir);
 		var path = Path.Combine(dir, "student.json");
 		File.WriteAllText(path, """
-										   { "student": { "id": "S-CLI-DIAG",
-										     "gcses": {"english_language":7,"maths":5,"physics":5,"chemistry":5,"biology":5},
-										     "hobbies": [], "chosen_a_levels": ["maths"], "date_of_birth": "2009-09-01" } }
-										   """);
+								{ "student": { "id": "S-CLI-DIAG",
+								  "gcses": {"english_language":7,"maths":5,"physics":5,"chemistry":5,"biology":5},
+								  "hobbies": [], "chosen_a_levels": ["maths"], "date_of_birth": "2009-09-01" } }
+								""");
 
 		using var stdout = new StringWriter();
 		using var stderr = new StringWriter();

@@ -38,7 +38,7 @@ public static class Aggregator
 		var surplus = greens.Count - cap;
 		return surplus <= 0
 			? []
-			: [.. greens.Take(surplus).Select(static r => new Adjustment(r.Subject, Rating.Green, Rating.Amber, ExceedsCapReason))];
+			: [.. greens.Take(surplus).Select(static r => new Adjustment(r.Subject, Rating.Green, Rating.Amber, AdjustmentKind.Cap, ExceedsCapReason))];
 	}
 
 	/// <summary>

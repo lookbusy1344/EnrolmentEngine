@@ -37,10 +37,14 @@ public sealed class GoldenFileTests
 
 	private static EnrolmentResult EvaluateFixture(string fixture)
 	{
-		using var stream = File.OpenRead(Path.Combine(GoldenDir, fixture + ".json"));
-		var document = JsonSerializer.Deserialize(stream, EnrolmentJsonContext.Default.StudentDocument)!;
 		var engine = Harness.ShippedEngine();
-		return engine.Evaluate(document.Student);
+		return engine.Evaluate(LoadFixture(fixture));
+	}
+
+	private static StudentInput LoadFixture(string fixture)
+	{
+		using var stream = File.OpenRead(Path.Combine(GoldenDir, fixture + ".json"));
+		return JsonSerializer.Deserialize(stream, EnrolmentJsonContext.Default.StudentDocument)!.Student;
 	}
 
 	[Theory]
@@ -139,7 +143,7 @@ public sealed class GoldenFileTests
 		const int cap = 4;
 		using var stream = File.OpenRead(Path.Combine(GoldenDir, "strong-constraints.json"));
 		var document = JsonSerializer.Deserialize(stream, EnrolmentJsonContext.Default.StudentDocument)!;
-		var rules = (Harness.BuildFromShippedWorkflows()).Engine;
+		var rules = Harness.BuildFromShippedWorkflows().Engine;
 		var cappedEngine = new EnrolmentEngine(rules, Harness.Thresholds with { MaxGreenChoices = cap }, Harness.Catalogue, Harness.AsOf);
 
 		var result = cappedEngine.Evaluate(document.Student);
@@ -147,5 +151,74 @@ public sealed class GoldenFileTests
 		result.Eligible.Should().BeTrue();
 		result.Summary.GreenCount.Should().Be(cap);
 		result.Adjustments.Should().Contain(a => a.Reason == Aggregator.ExceedsCapReason);
+	}
+
+	[Fact]
+	public void adult_art_boundary_fixture_uses_the_fixed_as_of_date_for_the_age_gate()
+	{
+		var engine = Harness.ShippedEngine();
+		var adult = new StudentInput(
+			"S-ADULT-ART",
+			new Dictionary<string, int> {
+				["english_language"] = 9,
+				["maths"] = 5,
+				["physics"] = 9,
+				["chemistry"] = 9,
+				["art"] = 6,
+			},
+			[]) { DateOfBirth = new DateOnly(2007, 9, 1) };
+		var younger = adult with { DateOfBirth = adult.DateOfBirth!.Value.AddDays(1) };
+
+		var adultExplanation = engine.Explain(adult);
+		var youngerExplanation = engine.Explain(younger);
+
+		adultExplanation.Eligible.Should().BeTrue();
+		Harness.AsOf.Should().Be(new(2026, 9, 1));
+		adultExplanation.Explanations.Single(explanation => explanation.Subject == Subject.Art).BaseRating.Should().Be(Rating.Red);
+		youngerExplanation.Explanations.Single(explanation => explanation.Subject == Subject.Art).BaseRating.Should().NotBe(Rating.Red);
+	}
+
+	[Fact]
+	public void prior_equivalent_fixture_opens_biology_upstream_before_the_restudy_bar_downgrades_it()
+	{
+		var engine = Harness.ShippedEngine();
+		var fixture = LoadFixture("prior-equivalent-restudy-bar");
+		var equivalentOnly = fixture with { PriorQualifications = [fixture.PriorQualifications[0]] };
+
+		var equivalentOnlyResult = engine.Evaluate(equivalentOnly);
+		var combinedResult = engine.Evaluate(fixture);
+
+		equivalentOnlyResult.Recommendations.Single(r => r.Subject == Subject.Biology).Rating.Should().Be(Rating.Green);
+
+		var biology = combinedResult.Recommendations.Single(r => r.Subject == Subject.Biology);
+		biology.Rating.Should().Be(Rating.Red);
+		biology.Reason.Should().StartWith(ConstraintPass.RestudyBarReasonPrefix);
+		combinedResult.Adjustments.Should().ContainSingle(adjustment =>
+			adjustment.Subject == Subject.Biology
+			&& adjustment.From == Rating.Green
+			&& adjustment.To == Rating.Red
+			&& adjustment.Reason.StartsWith(ConstraintPass.RestudyBarReasonPrefix, StringComparison.Ordinal));
+	}
+
+	[Fact]
+	public void veto_fixture_shows_music_as_otherwise_green_but_barred_by_activity()
+	{
+		var engine = Harness.ShippedEngine();
+		var fixture = LoadFixture("veto-precedence");
+		var withoutVeto = fixture with { Hobbies = ["plays_piano"] };
+
+		var withoutVetoResult = engine.Evaluate(withoutVeto);
+		var withVetoResult = engine.Evaluate(fixture);
+
+		withoutVetoResult.Recommendations.Single(r => r.Subject == Subject.Music).Rating.Should().Be(Rating.Green);
+
+		var music = withVetoResult.Recommendations.Single(r => r.Subject == Subject.Music);
+		music.Rating.Should().Be(Rating.Red);
+		music.Reason.Should().StartWith(ConstraintPass.VetoReasonPrefix).And.Contain("plays_trombone");
+		withVetoResult.Adjustments.Should().ContainSingle(adjustment =>
+			adjustment.Subject == Subject.Music
+			&& adjustment.From == Rating.Green
+			&& adjustment.To == Rating.Red
+			&& adjustment.Reason.StartsWith(ConstraintPass.VetoReasonPrefix, StringComparison.Ordinal));
 	}
 }

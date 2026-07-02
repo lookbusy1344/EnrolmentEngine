@@ -206,9 +206,13 @@ Two distinct mechanisms decide a subject's rating; keep them apart:
 1. **Base tier** — a RulesEngine workflow picks green/amber/red by a first-hit-wins scan (green
    criteria, else amber, else red). This stage *is* an ordered cascade.
 2. **Cross-subject constraints** — prerequisites, mutual exclusions, prior-choice exclusions,
-   own-time requirements, per-subject vetoes, and restudy bars. Each reads only the base tier,
-   never another constraint's output, and when it fires can only move the rating toward red. They
-   therefore commute and fold in by most-severe-wins, order-independently.
+   own-time requirements, per-subject vetoes, and restudy bars. Each only ever moves a rating toward
+   red, so *applying* them commutes and folds in by most-severe-wins, order-independently.
+   *Evaluation*, though, runs in two phases: the single-subject and pairwise constraints (veto,
+   restudy bar, exclusions, own-time) read the base tier, then prerequisites read the ratings *after*
+   those downgrades — so a dependency a sibling constraint drove to red no longer satisfies a
+   `qualifying` prerequisite. That order is fixed but acyclic (prerequisites never feed the other
+   constraints), not a fixpoint iteration.
 3. **Optional green cap** — when explicitly enabled, this runs after the constraint fold because it
    counts only greens that survived those downgrades. It is also downgrade-only, but it is a distinct,
    ordered aggregation phase rather than one of the commuting base-rating constraints.

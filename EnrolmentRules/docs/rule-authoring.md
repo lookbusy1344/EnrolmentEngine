@@ -608,6 +608,12 @@ apply in never changes the outcome. The shipped relationship types:
 | Vetoes                  | → red             | A `blocking_activities` prefix is present in hobbies                      |
 | Restudy bars            | → bar severity    | A held prior qualification of a barred `type` in the same subject         |
 
+> **Prerequisites see the other downgrades first.** "Qualifying" in the prerequisites row means the
+> dependency's rating *after* the single-subject and pairwise constraints apply — so a dependency
+> vetoed, restudy-barred, or excluded to red fails the prerequisite even when its own base tier was
+> green. Evaluation is a fixed two-phase order (those constraints, then prerequisites); the fold that
+> applies every downgrade still commutes.
+
 Each of these reads the catalogue — none hardcodes policy. To add a clash, a prerequisite, or a bar
 you edit [`data/catalogue.yaml`](#42-datacatalogueyaml--subject-relationships); you never touch the
 code. Adding a genuinely new *kind* of relationship (one the six above cannot express) is a code

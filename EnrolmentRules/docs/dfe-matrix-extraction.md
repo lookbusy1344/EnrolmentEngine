@@ -107,7 +107,10 @@ students** with `P(≥B)=0.50`, which would rank a top student *below* the green
 sample noise. To avoid that, the **`>=9` band row is suppressed when it represents fewer than 5
 students** (counts read from the workbook's `All Data - Student Numbers` sheet, `sheet3.xml`, same
 column map). The loader (`DfeTransitionMatrix.FindEvidence`) then falls back to the adjacent
-well-sampled `8 to < 9` band, which is what a top student is scored against.
+well-sampled `8 to < 9` band, which is what a top student is scored against. The fallback is
+observable, not silent: the returned `TransitionEvidence` sets `RequestedBand` to the band asked
+for and flags `Imputed = true` (with `PriorAttainmentBand` still naming the band the probabilities
+describe), so a top student scored against `8 to < 9` is visibly marked as borrowed.
 
 Suppression is confined to the **top** band: lower bands keep their small cells (e.g. biology's
 `< 1` cell is `n=2` and is retained), because they sit below the entry gates and never feed the

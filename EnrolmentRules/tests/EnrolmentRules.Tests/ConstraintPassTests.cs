@@ -31,8 +31,8 @@ public sealed class ConstraintPassTests
 	{
 		SubjectRating[] ratings = [new(Subject.French, Rating.Green, "base reason")];
 		Adjustment[] adjustments = [
-			new(Subject.French, Rating.Green, Rating.Amber, "first amber"),
-			new(Subject.French, Rating.Green, Rating.Amber, "second amber"),
+			new(Subject.French, Rating.Green, Rating.Amber, AdjustmentKind.OwnTime, "first amber"),
+			new(Subject.French, Rating.Green, Rating.Amber, AdjustmentKind.OwnTime, "second amber"),
 		];
 
 		var applied = ConstraintPass.Apply(ratings, adjustments);
@@ -43,12 +43,41 @@ public sealed class ConstraintPassTests
 	}
 
 	[Fact]
+	public void apply_breaks_same_severity_ties_by_kind_precedence_not_reason_text()
+	{
+		// Two equally-severe (green→red) downgrades: the higher-precedence Kind supplies the surviving reason
+		// regardless of array order. This pins the tie-break to the typed discriminator, not the reason text —
+		// the coupling the old string-prefix precedence carried.
+		SubjectRating[] ratings = [new(Subject.Music, Rating.Green, "base reason")];
+		Adjustment[] prereqFirst = [
+			new(Subject.Music, Rating.Green, Rating.Red, AdjustmentKind.Prerequisite, "prereq reason"),
+			new(Subject.Music, Rating.Green, Rating.Red, AdjustmentKind.Veto, "veto reason"),
+		];
+		Adjustment[] vetoFirst = [.. prereqFirst.Reverse()];
+
+		ConstraintPass.Apply(ratings, prereqFirst).Single().Reason.Should().Be("veto reason");
+		ConstraintPass.Apply(ratings, vetoFirst).Single().Reason.Should().Be("veto reason");
+	}
+
+	[Fact]
+	public void evaluate_stamps_each_downgrade_with_its_relationship_kind()
+	{
+		// A veto producer must stamp AdjustmentKind.Veto so the fold can order it without parsing the reason.
+		SubjectRating[] ratings = [.. Harness.Catalogue.Subjects.Select(subject => new SubjectRating(subject, Rating.Green, "base"))];
+		var profile = new StudentProfile("S", 7.0, [], [], ["plays_trombone"]);
+
+		var adjustments = ConstraintPass.Evaluate(ratings, profile, Harness.Catalogue);
+
+		adjustments.Should().Contain(adjustment => adjustment.Subject == Subject.Music && adjustment.Kind == AdjustmentKind.Veto);
+	}
+
+	[Fact]
 	public void apply_takes_the_most_severe_adjustment_regardless_of_order()
 	{
 		SubjectRating[] ratings = [new(Subject.French, Rating.Green, "base reason")];
 		Adjustment[] adjustments = [
-			new(Subject.French, Rating.Green, Rating.Amber, "amber reason"),
-			new(Subject.French, Rating.Green, Rating.Red, "red reason"),
+			new(Subject.French, Rating.Green, Rating.Amber, AdjustmentKind.OwnTime, "amber reason"),
+			new(Subject.French, Rating.Green, Rating.Red, AdjustmentKind.Veto, "red reason"),
 		];
 
 		var applied = ConstraintPass.Apply(ratings, adjustments);
@@ -63,7 +92,7 @@ public sealed class ConstraintPassTests
 	{
 		// The veto-on-already-red case: rating stays red, but the named bar is the more informative reason.
 		SubjectRating[] ratings = [new(Subject.Music, Rating.Red, "base red reason")];
-		Adjustment[] adjustments = [new(Subject.Music, Rating.Red, Rating.Red, "veto reason")];
+		Adjustment[] adjustments = [new(Subject.Music, Rating.Red, Rating.Red, AdjustmentKind.Veto, "veto reason")];
 
 		var applied = ConstraintPass.Apply(ratings, adjustments);
 
@@ -100,7 +129,7 @@ public sealed class ConstraintPassTests
 	public void apply_ignores_an_adjustment_that_would_upgrade_the_base_rating()
 	{
 		SubjectRating[] ratings = [new(Subject.Biology, Rating.Red, "failed entry requirement")];
-		Adjustment[] adjustments = [new(Subject.Biology, Rating.Red, Rating.Amber, "less severe reason")];
+		Adjustment[] adjustments = [new(Subject.Biology, Rating.Red, Rating.Amber, AdjustmentKind.RestudyBar, "less severe reason")];
 
 		var applied = ConstraintPass.Apply(ratings, adjustments);
 
@@ -115,6 +144,57 @@ public sealed class ConstraintPassTests
 		var applied = ConstraintPass.Apply(ratings, []);
 
 		applied.Should().ContainSingle().Which.Should().Be(new SubjectRating(Subject.Maths, Rating.Green, "base reason"));
+	}
+
+	[Fact]
+	public void a_qualifying_prerequisite_is_unmet_when_its_dependency_is_downgraded_to_red_by_another_constraint()
+	{
+		// Economics requires Maths under the qualifying mode. Maths qualifies at its base rating, but a
+		// blocking hobby vetoes it to red. The prerequisite must observe the vetoed rating and downgrade
+		// Economics — not read Maths's stale green base and leave Economics green, recommending a subject
+		// on a prerequisite the student can no longer take.
+		var maths = Harness.Catalogue.Meta(Subject.Maths) with { BlockingActivities = ["hates_maths"] };
+		var economics = Harness.Catalogue.Meta(Subject.Economics) with { Exclusions = [] };
+		var catalogue = new CatalogueData(
+			new Dictionary<Subject, SubjectMeta> {
+				[Subject.Maths] = maths,
+				[Subject.Economics] = economics,
+			}, [Subject.Maths, Subject.Economics]);
+		var profile = new StudentProfile("S-PREREQ-VETO", 7.0, [], [], ["hates_maths"]);
+		SubjectRating[] ratings = [
+			new(Subject.Maths, Rating.Green, "maths base"),
+			new(Subject.Economics, Rating.Green, "economics base"),
+		];
+
+		var applied = ConstraintPass.Apply(ratings, ConstraintPass.Evaluate(ratings, profile, catalogue));
+
+		applied.Single(rating => rating.Subject == Subject.Maths).Rating.Should().Be(Rating.Red);
+		var economicsFinal = applied.Single(rating => rating.Subject == Subject.Economics);
+		economicsFinal.Rating.Should().Be(Rating.Amber);
+		economicsFinal.Reason.Should().Be(ConstraintPass.MathsPrerequisiteReason);
+	}
+
+	[Fact]
+	public void a_qualifying_prerequisite_stays_met_when_its_dependency_keeps_a_qualifying_rating()
+	{
+		// The mirror of the veto case: with no constraint knocking Maths out, its green base still satisfies
+		// Economics's qualifying prerequisite, so Economics is untouched. Guards against the phased evaluation
+		// over-firing prerequisites.
+		var economics = Harness.Catalogue.Meta(Subject.Economics) with { Exclusions = [] };
+		var catalogue = new CatalogueData(
+			new Dictionary<Subject, SubjectMeta> {
+				[Subject.Maths] = Harness.Catalogue.Meta(Subject.Maths),
+				[Subject.Economics] = economics,
+			}, [Subject.Maths, Subject.Economics]);
+		var profile = new StudentProfile("S-PREREQ-MET", 7.0, [], [], []);
+		SubjectRating[] ratings = [
+			new(Subject.Maths, Rating.Green, "maths base"),
+			new(Subject.Economics, Rating.Green, "economics base"),
+		];
+
+		var adjustments = ConstraintPass.Evaluate(ratings, profile, catalogue);
+
+		adjustments.Should().BeEmpty();
 	}
 }
 

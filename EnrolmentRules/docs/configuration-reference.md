@@ -127,7 +127,7 @@ Each subject entry:
 | --- | --- | --- | --- |
 | `any_of` | non-empty array of subject ids | yes | Alternative subjects that satisfy this prerequisite group. |
 | `severity` | `amber` or `red` | no | Downgrade severity when the group is unmet. Defaults to the engine's hard requirement behaviour. |
-| `requires` | `qualifying` or `chosen` | no | Satisfaction mode. `qualifying` accepts a green/amber result or a chosen A-level; `chosen` requires a committed `chosen_a_levels` entry. |
+| `requires` | `qualifying` or `chosen` | no | Satisfaction mode. `qualifying` accepts a green/amber result (as it stands *after* the dependency's own veto / restudy bar / exclusion downgrades) or a chosen A-level; `chosen` requires a committed `chosen_a_levels` entry. |
 
 `entry_equivalents` entries:
 

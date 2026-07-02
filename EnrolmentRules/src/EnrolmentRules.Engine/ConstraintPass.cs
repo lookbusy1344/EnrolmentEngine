@@ -30,22 +30,36 @@ public static class ConstraintPass
 		EnumNames.NameOf(Subject.Maths) + PrerequisiteReasonSuffix;
 
 	/// <summary>
-	///     Collect every downgrade for one student. The three rules read only the <em>base</em> ratings (never
-	///     each other's output), so the result is independent of the order they are produced or applied.
+	///     Collect every downgrade for one student in two phases. The non-prerequisite constraints (mutual and
+	///     prior-choice exclusion, own-time, veto, restudy bar) read only the <em>base</em> ratings; a
+	///     prerequisite then reads the ratings <em>after</em> those downgrades, so a dependency a sibling
+	///     constraint drove to red no longer satisfies a dependent's requirement. Because none of the
+	///     non-prerequisite constraints read prerequisite output, this is a fixed two-phase order — not a
+	///     fixpoint iteration — and it stays acyclic. Application still commutes: <see cref="Apply" /> folds
+	///     the whole trail by most-severe-wins regardless of order; only this evaluation order is fixed.
 	/// </summary>
 	public static IReadOnlyList<Adjustment> Evaluate(
 		IReadOnlyList<SubjectRating> ratings,
 		StudentProfile profile,
 		CatalogueData catalogue)
 	{
-		var rating = ratings.ToDictionary(static r => r.Subject, static r => r.Rating);
+		var baseRating = ratings.ToDictionary(static r => r.Subject, static r => r.Rating);
+
+		IReadOnlyList<Adjustment> nonPrerequisite = [
+			.. MutualExclusions(baseRating, catalogue),
+			.. PriorChoiceExclusions(baseRating, profile.ChosenALevels, catalogue),
+			.. OwnTime(baseRating, profile.Hobbies, catalogue),
+			.. Vetoes(baseRating, profile.Hobbies, catalogue),
+			.. RestudyBars(baseRating, profile.PriorQualifications, catalogue),
+		];
+
+		// Prerequisites see the ratings after the phase-one downgrades. A prerequisite chained on another
+		// prerequisite's target is still resolved against these phase-one ratings — deep prerequisite chains
+		// would need ordered resolution, which the catalogue does not currently exercise.
+		var adjustedRating = Apply(ratings, nonPrerequisite).ToDictionary(static r => r.Subject, static r => r.Rating);
 		return [
-			.. Prerequisites(rating, profile.ChosenALevels, catalogue),
-			.. MutualExclusions(rating, catalogue),
-			.. PriorChoiceExclusions(rating, profile.ChosenALevels, catalogue),
-			.. OwnTime(rating, profile.Hobbies, catalogue),
-			.. Vetoes(rating, profile.Hobbies, catalogue),
-			.. RestudyBars(rating, profile.PriorQualifications, catalogue),
+			.. Prerequisites(baseRating, adjustedRating, profile.ChosenALevels, catalogue),
+			.. nonPrerequisite,
 		];
 	}
 
@@ -57,13 +71,14 @@ public static class ConstraintPass
 		IReadOnlyList<SubjectRating> ratings,
 		IReadOnlyList<Adjustment> adjustments)
 	{
-		// Producers still emit the deciding adjustment by To-severity and reason precedence, but Apply owns the
-		// monotonicity invariant and defensively ignores a winner less severe than the base. That keeps
-		// same-severity reason replacement (own-time amber→amber, veto/restudy red→red) without allowing an
-		// invalid adjustment to relabel or upgrade a more-severe base.
+		// The winner within a subject is the most severe adjustment, ties broken by AdjustmentKind precedence
+		// (the typed discriminator, not the reason text). Apply owns the monotonicity invariant and defensively
+		// ignores a winner less severe than the base. That keeps same-severity reason replacement (own-time
+		// amber→amber, veto/restudy red→red) without allowing an invalid adjustment to relabel or upgrade a
+		// more-severe base.
 		var worst = adjustments
 			.GroupBy(static a => a.Subject)
-			.ToDictionary(static g => g.Key, static g => g.MaxBy(static a => ((int)a.To, (int)ReasonPrecedence(a)))!);
+			.ToDictionary(static g => g.Key, static g => g.MaxBy(static a => ((int)a.To, (int)a.Kind))!);
 
 		return [
 			.. ratings.Select(r =>
@@ -82,24 +97,27 @@ public static class ConstraintPass
 
 	// Prerequisite (→ amber or red): for each qualifying subject, every dependency group must be satisfied —
 	// a group is met when any one of its alternatives qualifies in this run or is a committed A-level (a
-	// committed choice is at least as strong as a qualifying rating). Each unmet group emits a downgrade to
-	// its own severity; most-severe-wins composes them in Apply. Driven by the Catalogue's per-subject
-	// Prerequisites table, not hardcoded — editing the table is how policy changes.
+	// committed choice is at least as strong as a qualifying rating). Availability reads the phase-one
+	// adjusted ratings, so a dependency vetoed / restudy-barred / excluded to red no longer counts as
+	// qualifying; the dependent selection and the adjustment's From still read the base ratings. Each unmet
+	// group emits a downgrade to its own severity; most-severe-wins composes them in Apply. Driven by the
+	// Catalogue's per-subject Prerequisites table, not hardcoded — editing the table is how policy changes.
 	private static IEnumerable<Adjustment> Prerequisites(
-		Dictionary<Subject, Rating> ratings,
+		Dictionary<Subject, Rating> baseRatings,
+		Dictionary<Subject, Rating> adjustedRatings,
 		IReadOnlyList<Subject> chosenALevels,
 		CatalogueData catalogue)
 	{
 		bool Available(Subject required, PrerequisiteSatisfaction requires) =>
-			IsPrerequisiteAvailable(required, requires, r => Qualifies(ratings, r), chosenALevels);
+			IsPrerequisiteAvailable(required, requires, r => Qualifies(adjustedRatings, r), chosenALevels);
 
 		foreach (var subject in catalogue.Subjects.Where(subject => catalogue.Meta(subject).Prerequisites.Count > 0)) {
-			if (!Qualifies(ratings, subject)) {
+			if (!Qualifies(baseRatings, subject)) {
 				continue;
 			}
 
 			foreach (var adjustment in PrerequisiteAdjustments(
-						 subject, ratings[subject], catalogue.Meta(subject).Prerequisites, Available)) {
+						 subject, baseRatings[subject], catalogue.Meta(subject).Prerequisites, Available)) {
 				yield return adjustment;
 			}
 		}
@@ -132,7 +150,7 @@ public static class ConstraintPass
 	{
 		foreach (var group in groups) {
 			if (!group.AnyOf.Any(required => available(required, group.Requires))) {
-				yield return new(subject, baseRating, group.Severity, PrerequisiteReason(group));
+				yield return new(subject, baseRating, group.Severity, AdjustmentKind.Prerequisite, PrerequisiteReason(group));
 			}
 		}
 	}
@@ -156,7 +174,7 @@ public static class ConstraintPass
 					catalogue.Meta(a).UcasWeight <= catalogue.Meta(b).UcasWeight ? (a, b) : (b, a);
 				var winnerName = EnumNames.NameOf(winner);
 				yield return new(
-					loser, ratings[loser], severity,
+					loser, ratings[loser], severity, AdjustmentKind.MutualExclusion,
 					severity == Rating.Red
 						? $"{MutualExclusionRedReasonPrefix}{winnerName}{MutualExclusionRedReasonSuffix}"
 						: $"{MutualExclusionAmberReasonPrefix}{winnerName}{MutualExclusionAmberReasonSuffix}");
@@ -176,7 +194,7 @@ public static class ConstraintPass
 				if (Qualifies(ratings, exclusion.Other)) {
 					var chosenName = EnumNames.NameOf(chosen);
 					yield return new(
-						exclusion.Other, ratings[exclusion.Other], exclusion.Severity,
+						exclusion.Other, ratings[exclusion.Other], exclusion.Severity, AdjustmentKind.PriorChoiceExclusion,
 						$"{PriorChoiceExclusionReasonPrefix}{chosenName}");
 				}
 			}
@@ -193,7 +211,7 @@ public static class ConstraintPass
 	{
 		foreach (var subject in catalogue.Subjects.Where(subject => catalogue.Meta(subject).RequiredActivities.Count > 0)) {
 			if (Qualifies(ratings, subject) && !OwnTimeSatisfied(catalogue, subject, hobbies)) {
-				yield return new(subject, ratings[subject], Rating.Amber, OwnTimeReason);
+				yield return new(subject, ratings[subject], Rating.Amber, AdjustmentKind.OwnTime, OwnTimeReason);
 			}
 		}
 	}
@@ -210,7 +228,7 @@ public static class ConstraintPass
 	{
 		foreach (var subject in catalogue.Subjects.Where(subject => catalogue.Meta(subject).BlockingActivities.Count > 0)) {
 			if (VetoingHobby(catalogue, subject, hobbies) is { } hobby) {
-				yield return new(subject, RequireRating(ratings, subject), Rating.Red, $"{VetoReasonPrefix}{hobby}");
+				yield return new(subject, RequireRating(ratings, subject), Rating.Red, AdjustmentKind.Veto, $"{VetoReasonPrefix}{hobby}");
 			}
 		}
 	}
@@ -244,6 +262,7 @@ public static class ConstraintPass
 					subject,
 					baseRating,
 					bar.Severity,
+					AdjustmentKind.RestudyBar,
 					$"{RestudyBarReasonPrefix}{subjectName}");
 			}
 		}
@@ -262,33 +281,4 @@ public static class ConstraintPass
 			? rating
 			: throw new InvalidDataException(
 				$"Constraint pass expected a base rating for subject '{EnumNames.NameOf(subject)}'.");
-
-	private static AdjustmentReasonPrecedence ReasonPrecedence(Adjustment adjustment) =>
-		adjustment.Reason switch {
-			var reason when string.Equals(reason, OwnTimeReason, StringComparison.Ordinal)
-				=> AdjustmentReasonPrecedence.OwnTime,
-			var reason when reason.StartsWith(RestudyBarReasonPrefix, StringComparison.Ordinal)
-				=> AdjustmentReasonPrecedence.RestudyBar,
-			var reason when reason.StartsWith(VetoReasonPrefix, StringComparison.Ordinal)
-				=> AdjustmentReasonPrecedence.Veto,
-			var reason when reason.StartsWith(PriorChoiceExclusionReasonPrefix, StringComparison.Ordinal)
-				=> AdjustmentReasonPrecedence.PriorChoiceExclusion,
-			var reason when reason.StartsWith(MutualExclusionAmberReasonPrefix, StringComparison.Ordinal)
-							|| reason.StartsWith(MutualExclusionRedReasonPrefix, StringComparison.Ordinal)
-				=> AdjustmentReasonPrecedence.MutualExclusion,
-			var reason when reason.EndsWith(PrerequisiteReasonSuffix, StringComparison.Ordinal)
-				=> AdjustmentReasonPrecedence.Prerequisite,
-			_ => AdjustmentReasonPrecedence.Unknown,
-		};
-
-	private enum AdjustmentReasonPrecedence
-	{
-		Unknown = 0,
-		OwnTime = 1,
-		Prerequisite = 2,
-		PriorChoiceExclusion = 3,
-		MutualExclusion = 4,
-		Veto = 5,
-		RestudyBar = 6,
-	}
 }

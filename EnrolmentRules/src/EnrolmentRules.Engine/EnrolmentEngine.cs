@@ -326,13 +326,18 @@ public sealed class EnrolmentEngine : IEnrolmentEngine
 			e.Summary);
 	}
 
+	// Return within the loop on the first satisfying qualification rather than testing FirstOrDefault against
+	// the struct default: Qualification is a value type, so a "no match" default is only distinguishable from
+	// a real all-default match by luck, and the sentinel couples correctness to which fields happen to be
+	// zero. The explicit match is also the reason we cite, with no re-derivation.
 	private string? EntryEquivalentReason(StudentProfile profile, Subject subject, CatalogueData catalogue)
 	{
 		foreach (var equivalent in catalogue.Meta(subject).EntryEquivalents) {
-			var match = profile.PriorQualifications.FirstOrDefault(qualification => Scale.Satisfies(qualification, equivalent));
-			if (match != default) {
-				return
-					$"Entry equivalent satisfied by prior qualification {match.Subject} {EnumNames.NameOf(match.Type)} {match.Grade} for {EnumNames.NameOf(subject)}.";
+			foreach (var qualification in profile.PriorQualifications) {
+				if (Scale.Satisfies(qualification, equivalent)) {
+					return
+						$"Entry equivalent satisfied by prior qualification {qualification.Subject} {EnumNames.NameOf(qualification.Type)} {qualification.Grade} for {EnumNames.NameOf(subject)}.";
+				}
 			}
 		}
 

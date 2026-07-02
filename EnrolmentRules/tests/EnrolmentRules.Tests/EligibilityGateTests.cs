@@ -315,7 +315,7 @@ public sealed class EligibilityGateTests
 		result.Recommendations.Single(r => r.Subject == Subject.Art).Rating;
 
 	private static RatingEvaluator Evaluator(PolicyThresholds thresholds) =>
-		new((Harness.BuildFromShippedWorkflows()).Engine, thresholds, Harness.Catalogue, Harness.Scale);
+		new(Harness.BuildFromShippedWorkflows().Engine, thresholds, Harness.Catalogue, Harness.Scale);
 
 	[Fact]
 	public void per_call_asof_overrides_the_bound_construction_date()

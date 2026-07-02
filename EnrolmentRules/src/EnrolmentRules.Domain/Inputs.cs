@@ -1,5 +1,7 @@
 namespace EnrolmentRules.Domain;
 
+using System.Text.Json.Serialization;
+
 /// <summary>
 ///     The top-level student document as it appears on disk / on the wire:
 ///     <c>{ "student": { "id": ..., "gcses": {...}, "hobbies": [...] } }</c> (§1.1).
@@ -94,6 +96,19 @@ public sealed record TransitionEvidence(
 	double ProbabilityA,
 	double ProbabilityAStar)
 {
+	/// <summary>
+	///     The student's own prior-attainment band when it differs from <see cref="PriorAttainmentBand" />
+	///     because the matrix had no row for it and the nearest populated band supplied the probabilities;
+	///     <c>null</c> for an exact match (and for an unmodelled subject's empty evidence). Makes the
+	///     otherwise-silent nearest-band substitution observable — <see cref="PriorAttainmentBand" /> names
+	///     the band the probabilities describe, this names the band actually asked for.
+	/// </summary>
+	[JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+	public string? RequestedBand { get; init; }
+
+	/// <summary>Whether the probabilities were imputed from a neighbouring band rather than the student's own.</summary>
+	public bool Imputed => RequestedBand is not null;
+
 	/// <summary>Probability of achieving at least <paramref name="minimumGrade" /> on the A-level points scale.</summary>
 	public double ProbabilityAtOrAbove(double minimumGrade) => minimumGrade switch {
 		<= ALevelGrade.U => ProbabilityU + ProbabilityE + ProbabilityD + ProbabilityC + ProbabilityB + ProbabilityA + ProbabilityAStar,

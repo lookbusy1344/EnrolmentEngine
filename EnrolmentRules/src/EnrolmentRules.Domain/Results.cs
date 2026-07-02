@@ -1,13 +1,18 @@
 namespace EnrolmentRules.Domain;
 
+using System.Text.Json.Serialization;
+
 /// <summary>
 ///     A host-code downgrade applied by the constraint pass (§1.6): the subject, its rating
-///     <see cref="From" /> the engine's base verdict, the rating it was moved <see cref="To" />, and the
-///     reason. Adjustments only ever downgrade (<see cref="To" /> is at least as severe as
-///     <see cref="From" />), which is what keeps the pipeline monotone and single-pass. The trail of
-///     adjustments is the explainable record of why a base rating was overridden (Phase 7).
+///     <see cref="From" /> the engine's base verdict, the rating it was moved <see cref="To" />, the
+///     <see cref="Kind" /> of relationship that produced it, and the reason. Adjustments only ever downgrade
+///     (<see cref="To" /> is at least as severe as <see cref="From" />), which is what keeps the pipeline
+///     monotone and single-pass. The trail of adjustments is the explainable record of why a base rating was
+///     overridden (Phase 7). <see cref="Kind" /> is the typed discriminator the apply fold's tie-break reads;
+///     it is not part of the §1.7 output document (<see cref="JsonIgnoreAttribute" />), so the human
+///     <see cref="Reason" /> remains the sole serialized explanation.
 /// </summary>
-public sealed record Adjustment(Subject Subject, Rating From, Rating To, string Reason);
+public sealed record Adjustment(Subject Subject, Rating From, Rating To, [property: JsonIgnore] AdjustmentKind Kind, string Reason);
 
 /// <summary>
 ///     The aggregate verdict over the final ratings (§1.6): how many subjects ended green and amber, and

@@ -192,6 +192,99 @@ public sealed class WorkflowLinterTests
 	}
 
 	[Fact]
+	public void green_tier_weaker_than_its_amber_predicted_grade_is_reported()
+	{
+		// The copy-paste slip: a green rule left comparing to the amber predicted grade. It orders and compiles,
+		// but promotes amber-level students to green.
+		Workflow[] workflows = [
+			new() {
+				WorkflowName = RatingEvaluator.SubjectRatingsWorkflow,
+				Rules = [
+					new() { RuleName = "maths:green", Expression = "facts.Predicted(\"maths\") >= ALevelGrade.C" },
+					new() { RuleName = "maths:amber", Expression = "facts.Predicted(\"maths\") >= ALevelGrade.B" },
+					new() { RuleName = "maths:red", Expression = "true" },
+				],
+			},
+		];
+
+		var findings = WorkflowLinter.Lint(workflows, Harness.Catalogue);
+
+		findings.Should().ContainSingle(finding =>
+			finding.Rule == "maths:green"
+			&& finding.Severity == LintSeverity.Error
+			&& finding.Message.Contains("weaker predicted grade", StringComparison.Ordinal));
+	}
+
+	[Fact]
+	public void green_tier_reading_the_amber_dfe_floor_is_reported()
+	{
+		Workflow[] workflows = [
+			new() {
+				WorkflowName = RatingEvaluator.SubjectRatingsWorkflow,
+				Rules = [
+					new() { RuleName = "maths:green", Expression = "facts.Predicted(\"maths\") >= ALevelGrade.A && facts.DfeProbabilityAtOrAbove(\"maths\", ALevelGrade.A) >= facts.MinDfeAmberProbabilityAtOrAbove" },
+					new() { RuleName = "maths:amber", Expression = "facts.Predicted(\"maths\") >= ALevelGrade.B && facts.DfeProbabilityAtOrAbove(\"maths\", ALevelGrade.B) >= facts.MinDfeAmberProbabilityAtOrAbove" },
+					new() { RuleName = "maths:red", Expression = "true" },
+				],
+			},
+		];
+
+		var findings = WorkflowLinter.Lint(workflows, Harness.Catalogue);
+
+		findings.Should().ContainSingle(finding =>
+			finding.Rule == "maths:green"
+			&& finding.Severity == LintSeverity.Error
+			&& finding.Message.Contains("amber DfE confidence floor", StringComparison.Ordinal));
+	}
+
+	[Fact]
+	public void amber_tier_reading_the_green_dfe_floor_is_reported()
+	{
+		Workflow[] workflows = [
+			new() {
+				WorkflowName = RatingEvaluator.SubjectRatingsWorkflow,
+				Rules = [
+					new() { RuleName = "maths:green", Expression = "facts.Predicted(\"maths\") >= ALevelGrade.A && facts.DfeProbabilityAtOrAbove(\"maths\", ALevelGrade.A) >= facts.MinDfeGreenProbabilityAtOrAbove" },
+					new() { RuleName = "maths:amber", Expression = "facts.Predicted(\"maths\") >= ALevelGrade.B && facts.DfeProbabilityAtOrAbove(\"maths\", ALevelGrade.B) >= facts.MinDfeGreenProbabilityAtOrAbove" },
+					new() { RuleName = "maths:red", Expression = "true" },
+				],
+			},
+		];
+
+		var findings = WorkflowLinter.Lint(workflows, Harness.Catalogue);
+
+		findings.Should().ContainSingle(finding =>
+			finding.Rule == "maths:amber"
+			&& finding.Severity == LintSeverity.Error
+			&& finding.Message.Contains("green DfE confidence floor", StringComparison.Ordinal));
+	}
+
+	[Fact]
+	public void equal_predicted_grades_separated_only_by_dfe_floor_lint_clean()
+	{
+		// A legitimate design: green and amber share the predicted grade and separate on DfE confidence. The
+		// grade check must not fire on equal thresholds — only a strictly weaker green tier is a defect.
+		Workflow[] workflows = [
+			new() {
+				WorkflowName = RatingEvaluator.SubjectRatingsWorkflow,
+				Rules = [
+					new() { RuleName = "maths:green", Expression = "facts.Predicted(\"maths\") >= ALevelGrade.B && facts.DfeProbabilityAtOrAbove(\"maths\", ALevelGrade.B) >= facts.MinDfeGreenProbabilityAtOrAbove" },
+					new() { RuleName = "maths:amber", Expression = "facts.Predicted(\"maths\") >= ALevelGrade.B && facts.DfeProbabilityAtOrAbove(\"maths\", ALevelGrade.B) >= facts.MinDfeAmberProbabilityAtOrAbove" },
+					new() { RuleName = "maths:red", Expression = "true" },
+				],
+			},
+		];
+
+		// Other catalogue subjects are absent from this maths-only fixture and reported as missing; the point is
+		// that the maths pair itself draws no tier-strength complaint.
+		var findings = WorkflowLinter.Lint(workflows, Harness.Catalogue);
+
+		findings.Should().NotContain(finding =>
+			finding.Message.Contains("predicted grade", StringComparison.Ordinal)
+			|| finding.Message.Contains("DfE confidence floor", StringComparison.Ordinal));
+	}
+
+	[Fact]
 	public void shipped_workflows_lint_clean()
 	{
 		var workflows = WorkflowStore.LoadAndValidate(Harness.WorkflowsDir, Harness.SchemaPath);
@@ -262,7 +355,7 @@ public sealed class WorkflowLinterTests
 		var brokenDir = CopyShippedWorkflows();
 		try {
 			var ratingsPath = Path.Combine(brokenDir, "subject-ratings.yaml");
-			var corrupted = (File.ReadAllText(ratingsPath))
+			var corrupted = File.ReadAllText(ratingsPath)
 				.Replace("facts.Predicted", "facts.Prediced", StringComparison.Ordinal);
 			File.WriteAllText(ratingsPath, corrupted);
 

@@ -135,6 +135,18 @@ public static partial class WorkflowLinter
 					}
 				}
 			}
+
+			// The green tier must be strictly stronger than the amber tier. The subject-ratings YAML is a
+			// large copy-paste surface (Reservation 1): a green rule left comparing to the amber predicted
+			// grade, or wired to the amber DfE confidence floor, compiles, orders and produces a rating — but
+			// silently promotes amber-level students to green. The ordering/existence checks above never see
+			// inside the expressions, so the tier boundary is pinned here from the green/amber pair itself.
+			if (byRating.TryGetValue(Rating.Green, out var greenRules) && greenRules.Length == 1
+				&& byRating.TryGetValue(Rating.Amber, out var amberRules) && amberRules.Length == 1) {
+				foreach (var finding in LintTierStrength(workflowName, subject, greenRules[0].Rule, amberRules[0].Rule)) {
+					yield return finding;
+				}
+			}
 		}
 
 		foreach (var subject in parsedRules.Keys
@@ -147,6 +159,69 @@ public static partial class WorkflowLinter
 				$"rules exist for subject '{EnumNames.NameOf(subject)}' which is not in the catalogue; they will never produce a rating");
 		}
 	}
+
+	// The DfE confidence floors the two tiers read. Sourced by nameof so a rename of the RatingFacts member
+	// carries the linter with it rather than drifting from a hard-coded string.
+	private static readonly string GreenDfeFloor = nameof(RatingFacts.MinDfeGreenProbabilityAtOrAbove);
+	private static readonly string AmberDfeFloor = nameof(RatingFacts.MinDfeAmberProbabilityAtOrAbove);
+
+	private static IEnumerable<LintFinding> LintTierStrength(string workflowName, Subject subject, Rule green, Rule amber)
+	{
+		var subjectName = EnumNames.NameOf(subject);
+
+		// The predicted-grade tier boundary: green must demand at least as high a predicted grade as amber.
+		// Equal grades are allowed (a subject may legitimately separate the tiers on DfE confidence alone), so
+		// only a green tier that is strictly weaker than its amber tier is a defect.
+		if (PredictedThreshold(green.Expression) is { } greenGrade
+			&& PredictedThreshold(amber.Expression) is { } amberGrade
+			&& greenGrade.Value < amberGrade.Value) {
+			yield return new(
+				workflowName,
+				green.RuleName,
+				LintSeverity.Error,
+				$"{subjectName} green tier requires a weaker predicted grade (ALevelGrade.{greenGrade.Token}) than its amber tier (ALevelGrade.{amberGrade.Token}); green must be at least as strong");
+		}
+
+		// The DfE confidence floors must not be transposed: green reads the green floor, amber the amber floor.
+		if (References(green.Expression, AmberDfeFloor)) {
+			yield return new(
+				workflowName,
+				green.RuleName,
+				LintSeverity.Error,
+				$"{subjectName} green tier reads the amber DfE confidence floor '{AmberDfeFloor}'; it must read '{GreenDfeFloor}'");
+		}
+
+		if (References(amber.Expression, GreenDfeFloor)) {
+			yield return new(
+				workflowName,
+				amber.RuleName,
+				LintSeverity.Error,
+				$"{subjectName} amber tier reads the green DfE confidence floor '{GreenDfeFloor}'; it must read '{AmberDfeFloor}'");
+		}
+	}
+
+	// The first `Predicted(...) >= ALevelGrade.X` threshold in an expression, resolved to its scale value for
+	// comparison. Null when the rule carries no predicted-grade comparison (e.g. an entry-only tier), which
+	// simply opts that pair out of the grade check.
+	private static (string Token, double Value)? PredictedThreshold(string? expression)
+	{
+		if (expression is null) {
+			return null;
+		}
+
+		var match = PredictedThresholdRegex().Match(expression);
+		if (!match.Success) {
+			return null;
+		}
+
+		var token = match.Groups["grade"].Value;
+		return typeof(ALevelGrade).GetField(token, BindingFlags.Public | BindingFlags.Static)?.GetRawConstantValue() is double value
+			? (token, value)
+			: null;
+	}
+
+	private static bool References(string? expression, string member) =>
+		expression is not null && expression.Contains(member, StringComparison.Ordinal);
 
 	private static IEnumerable<LintFinding> LintEligibility(string workflowName, IReadOnlyList<Rule> rules)
 	{
@@ -285,6 +360,10 @@ public static partial class WorkflowLinter
 	// Match a subject-keyed accessor call and capture its first string-literal argument: the subject key.
 	[GeneratedRegex(@"(?<![\w])(?<owner>facts|lookup)\.(?<method>Gcse|Predicted|DfeProbabilityAtOrAbove|Grade)\(\s*""(?<key>[^""]*)""")]
 	private static partial Regex SubjectKeyRegex();
+
+	// Match a `Predicted(...) >= ALevelGrade.X` predicted-grade tier comparison and capture the grade token.
+	[GeneratedRegex(@"Predicted\s*\([^)]*\)\s*>=\s*ALevelGrade\.(?<grade>[A-Za-z]+)")]
+	private static partial Regex PredictedThresholdRegex();
 
 	private enum KeyVocabulary
 	{

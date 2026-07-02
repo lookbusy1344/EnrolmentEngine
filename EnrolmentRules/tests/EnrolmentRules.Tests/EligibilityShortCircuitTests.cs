@@ -65,7 +65,7 @@ public sealed class EligibilityShortCircuitTests
 	public void ineligible_student_never_executes_the_subject_workflow()
 	{
 		var gcses = IneligibleGcses();
-		var spy = new RecordingEngine((Harness.BuildFromShippedWorkflows()).Engine);
+		var spy = new RecordingEngine(Harness.BuildFromShippedWorkflows().Engine);
 		var thresholds = PolicyThresholdsStore.LoadAndValidate(Harness.DataDir);
 
 		new RatingEvaluator(spy, thresholds).Evaluate(ProfileFor(gcses), gcses);
@@ -79,7 +79,7 @@ public sealed class EligibilityShortCircuitTests
 	{
 		var student = EligibleStudent();
 		var gcses = student.ToGcseResults();
-		var spy = new RecordingEngine((Harness.BuildFromShippedWorkflows()).Engine);
+		var spy = new RecordingEngine(Harness.BuildFromShippedWorkflows().Engine);
 		var thresholds = PolicyThresholdsStore.LoadAndValidate(Harness.DataDir);
 
 		var ratings = new RatingEvaluator(spy, thresholds).Evaluate(Harness.Predict(student), gcses);

@@ -3,7 +3,6 @@ namespace EnrolmentRules.Tests;
 using System.Collections.Concurrent;
 using System.Diagnostics;
 using System.Text;
-using System.Threading;
 using AwesomeAssertions;
 using Domain;
 using Engine;
@@ -219,7 +218,7 @@ public sealed class EngineFactoryTests
 		}
 		finally {
 			release.Set();
-			JoinThreads(threads, "cleanup thread", ThreadJoinTimeoutMilliseconds);
+			JoinThreads(threads, "cleanup thread");
 		}
 	}
 
@@ -352,6 +351,7 @@ public sealed class EngineFactoryTests
 		private readonly bool blockFirstReload;
 		private readonly byte[] catalogue;
 		private readonly byte[] catalogueSchema;
+		private readonly ManualResetEventSlim firstReloadBlockedSignal = new(false);
 		private readonly byte[] qualifications;
 		private readonly byte[] qualificationsSchema;
 		private readonly ManualResetEventSlim releaseFirstReloadSignal = new(false);
@@ -361,7 +361,6 @@ public sealed class EngineFactoryTests
 		private readonly byte[] transitionMatrix;
 		private readonly IReadOnlyList<(string FileName, byte[] Bytes)> workflows;
 		private readonly byte[] workflowSchema;
-		private readonly ManualResetEventSlim firstReloadBlockedSignal = new(false);
 		private int activeReloadBuilds;
 		private int thresholdsOpenCount;
 

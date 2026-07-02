@@ -112,6 +112,20 @@ public sealed class ExplanationTests
 	}
 
 	[Fact]
+	public void explanation_omits_the_entry_equivalent_note_when_no_prior_qualification_satisfies_it()
+	{
+		// Biology's entry equivalent needs a distinction; a merit does not satisfy it, so the note is absent —
+		// the "no match" branch of the reason projection.
+		var student = StrongBiologyEquivalentStudent() with {
+			PriorQualifications = [new("applied_science", QualificationType.BtecDiploma, "merit")],
+		};
+
+		var biology = Of(Harness.ShippedEngine().Explain(student), Subject.Biology);
+
+		biology.EntryEquivalentReason.Should().BeNull();
+	}
+
+	[Fact]
 	public void ineligible_explanation_attributes_each_red_to_the_eligibility_gate()
 	{
 		// Only Maths present: English absent and too few passes ⇒ ineligible, every subject red.

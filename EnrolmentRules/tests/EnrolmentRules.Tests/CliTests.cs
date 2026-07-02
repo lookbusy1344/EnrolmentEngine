@@ -519,15 +519,15 @@ public sealed class CliTests
 		File.WriteAllText(
 			Path.Combine(dataDir, QualificationScaleStore.QualificationsFileName),
 			File.ReadAllText(Path.Combine(Harness.DataDir, QualificationScaleStore.QualificationsFileName))
-			.Replace(
-				"      - { grade: distinction_star, ordinal: 3, equivalence: 6.0 }",
-				"      - { grade: distinction_star, ordinal: 3, equivalence: 6.0 }\n      - { grade: platinum, ordinal: 4, equivalence: 6.0 }",
-				StringComparison.Ordinal));
+				.Replace(
+					"      - { grade: distinction_star, ordinal: 3, equivalence: 6.0 }",
+					"      - { grade: distinction_star, ordinal: 3, equivalence: 6.0 }\n      - { grade: platinum, ordinal: 4, equivalence: 6.0 }",
+					StringComparison.Ordinal));
 
 		File.WriteAllText(
 			Path.Combine(dataDir, CatalogueStore.CatalogueFileName),
 			File.ReadAllText(Path.Combine(Harness.DataDir, CatalogueStore.CatalogueFileName))
-			.Replace("min_grade: distinction", "min_grade: platinum", StringComparison.Ordinal));
+				.Replace("min_grade: distinction", "min_grade: platinum", StringComparison.Ordinal));
 
 		return (dir, dataDir, workflowsDir);
 	}

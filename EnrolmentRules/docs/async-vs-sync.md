@@ -1,5 +1,12 @@
 # Async vs Synchronous: Why the Evaluation Path Should Not Be `async`
 
+The production evaluation path remains synchronous by design. Tests remain synchronous by default
+for the same reason, with one narrow exception: process I/O in `tests/EnrolmentRules.Tests/TestInfrastructure`
+uses `ReadToEndAsync` and `WaitForExitAsync` because redirected external process streams and
+termination are genuinely asynchronous operations. That exception is structural and confined to
+test infrastructure; it does not justify incidental `async` in engine, domain, golden, or ordinary
+unit tests.
+
 The engine's public API is now synchronous end to end — `Evaluate`, `Explain`, `Advise`,
 `TryEvaluate`, and their overloads return concrete values. This document records why the earlier async surface was a
 mismatch for the workload, and why the per-student evaluation path belongs in synchronous code.

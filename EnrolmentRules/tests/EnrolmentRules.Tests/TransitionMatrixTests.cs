@@ -156,6 +156,50 @@ public sealed class TransitionMatrixTests
 	}
 
 	[Fact]
+	public void imputed_evidence_flags_the_substitution_and_names_the_requested_band()
+	{
+		// The student's band ("1 to < 2" at avg 1.5) has no row, so the nearest populated band supplies the
+		// probabilities. That substitution must be observable: PriorAttainmentBand still names the source of
+		// the probabilities, RequestedBand names the student's own band, and Imputed flags the mismatch.
+		var matrix = DfeTransitionMatrix.Load(new StringReader(
+			Header + "\n" +
+			ValidRow("5 to < 6", "1.0", "0.0", "0.0", "0.0", "0.0", "0.0", "0.0")));
+
+		var evidence = matrix.EvidenceFor(1.5, SingleSubjectCatalogue(Subject.Maths)).Single();
+
+		evidence.Imputed.Should().BeTrue();
+		evidence.PriorAttainmentBand.Should().Be("5 to < 6");
+		evidence.RequestedBand.Should().Be("1 to < 2");
+	}
+
+	[Fact]
+	public void exact_band_evidence_is_not_flagged_as_imputed()
+	{
+		var matrix = DfeTransitionMatrix.Load(new StringReader(
+			Header + "\n" +
+			ValidRow("1 to < 2", "1.0", "0.0", "0.0", "0.0", "0.0", "0.0", "0.0")));
+
+		var evidence = matrix.EvidenceFor(1.5, SingleSubjectCatalogue(Subject.Maths)).Single();
+
+		evidence.Imputed.Should().BeFalse();
+		evidence.RequestedBand.Should().BeNull();
+	}
+
+	[Fact]
+	public void an_unmodelled_subject_yields_empty_evidence_that_is_not_flagged_as_imputed()
+	{
+		// No row for the subject at all is "no evidence", not a band substitution, so it is not imputed.
+		var matrix = DfeTransitionMatrix.Load(new StringReader(
+			Header + "\n" +
+			ValidRow("5 to < 6", "1.0", "0.0", "0.0", "0.0", "0.0", "0.0", "0.0")));
+
+		var evidence = matrix.EvidenceFor(5.5, SingleSubjectCatalogue(Subject.Physics)).Single();
+
+		evidence.Imputed.Should().BeFalse();
+		evidence.RequestedBand.Should().BeNull();
+	}
+
+	[Fact]
 	public void equidistant_sparse_gap_prefers_the_lower_populated_band()
 	{
 		var matrix = DfeTransitionMatrix.Load(new StringReader(

@@ -23,6 +23,7 @@ internal static class Harness
 	///     fully warm, so the concurrent evaluations the parallel suite drives are pure reads.
 	/// </summary>
 	private static readonly Lazy<Built> shipped = new(BuildShipped, LazyThreadSafetyMode.ExecutionAndPublication);
+
 	public static string RepoRoot { get; } = FindRepoRoot();
 
 	/// <summary>

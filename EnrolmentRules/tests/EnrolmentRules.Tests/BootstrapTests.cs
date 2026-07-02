@@ -1,5 +1,6 @@
 namespace EnrolmentRules.Tests;
 
+using System.Text;
 using System.Text.Json;
 using AwesomeAssertions;
 using Domain;
@@ -12,19 +13,38 @@ using Prediction;
 /// </summary>
 public sealed class BootstrapTests
 {
+	private const string TransitionHeader =
+		"subject,dfe_qualification_number,dfe_subject_number,dfe_subject_name,prior_attainment_band,probability_u,probability_e,probability_d,probability_c,probability_b,probability_a,probability_a_star";
+
 	private static string DataDir => Harness.DataDir;
 
 	[Fact]
-	public void dfe_transition_matrix_loads_equally_from_a_stream_and_a_path()
+	public void transition_matrix_stream_and_path_loaders_match_for_a_tiny_known_fixture()
 	{
-		var path = Path.Combine(DataDir, DfeTransitionMatrix.DataDirectoryRelativePath);
-		var expected = DfeTransitionMatrix.Load(path);
+		var directory = Path.Combine(Path.GetTempPath(), "enrolmentrules-tests", Guid.NewGuid().ToString("N"));
+		Directory.CreateDirectory(directory);
+		var path = Path.Combine(directory, "transition.csv");
+		File.WriteAllText(path, string.Join(
+			Environment.NewLine,
+			TransitionHeader,
+			ValidTransitionRow("< 1", "0.0", "1.0", "0.0", "0.0", "0.0", "0.0", "0.0"),
+			ValidTransitionRow("7 to < 8")));
+
+		var fromPath = DfeTransitionMatrix.Load(path);
 
 		using var stream = File.OpenRead(path);
-		var actual = DfeTransitionMatrix.Load(stream);
+		var fromStream = DfeTransitionMatrix.Load(stream);
 
-		actual.EvidenceFor(6.5, Harness.Catalogue).Should()
-			.BeEquivalentTo(expected.EvidenceFor(6.5, Harness.Catalogue));
+		var lowBandPath = fromPath.EvidenceFor(0.5, SingleSubjectCatalogue(Subject.Maths)).Single();
+		var highBandStream = fromStream.EvidenceFor(7.5, SingleSubjectCatalogue(Subject.Maths)).Single();
+
+		lowBandPath.PriorAttainmentBand.Should().Be("< 1");
+		lowBandPath.ProbabilityE.Should().Be(1.0);
+		highBandStream.PriorAttainmentBand.Should().Be("7 to < 8");
+		highBandStream.ProbabilityA.Should().Be(0.2);
+
+		fromStream.EvidenceFor(7.5, SingleSubjectCatalogue(Subject.Maths)).Should()
+			.BeEquivalentTo(fromPath.EvidenceFor(7.5, SingleSubjectCatalogue(Subject.Maths)));
 	}
 
 	[Fact]
@@ -41,32 +61,124 @@ public sealed class BootstrapTests
 	}
 
 	[Fact]
-	public void directory_data_source_matches_the_directory_bootstrap_path()
+	public void directory_data_source_matches_the_directory_bootstrap_path_for_the_same_student()
 	{
 		var expected = EnrolmentEngine.Create(Harness.WorkflowsDir, DataDir, Harness.AsOf);
 		var actual = EnrolmentEngine.Create(new DirectoryDataSource(Harness.WorkflowsDir, DataDir), Harness.AsOf);
 
-		var student = ExampleStudent();
+		var student = GoldenStudent("top-allrounder");
 		actual.Evaluate(student).Should().BeEquivalentTo(expected.Evaluate(student));
 	}
 
 	[Fact]
-	public void in_memory_data_source_bootstraps_the_engine_without_files_on_disk()
+	public void in_memory_data_source_matches_the_directory_bootstrap_path_for_the_same_student()
 	{
 		var source = InMemoryDataSource.FromRepositoryLayout(Harness.WorkflowsDir, DataDir);
 		var created = EnrolmentEngine.Create(source, Harness.AsOf);
 		var expected = EnrolmentEngine.Create(Harness.WorkflowsDir, DataDir, Harness.AsOf);
 
-		var student = ExampleStudent();
+		var student = GoldenStudent("top-allrounder");
 		created.Evaluate(student).Should().BeEquivalentTo(expected.Evaluate(student));
 	}
 
-	private static StudentInput ExampleStudent()
+	[Fact]
+	public void directory_data_source_bootstraps_the_expected_catalogue_scale_and_student_contracts()
 	{
-		var path = Path.Combine(Harness.RepoRoot, "examples", "student.json");
+		var created = EnrolmentEngine.Create(new DirectoryDataSource(Harness.WorkflowsDir, DataDir), Harness.AsOf);
+
+		AssertBootstrapContract(created);
+	}
+
+	[Fact]
+	public void in_memory_data_source_bootstraps_the_expected_catalogue_scale_and_student_contracts()
+	{
+		var created = EnrolmentEngine.Create(InMemoryDataSource.FromRepositoryLayout(Harness.WorkflowsDir, DataDir), Harness.AsOf);
+
+		AssertBootstrapContract(created);
+	}
+
+	[Fact]
+	public void directory_data_source_reports_a_missing_catalogue_file()
+	{
+		var dataDir = CopyDirectory(DataDir);
+		File.Delete(Path.Combine(dataDir, CatalogueStore.CatalogueFileName));
+
+		var act = () => EnrolmentEngine.Create(new DirectoryDataSource(Harness.WorkflowsDir, dataDir), Harness.AsOf);
+
+		act.Should().Throw<FileNotFoundException>();
+	}
+
+	[Fact]
+	public void in_memory_data_source_reports_an_invalid_transition_matrix()
+	{
+		var source = InMemoryDataSource.FromRepositoryLayout(
+			Harness.WorkflowsDir,
+			DataDir,
+			Encoding.UTF8.GetBytes(TransitionHeader + Environment.NewLine + ValidTransitionRow("7 to < 8", probabilityA: "NaN")));
+
+		var act = () => EnrolmentEngine.Create(source, Harness.AsOf);
+
+		act.Should().Throw<TransitionMatrixException>();
+	}
+
+	private static void AssertBootstrapContract(EnrolmentEngine engine)
+	{
+		engine.Catalogue.Subjects.Should().Equal(Harness.Catalogue.Subjects);
+		engine.Scale.Equivalence(QualificationType.BtecDiploma, "distinction").Should().Be(ALevelGrade.A);
+
+		var result = engine.Evaluate(GoldenStudent("top-allrounder"));
+		result.Eligible.Should().BeTrue();
+		result.Recommendations.Single(recommendation => recommendation.Subject == Subject.FurtherMaths).Rating.Should().Be(Rating.Red);
+		result.Adjustments.Should().BeEmpty();
+	}
+
+	private static StudentInput GoldenStudent(string fixture)
+	{
+		var path = Path.Combine(Harness.RepoRoot, "examples", "golden", fixture + ".json");
 		var json = File.ReadAllText(path);
 		var document = JsonSerializer.Deserialize(json, EnrolmentJsonContext.Default.StudentDocument);
 		return document!.Student;
+	}
+
+	private static CatalogueData SingleSubjectCatalogue(Subject subject) =>
+		new(new Dictionary<Subject, SubjectMeta> { [subject] = Harness.Catalogue.Meta(subject) }, [subject]);
+
+	private static string ValidTransitionRow(
+		string band,
+		string probabilityU = "0.1",
+		string probabilityE = "0.1",
+		string probabilityD = "0.1",
+		string probabilityC = "0.1",
+		string probabilityB = "0.1",
+		string probabilityA = "0.2",
+		string probabilityAStar = "0.3") =>
+		string.Join(',',
+			"maths",
+			"111",
+			"12210",
+			"Mathematics",
+			band,
+			probabilityU,
+			probabilityE,
+			probabilityD,
+			probabilityC,
+			probabilityB,
+			probabilityA,
+			probabilityAStar);
+
+	private static string CopyDirectory(string source)
+	{
+		var destination = Path.Combine(Path.GetTempPath(), "enrolmentrules-tests", Guid.NewGuid().ToString("N"), "payload");
+		foreach (var dir in Directory.EnumerateDirectories(source, "*", SearchOption.AllDirectories)) {
+			Directory.CreateDirectory(dir.Replace(source, destination, StringComparison.Ordinal));
+		}
+
+		Directory.CreateDirectory(destination);
+		foreach (var file in Directory.EnumerateFiles(source, "*", SearchOption.AllDirectories)) {
+			File.Copy(file, file.Replace(source, destination, StringComparison.Ordinal), true);
+		}
+
+		return destination;
 	}
 
 	private static bool IsWorkflowFile(string file) =>
@@ -126,7 +238,10 @@ public sealed class BootstrapTests
 
 		public Stream OpenTransitionMatrix() => new MemoryStream(transitionMatrix, false);
 
-		public static InMemoryDataSource FromRepositoryLayout(string workflowsDirectory, string dataDirectory)
+		public static InMemoryDataSource FromRepositoryLayout(
+			string workflowsDirectory,
+			string dataDirectory,
+			byte[]? transitionMatrix = null)
 		{
 			var workflows = Directory.EnumerateFiles(workflowsDirectory)
 				.Where(IsWorkflowFile)
@@ -143,7 +258,7 @@ public sealed class BootstrapTests
 				File.ReadAllBytes(Path.Combine(dataDirectory, QualificationScaleStore.SchemaFileName)),
 				File.ReadAllBytes(Path.Combine(dataDirectory, PolicyThresholdsStore.ThresholdsFileName)),
 				File.ReadAllBytes(Path.Combine(dataDirectory, PolicyThresholdsStore.SchemaFileName)),
-				File.ReadAllBytes(Path.Combine(dataDirectory, DfeTransitionMatrix.DataDirectoryRelativePath)));
+				transitionMatrix ?? File.ReadAllBytes(Path.Combine(dataDirectory, DfeTransitionMatrix.DataDirectoryRelativePath)));
 		}
 	}
 }

@@ -8,6 +8,7 @@
         <Project Path="src/EnrolmentRules.Prediction/EnrolmentRules.Prediction.csproj"/>
     </Folder>
     <Folder Name="/tests/">
+        <Project Path="tests/EnrolmentRules.TestProcessHost/EnrolmentRules.TestProcessHost.csproj"/>
         <Project Path="tests/EnrolmentRules.Tests/EnrolmentRules.Tests.csproj"/>
     </Folder>
 </Solution>

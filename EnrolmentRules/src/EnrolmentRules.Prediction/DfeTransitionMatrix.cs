@@ -132,12 +132,12 @@ public sealed class DfeTransitionMatrix
 		for (var distance = 1; distance < Bands.Length; distance++) {
 			var lower = bandIndex - distance;
 			if (lower >= 0 && subjectBands.Contains(Bands[lower])) {
-				return rows[(subject, Bands[lower])];
+				return rows[(subject, Bands[lower])] with { RequestedBand = band };
 			}
 
 			var upper = bandIndex + distance;
 			if (upper < Bands.Length && subjectBands.Contains(Bands[upper])) {
-				return rows[(subject, Bands[upper])];
+				return rows[(subject, Bands[upper])] with { RequestedBand = band };
 			}
 		}
 

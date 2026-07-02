@@ -239,8 +239,13 @@ Mathematics, these proportions achieved `U/E/D/C/B/A/A*`".
 `TransitionEvidence.ProbabilityAtOrAbove(A)` then sums the `A` and `A*` columns. That value can
 be used directly in workflow YAML. Some DfE subject/band combinations are absent from the
 source workbook because the national row is too sparse; `DfeTransitionMatrix` handles that by
-falling back to the nearest lower populated band for the same subject, and only returns zero
-evidence if the subject has no usable DfE row at or below the requested band.
+falling back to the nearest populated band for the same subject (preferring the lower band when
+two are equidistant), and only returns zero evidence if the subject has no usable DfE row at
+all. That substitution is not silent: when it happens the returned `TransitionEvidence` sets
+`RequestedBand` to the student's own band (`PriorAttainmentBand` continues to name the band the
+probabilities actually describe) and `Imputed` reports `true`, so the profile output and any
+consumer can see the evidence was borrowed from a neighbouring band rather than measured at the
+student's own.
 
 What DfE means by prior attainment is slightly richer than this project's current input model.
 For A-level/academic value-added measures, DfE bases prior attainment on **GCSE grades only**,
@@ -564,9 +569,13 @@ ratings at once. It is a pure function `(ratings, profile) → Adjustment[]`. Si
   never improves a rating.
 
 Every adjustment **only ever downgrades** (green→amber→red, never the reverse). That
-monotonicity is why the pass is single-shot and order-independent: the rules read only
-the *base* ratings, never each other's output, so they commute. `ConstraintPass.Apply` then
-folds the base rating and any adjustments together by **most-severe-wins**.
+monotonicity is why *applying* the adjustments is order-independent — `ConstraintPass.Apply`
+folds the base rating and every adjustment together by **most-severe-wins**, whatever order they
+arrive in. Evaluation is single-shot but two-phase: the single-subject and pairwise constraints
+(veto, restudy bar, exclusions, own-time) read the *base* ratings, then prerequisites read the
+ratings *after* those downgrades, so a dependency knocked to red no longer satisfies a
+`qualifying` prerequisite. The order is fixed but acyclic — prerequisites never feed the other
+constraints — so no fixpoint iteration is needed.
 
 The net effect is one unambiguous precedence ladder. Read it top-down and stop at the first row
 that matches:
