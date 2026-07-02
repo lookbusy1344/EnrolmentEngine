@@ -12,8 +12,11 @@ using Prediction;
 /// <summary>Reloadable engine factory for policy edits without process restart.</summary>
 public sealed class EngineFactoryTests
 {
-	private const int ThreadJoinTimeoutMilliseconds = 5_000;
-	private const int SignalWaitTimeoutMilliseconds = 5_000;
+	// Generous headroom for CI runners: these values bound real OS-thread scheduling
+	// (50 threads spun up concurrently), not the logic under test, and shared CI hardware
+	// is far noisier than a local dev machine.
+	private const int ThreadJoinTimeoutMilliseconds = 20_000;
+	private const int SignalWaitTimeoutMilliseconds = 20_000;
 
 	private static StudentInput EligibleStudent() =>
 		new(
