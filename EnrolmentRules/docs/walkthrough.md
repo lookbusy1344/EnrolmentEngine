@@ -129,8 +129,8 @@ The code maps onto the diagram cleanly:
 | Layer | Project | Key types |
 | --- | --- | --- |
 | 1. Prediction | `EnrolmentRules.Prediction` | `GradePredictor`, `PredictionModel`, `DfeTransitionMatrix` |
-| 2. Engine tables | `EnrolmentRules.Engine` + `workflows/` | `WorkflowStore`, `RatingEvaluator`, the two YAML workflows |
-| 3. Constraints | `EnrolmentRules.Engine` | `ConstraintPass`, `Aggregator` |
+| 2. Engine tables | `EnrolmentRules.Engine.Authoring` + `workflows/` | `WorkflowStore`, the two YAML workflows |
+| 3. Constraints | `EnrolmentRules.Engine` internal machinery | internal constraint and aggregation passes |
 | Façade over all 3 | `EnrolmentRules.Engine` | `EnrolmentEngine` |
 | Shared vocabulary | `EnrolmentRules.Domain` | `Subject`, `Rating`, `Thresholds`, `ALevelGrade`, `Catalogue`, the result records |
 
@@ -147,8 +147,8 @@ the rest of the project reads easily:
 | **Per-student rules** | `workflows/eligibility.yaml`, `workflows/subject-ratings.yaml` | Microsoft **RulesEngine** (lambda strings) | The eligibility gate and each subject's green/amber/red base tier. A pure function of *one* student's facts. |
 | **Tuning values** | `data/thresholds.yaml` | Plain **data**, schema-validated by `PolicyThresholdsStore` → `PolicyThresholds` | The numeric knobs the lambdas read as `policy.PassGrade` / `facts.TopEntry` and the host pass reads directly: pass grade, min passes, entry thresholds, DfE floors, adult age, the optional green cap (normally unset), amber tariff factor. |
 | **Qualification scale** | `data/qualifications.yaml` | Plain **data**, schema-validated by `QualificationScaleStore` → `QualificationScale` | Grade ordering within each qualification type, plus the A-level-points equivalence used when prior qualifications lift a subject's prediction. |
-| **Subject-relationship rules** | `data/catalogue.yaml` | Plain **data**, schema-validated by `CatalogueStore` — *not* RulesEngine | UCAS weights, exclusion pairs, own-time/veto prefixes, prerequisites, entry equivalents, restudy bars, per-subject regression — which subjects relate to which. |
-| **Relationship types + scale invariants** | `ConstraintPass`, `Aggregator`, `PredictionModel`/`ALevelGrade` math, `Thresholds` | Compiled **C#** | Not rules — the fixed *types* a rule can take and how they apply (a rule cannot read sibling rule outcomes), plus the GCSE-scale invariants. Changed only to add a new *kind* of relationship — rare, not part of normal operation. |
+| **Subject-relationship rules** | `data/catalogue.yaml` | Plain **data**, schema-validated by `EnrolmentRules.Engine.Authoring.CatalogueStore` — *not* RulesEngine | UCAS weights, exclusion pairs, own-time/veto prefixes, prerequisites, entry equivalents, restudy bars, per-subject regression — which subjects relate to which. |
+| **Relationship types + scale invariants** | internal engine machinery, `PredictionModel`/`ALevelGrade` math, `Thresholds` | Compiled **C#** | Not rules — the fixed *types* a rule can take and how they apply (a rule cannot read sibling rule outcomes), plus the GCSE-scale invariants. Changed only to add a new *kind* of relationship — rare, not part of normal operation. |
 
 The one-line model: **what** to decide for one student → workflow YAML; the *numbers* it turns on →
 thresholds YAML; **how prior-qualification grades compare** → qualifications YAML; **which** subjects
@@ -315,7 +315,7 @@ A small workflow of three independent rules:
 | `MathsPass` | Maths GCSE ≥ `policy.PassGrade` (4) |
 | `EnoughPasses` | count of GCSEs at grade ≥ 4 is ≥ `policy.MinPasses` (5) |
 
-The engine reports each rule's pass/fail. `RatingEvaluator.EvaluateEligibility` then
+The engine reports each rule's pass/fail. The internal rating evaluator then
 *assembles the verdict in host code*: if any rule failed, the student is ineligible and each
 failed rule's reason is projected from the loaded thresholds (keyed by `RuleName`), kept in
 declared order. Projecting the text from `PolicyThresholds` rather than reading a static
@@ -324,7 +324,7 @@ fired. Note this assembly is host code precisely because the engine can't aggreg
 
 A subtlety in how inputs are shaped: counting passes needs to iterate a **collection**, but
 checking a single subject needs a **keyed lookup**. So the engine is given two inputs —
-`gcses` (an array, which `EnoughPasses` counts over) and `lookup` (a `GcseFacts` accessor, on
+`gcses` (an array, which `EnoughPasses` counts over) and `lookup` (a GCSE accessor, on
 which the single-subject rules call `lookup.Grade("maths")`). An absent subject returns `0`,
 which can never satisfy a threshold.
 
@@ -420,7 +420,7 @@ Rules:
 `facts.Age` is the whole-years age derived in step 1. The gate *policy* — adults (≥ `AdultAge`)
 must reach `TopEntry`, younger students only `StrongEntry` — lives entirely in the rule data; host
 code only exposes the value. This is the template for any new per-student attribute: derive it in
-prediction, expose it on `RatingFacts`, and decide with it in the YAML.
+prediction, expose it on the internal facts object, and decide with it in the YAML.
 
 The five evaluation stages are fixed, each consuming the previous one's output:
 
@@ -481,26 +481,26 @@ Each non-red tier requires three independent facts:
 
 | Fact | Source |
 | --- | --- |
-| Subject entry requirement is met | Raw input GCSEs and average score via `GcseFacts` / `RatingFacts.Average`. |
+| Subject entry requirement is met | Raw input GCSEs and average score via the internal lookup/facts object. |
 | Linear prediction clears the tier grade | `PredictionModel` via `PredictedGrades[]`. |
 | National DfE probability at or above that grade clears the tier probability threshold | `DfeTransitionMatrix` via `TransitionEvidence[]`. |
 
-If the profile contains no DfE evidence for a subject, `RatingFacts` returns probability `0.0`,
+If the profile contains no DfE evidence for a subject, the internal facts object returns probability `0.0`,
 so a probability-gated green or amber rule cannot pass accidentally.
 
 **"First hit wins" is enforced by host code, not the engine.** The engine runs *every* rule
 and returns all results — there is no built-in short-circuit. A green-eligible student also
-satisfies the amber rule (and the always-true red rule). So `RatingEvaluator.EvaluateRatings`
+satisfies the amber rule (and the always-true red rule). So the internal evaluator
 scans the results **in declared order and takes the first success** per subject. Authoring the
 rules green → amber → red is therefore the *intended policy*, and the host scan is what
 *realises* it.
 
 > The expressions call methods like `facts.Gcse(...)` and reference types like `Thresholds`.
 > RulesEngine only lets a lambda touch types you have explicitly whitelisted. That whitelist is
-> `RuleSettings.Default` (`CustomTypes = [GcseFacts, PolicyFacts, RatingFacts, Thresholds, ALevelGrade]`). If
-> you write a rule that calls into a new type, you must add it there or the rule won't compile.
+> `RuleSettings.Default`. If you write a rule that calls into a new type, you must add it there or
+> the rule won't compile.
 
-`RatingFacts` is the boundary between rules-as-data and typed C#:
+the internal facts object is the boundary between rules-as-data and typed C#:
 
 | Workflow call | Host-side meaning |
 | --- | --- |
@@ -510,7 +510,7 @@ rules green → amber → red is therefore the *intended policy*, and the host s
 | `facts.HasEntryEquivalent("biology")` | True when `prior_qualifications` contains a catalogue-configured matching subject/type/grade pair for that subject. |
 | `facts.Average` | The student's mean GCSE score. |
 
-The result of step 2 is one **base** `SubjectRating { Subject, Rating, Reason }` per subject.
+The result of step 2 is one **base** subject-rating record per subject.
 `StudentProfile.ChosenALevels` also rides along unchanged, but it is only consumed by the
 host constraint pass in step 3.
 
@@ -520,7 +520,7 @@ If the gate said *ineligible*, the per-subject workflow is **never run**; instea
 subject is emitted red with the gate's reason. The subject list comes from the loaded catalogue
 snapshot, so adding a subject to the catalogue cannot accidentally bypass the gate.
 
-### Step 3 — Cross-subject constraint pass (host code, `ConstraintPass`)
+### Step 3 — Cross-subject constraint pass (host code, internal machinery)
 
 This is the part the engine fundamentally cannot do, because it must read *all* the base
 ratings at once. It is a pure function `(ratings, profile) → Adjustment[]`. Six rules:
@@ -569,7 +569,7 @@ ratings at once. It is a pure function `(ratings, profile) → Adjustment[]`. Si
   never improves a rating.
 
 Every adjustment **only ever downgrades** (green→amber→red, never the reverse). That
-monotonicity is why *applying* the adjustments is order-independent — `ConstraintPass.Apply`
+monotonicity is why *applying* the adjustments is order-independent — the internal apply step
 folds the base rating and every adjustment together by **most-severe-wins**, whatever order they
 arrive in. Evaluation is single-shot but two-phase: the single-subject and pairwise constraints
 (veto, restudy bar, exclusions, own-time) read the *base* ratings, then prerequisites read the
@@ -593,7 +593,7 @@ Mechanically the engine emits the green/amber/red base tier first (its first-hit
 what makes green beat amber) and the host pass then applies the red/amber downgrades; the table
 above is the *net* precedence after `Apply`. Promotion never happens.
 
-### Step 4 — Aggregation and the optional green cap (host code, `Aggregator`)
+### Step 4 — Aggregation and the optional green cap (host code, internal machinery)
 
 This runs **after** the constraint pass:
 
@@ -687,7 +687,7 @@ ExplainedResult explained = enrolment.Explain(student);
 
 All bootstrap and evaluate/explain/advise overloads accept an optional `CancellationToken`. For
 long-running hosts (live clock per evaluation), the `IEnrolmentEngine` abstraction, DI registration
-via `AddEnrolmentEngine`, and stream-backed `IEnrolmentDataSource` bootstrap, see
+via `AddEnrolmentEngine`, and stream-backed `EnrolmentRules.Engine.Hosting.IEnrolmentDataSource` bootstrap, see
 [Using EnrolmentRules as a library](technical-reference.md#using-enrolmentrules-as-a-library).
 
 ---
@@ -726,7 +726,7 @@ Physics need a predicted A for green, change `physics:green` in `subject-ratings
 
 **Changing a subject relationship (the everyday, data-file path).** Edit `data/catalogue.yaml` —
 weights, exclusion pairs, own-time/veto activity prefixes, prerequisites, entry equivalents, restudy
-bars. The file is loaded and schema-validated at startup (`CatalogueStore`), with coverage and
+bars. The file is loaded and schema-validated at startup (`EnrolmentRules.Engine.Authoring.CatalogueStore`), with coverage and
 exclusion-symmetry enforced as load-time invariants. For example, the History ↔ Art exclusion is a
 data entry, so adding a new clashing pair is a one-line YAML edit, not a code change. This is how
 you change *which* subjects relate and *how strictly* — the common case.
@@ -738,7 +738,7 @@ adding a genuinely new type requires a C# enum member plus coordinated schema an
 
 **Adding a new relationship *type* (engine evolution, not config).** Only when you need a kind of
 relation that does not exist yet — beyond prerequisite, mutual exclusion, prior-choice exclusion,
-own-time, veto, and restudy bar — do you touch `ConstraintPass` / `Aggregator`. The existing six
+own-time, veto, and restudy bar — do you touch the internal constraint / aggregation machinery. The existing six
 types cover the policy you can express as data; a seventh is a structural change to the engine, not a
 routine edit, and not the kind of thing that changes within an academic year. This is a project
 change, out of scope for normal operation — see the
@@ -750,7 +750,7 @@ configuration. A signal a rule reads but the document does not yet carry follows
 the raw fact to `StudentInput` (and the validator, if
 required at the boundary); derive or carry it onto `StudentProfile` in `GradePredictor.Predict`
 (anything date- or context-dependent, like age, takes the reference date already threaded there);
-expose it on `RatingFacts` so the lambda can read `facts.X`; then write the gate in the YAML.
+expose it on the internal facts object so the lambda can read `facts.X`; then write the gate in the YAML.
 `date_of_birth` → `facts.Age` is the worked example — host code plumbs the value, the workflow
 decides the policy.
 
@@ -768,7 +768,7 @@ missing-row behaviour belong in typed host code.
 
 The guiding principle: **per-student-fact rules go in the workflows; subject-relationship rules go
 in the catalogue, and the host code applies them.** If you find yourself wanting a rule to read
-another rule's result, that relation belongs in the catalogue and is applied by `ConstraintPass`,
+another rule's result, that relation belongs in the catalogue and is applied by the internal constraint pass,
 not the engine — and only a brand-new *type* of relation requires touching that code.
 
 ---
@@ -781,8 +781,8 @@ guards rule correctness with **seven independent layers**. No single layer is tr
 
 | Layer | What it catches | When |
 | --- | --- | --- |
-| **JSON-Schema validation** | Structurally broken workflow (missing field, wrong type) | startup (`WorkflowStore`) |
-| **Probe-evaluation** | Lambda compile/binding errors — typo'd field, bad expression | startup (`WorkflowStore`) |
+| **JSON-Schema validation** | Structurally broken workflow (missing field, wrong type) | startup (`EnrolmentRules.Engine.Authoring.WorkflowStore`) |
+| **Probe-evaluation** | Lambda compile/binding errors — typo'd field, bad expression | startup (`EnrolmentRules.Engine.Authoring.WorkflowStore`) |
 | **Per-rule engine tests** | A rule's real pass/fail vs. intent, including DfE probability gates | CI |
 | **DfE extract tests** | A known official CSV row maps to the expected band/probability | CI |
 | **Golden-file tests** | Whole-pipeline regressions (predict → engine → constraints → cap) | CI |
@@ -816,10 +816,10 @@ change is a code change, and it must keep all seven layers green
 - `src/EnrolmentRules.Engine/WorkflowStore.cs` — loading, schema validation, and probe
   compilation.
 - `src/EnrolmentRules.Engine/RatingEvaluator.cs` — how engine results become base ratings, and
-  the input-shaping (`GcseFacts`, `RatingFacts`).
+  the input-shaping (internal accessors/facts).
 - `src/EnrolmentRules.Prediction/DfeTransitionMatrix.cs` and `data/dfe-transition-matrices/` —
   the DfE probability-evidence loader and its local source extract.
-- `src/EnrolmentRules.Engine/ConstraintPass.cs` and `Aggregator.cs` — the host-code half.
+- internal constraint and aggregation machinery — the host-code half.
 - `workflows/eligibility.yaml` and `workflows/subject-ratings.yaml` — the rules-as-data.
 - `tests/EnrolmentRules.Tests/` — phase-oriented suites plus focused bootstrap, advisor, DI,
   documentation, golden-file, and invariant coverage; the best worked examples of expected behaviour.

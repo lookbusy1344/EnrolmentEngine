@@ -28,8 +28,7 @@ semantics, salience, and conflict-resolution reasoning for capabilities we would
 **The hard part is relational aggregation over the result set, not rule matching.** The UCAS tariff,
 exclusion/prerequisite resolution, and the optional green cap all compare a subject against its siblings. RETE
 can express cross-fact joins, but a join network over every subject pair is a heavyweight,
-error-prone way to write what is, in compiled C#, a sort and a fold (`Aggregator`,
-`ConstraintPass`).
+error-prone way to write what is, in compiled C#, a sort and a fold (internal engine machinery).
 
 RulesEngine's inability to read sibling-rule outcomes forced that logic into typed, tested,
 debuggable code, which is where this relational, set-level logic belongs regardless of engine.

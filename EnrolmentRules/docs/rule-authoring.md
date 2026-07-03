@@ -416,6 +416,12 @@ It checks:
   A-level subject keys (the catalogue). Catches a misspelt key like `facts.Gcse("physis")`.
 - **Subject-rating shape** — every subject has exactly one green, one amber, one red rule; they are
   ordered green → amber → red; and red is the unconditional `true` catch-all.
+- **Tier strength** — the green tier must be at least as strong as the amber tier it sits above:
+  its predicted-grade threshold cannot be *lower* than amber's (equal grades are allowed — a subject
+  may separate the tiers on DfE confidence alone), and the two DfE confidence floors must not be
+  transposed (green reads `MinDfeGreenProbabilityAtOrAbove`, amber reads
+  `MinDfeAmberProbabilityAtOrAbove`). Catches a green rule left comparing against the amber threshold
+  after a copy-paste, which would silently promote amber-level students to green.
 - **Eligibility shape** — exactly `EnglishLanguagePass`, `MathsPass`, `EnoughPasses`, in order.
 
 Exit code `5` on any error finding, `0` when clean.

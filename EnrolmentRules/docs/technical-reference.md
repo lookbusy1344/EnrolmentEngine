@@ -57,17 +57,15 @@ constraint anyway: a rule cannot read sibling rule outcomes.
 binary.** Which subjects clash, what each subject needs as a prerequisite, what bars it, the UCAS
 weights, the entry equivalents, the restudy bars — every individual rule of this kind lives in
 `data/catalogue.yaml`, a deployable file loaded and schema-validated into an immutable startup snapshot
-(`CatalogueStore`), with coverage and exclusion-symmetry enforced as load-time invariants. Adding,
+(`EnrolmentRules.Engine.Authoring.CatalogueStore`), with coverage and exclusion-symmetry enforced as load-time invariants. Adding,
 removing, or retuning a clash pair, prerequisite, entry-equivalent, or restudy bar is a one-line
 YAML edit, not a code change — as is editing the per-student rules in `workflows/` and the numeric
 tuning knobs in `data/thresholds.yaml`.
 
 What stays compiled is not a rule but the fixed, small catalogue of **relationship *types*** — the
 half-dozen shapes a rule can take (prerequisite, mutual exclusion, prior-choice exclusion,
-own-time, veto, restudy bar) and how their downgrades compose.
-`src/EnrolmentRules.Engine/ConstraintPass.cs` reads the data and applies those shapes;
-`src/EnrolmentRules.Engine/Aggregator.cs` does the over-the-set aggregate scoring and the optional
-green cap (off by default).
+own-time, veto, restudy bar) and how their downgrades compose. That machinery is internal to the
+engine and not part of the supported consumer surface.
 These types are deliberately static: you touch them only to invent a *new kind* of relationship
 that does not exist yet — a rare event, not something that changes within an academic year. Which
 subjects relate, and how strictly, is everyday data.
@@ -105,11 +103,12 @@ Start with the [guided walk-through](walkthrough.md).
 |-----------------------------------------------------|-----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
 | `src/EnrolmentRules.Domain`                         | Immutable domain inputs, outputs, subject/rating vocabulary, thresholds, the `Catalogue` (loads/validates `data/catalogue.yaml`), and JSON source generation.                           |
 | `src/EnrolmentRules.Prediction`                     | GCSE averaging and linear prediction from raw student facts to `StudentProfile`.                                                                                                        |
-| `src/EnrolmentRules.Engine`                         | Workflow and catalogue loading, schema validation, probe compilation, rating evaluation, constraints, aggregation, the `EnrolmentEngine` facade and its `IEnrolmentEngine` abstraction. |
+| `src/EnrolmentRules.Engine`                         | The `EnrolmentEngine` facade and the mainline evaluation contracts (`IEnrolmentEngine`, `IEnrolmentEvaluator`, `IEnrolmentAdvisor`). Supporting bootstrap and authoring APIs live in explicit `Hosting` / `Authoring` namespaces. |
 | `src/EnrolmentRules.Extensions.DependencyInjection` | `AddEnrolmentEngineFactory` / `AddEnrolmentEngine` registration helpers for `Microsoft.Extensions.DependencyInjection` hosts.                                                           |
 | `src/EnrolmentRules.Cli`                            | `enrolment` executable and table/JSON/batch command line modes.                                                                                                                         |
 | `src/EnrolmentRules.Benchmarks`                     | BenchmarkDotNet harness for engine throughput.                                                                                                                                          |
 | `tests/EnrolmentRules.Tests`                        | xUnit and Awesome Assertions coverage, including engine-driven rule tests, invariants, and golden files.                                                                                |
+| `tests/EnrolmentRules.TestProcessHost`              | Out-of-process fixture exercised by the CLI/process tests.                                                                                                                              |
 | `workflows`                                         | Hot-swappable RulesEngine workflow YAML and its schema.                                                                                                                                 |
 | `examples`                                          | Single-student JSON, JSONL batch input, and golden-file fixtures.                                                                                                                       |
 | `docs/*.md`                                         | Reference docs for the pipeline, configuration surfaces, rule authoring, and engine-choice rationale.                                                                                   |
@@ -158,7 +157,9 @@ alternative entry paths and raise predicted points, and downstream to enforce re
 is not a pure function of the input (it depends on *when* the student is assessed), so the engine
 derives a whole-years age from the date of birth as of a per-run **reference ("as-of") date**. The
 CLI uses the current local date; tests and golden files pin a fixed date so age-dependent outcomes
-stay deterministic. The wall clock is read only at the CLI edge, never inside the engine.
+stay deterministic. The wall clock is read only at the CLI edge, never inside the engine. A 29
+February birthday has no anniversary in a non-leap year; following UK legal convention the engine
+treats 1 March (not 28 February) as that year's anniversary, so the student ages up on 1 March.
 YAML input applies to the single-student modes only; `--batch` remains JSONL.
 
 ### Custom A-level subjects
@@ -407,7 +408,10 @@ AdviceResult    advice    = enrolment.Advise(student);
 
 For HTTP or other request boundaries, prefer **`TryEvaluate`** (and the matching `TryExplain`
 / `TryAdvise` overloads): invalid student documents return a structured `ValidationOutcome` instead
-of throwing, so the host can map problems to 400 responses without a catch block.
+of throwing, so the host can map problems to 400 responses without a catch block. This covers invalid
+*content* only — a null `StudentInput` is a programming error, so every evaluation entry point
+(including the `Try*` overloads) throws `ArgumentNullException` at the boundary rather than returning
+a validation failure.
 
 ```csharp
 ValidatedEvaluation<EnrolmentResult> validated = enrolment.TryEvaluate(student);
@@ -439,13 +443,13 @@ an optional `CancellationToken`.
 #### Catalogue and scale snapshots
 
 `EnrolmentEngine.Create` binds one immutable `CatalogueData` and `QualificationScale` for the
-engine's lifetime. Every evaluation path threads those snapshots through prediction, the constraint
-pass, and aggregation. If your host loads a custom `data/` tree (or boots via `IEnrolmentDataSource`),
-**always** pass `enrolment.Catalogue` and `enrolment.Scale` — or the snapshots you passed to
-`Create` — into boundary validation and any direct calls to `GradePredictor`, `ConstraintPass`,
-`Aggregator`, `WorkflowLinter`, or `StudentValidator`. There are no implicit defaults on those APIs:
-`Catalogue.Default` / `QualificationScale.Default` remain for the shipped reference tables only
-(zero-wiring tests and CLI tooling).
+engine's lifetime. Every evaluation path threads those snapshots through prediction and the
+internal constraint/aggregation machinery. If your host loads a custom `data/` tree (or boots via
+`EnrolmentRules.Engine.Hosting.IEnrolmentDataSource`), **always** pass `enrolment.Catalogue` and
+`enrolment.Scale` — or the snapshots you passed to `Create` — into boundary validation and any
+direct calls to `GradePredictor`, `WorkflowLinter`, or `StudentValidator`. There are no implicit
+defaults on those APIs: `Catalogue.Default` / `QualificationScale.Default` remain for the shipped
+reference tables only (zero-wiring tests and CLI tooling).
 
 ```csharp
 // Boundary validation must honour the same table the engine evaluates against.
@@ -453,7 +457,8 @@ var problems = StudentValidator.Validate(student, enrolment.Catalogue, enrolment
 ```
 
 For hosts that ship data as embedded resources or another non-filesystem source, implement
-`IEnrolmentDataSource` and call `EnrolmentEngine.Create(source, ...)`. The bootstrapper consumes
+`EnrolmentRules.Engine.Hosting.IEnrolmentDataSource` and call `EnrolmentEngine.Create(source, ...)`.
+The bootstrapper consumes
 fresh streams for workflows, all schemas and YAML tables, and the transition matrix, then disposes
 them after constructing the immutable engine snapshot.
 
