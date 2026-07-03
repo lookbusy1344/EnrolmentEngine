@@ -52,6 +52,25 @@ public sealed class AgeGateTests
 	}
 
 	[Fact]
+	public void a_29_february_birth_ages_up_on_1_march_in_non_leap_years()
+	{
+		// UK legal convention: someone born on 29 Feb is not deemed a year older until 1 March in a
+		// non-leap year (the anniversary date does not exist), not 28 Feb.
+		var dob = new DateOnly(2024, 2, 29);
+
+		AgeCalculator.WholeYears(dob, new DateOnly(2025, 2, 28)).Should().Be(0);
+		AgeCalculator.WholeYears(dob, new DateOnly(2025, 3, 1)).Should().Be(1);
+		AgeCalculator.WholeYears(dob, new DateOnly(2026, 2, 28)).Should().Be(1);
+		AgeCalculator.WholeYears(dob, new DateOnly(2026, 3, 1)).Should().Be(2);
+		AgeCalculator.WholeYears(dob, new DateOnly(2027, 2, 28)).Should().Be(2);
+		AgeCalculator.WholeYears(dob, new DateOnly(2027, 3, 1)).Should().Be(3);
+
+		// 2028 is a leap year, so the anniversary genuinely falls on 29 Feb again.
+		AgeCalculator.WholeYears(dob, new DateOnly(2028, 2, 28)).Should().Be(3);
+		AgeCalculator.WholeYears(dob, new DateOnly(2028, 2, 29)).Should().Be(4);
+	}
+
+	[Fact]
 	public void a_younger_student_clears_art_entry_at_the_strong_threshold() =>
 		// Art GCSE exactly at StrongEntry: a sub-adult meets entry, so the rating is decided by prediction, not the gate.
 		RateArt(YoungerDob, Harness.Thresholds.StrongEntry).Should().NotBe(Rating.Red);

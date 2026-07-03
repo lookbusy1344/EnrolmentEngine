@@ -14,13 +14,24 @@ public static class AgeCalculator
 	///     difference, decremented when the birthday has not yet occurred on or before the reference date.
 	///     Clamped at zero so a reference date earlier than the birth date never yields a negative age.
 	/// </summary>
+	/// <remarks>
+	///     A 29 February birthday has no anniversary in a non-leap year. <see cref="DateOnly.AddYears" />
+	///     clamps that anniversary to 28 February, which would age the student up a day early; UK legal
+	///     convention instead treats 1 March as the anniversary in a non-leap year, so the birthday-in-year
+	///     is computed explicitly rather than via <c>AddYears</c>.
+	/// </remarks>
 	public static int WholeYears(DateOnly dateOfBirth, DateOnly asOf)
 	{
 		var age = asOf.Year - dateOfBirth.Year;
-		if (asOf < dateOfBirth.AddYears(age)) {
+		if (asOf < BirthdayInYear(dateOfBirth, asOf.Year)) {
 			age--;
 		}
 
 		return Math.Max(0, age);
 	}
+
+	private static DateOnly BirthdayInYear(DateOnly dateOfBirth, int year) =>
+		dateOfBirth is { Month: 2, Day: 29 } && !DateTime.IsLeapYear(year)
+			? new DateOnly(year, 3, 1)
+			: new DateOnly(year, dateOfBirth.Month, dateOfBirth.Day);
 }
