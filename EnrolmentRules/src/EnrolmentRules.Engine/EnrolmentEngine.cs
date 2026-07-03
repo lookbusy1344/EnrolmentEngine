@@ -71,52 +71,81 @@ public sealed class EnrolmentEngine : IEnrolmentEngine
 	public QualificationScale Scale => evaluator.Scale;
 
 	/// <summary>The whole-student §1.7 verdict (the document the golden-file suite locks), as of the bound date.</summary>
-	public EnrolmentResult Evaluate(StudentInput student, CancellationToken cancellationToken = default) =>
-		Evaluate(student, asOf(), cancellationToken);
+	public EnrolmentResult Evaluate(StudentInput student, CancellationToken cancellationToken = default)
+	{
+		ArgumentNullException.ThrowIfNull(student);
+		return Evaluate(student, asOf(), cancellationToken);
+	}
 
 	/// <summary>The whole-student §1.7 verdict as of an explicit reference date (per-request hosting).</summary>
-	public EnrolmentResult Evaluate(StudentInput student, DateOnly asOf, CancellationToken cancellationToken = default) =>
-		ToResult(Run(student, asOf, cancellationToken));
+	public EnrolmentResult Evaluate(StudentInput student, DateOnly asOf, CancellationToken cancellationToken = default)
+	{
+		ArgumentNullException.ThrowIfNull(student);
+		return ToResult(Run(student, asOf, cancellationToken));
+	}
 
 	/// <summary>The same verdict with per-recommendation provenance attached (<c>--explain</c>).</summary>
-	public ExplainedResult Explain(StudentInput student, CancellationToken cancellationToken = default) =>
-		Explain(student, asOf(), cancellationToken);
+	public ExplainedResult Explain(StudentInput student, CancellationToken cancellationToken = default)
+	{
+		ArgumentNullException.ThrowIfNull(student);
+		return Explain(student, asOf(), cancellationToken);
+	}
 
 	/// <summary>The explained verdict as of an explicit reference date.</summary>
-	public ExplainedResult Explain(StudentInput student, DateOnly asOf, CancellationToken cancellationToken = default) =>
-		ToExplained(Run(student, asOf, cancellationToken));
+	public ExplainedResult Explain(StudentInput student, DateOnly asOf, CancellationToken cancellationToken = default)
+	{
+		ArgumentNullException.ThrowIfNull(student);
+		return ToExplained(Run(student, asOf, cancellationToken));
+	}
 
 	/// <summary>
 	///     Counterfactual guidance over the same pipeline: for an eligible student, propose the minimal
 	///     GCSE grade moves that would lift each amber/red subject to the next rating; for an ineligible
 	///     student, propose the minimal bundle that clears the eligibility gate.
 	/// </summary>
-	public AdviceResult Advise(StudentInput student, CancellationToken cancellationToken = default) =>
-		Advise(student, asOf(), cancellationToken);
+	public AdviceResult Advise(StudentInput student, CancellationToken cancellationToken = default)
+	{
+		ArgumentNullException.ThrowIfNull(student);
+		return Advise(student, asOf(), cancellationToken);
+	}
 
 	/// <summary>Counterfactual guidance as of an explicit reference date.</summary>
-	public AdviceResult Advise(StudentInput student, DateOnly asOf, CancellationToken cancellationToken = default) =>
-		Advise(student, asOf, evaluator.Thresholds.AdviceConsidersUnsatGcses, cancellationToken);
+	public AdviceResult Advise(StudentInput student, DateOnly asOf, CancellationToken cancellationToken = default)
+	{
+		ArgumentNullException.ThrowIfNull(student);
+		return Advise(student, asOf, evaluator.Thresholds.AdviceConsidersUnsatGcses, cancellationToken);
+	}
 
 	/// <summary>
 	///     Counterfactual guidance with an explicit <paramref name="considerUnsatGcses" /> override of the
 	///     loaded <see cref="PolicyThresholds.AdviceConsidersUnsatGcses" /> default — the diagnostic mode that
 	///     lets the search also propose sitting GCSEs the student never took. As of the bound reference date.
 	/// </summary>
-	public AdviceResult Advise(StudentInput student, bool considerUnsatGcses, CancellationToken cancellationToken = default) =>
-		Advise(student, asOf(), considerUnsatGcses, cancellationToken);
+	public AdviceResult Advise(StudentInput student, bool considerUnsatGcses, CancellationToken cancellationToken = default)
+	{
+		ArgumentNullException.ThrowIfNull(student);
+		return Advise(student, asOf(), considerUnsatGcses, cancellationToken);
+	}
 
 	/// <summary>Counterfactual guidance with an explicit diagnostic override, as of an explicit reference date.</summary>
 	public AdviceResult Advise(
 		StudentInput student,
 		DateOnly asOf,
 		bool considerUnsatGcses,
-		CancellationToken cancellationToken = default) =>
-		CounterfactualAdvisor.Advise(this, student, evaluator.Thresholds, asOf, considerUnsatGcses, cancellationToken: cancellationToken);
+		CancellationToken cancellationToken = default)
+	{
+		ArgumentNullException.ThrowIfNull(student);
+		return CounterfactualAdvisor.Advise(this, student, evaluator.Thresholds, asOf, considerUnsatGcses, cancellationToken: cancellationToken);
+	}
 
 	/// <inheritdoc cref="IEnrolmentEvaluator.TryEvaluate(StudentInput, CancellationToken)" />
-	public ValidatedEvaluation<EnrolmentResult> TryEvaluate(StudentInput student, CancellationToken cancellationToken = default) =>
-		TryEvaluate(student, asOf(), cancellationToken);
+	public ValidatedEvaluation<EnrolmentResult> TryEvaluate(StudentInput student, CancellationToken cancellationToken = default)
+	{
+		var validation = ValidateInput(student);
+		return validation.IsValid
+			? new(validation, Evaluate(student, asOf(), cancellationToken))
+			: new(validation, null);
+	}
 
 	/// <inheritdoc cref="IEnrolmentEvaluator.TryEvaluate(StudentInput, DateOnly, CancellationToken)" />
 	public ValidatedEvaluation<EnrolmentResult> TryEvaluate(
@@ -131,8 +160,13 @@ public sealed class EnrolmentEngine : IEnrolmentEngine
 	}
 
 	/// <inheritdoc cref="IEnrolmentEvaluator.TryExplain(StudentInput, CancellationToken)" />
-	public ValidatedEvaluation<ExplainedResult> TryExplain(StudentInput student, CancellationToken cancellationToken = default) =>
-		TryExplain(student, asOf(), cancellationToken);
+	public ValidatedEvaluation<ExplainedResult> TryExplain(StudentInput student, CancellationToken cancellationToken = default)
+	{
+		var validation = ValidateInput(student);
+		return validation.IsValid
+			? new(validation, Explain(student, asOf(), cancellationToken))
+			: new(validation, null);
+	}
 
 	/// <inheritdoc cref="IEnrolmentEvaluator.TryExplain(StudentInput, DateOnly, CancellationToken)" />
 	public ValidatedEvaluation<ExplainedResult> TryExplain(
@@ -147,8 +181,13 @@ public sealed class EnrolmentEngine : IEnrolmentEngine
 	}
 
 	/// <inheritdoc cref="IEnrolmentAdvisor.TryAdvise(StudentInput, CancellationToken)" />
-	public ValidatedEvaluation<AdviceResult> TryAdvise(StudentInput student, CancellationToken cancellationToken = default) =>
-		TryAdvise(student, asOf(), cancellationToken);
+	public ValidatedEvaluation<AdviceResult> TryAdvise(StudentInput student, CancellationToken cancellationToken = default)
+	{
+		var validation = ValidateInput(student);
+		return validation.IsValid
+			? new(validation, Advise(student, asOf(), cancellationToken))
+			: new(validation, null);
+	}
 
 	/// <inheritdoc cref="IEnrolmentAdvisor.TryAdvise(StudentInput, DateOnly, CancellationToken)" />
 	public ValidatedEvaluation<AdviceResult> TryAdvise(
@@ -161,8 +200,13 @@ public sealed class EnrolmentEngine : IEnrolmentEngine
 	public ValidatedEvaluation<AdviceResult> TryAdvise(
 		StudentInput student,
 		bool considerUnsatGcses,
-		CancellationToken cancellationToken = default) =>
-		TryAdvise(student, asOf(), considerUnsatGcses, cancellationToken);
+		CancellationToken cancellationToken = default)
+	{
+		var validation = ValidateInput(student);
+		return validation.IsValid
+			? new(validation, Advise(student, asOf(), considerUnsatGcses, cancellationToken))
+			: new(validation, null);
+	}
 
 	/// <inheritdoc cref="IEnrolmentAdvisor.TryAdvise(StudentInput, DateOnly, bool, CancellationToken)" />
 	public ValidatedEvaluation<AdviceResult> TryAdvise(

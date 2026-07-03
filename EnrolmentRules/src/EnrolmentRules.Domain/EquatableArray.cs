@@ -44,16 +44,25 @@ public readonly struct EquatableArray<T>(ImmutableArray<T> items) : IReadOnlyLis
 	public static bool operator ==(EquatableArray<T> left, EquatableArray<T> right) => left.Equals(right);
 
 	public static bool operator !=(EquatableArray<T> left, EquatableArray<T> right) => !left.Equals(right);
-
-	public static implicit operator EquatableArray<T>(ImmutableArray<T> items) => new(items);
-
-	public static implicit operator EquatableArray<T>(T[]? items) => items is null ? default : new([.. items]);
-
-	public static implicit operator EquatableArray<T>(List<T>? items) => items is null ? default : new([.. items]);
 }
 
-/// <summary>The collection-expression builder for <see cref="EquatableArray{T}" /> (<c>[]</c> / <c>[.. xs]</c>).</summary>
+/// <summary>
+///     The collection-expression builder and explicit copy helpers for <see cref="EquatableArray{T}" />
+///     (<c>[]</c> / <c>[.. xs]</c>).
+/// </summary>
 public static class EquatableArray
 {
 	public static EquatableArray<T> Create<T>(ReadOnlySpan<T> items) => new([.. items]);
+
+	/// <summary>
+	///     Explicitly copy a sequence into a structurally comparable immutable array.
+	/// </summary>
+	public static EquatableArray<T> CopyOf<T>(IEnumerable<T> items)
+	{
+		ArgumentNullException.ThrowIfNull(items);
+		return new([.. items]);
+	}
+
+	/// <summary>Wrap an already immutable array without another copy.</summary>
+	public static EquatableArray<T> CopyOf<T>(ImmutableArray<T> items) => new(items);
 }

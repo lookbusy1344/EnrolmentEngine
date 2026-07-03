@@ -12,11 +12,17 @@ using System.Text.Json.Serialization;
 ///     as empty.
 /// </summary>
 [JsonConverter(typeof(EquatableDictionaryJsonConverterFactory))]
-public readonly struct EquatableDictionary<TKey, TValue>(IDictionary<TKey, TValue> entries)
-	: IReadOnlyDictionary<TKey, TValue>, IEquatable<EquatableDictionary<TKey, TValue>>
+public readonly struct EquatableDictionary<TKey, TValue> : IReadOnlyDictionary<TKey, TValue>, IEquatable<EquatableDictionary<TKey, TValue>>
 	where TKey : notnull
 {
-	private Dictionary<TKey, TValue> Entries { get => field ?? []; } = new(entries);
+	private readonly Dictionary<TKey, TValue>? entries;
+
+	internal EquatableDictionary(Dictionary<TKey, TValue> entries)
+	{
+		this.entries = entries;
+	}
+
+	private Dictionary<TKey, TValue> Entries => entries ?? [];
 
 	public int Count => Entries.Count;
 
@@ -66,7 +72,18 @@ public readonly struct EquatableDictionary<TKey, TValue>(IDictionary<TKey, TValu
 	public static bool operator ==(EquatableDictionary<TKey, TValue> left, EquatableDictionary<TKey, TValue> right) => left.Equals(right);
 
 	public static bool operator !=(EquatableDictionary<TKey, TValue> left, EquatableDictionary<TKey, TValue> right) => !left.Equals(right);
+}
 
-	public static implicit operator EquatableDictionary<TKey, TValue>(Dictionary<TKey, TValue>? entries) =>
-		entries is null ? default : new(entries);
+/// <summary>Explicit copy helpers for <see cref="EquatableDictionary{TKey, TValue}" />.</summary>
+public static class EquatableDictionaryFactory
+{
+	/// <summary>
+	///     Explicitly copy a dictionary into an immutable value object.
+	/// </summary>
+	public static EquatableDictionary<TKey, TValue> CopyOf<TKey, TValue>(IReadOnlyDictionary<TKey, TValue> entries)
+		where TKey : notnull
+	{
+		ArgumentNullException.ThrowIfNull(entries);
+		return new(new(entries));
+	}
 }

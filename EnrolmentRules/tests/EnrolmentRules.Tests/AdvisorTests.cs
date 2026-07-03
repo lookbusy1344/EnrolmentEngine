@@ -554,6 +554,6 @@ public sealed class AdvisorTests
 			gcses[change.GcseSubject] = change.To;
 		}
 
-		return original with { Gcses = gcses };
+		return original with { Gcses = EquatableDictionaryFactory.CopyOf(gcses) };
 	}
 }

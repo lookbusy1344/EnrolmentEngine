@@ -1,4 +1,4 @@
-namespace EnrolmentRules.Engine;
+namespace EnrolmentRules.Engine.Hosting;
 
 /// <summary>
 ///     Thread-safe factory that rebuilds <see cref="EnrolmentEngine" /> from a fixed

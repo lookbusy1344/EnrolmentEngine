@@ -1,3 +1,4 @@
+#pragma warning disable CS3019
 namespace EnrolmentRules.Engine;
 
 using Domain;
@@ -9,7 +10,7 @@ using Domain;
 ///     — the pipeline has a fixed phase order (predict → engine → constraints → cap/aggregate). All weights come from the
 ///     <see cref="Catalogue" /> and the loaded <see cref="PolicyThresholds" />; nothing here is a literal.
 /// </summary>
-public static class Aggregator
+internal static class Aggregator
 {
 	public const string ExceedsCapReason = "exceeds auto-enrol cap";
 

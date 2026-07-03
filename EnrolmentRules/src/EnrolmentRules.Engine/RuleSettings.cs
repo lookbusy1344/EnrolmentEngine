@@ -1,3 +1,4 @@
+#pragma warning disable CS3019
 namespace EnrolmentRules.Engine;
 
 using Domain;
@@ -10,7 +11,7 @@ using RulesEngine.Models;
 ///     and shared across the reusable engine.
 /// </summary>
 [CLSCompliant(false)]
-public static class RuleSettings
+internal static class RuleSettings
 {
 	public static ReSettings Default { get; } = new() {
 		CustomTypes = [typeof(GcseFacts), typeof(PolicyFacts), typeof(RatingFacts), typeof(Thresholds), typeof(ALevelGrade)],

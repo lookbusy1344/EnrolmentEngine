@@ -1,4 +1,4 @@
-namespace EnrolmentRules.Engine;
+namespace EnrolmentRules.Engine.Hosting;
 
 /// <summary>
 ///     Stream-based access to the shipped enrolment data. Each call must return fresh streams so the

@@ -11,7 +11,7 @@ using System.Text.Json.Serialization.Metadata;
 ///     <see cref="EnrolmentJsonContext" /> — so the wrapper stays reflection-free: it adds no metadata of
 ///     its own, it just borrows the element's generated <see cref="JsonTypeInfo{T}" />.
 /// </summary>
-public sealed class EquatableArrayJsonConverterFactory : JsonConverterFactory
+internal sealed class EquatableArrayJsonConverterFactory : JsonConverterFactory
 {
 	public override bool CanConvert(Type typeToConvert) =>
 		typeToConvert.IsGenericType && typeToConvert.GetGenericTypeDefinition() == typeof(EquatableArray<>);
@@ -35,7 +35,7 @@ internal sealed class EquatableArrayJsonConverter<T> : JsonConverter<EquatableAr
 			builder.Add(JsonSerializer.Deserialize(ref reader, elementInfo)!);
 		}
 
-		return new(builder.ToImmutable());
+		return EquatableArray.CopyOf(builder.ToImmutable());
 	}
 
 	public override void Write(Utf8JsonWriter writer, EquatableArray<T> value, JsonSerializerOptions options)
@@ -55,7 +55,7 @@ internal sealed class EquatableArrayJsonConverter<T> : JsonConverter<EquatableAr
 ///     the source-generated <see cref="Dictionary{TKey, TValue}" /> contract, so the wrapper inherits the
 ///     context's key-naming policy unchanged.
 /// </summary>
-public sealed class EquatableDictionaryJsonConverterFactory : JsonConverterFactory
+internal sealed class EquatableDictionaryJsonConverterFactory : JsonConverterFactory
 {
 	public override bool CanConvert(Type typeToConvert) =>
 		typeToConvert.IsGenericType && typeToConvert.GetGenericTypeDefinition() == typeof(EquatableDictionary<,>);
@@ -71,12 +71,16 @@ internal sealed class EquatableDictionaryJsonConverter<TKey, TValue> : JsonConve
 	public override EquatableDictionary<TKey, TValue> Read(ref Utf8JsonReader reader, Type typeToConvert, JsonSerializerOptions options)
 	{
 		var info = (JsonTypeInfo<Dictionary<TKey, TValue>>)options.GetTypeInfo(typeof(Dictionary<TKey, TValue>));
-		return new(JsonSerializer.Deserialize(ref reader, info) ?? []);
+		// The deserialized dictionary is freshly allocated and unaliased, so hand it straight to the
+		// ownership constructor rather than copying it again through the public CopyOf factory.
+		var entries = JsonSerializer.Deserialize(ref reader, info)
+			?? throw new JsonException("Expected a JSON object.");
+		return new(entries);
 	}
 
 	public override void Write(Utf8JsonWriter writer, EquatableDictionary<TKey, TValue> value, JsonSerializerOptions options)
 	{
 		var info = (JsonTypeInfo<Dictionary<TKey, TValue>>)options.GetTypeInfo(typeof(Dictionary<TKey, TValue>));
-		JsonSerializer.Serialize(writer, new(value), info);
+		JsonSerializer.Serialize(writer, new Dictionary<TKey, TValue>(value), info);
 	}
 }

@@ -310,7 +310,7 @@ internal static class CounterfactualAdvisor
 	}
 
 	private static StudentInput Apply(StudentInput student, IReadOnlyDictionary<string, int> grades) =>
-		student with { Gcses = GradeMap(grades) };
+		student with { Gcses = EquatableDictionaryFactory.CopyOf(GradeMap(grades)) };
 
 	private static Dictionary<string, int> GradeMap(StudentInput student) => GradeMap(student.Gcses);
 

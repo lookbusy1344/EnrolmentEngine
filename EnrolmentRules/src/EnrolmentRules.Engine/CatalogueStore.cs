@@ -1,4 +1,4 @@
-namespace EnrolmentRules.Engine;
+namespace EnrolmentRules.Engine.Authoring;
 
 using System.Collections.Concurrent;
 using System.Security.Cryptography;

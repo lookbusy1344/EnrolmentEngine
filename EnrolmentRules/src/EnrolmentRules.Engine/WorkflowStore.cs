@@ -1,4 +1,4 @@
-namespace EnrolmentRules.Engine;
+namespace EnrolmentRules.Engine.Authoring;
 
 using System.Collections.Concurrent;
 using System.Security.Cryptography;
@@ -346,7 +346,7 @@ public static class WorkflowStore
 	internal static StudentInput CanonicalProbeStudent(PolicyThresholds thresholds) =>
 		new(
 			"probe",
-			GcseSubjects.Known.ToDictionary(static subject => subject, _ => thresholds.TopEntry, StringComparer.Ordinal),
+			EquatableDictionaryFactory.CopyOf(GcseSubjects.Known.ToDictionary(static subject => subject, _ => thresholds.TopEntry, StringComparer.Ordinal)),
 			[]);
 
 	private static PolicyThresholds LoadDefaultThresholds(string workflowsDirectory)

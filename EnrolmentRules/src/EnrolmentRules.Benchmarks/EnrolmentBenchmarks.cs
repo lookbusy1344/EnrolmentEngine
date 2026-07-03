@@ -37,7 +37,7 @@ public class EnrolmentBenchmarks
 		// Worst case for the counterfactual advisor: an eligible-but-middling student whose subjects are
 		// mostly amber/red, so the advisor runs a grade search per amber/red subject and each search expands
 		// many nodes (every node re-runs the whole predict → engine pipeline).
-		adviseStudent = new("S-ADVISE", new Dictionary<string, int> {
+		adviseStudent = new("S-ADVISE", EquatableDictionaryFactory.CopyOf(new Dictionary<string, int> {
 			["english_language"] = 6,
 			["maths"] = 6,
 			["physics"] = 6,
@@ -51,11 +51,11 @@ public class EnrolmentBenchmarks
 			["history"] = 6,
 			["music"] = 6,
 			["art"] = 6,
-		}, []);
+		}), []);
 		batch = [
 			student,
 			StrongStudent("S-BENCH-2", "gaming"),
-			new("S-BENCH-3", new Dictionary<string, int> {
+			new("S-BENCH-3", EquatableDictionaryFactory.CopyOf(new Dictionary<string, int> {
 				["english_language"] = 8,
 				["maths"] = 8,
 				["physics"] = 7,
@@ -64,7 +64,7 @@ public class EnrolmentBenchmarks
 				["music"] = 7,
 				["art"] = 7,
 				["history"] = 7,
-			}, []),
+			}), []),
 		];
 	}
 
@@ -85,7 +85,7 @@ public class EnrolmentBenchmarks
 	public AdviceResult Advise() => engine.Advise(adviseStudent);
 
 	private static StudentInput StrongStudent(string id, params string[] hobbies) =>
-		new(id, new Dictionary<string, int> {
+		new(id, EquatableDictionaryFactory.CopyOf(new Dictionary<string, int> {
 			["english_language"] = 8,
 			["maths"] = 8,
 			["physics"] = 8,
@@ -94,7 +94,7 @@ public class EnrolmentBenchmarks
 			["history"] = 8,
 			["music"] = 8,
 			["art"] = 8,
-		}, hobbies);
+		}), EquatableArray.CopyOf(hobbies));
 
 	private static string FindRepoRoot()
 	{

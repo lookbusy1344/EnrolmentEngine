@@ -1,4 +1,4 @@
-namespace EnrolmentRules.Engine;
+namespace EnrolmentRules.Engine.Hosting;
 
 /// <summary>A named workflow stream returned by <see cref="IEnrolmentDataSource.OpenWorkflows" />.</summary>
 /// <remarks>The consumer owns the content stream and must dispose this instance after loading it.</remarks>

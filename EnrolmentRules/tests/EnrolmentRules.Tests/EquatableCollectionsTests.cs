@@ -12,19 +12,28 @@ using Domain;
 public sealed class EquatableCollectionsTests
 {
 	[Fact]
-	public void implicit_collection_conversions_treat_null_as_empty()
+	public void explicit_copy_factories_reject_null()
 	{
-		int[]? array = null;
-		List<int>? list = null;
-		Dictionary<string, int>? dictionary = null;
+		IEnumerable<int>? items = null;
+		IReadOnlyDictionary<string, int>? entries = null;
 
-		EquatableArray<int> convertedArray = array;
-		EquatableArray<int> convertedList = list;
-		EquatableDictionary<string, int> convertedDictionary = dictionary;
+		var copyArray = () => EquatableArray.CopyOf(items!);
+		var copyDictionary = () => EquatableDictionaryFactory.CopyOf(entries!);
 
-		convertedArray.Should().BeEmpty();
-		convertedList.Should().BeEmpty();
-		convertedDictionary.Should().BeEmpty();
+		copyArray.Should().Throw<ArgumentNullException>().WithParameterName("items");
+		copyDictionary.Should().Throw<ArgumentNullException>().WithParameterName("entries");
+	}
+
+	[Fact]
+	public void raw_student_constructor_preserves_absent_collections_for_validation()
+	{
+		IReadOnlyDictionary<string, int>? gcses = null;
+		IReadOnlyList<string>? hobbies = null;
+		var student = new StudentInput("S1", gcses, hobbies);
+
+		var errors = StudentValidator.Validate(student, Harness.Catalogue, Harness.Scale);
+
+		errors.Should().Contain("gcses is required").And.Contain("hobbies is required");
 	}
 
 	[Fact]
@@ -78,7 +87,7 @@ public sealed class EquatableCollectionsTests
 	public void student_document_dictionary_round_trips_through_source_generated_json()
 	{
 		var document = new StudentDocument(
-			new("S1", new Dictionary<string, int> { ["maths"] = 7, ["physics"] = 6 }, ["chess"]) { ChosenALevels = [Subject.Physics] });
+			new StudentInput("S1", new Dictionary<string, int> { ["maths"] = 7, ["physics"] = 6 }, ["chess"]) with { ChosenALevels = [Subject.Physics] });
 
 		var json = JsonSerializer.Serialize(document, EnrolmentJsonContext.Default.StudentDocument);
 		var back = JsonSerializer.Deserialize(json, EnrolmentJsonContext.Default.StudentDocument);

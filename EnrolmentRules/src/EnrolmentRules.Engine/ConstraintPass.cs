@@ -1,3 +1,4 @@
+#pragma warning disable CS3019
 namespace EnrolmentRules.Engine;
 
 using Domain;
@@ -12,7 +13,7 @@ using Domain;
 ///     compose by most-severe-wins — the acyclic/monotone property that justifies a stateless engine
 ///     over RETE.
 /// </summary>
-public static class ConstraintPass
+internal static class ConstraintPass
 {
 	public const string OwnTimeReason = "requires own-time practice — authorisation required";
 	public const string VetoReasonPrefix = "Barred — incompatible activity: ";

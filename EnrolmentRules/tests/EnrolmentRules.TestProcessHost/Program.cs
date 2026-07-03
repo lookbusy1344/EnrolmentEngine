@@ -25,32 +25,32 @@ internal static class Program
 	{
 		var stdout = Task.Run(async () => {
 			for (var index = 0; index < ConcurrentLineCount; index++) {
-				await Console.Out.WriteLineAsync($"stdout:{index}").ConfigureAwait(false);
+				await Console.Out.WriteLineAsync($"stdout:{index}");
 			}
 		});
 		var stderr = Task.Run(async () => {
 			for (var index = 0; index < ConcurrentLineCount; index++) {
-				await Console.Error.WriteLineAsync($"stderr:{index}").ConfigureAwait(false);
+				await Console.Error.WriteLineAsync($"stderr:{index}");
 			}
 		});
 
-		await Task.WhenAll(stdout, stderr).ConfigureAwait(false);
+		await Task.WhenAll(stdout, stderr);
 		return 0;
 	}
 
 	private static async Task<int> LargeOutputAsync()
 	{
 		var payload = new string('x', LargePayloadBytes);
-		await Console.Out.WriteAsync(payload).ConfigureAwait(false);
-		await Console.Out.WriteLineAsync().ConfigureAwait(false);
-		await Console.Error.WriteLineAsync("stderr:complete").ConfigureAwait(false);
+		await Console.Out.WriteAsync(payload);
+		await Console.Out.WriteLineAsync();
+		await Console.Error.WriteLineAsync("stderr:complete");
 		return 0;
 	}
 
 	private static async Task<int> NonZeroAsync()
 	{
-		await Console.Out.WriteLineAsync("stdout:before-exit").ConfigureAwait(false);
-		await Console.Error.WriteLineAsync("stderr:before-exit").ConfigureAwait(false);
+		await Console.Out.WriteLineAsync("stdout:before-exit");
+		await Console.Error.WriteLineAsync("stderr:before-exit");
 		return NonZeroExitCode;
 	}
 
@@ -73,15 +73,15 @@ internal static class Program
 		}
 
 		File.WriteAllText(pidFilePath, child.Id.ToString(CultureInfo.InvariantCulture));
-		await Console.Out.WriteLineAsync("parent:waiting").ConfigureAwait(false);
+		await Console.Out.WriteLineAsync("parent:waiting");
 		child.WaitForExit();
 		return child.ExitCode;
 	}
 
 	private static async Task<int> SleepChildAsync(string _)
 	{
-		await Console.Out.WriteLineAsync("child:started").ConfigureAwait(false);
-		await Task.Delay(ChildSleepDuration).ConfigureAwait(false);
+		await Console.Out.WriteLineAsync("child:started");
+		await Task.Delay(ChildSleepDuration);
 		return 0;
 	}
 }

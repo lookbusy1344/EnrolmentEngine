@@ -274,6 +274,35 @@ public sealed class DependencyInjectionTests
 			.Which.Should().Contain("maths").And.Contain("out of range");
 	}
 
+	[Fact]
+	public void reloadable_interface_proxy_matches_the_concrete_null_contract()
+	{
+		var services = new ServiceCollection();
+		_ = services.AddEnrolmentEngineFactory(options => {
+			options.UseWorkflowsDirectory(Harness.WorkflowsDir)
+				.UseDataDirectory(Harness.DataDir)
+				.UseFixedAsOf(Harness.AsOf);
+		});
+
+		using var provider = services.BuildServiceProvider();
+		var engine = provider.GetRequiredService<IEnrolmentEngine>();
+		StudentInput? student = null;
+
+		var evaluate = () => engine.Evaluate(student!);
+		evaluate.Should().Throw<ArgumentNullException>().WithParameterName("student");
+		var datedEvaluate = () => engine.Evaluate(student!, Harness.AsOf);
+		datedEvaluate.Should().Throw<ArgumentNullException>().WithParameterName("student");
+
+		var outcome = engine.TryEvaluate(student!);
+		var datedOutcome = engine.TryEvaluate(student!, Harness.AsOf);
+		outcome.Validation.IsValid.Should().BeFalse();
+		outcome.Value.Should().BeNull();
+		outcome.Validation.Errors.Should().ContainSingle().Which.Should().Be("student is required");
+		datedOutcome.Validation.IsValid.Should().BeFalse();
+		datedOutcome.Value.Should().BeNull();
+		datedOutcome.Validation.Errors.Should().ContainSingle().Which.Should().Be("student is required");
+	}
+
 	private static StudentInput ReloadEligibleStudent() =>
 		new(
 			"S-RELOAD",

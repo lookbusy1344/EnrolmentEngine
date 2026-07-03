@@ -17,7 +17,10 @@ public sealed class PriorQualificationTests
 	private static StudentInput Student(
 		Dictionary<string, int> gcses,
 		params Qualification[] priorQualifications) =>
-		new("S-ENTRY", gcses, []) { DateOfBirth = new DateOnly(2009, 9, 1), PriorQualifications = priorQualifications };
+		new StudentInput("S-ENTRY", gcses, []) with {
+			DateOfBirth = new DateOnly(2009, 9, 1),
+			PriorQualifications = EquatableArray.CopyOf(priorQualifications),
+		};
 
 	private static QualificationScale BuildDiplomaScale(params (string Grade, int Ordinal, double Equivalence)[] grades) =>
 		new(grades.Select(grade => new QualificationScaleEntry(QualificationType.BtecDiploma, grade.Grade, grade.Ordinal, grade.Equivalence)));
@@ -447,7 +450,7 @@ public sealed class QualificationScaleResolutionTests
 public sealed class RestudyBarConstraintTests
 {
 	private static StudentInput StrongStudent(params Qualification[] priorQualifications) =>
-		new(
+		new StudentInput(
 			"S-RB",
 			new Dictionary<string, int> {
 				["english_language"] = 8,
@@ -464,7 +467,10 @@ public sealed class RestudyBarConstraintTests
 				["music"] = 8,
 				["art"] = 8,
 			},
-			[]) { DateOfBirth = new DateOnly(2009, 9, 1), PriorQualifications = priorQualifications };
+			[]) with {
+			DateOfBirth = new DateOnly(2009, 9, 1),
+			PriorQualifications = EquatableArray.CopyOf(priorQualifications),
+		};
 
 	[Fact]
 	public void a_same_subject_prior_a_level_triggers_the_restudy_bar()
@@ -528,7 +534,7 @@ public static class MalformedStudentArbitraries
 			from includeGcses in Gen.Elements(true, false)
 			from includeHobbies in Gen.Elements(true, false)
 			from hobbies in includeHobbies
-				? Hobby.ListOf().Select(static items => (EquatableArray<string>?)items.ToArray())
+				? Hobby.ListOf().Select(static items => (EquatableArray<string>?)EquatableArray.CopyOf(items))
 				: Gen.Constant<EquatableArray<string>?>(null)
 			from priorQualifications in Qualification.ListOf()
 			from includeBirthDate in Gen.Elements(true, false)

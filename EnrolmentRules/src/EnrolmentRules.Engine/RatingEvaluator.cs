@@ -1,3 +1,4 @@
+#pragma warning disable CS3019
 namespace EnrolmentRules.Engine;
 
 using Domain;
@@ -11,20 +12,20 @@ using RulesEngine.Models;
 ///     needs. <see cref="Reasons" /> lists the failed requirements in the workflow's declared precedence
 ///     (English → Maths → pass-count); an empty list means eligible.
 /// </summary>
-public sealed record EligibilityGate(bool Eligible, EquatableArray<string> Reasons);
+internal sealed record EligibilityGate(bool Eligible, EquatableArray<string> Reasons);
 
 /// <summary>
 ///     A subject's base traffic-light rating as decided by the engine alone (§1.4), before any host-code
 ///     cross-subject adjustments. <see cref="Reason" /> is the deciding rule's <c>SuccessEvent</c>.
 /// </summary>
-public sealed record SubjectRating(Subject Subject, Rating Rating, string Reason);
+internal sealed record SubjectRating(Subject Subject, Rating Rating, string Reason);
 
 /// <summary>
 ///     Runs the rules-as-data workflows over one student's facts and composes the host-side verdicts.
 ///     Stateless and thread-safe: it holds only the shared, reusable engine.
 /// </summary>
 [CLSCompliant(false)]
-public sealed class RatingEvaluator(
+internal sealed class RatingEvaluator(
 	IRulesEngine engine,
 	PolicyThresholds thresholds,
 	CatalogueData? catalogue = null,
@@ -88,7 +89,7 @@ public sealed class RatingEvaluator(
 			.Select(result => EligibilityFailureReason(result))
 			.ToList();
 
-		return new(reasons.Count == 0, reasons);
+		return new(reasons.Count == 0, EquatableArray.CopyOf(reasons));
 	}
 
 	/// <summary>
@@ -246,7 +247,7 @@ public sealed class RatingEvaluator(
 ///     missing GCSE can never satisfy a threshold. Registered in <see cref="RuleSettings" /> custom types
 ///     so the engine permits the instance-method call.
 /// </summary>
-public sealed class GcseFacts(IEnumerable<GcseResult> gcses)
+internal sealed class GcseFacts(IEnumerable<GcseResult> gcses)
 {
 	// One below the GCSE floor: a non-pass sentinel that can never satisfy a threshold, derived from the
 	// scale so it tracks Thresholds.MinGcseGrade rather than drifting from a hard-coded literal.
@@ -270,7 +271,7 @@ public sealed class GcseFacts(IEnumerable<GcseResult> gcses)
 ///     never clear
 ///     a probability-gated tier. Registered in <see cref="RuleSettings" /> custom types for the method calls.
 /// </summary>
-public sealed class RatingFacts(
+internal sealed class RatingFacts(
 	StudentProfile profile,
 	GcseFacts gcses,
 	PolicyFacts policy,

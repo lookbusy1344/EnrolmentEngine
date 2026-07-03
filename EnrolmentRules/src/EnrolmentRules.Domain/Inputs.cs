@@ -13,11 +13,20 @@ public sealed record StudentDocument(StudentInput Student);
 ///     "not taken") plus opaque free-form activity tags. This is the deserialisation target and the
 ///     canonical immutable input the prediction stage consumes — it carries no derived values.
 /// </summary>
+[method: JsonConstructor]
 public sealed record StudentInput(
-	string Id,
-	EquatableDictionary<string, int>? Gcses,
-	EquatableArray<string>? Hobbies)
+string Id,
+EquatableDictionary<string, int>? Gcses,
+EquatableArray<string>? Hobbies)
 {
+	public StudentInput(string id, IReadOnlyDictionary<string, int>? gcses, IReadOnlyList<string>? hobbies)
+		: this(
+			id,
+			gcses is null ? null : EquatableDictionaryFactory.CopyOf(gcses),
+			hobbies is null ? null : EquatableArray.CopyOf(hobbies))
+	{
+	}
+
 	/// <summary>The A-level subjects the student has already chosen. These are constraint triggers, not filters.</summary>
 	public EquatableArray<Subject> ChosenALevels { get; init; } = [];
 
@@ -53,13 +62,29 @@ public readonly record struct GcseResult(string Subject, int Grade);
 ///     points prediction per <see cref="Subject" />. Hobbies are carried through unchanged for the
 ///     downstream own-time constraint.
 /// </summary>
+[method: JsonConstructor]
 public sealed record StudentProfile(
-	string Id,
-	double AverageGcseScore,
-	EquatableArray<PredictedGrade> PredictedGrades,
-	EquatableArray<TransitionEvidence> TransitionEvidence,
-	EquatableArray<string> Hobbies)
+string Id,
+double AverageGcseScore,
+EquatableArray<PredictedGrade> PredictedGrades,
+EquatableArray<TransitionEvidence> TransitionEvidence,
+EquatableArray<string> Hobbies)
 {
+	public StudentProfile(
+		string id,
+		double averageGcseScore,
+		IReadOnlyList<PredictedGrade> predictedGrades,
+		IReadOnlyList<TransitionEvidence> transitionEvidence,
+		IReadOnlyList<string> hobbies)
+		: this(
+			id,
+			averageGcseScore,
+			EquatableArray.CopyOf(predictedGrades),
+			EquatableArray.CopyOf(transitionEvidence),
+			EquatableArray.CopyOf(hobbies))
+	{
+	}
+
 	/// <summary>The A-level subjects already chosen by the student, carried through for host-code constraints.</summary>
 	public EquatableArray<Subject> ChosenALevels { get; init; } = [];
 
