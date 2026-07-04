@@ -295,7 +295,7 @@ internal sealed class RatingFacts(
 
 	// The policy knobs the rating lambdas read, forwarded from the single PolicyFacts surface rather than
 	// copied — one source of truth for the values. Eligibility-only and host-aggregation knobs (PassGrade,
-	// MinPasses, MaxGreenChoices, AmberTariffFactor) are deliberately absent: no rating rule references them.
+	// MinPasses, MaxGreenChoices, AmberScoreFactor) are deliberately absent: no rating rule references them.
 	public int TopEntry => policy.TopEntry;
 
 	public int StrongEntry => policy.StrongEntry;

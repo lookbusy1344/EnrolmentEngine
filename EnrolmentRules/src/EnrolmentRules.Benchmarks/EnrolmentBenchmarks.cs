@@ -2,7 +2,6 @@ namespace EnrolmentRules.Benchmarks;
 
 using BenchmarkDotNet.Attributes;
 using Domain;
-using Engine;
 using RulesEngine.Models;
 
 /// <summary>

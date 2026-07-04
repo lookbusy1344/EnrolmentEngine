@@ -1,8 +1,9 @@
 # Subject catalogue — the single source of truth for the cross-subject constraint pass and aggregation
 # (§1.5–1.6). Host code loads and schema-validates this file at startup (see CatalogueStore); editing it,
 # not the constraint-pass code, is how cross-subject policy changes. Per subject:
-#   ucas_weight          — the UCAS tariff a green contributes (deliberately distinct so the exclusion
-#                          loser and the green-cap surplus are decided without ties).
+#   priority_weight       — policy priority used by the programme priority score, same-rating ordering, mutual-
+#                           exclusion resolution, and the optional green cap. It is not a UCAS tariff.
+#                           Exclusion pairs require distinct weights so their loser is unambiguous.
 #   exclusions           — symmetric timetable-clash edges to other subjects, each with a downgrade
 #                          severity (amber or red). Must be declared on both sides.
 #   required_activities  — own-time activity-tag prefixes the subject requires (absence ⇒ amber).
@@ -22,22 +23,22 @@
 # player is barred even though that hobby satisfies the own-time prefix). Further Maths needs Maths.
 subjects:
   - subject: maths
-    ucas_weight: 50
+    priority_weight: 50
     regression: { slope: 0.80, intercept: -1.00 }
   - subject: further_maths
-    ucas_weight: 56
+    priority_weight: 56
     regression: { slope: 1.00, intercept: -2.00 }
     prerequisites:
       - any_of: [ maths ]
         requires: chosen
   - subject: physics
-    ucas_weight: 48
+    priority_weight: 48
     regression: { slope: 0.90, intercept: -2.20 }
   - subject: chemistry
-    ucas_weight: 46
+    priority_weight: 46
     regression: { slope: 0.90, intercept: -2.30 }
   - subject: biology
-    ucas_weight: 44
+    priority_weight: 44
     regression: { slope: 0.90, intercept: -2.30 }
     entry_equivalents:
       - { subject: applied_science, type: btec_diploma, min_grade: distinction }
@@ -45,44 +46,44 @@ subjects:
       types: [ a_level ]
       severity: red
   - subject: english_language
-    ucas_weight: 41
+    priority_weight: 41
     regression: { slope: 0.85, intercept: -1.75 }
   - subject: english_literature
-    ucas_weight: 42
+    priority_weight: 42
     regression: { slope: 0.85, intercept: -1.80 }
   - subject: french
-    ucas_weight: 39
+    priority_weight: 39
     regression: { slope: 0.85, intercept: -1.85 }
     exclusions:
       - { other: german, severity: red }
   - subject: german
-    ucas_weight: 37
+    priority_weight: 37
     regression: { slope: 0.85, intercept: -1.85 }
     exclusions:
       - { other: french, severity: red }
   - subject: physical_education
-    ucas_weight: 35
+    priority_weight: 35
     regression: { slope: 0.80, intercept: -1.45 }
   - subject: computer_studies
-    ucas_weight: 43
+    priority_weight: 43
     regression: { slope: 0.90, intercept: -2.10 }
   - subject: history
-    ucas_weight: 40
+    priority_weight: 40
     regression: { slope: 0.85, intercept: -1.90 }
     exclusions:
       - { other: art, severity: amber }
   - subject: music
-    ucas_weight: 36
+    priority_weight: 36
     regression: { slope: 0.85, intercept: -1.70 }
     required_activities: [ plays_ ]
     blocking_activities: [ plays_trombone ]
   - subject: art
-    ucas_weight: 38
+    priority_weight: 38
     regression: { slope: 0.80, intercept: -1.40 }
     exclusions:
       - { other: history, severity: amber }
   - subject: economics
-    ucas_weight: 45
+    priority_weight: 45
     regression: { slope: 0.90, intercept: -2.10 }
     prerequisites:
       - any_of: [ maths ]
@@ -90,37 +91,37 @@ subjects:
     exclusions:
       - { other: business_studies, severity: amber }
   - subject: geography
-    ucas_weight: 49
+    priority_weight: 49
     regression: { slope: 0.85, intercept: -1.85 }
   - subject: psychology
-    ucas_weight: 47
+    priority_weight: 47
     regression: { slope: 0.85, intercept: -1.90 }
   - subject: sociology
-    ucas_weight: 33
+    priority_weight: 33
     regression: { slope: 0.82, intercept: -1.55 }
   - subject: business_studies
-    ucas_weight: 34
+    priority_weight: 34
     regression: { slope: 0.83, intercept: -1.65 }
     exclusions:
       - { other: economics, severity: amber }
   - subject: politics
-    ucas_weight: 51
+    priority_weight: 51
     regression: { slope: 0.85, intercept: -1.90 }
   - subject: religious_studies
-    ucas_weight: 52
+    priority_weight: 52
     regression: { slope: 0.85, intercept: -1.80 }
   - subject: drama
-    ucas_weight: 30
+    priority_weight: 30
     regression: { slope: 0.80, intercept: -1.40 }
   - subject: media_studies
-    ucas_weight: 31
+    priority_weight: 31
     regression: { slope: 0.80, intercept: -1.35 }
   - subject: law
-    ucas_weight: 53
+    priority_weight: 53
     regression: { slope: 0.86, intercept: -1.95 }
   - subject: spanish
-    ucas_weight: 54
+    priority_weight: 54
     regression: { slope: 0.85, intercept: -1.80 }
   - subject: design_technology
-    ucas_weight: 55
+    priority_weight: 55
     regression: { slope: 0.82, intercept: -1.55 }

@@ -3,7 +3,6 @@ namespace EnrolmentRules.Tests;
 using System.Text.Json;
 using AwesomeAssertions;
 using Domain;
-using Engine;
 
 /// <summary>
 ///     Phase 7 — the golden-file end-to-end suite: a handful of representative students whose expected

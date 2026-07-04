@@ -346,7 +346,8 @@ public static class WorkflowStore
 	internal static StudentInput CanonicalProbeStudent(PolicyThresholds thresholds) =>
 		new(
 			"probe",
-			EquatableDictionaryFactory.CopyOf(GcseSubjects.Known.ToDictionary(static subject => subject, _ => thresholds.TopEntry, StringComparer.Ordinal)),
+			EquatableDictionaryFactory.CopyOf(GcseSubjects.Known.ToDictionary(static subject => subject, _ => thresholds.TopEntry,
+				StringComparer.Ordinal)),
 			[]);
 
 	private static PolicyThresholds LoadDefaultThresholds(string workflowsDirectory)

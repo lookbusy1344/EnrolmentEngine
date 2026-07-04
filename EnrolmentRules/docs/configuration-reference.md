@@ -36,22 +36,22 @@ Numeric tuning knobs read by the workflow expressions and host-side aggregation/
 
 | Field | Type | Required | Meaning |
 | --- | --- | --- | --- |
-| `pass_grade` | integer `1..9` | yes | GCSE grade treated as a pass by the eligibility gate. |
-| `min_passes` | integer `>= 1` | yes | Minimum count of GCSE passes required for whole-student eligibility. |
-| `top_entry` | integer `1..9` | yes | Highest GCSE threshold used by stricter subject-entry rules. |
-| `strong_entry` | integer `1..9` | yes | Middle GCSE threshold used by many subject-entry rules. |
-| `standard_entry` | integer `1..9` | yes | Lowest normal GCSE threshold used by subject-entry rules. |
-| `further_maths_average_entry` | number `0..9` | yes | Minimum average GCSE score for Further Maths workflow rules. |
-| `humanities_average_entry` | number `0..9` | yes | Minimum average GCSE score for humanities-style workflow rules. |
-| `min_dfe_green_probability_at_or_above` | number `0..1` | yes | Minimum DfE `P(grade or above)` for a green tier. |
-| `min_dfe_amber_probability_at_or_above` | number `0..1` | yes | Minimum DfE `P(grade or above)` for an amber tier. |
-| `adult_age` | integer `>= 1` | yes | Age cutoff used by age-gated workflow rules such as Art. |
-| `max_green_choices` | integer `>= 1` | no | Optional cap on surviving green subjects after constraints. Omit to disable the green cap. |
-| `amber_tariff_factor` | number `0..1` | yes | Weighting factor when amber results contribute to summary tariff figures. |
-| `advice_considers_unsat_gcses` | boolean | no | Diagnostic advisor switch. `true` allows advice to suggest sitting a brand-new GCSE. |
-| `advice_max_grade_cost` | integer `>= 1` | no | Maximum total GCSE grade uplift the advisor may propose in one search. |
-| `advice_max_subjects_changed` | integer `>= 1` | no | Maximum number of distinct GCSE subjects the advisor may change in one proposal. |
-| `advice_max_pipeline_evaluations` | integer `>= 1` | no | Optional hard cap on full pipeline runs per `--advise` call. Omit for unlimited. |
+| `pass_grade` | integer `1..9` | yes | Inclusive GCSE pass boundary. The eligibility workflow compares English Language, Maths, and the count of all supplied GCSE grades against this value; a grade equal to it passes. It does not set subject-specific entry requirements. |
+| `min_passes` | integer `>= 1` | yes | Inclusive number of GCSE entries at or above `pass_grade` required by the `EnoughPasses` eligibility rule. Duplicate subjects cannot inflate the count because GCSE input is a subject-keyed map. |
+| `top_entry` | integer `1..9` | yes | Named high-selectivity GCSE boundary exposed to subject-rating expressions as `facts.TopEntry`. It has no intrinsic ordering relationship with the other entry fields: workflow expressions choose where and how to apply it. |
+| `strong_entry` | integer `1..9` | yes | Named medium-selectivity GCSE boundary exposed as `facts.StrongEntry`. A subject may test one or several GCSEs against it, or ignore it entirely. |
+| `standard_entry` | integer `1..9` | yes | Named baseline GCSE boundary exposed as `facts.StandardEntry`. It does not automatically apply to every subject; only expressions that reference it are affected. |
+| `further_maths_average_entry` | number `0..9` | yes | Inclusive whole-profile GCSE-average boundary exposed as `facts.FurtherMathsAverageEntry`. Despite the policy-oriented name, it affects whichever workflow expressions reference it. |
+| `humanities_average_entry` | number `0..9` | yes | Inclusive whole-profile GCSE-average boundary exposed as `facts.HumanitiesAverageEntry`, commonly used for subjects whose entry decision is based on overall attainment rather than one GCSE. |
+| `min_dfe_green_probability_at_or_above` | number `0..1` | yes | Inclusive probability floor exposed as `facts.MinDfeGreenProbabilityAtOrAbove`. A workflow normally compares it with the student's DfE probability of achieving a specified A-level grade or better; it has no effect unless the expression performs that comparison. |
+| `min_dfe_amber_probability_at_or_above` | number `0..1` | yes | Inclusive probability floor for amber expressions, exposed as `facts.MinDfeAmberProbabilityAtOrAbove`. Values are proportions (`0.50` means 50%), not percentages. |
+| `adult_age` | integer `>= 1` | yes | Inclusive whole-years age boundary exposed as `facts.AdultAge`. Age is calculated on the evaluation's as-of date; workflows decide whether being at, above, or below the boundary is acceptable. |
+| `max_green_choices` | integer `>= 1` | no | Maximum number of subjects allowed to remain green after all constraint downgrades. When exceeded, the lowest-`priority_weight` greens are demoted to amber; omit the field to disable this pass. |
+| `amber_score_factor` | number `0..1` | yes | Multiplier applied to each final amber subject's `priority_weight` when calculating `programme_priority_score`. Green contributes full weight and red contributes zero; this field changes only the aggregate score, not a rating. |
+| `advice_considers_unsat_gcses` | boolean | no | Controls the advisor's candidate GCSE set. When `true`, it may propose adding a GCSE absent from the student's input; when `false` or omitted, it may only raise supplied GCSEs. It never changes ordinary evaluation. |
+| `advice_max_grade_cost` | integer `>= 1` | no | Upper bound on a proposal's total grade-step cost: the sum of every proposed GCSE increase, with a newly added GCSE costed from the advisor's baseline. Candidates over the bound are not explored. Defaults to `12` when omitted. |
+| `advice_max_subjects_changed` | integer `>= 1` | no | Upper bound on the number of distinct GCSE keys altered by one proposal, independent of how many grade steps each alteration costs. Defaults to `3` when omitted. |
+| `advice_max_pipeline_evaluations` | integer `>= 1` | no | Budget for complete evaluation-pipeline executions during one advice search. Reaching it returns deterministic partial advice marked as truncated; omit for no evaluation-count limit. |
 
 Notes:
 
@@ -72,7 +72,7 @@ humanities_average_entry: 5.0
 min_dfe_green_probability_at_or_above: 0.60
 min_dfe_amber_probability_at_or_above: 0.50
 adult_age: 19
-amber_tariff_factor: 0.5
+amber_score_factor: 0.5
 ```
 
 What this means in practice:
@@ -85,64 +85,64 @@ What this means in practice:
 ### `data/catalogue.yaml`
 
 The subject catalogue is the data source for prediction coefficients, cross-subject relationships,
-entry equivalents, restudy bars, and UCAS weighting.
+entry equivalents, restudy bars, and subject priority weighting.
 
 Top-level shape:
 
 | Field | Type | Required | Meaning |
 | --- | --- | --- | --- |
-| `subjects` | array of subject entries | yes | One entry per A-level subject known to the engine. |
+| `subjects` | array of subject entries | yes | Complete, non-empty catalogue of A-level subjects. Subject ids must be unique, and startup validation cross-checks this set against the subjects represented by the rating workflow. Array order does not determine recommendation order. |
 
 Each subject entry:
 
 | Field | Type | Required | Meaning |
 | --- | --- | --- | --- |
-| `subject` | `snake_case` string | yes | Subject identifier used across workflows, results, and input documents. |
-| `ucas_weight` | positive integer | yes | Ranking/tie-break weight used by aggregation and optional green-cap demotion. |
-| `regression` | object | yes | Subject-specific linear prediction coefficients. |
-| `exclusions` | array | no | Timetable or policy clashes with other subjects. Must be declared symmetrically on both sides. |
-| `required_activities` | array of strings | no | Hobby/activity prefixes required for the subject's own-time rule. Missing prefix match downgrades to amber. |
-| `blocking_activities` | array of strings | no | Hobby/activity prefixes that veto the subject outright. Matching prefix downgrades to red. |
-| `prerequisites` | array | no | Dependency groups that must be satisfied by other subjects or chosen A-levels. |
-| `entry_equivalents` | array | no | Prior qualifications that can satisfy the subject's entry path. |
-| `restudy_bar` | object | no | Prior-qualification types that bar re-studying the same subject. |
+| `subject` | `snake_case` string | yes | Canonical, case-sensitive subject identifier used in rule names, workflow fact lookups, results, relationships, and student choices. It must be unique and match the schema's lowercase identifier pattern. |
+| `priority_weight` | positive integer | yes | Subject policy priority. It contributes to `programme_priority_score`, orders subjects within a rating, decides the loser in a mutual exclusion, and—only when the optional green cap is enabled—decides which surplus greens are demoted. It is not a UCAS tariff value. Mutually excluding subjects must have distinct weights. |
+| `regression` | object | yes | Coefficients for converting the student's average GCSE score into this subject's predicted A-level points before prior-qualification uplift and workflow rating. |
+| `exclusions` | array | no | Pairwise timetable or policy clashes. The reciprocal subject must declare the same pair and severity. A red clash applies when both subjects qualify as green/amber; an amber clash applies only when both are green. Compiled machinery downgrades the lower-priority subject. |
+| `required_activities` | array of strings | no | Acceptable hobby-tag prefixes for an own-time requirement. At least one student hobby must start with at least one configured prefix; otherwise the subject is downgraded to amber. An empty/omitted list creates no requirement. |
+| `blocking_activities` | array of strings | no | Hobby-tag prefixes that veto the subject. Any student hobby starting with any configured prefix produces a red downgrade, even if a required-activity prefix also matches. |
+| `prerequisites` | array | no | Conjunctive list of dependency groups: every group must be satisfied, while the subjects inside one group's `any_of` are alternatives. Each unmet group produces its configured downgrade. |
+| `entry_equivalents` | array | no | Alternative prior-qualification routes recognised for this A-level. A matching qualification at or above `min_grade` can both satisfy `facts.HasEntryEquivalent(subject)` and lift the upstream prediction. |
+| `restudy_bar` | object | no | Same-subject prior-qualification restriction applied downstream. If the student already holds one of the listed qualification types in this catalogue subject, the final rating is downgraded to the configured severity. |
 
 `regression` object:
 
 | Field | Type | Required | Meaning |
 | --- | --- | --- | --- |
-| `slope` | number | yes | Multiplier in the subject's linear prediction line. |
-| `intercept` | number | yes | Offset in the subject's linear prediction line. |
+| `slope` | number | yes | Multiplier applied to the student's average GCSE score in the linear model: `predicted points = slope × average + intercept`. The regression result is clamped to the A-level `0..6` points range, then a stronger qualifying prior-equivalent value may replace it. |
+| `intercept` | number | yes | Constant added by that linear model. Negative values lower the prediction across the range; positive values raise it. |
 
 `exclusions` entries:
 
 | Field | Type | Required | Meaning |
 | --- | --- | --- | --- |
-| `other` | `snake_case` subject id | yes | The clashing subject. |
-| `severity` | `amber` or `red` | yes | Downgrade severity when both subjects survive the base rating stage. |
+| `other` | `snake_case` subject id | yes | Id of the other catalogue subject in the clash. Self-references and unknown ids are rejected, and the other subject must contain the reciprocal declaration. |
+| `severity` | `amber` or `red` | yes | Maximum rating retained by the losing subject when the clash applies. `amber` preserves it as a caution; `red` blocks it. Reciprocal entries must agree. |
 
 `prerequisites` entries:
 
 | Field | Type | Required | Meaning |
 | --- | --- | --- | --- |
-| `any_of` | non-empty array of subject ids | yes | Alternative subjects that satisfy this prerequisite group. |
-| `severity` | `amber` or `red` | no | Downgrade severity when the group is unmet. Defaults to the engine's hard requirement behaviour. |
+| `any_of` | non-empty array of subject ids | yes | Alternative catalogue subjects for one prerequisite group. One alternative is sufficient; separate prerequisite entries are all required. Unknown subjects and a dependency on the owning subject are rejected. |
+| `severity` | `amber` or `red` | no | Maximum rating retained when this group is unmet. Omission defaults to `red`, making the prerequisite blocking. |
 | `requires` | `qualifying` or `chosen` | no | Satisfaction mode. `qualifying` accepts a green/amber result (as it stands *after* the dependency's own veto / restudy bar / exclusion downgrades) or a chosen A-level; `chosen` requires a committed `chosen_a_levels` entry. |
 
 `entry_equivalents` entries:
 
 | Field | Type | Required | Meaning |
 | --- | --- | --- | --- |
-| `subject` | string | yes | Prior-qualification subject that counts for equivalence, for example `applied_science`. |
-| `type` | known qualification type | yes | Qualification vocabulary shared with `data/qualifications.yaml`. |
-| `min_grade` | string | yes | Lowest prior-qualification grade that qualifies for this equivalent path. |
+| `subject` | string | yes | Prior-qualification subject token to match, for example `applied_science`. This need not be an A-level catalogue id; matching is ordinal and case-insensitive. |
+| `type` | known qualification type | yes | Required qualification type. The type selects the grade scale used to interpret `min_grade` and the student's grade. |
+| `min_grade` | string | yes | Inclusive minimum grade token on the selected type's scale. Qualification ordering is determined by `ordinal`, not lexical grade-name ordering. Unknown grade tokens fail startup validation. |
 
 `restudy_bar` object:
 
 | Field | Type | Required | Meaning |
 | --- | --- | --- | --- |
-| `types` | non-empty array of qualification types | yes | Prior-qualification types that trigger the restudy check for the same subject. |
-| `severity` | `amber` or `red` | no | Downgrade severity. If omitted, engine defaults apply. |
+| `types` | non-empty array of qualification types | yes | Qualification types that trigger the bar when a student's prior-qualification `subject` equals this catalogue subject. Grade is irrelevant: holding any recognised grade of a listed type is enough. |
+| `severity` | `amber` or `red` | no | Maximum final rating after a match. Omission defaults to `red`. |
 
 Notes:
 
@@ -157,7 +157,7 @@ Minimal subject row:
 ```yaml
 subjects:
   - subject: maths
-    ucas_weight: 50
+    priority_weight: 50
     regression:
       slope: 0.80
       intercept: -1.00
@@ -168,20 +168,20 @@ Subject row with relationships:
 ```yaml
 subjects:
   - subject: further_maths
-    ucas_weight: 56
+    priority_weight: 56
     regression: { slope: 1.00, intercept: -2.00 }
     prerequisites:
       - any_of: [ maths ]
         requires: chosen
 
   - subject: music
-    ucas_weight: 36
+    priority_weight: 36
     regression: { slope: 0.85, intercept: -1.70 }
     required_activities: [ plays_ ]
     blocking_activities: [ plays_trombone ]
 
   - subject: biology
-    ucas_weight: 44
+    priority_weight: 44
     regression: { slope: 0.90, intercept: -2.30 }
     entry_equivalents:
       - subject: applied_science
@@ -207,22 +207,22 @@ Top-level shape:
 
 | Field | Type | Required | Meaning |
 | --- | --- | --- | --- |
-| `qualifications` | array of type entries | yes | One entry per known qualification type. |
+| `qualifications` | array of type entries | yes | Complete set of qualification scales. Every compiled qualification type must occur exactly once and contain at least one grade; missing type coverage is rejected at startup. Array order has no evaluation meaning. |
 
 Each qualification type entry:
 
 | Field | Type | Required | Meaning |
 | --- | --- | --- | --- |
-| `type` | qualification type | yes | One of the compiled qualification vocab values. |
-| `grades` | non-empty array of grade entries | yes | Ordered grade scale for that qualification type. |
+| `type` | qualification type | yes | Compiled qualification-family identifier used by student input, entry equivalents, and restudy bars. A type selects its own independent grade vocabulary and ordering. |
+| `grades` | non-empty array of grade entries | yes | Complete grade lookup table for this type. The array's physical order is irrelevant; `ordinal` supplies the ordering, and grade tokens and ordinals must each be unique within the type. |
 
 Each grade entry:
 
 | Field | Type | Required | Meaning |
 | --- | --- | --- | --- |
-| `grade` | string | yes | External grade token, for example `distinction` or `a_star`. |
-| `ordinal` | integer `>= 0` | yes | Monotone ordering within that qualification type. Higher means stronger. |
-| `equivalence` | number `0..6` | yes | A-level-points equivalence used when prior qualifications lift prediction or satisfy thresholds. |
+| `grade` | string | yes | Non-blank external token accepted in `student.prior_qualifications[].grade` and `entry_equivalents[].min_grade`, for example `distinction` or `a_star`. It is resolved only within the enclosing qualification type. |
+| `ordinal` | integer `>= 0` | yes | Relative rank used for inclusive minimum-grade comparisons within this type. Higher means stronger; values need not be contiguous, but duplicate ordinals are rejected. Ordinals are never compared across types. |
+| `equivalence` | number `0..6` | yes | Value on the A-level points scale (`U = 0` through `A* = 6`). For a satisfied entry-equivalent route, this value can raise—but never lower—the subject's regression prediction. It does not establish grade ordering; `ordinal` does that. |
 
 Known qualification types in the shipped schema:
 
@@ -282,25 +282,25 @@ Top-level fields:
 
 | Field | Type | Required | Meaning |
 | --- | --- | --- | --- |
-| `WorkflowName` | string | yes | Workflow identifier. Shipped value: `eligibility`. |
-| `Rules` | array of rule objects | yes | Ordered RulesEngine rules for the gate. |
+| `WorkflowName` | string | yes | Unique name by which compiled machinery selects this workflow. The shipped gate must be named `eligibility`; renaming it without changing the host lookup prevents evaluation. |
+| `Rules` | array of rule objects | yes | Non-empty ordered gate conditions. All shipped eligibility rules must succeed for the student to proceed to subject rating; failures are collected into the ineligibility result. |
 
 Rule object fields used here:
 
 | Field | Type | Required | Meaning |
 | --- | --- | --- | --- |
-| `RuleName` | string | yes | Stable rule identifier. |
-| `SuccessEvent` | string | no | Human-readable reason emitted when the rule passes. |
+| `RuleName` | string | yes | Unique, stable identifier within the workflow. For the shipped gate it also keys the compiled failure-reason projection, so changing a standard name is a behavioral change rather than a cosmetic edit. |
+| `SuccessEvent` | string | no | Human-readable text attached by RulesEngine on success. Eligibility output does not use it as the failure explanation, but it remains useful workflow metadata and must accurately describe the expression. |
 | `ErrorMessage` | string | no | Permitted by the schema but not used by the shipped workflows. Eligibility failure reasons are projected from the loaded `data/thresholds.yaml` values in compiled code (keyed by rule name), not read from this field, so the explanation cannot drift from the threshold that actually fired. |
-| `Expression` | string | yes | Lambda expression evaluated by RulesEngine. |
-| `LocalParams` | array | no | Named sub-expressions computed before the main expression. |
+| `Expression` | string | yes | C#-style lambda body compiled and evaluated by RulesEngine against the workflow inputs. It must return Boolean; startup probe-evaluation catches syntax/member errors but cannot prove that the policy comparison is logically correct. |
+| `LocalParams` | array | no | Rule-local named expressions evaluated for this rule and made available to its main `Expression`. Use them to name or reuse intermediate calculations; names must be unique within the rule. |
 
 `LocalParams` entries:
 
 | Field | Type | Required | Meaning |
 | --- | --- | --- | --- |
-| `Name` | string | yes | Local variable name visible to the rule expression. |
-| `Expression` | string | yes | Lambda expression that computes the local value. |
+| `Name` | string | yes | Identifier bound to the local result and referenced directly from the parent rule expression, such as `passCount`. It must be a valid, unique expression identifier. |
+| `Expression` | string | yes | C#-style expression evaluated against the same workflow inputs as the parent rule. Its inferred result type becomes the type of `Name`. |
 
 The shipped gate contains three ordered rules:
 
@@ -351,31 +351,31 @@ Top-level fields are the same as `eligibility.yaml`:
 
 | Field | Type | Required | Meaning |
 | --- | --- | --- | --- |
-| `WorkflowName` | string | yes | Workflow identifier. Shipped value: `subject-ratings`. |
-| `Rules` | array of rule objects | yes | Ordered RulesEngine rules covering all subjects. |
+| `WorkflowName` | string | yes | Unique name used by compiled machinery to select the rating workflow. The shipped value must remain `subject-ratings` unless the host lookup changes with it. |
+| `Rules` | array of rule objects | yes | Ordered rules covering every catalogue subject with exactly one `green`, `amber`, and `red` rule. Startup linting validates coverage, tier names, order, and catch-all shape. |
 
 Rule object fields used here:
 
 | Field | Type | Required | Meaning |
 | --- | --- | --- | --- |
-| `RuleName` | string | yes | Conventionally `<subject>:<tier>`, for example `physics:green`. |
-| `SuccessEvent` | string | no | Human-readable explanation for why this tier matched. |
-| `Expression` | string | yes | RulesEngine lambda expression. |
+| `RuleName` | string | yes | Required `<subject>:<tier>` identity, for example `physics:green`. The subject must exist in the catalogue and the tier must be `green`, `amber`, or `red`; this name is parsed to build the result. |
+| `SuccessEvent` | string | no | Explanation copied into the subject result when this rule is the winning base tier. A later constraint downgrade replaces it with the adjustment reason, so this text should explain only the base rule. |
+| `Expression` | string | yes | Boolean C#-style expression evaluated against one immutable `facts` view. All three rules are evaluated, after which the first successful tier in workflow order wins; the red expression must therefore remain an unconditional `true` fallback. |
 
 Common expression inputs in this workflow:
 
 | Member | Meaning |
 | --- | --- |
-| `facts.Gcse("subject")` | GCSE grade for a subject, or `0` if absent. |
-| `facts.Predicted("subject")` | Predicted A-level points for a subject. |
-| `facts.DfeProbabilityAtOrAbove("subject", ALevelGrade.X)` | DfE probability evidence for grade `X` or above. |
-| `facts.HasEntryEquivalent("subject")` | Whether prior qualifications satisfy the subject's equivalent-entry path. |
-| `facts.Average` | Average GCSE score. |
-| `facts.Age` | Whole-years age on the run's as-of date. |
-| `facts.TopEntry`, `facts.StrongEntry`, `facts.StandardEntry` | Threshold values forwarded from `data/thresholds.yaml`. |
-| `facts.FurtherMathsAverageEntry`, `facts.HumanitiesAverageEntry` | Average-based thresholds from `data/thresholds.yaml`. |
-| `facts.MinDfeGreenProbabilityAtOrAbove`, `facts.MinDfeAmberProbabilityAtOrAbove` | Probability floors from `data/thresholds.yaml`. |
-| `facts.AdultAge` | Adult-age cutoff from `data/thresholds.yaml`. |
+| `facts.Gcse("subject")` | Looks up a GCSE grade by subject using case-insensitive matching. Returns `0` when absent, so expressions must not mistake a missing GCSE for a supplied low grade when that distinction matters. |
+| `facts.Predicted("subject")` | Returns predicted A-level points on the `0..6` scale after taking the greater of the clamped regression prediction and any qualifying entry-equivalent uplift. |
+| `facts.DfeProbabilityAtOrAbove("subject", ALevelGrade.X)` | Returns the transition-matrix probability, as a `0..1` proportion, of grade `X` or better for the subject at the student's GCSE-average evidence band. |
+| `facts.HasEntryEquivalent("subject")` | Returns `true` when at least one prior qualification matches one of that catalogue subject's entry-equivalent routes by subject, type, and inclusive minimum ordinal. |
+| `facts.Average` | Arithmetic mean of all supplied GCSE grades. Missing subjects are not zero-filled; an empty GCSE map produces `0.0`. |
+| `facts.Age` | Student's age in completed years on the evaluation as-of date. A missing date of birth produces `0`, although normal document validation requires the field. |
+| `facts.TopEntry`, `facts.StrongEntry`, `facts.StandardEntry` | Direct projections of the three named GCSE boundaries in `data/thresholds.yaml`; they acquire meaning only through the comparisons written in a rule. |
+| `facts.FurtherMathsAverageEntry`, `facts.HumanitiesAverageEntry` | Direct projections of the named GCSE-average boundaries. Their names are policy conventions, not restrictions on which subject rules can reference them. |
+| `facts.MinDfeGreenProbabilityAtOrAbove`, `facts.MinDfeAmberProbabilityAtOrAbove` | Direct projections of the configured `0..1` DfE probability floors for green and amber expressions. |
+| `facts.AdultAge` | Direct projection of the configured whole-years adult-age boundary; the expression supplies the comparison operator. |
 
 Notes:
 
@@ -464,27 +464,27 @@ Relevant top-level fields:
 
 | Field | Required | Meaning |
 | --- | --- | --- |
-| `WorkflowName` | yes | Workflow identifier. |
-| `WorkflowsToInject` | no | RulesEngine workflow composition hook. Not used by the shipped files. |
-| `GlobalParams` | no | Workflow-scoped named expressions. Not used by the shipped files. |
-| `Rules` | yes | Top-level rule array. |
+| `WorkflowName` | yes | Unique workflow identifier used for RulesEngine execution and host lookup. |
+| `WorkflowsToInject` | no | Names of other workflows for RulesEngine to execute as dependencies of this workflow. The project does not lint or rely on composition, so introducing it requires integration tests and host-semantics review. |
+| `GlobalParams` | no | Named expressions available to every rule in the workflow. They are evaluated in workflow scope; shipped workflows use rule-local parameters instead. |
+| `Rules` | yes | Non-empty array of top-level expression or composite rules. Array order is preserved and is semantically significant for subject-tier selection. |
 
 Relevant rule fields:
 
 | Field | Required | Meaning |
 | --- | --- | --- |
-| `RuleName` | yes | Stable rule identifier. |
-| `Enabled` | no | RulesEngine toggle. Not used by shipped workflows. |
+| `RuleName` | yes | Identifier unique within the workflow. Project code parses eligibility names and subject-rating `<subject>:<tier>` names, so those conventions are contractual. |
+| `Enabled` | no | RulesEngine execution toggle. A disabled rule cannot succeed; disabling a shipped tier also violates the project's expected complete three-tier policy even if the generic schema accepts it. |
 | `ErrorMessage` | no | Permitted by the schema but not used by shipped workflows; eligibility failure reasons are projected from thresholds in compiled code. |
-| `SuccessEvent` | no | Success text. |
-| `Operator` | no | Composite-rule operator. Not used by shipped workflows. |
-| `RuleExpressionType` | no | Schema permits `LambdaExpression`; loader fills this automatically for real rules. |
-| `Expression` | conditional | Required for expression rules. |
-| `WorkflowsToInject` | no | Nested workflow injection hook. Not used by shipped workflows. |
-| `LocalParams` | no | Rule-scoped named expressions. |
-| `Rules` | conditional | Child rules for composite rules. |
-| `Actions` | no | RulesEngine action hook. Not used by shipped workflows. |
-| `Properties` | no | Arbitrary metadata object. Not used by shipped workflows. |
+| `SuccessEvent` | no | Text associated with successful evaluation. Subject-rating results expose this as their base explanation; eligibility failures do not. |
+| `Operator` | no | RulesEngine composite operator applied to child `Rules`, for example `And` or `Or`. The schema accepts any string and therefore does not validate the operator vocabulary; shipped workflows use flat lambda expressions instead. |
+| `RuleExpressionType` | no | Expression dialect selector. The only schema-supported value is `LambdaExpression`; normalization supplies it for rules with an `Expression`. |
+| `Expression` | conditional | Boolean lambda expression for a leaf rule. Required when the rule does not contain child `Rules`; project startup probe-evaluates it to force compilation. |
+| `WorkflowsToInject` | no | Names of workflows injected from this rule. This RulesEngine composition surface is accepted structurally but unused by project policy. |
+| `LocalParams` | no | Name/expression pairs scoped to this rule and evaluated before its main expression. |
+| `Rules` | conditional | Child-rule array for a composite rule, combined by `Operator`. A rule uses either a leaf `Expression` or nested rules according to the schema constraints. |
+| `Actions` | no | RulesEngine success/failure action configuration. The engine has no configured action implementations, so this is outside the supported project subset. |
+| `Properties` | no | Free-form JSON metadata retained on the rule. Project evaluation, explanations, and linting do not consume it. |
 
 For this project, the practical subset is much smaller than the full schema surface:
 
@@ -506,9 +506,9 @@ Fields shown:
 
 | Field | Meaning |
 | --- | --- |
-| `subject` | New subject id. |
-| `ucas_weight` | Aggregation weight for the new subject. |
-| `regression.slope` / `regression.intercept` | Prediction coefficients for the new subject. |
+| `subject` | Canonical id for the new subject. The appended workflow's three `RuleName` prefixes must use exactly the same id. |
+| `priority_weight` | Positive policy weight used for aggregate scoring, same-rating ordering, mutual-exclusion resolution, and optional green-cap demotion. It must differ from the weight of any subject this one excludes. |
+| `regression.slope` / `regression.intercept` | Coefficients of the average-GCSE-to-A-level-points prediction line. Choose these from an evidenced model; the engine clamps the result to `0..6`. |
 
 ### `examples/custom-subject/workflows/subject-ratings.append.yaml`
 
@@ -544,20 +544,20 @@ Student fields:
 
 | Field | Type | Required | Meaning |
 | --- | --- | --- | --- |
-| `student.id` | string | yes | Student identifier carried into results. |
-| `student.gcses` | object | yes | GCSE subject-to-grade map on the `1..9` scale. |
-| `student.chosen_a_levels` | array of subject ids | no | Already-committed A-levels used by downstream constraints. |
-| `student.hobbies` | array of strings | no | Activity tags matched by prefix for own-time and veto rules. |
-| `student.prior_qualifications` | array | no | Prior typed qualifications used for entry equivalents, uplift, and restudy bars. |
-| `student.date_of_birth` | `YYYY-MM-DD` string | yes | Date from which run-time age is derived. |
+| `student.id` | string | yes | Opaque correlation identifier copied unchanged to the evaluation result. It does not participate in any decision and need not encode personal information. |
+| `student.gcses` | object | yes | Case-insensitive subject-to-integer-grade map on the GCSE `1..9` scale. Present entries drive the average and pass count; an absent subject is returned as grade `0` by workflow lookup. |
+| `student.chosen_a_levels` | array of subject ids | no | Catalogue subjects to which the student is already committed. They can satisfy `chosen` and `qualifying` prerequisites and activate prior-choice exclusions; they are not automatically added to the recommendation set. |
+| `student.hobbies` | array of strings | no | Activity tags compared case-insensitively with catalogue prefix rules. One tag may satisfy a required prefix and/or trigger a blocking prefix; omit for no declared activities. |
+| `student.prior_qualifications` | array | no | Existing typed qualifications. Matching entries can open an entry-equivalent route, raise its subject prediction to the configured equivalence, or trigger a same-subject restudy bar. |
+| `student.date_of_birth` | `YYYY-MM-DD` string | yes | Calendar date used with the evaluation's as-of date to calculate completed years for `facts.Age`. It is not interpreted relative to the machine's current date inside a run. |
 
 Prior-qualification entries:
 
 | Field | Type | Required | Meaning |
 | --- | --- | --- | --- |
-| `subject` | string | yes | Qualification subject, for example `applied_science`. |
-| `type` | known qualification type | yes | Qualification vocabulary shared with `data/qualifications.yaml`. |
-| `grade` | string | yes | Grade token valid for that qualification type. |
+| `subject` | string | yes | Qualification's subject token, for example `applied_science`. Entry-equivalent and restudy matching are ordinal and case-insensitive; the token is otherwise free-form. |
+| `type` | known qualification type | yes | Qualification family selecting the relevant scale in `data/qualifications.yaml`. It must also be permitted by the compiled/schema vocabulary. |
+| `grade` | string | yes | Grade token resolved within the selected type. It supplies both the type-local `ordinal` for minimum-grade checks and the A-level-points `equivalence` for uplift; unknown tokens are rejected. |
 
 Example:
 

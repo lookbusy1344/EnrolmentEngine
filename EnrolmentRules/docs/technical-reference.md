@@ -54,7 +54,7 @@ relations belongs in typed, compiled code regardless of engine, and it aligns wi
 constraint anyway: a rule cannot read sibling rule outcomes.
 
 **The rules themselves are all configurable data — there is no rule logic compiled into the
-binary.** Which subjects clash, what each subject needs as a prerequisite, what bars it, the UCAS
+binary.** Which subjects clash, what each subject needs as a prerequisite, what bars it, the priority
 weights, the entry equivalents, the restudy bars — every individual rule of this kind lives in
 `data/catalogue.yaml`, a deployable file loaded and schema-validated into an immutable startup snapshot
 (`EnrolmentRules.Engine.Authoring.CatalogueStore`), with coverage and exclusion-symmetry enforced as load-time invariants. Adding,
@@ -71,7 +71,7 @@ that does not exist yet — a rare event, not something that changes within an a
 subjects relate, and how strictly, is everyday data.
 
 The numeric **tuning knobs** the relationship code and the workflow lambdas read (pass grade,
-entry thresholds, DfE-probability floors, the optional green cap, the amber tariff factor, ...) live in
+entry thresholds, DfE-probability floors, the optional green cap, the amber score factor, ...) live in
 `data/thresholds.yaml`, loaded and schema-validated at startup
 (`PolicyThresholdsStore`); the qualification-grade scale for prior qualifications lives in
 `data/qualifications.yaml` and is loaded by `QualificationScaleStore`; only the GCSE-scale
@@ -85,7 +85,7 @@ since they define the grade scale rather than policy.
 | Whole-student eligibility or a subject's green/amber/red base tier                               | `workflows/*.yaml`         |
 | Numeric thresholds read by workflows or host code                                                | `data/thresholds.yaml`     |
 | Qualification grade ordering and A-level-points equivalence                                      | `data/qualifications.yaml` |
-| Subject relationships, UCAS weights, regression coefficients, entry equivalents, or restudy bars | `data/catalogue.yaml`      |
+| Subject relationships, priority weights, regression coefficients, entry equivalents, or restudy bars | `data/catalogue.yaml`      |
 | A new relationship *type* or scale invariant                                                     | compiled C# in `src/`      |
 
 Routine policy changes are YAML changes. C# changes are reserved for new evaluator shapes, such as
@@ -167,7 +167,7 @@ YAML input applies to the single-student modes only; `--batch` remains JSONL.
 A-level subject identity is **data-driven**: a subject is a validated snake_case value object loaded
 from the catalogue. Adding a new A-level subject means:
 
-1. add its row to `data/catalogue.yaml` (UCAS weight, regression coefficients, and any exclusions /
+1. add its row to `data/catalogue.yaml` (priority weight, regression coefficients, and any exclusions /
    prerequisites / own-time / entry-equivalent / restudy-bar policy),
 2. add its `green` / `amber` / `red` rules to `workflows/subject-ratings.yaml`,
 3. if the subject or its prior-qualification policy needs a new grade mapping for an existing

@@ -15,9 +15,9 @@ public sealed record StudentDocument(StudentInput Student);
 /// </summary>
 [method: JsonConstructor]
 public sealed record StudentInput(
-string Id,
-EquatableDictionary<string, int>? Gcses,
-EquatableArray<string>? Hobbies)
+	string Id,
+	EquatableDictionary<string, int>? Gcses,
+	EquatableArray<string>? Hobbies)
 {
 	public StudentInput(string id, IReadOnlyDictionary<string, int>? gcses, IReadOnlyList<string>? hobbies)
 		: this(
@@ -64,11 +64,11 @@ public readonly record struct GcseResult(string Subject, int Grade);
 /// </summary>
 [method: JsonConstructor]
 public sealed record StudentProfile(
-string Id,
-double AverageGcseScore,
-EquatableArray<PredictedGrade> PredictedGrades,
-EquatableArray<TransitionEvidence> TransitionEvidence,
-EquatableArray<string> Hobbies)
+	string Id,
+	double AverageGcseScore,
+	EquatableArray<PredictedGrade> PredictedGrades,
+	EquatableArray<TransitionEvidence> TransitionEvidence,
+	EquatableArray<string> Hobbies)
 {
 	public StudentProfile(
 		string id,

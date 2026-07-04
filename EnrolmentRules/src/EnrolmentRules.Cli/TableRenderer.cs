@@ -41,7 +41,7 @@ internal static class TableRenderer
 		var summary = result.Summary;
 		console.MarkupLine(string.Create(
 			CultureInfo.InvariantCulture,
-			$"[green]{summary.GreenCount} green[/]  [yellow]{summary.AmberCount} amber[/]  projected tariff {summary.ProjectedTariff:0.##}"));
+			$"[green]{summary.GreenCount} green[/]  [yellow]{summary.AmberCount} amber[/]  programme priority score {summary.ProgrammePriorityScore:0.##}"));
 	}
 
 	private static Markup RatingCell(Rating rating)

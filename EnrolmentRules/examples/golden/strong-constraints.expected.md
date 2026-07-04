@@ -134,4 +134,4 @@ The engine rated this **green** because: Entry met; predicted A-level grade at o
 This was downgraded:
 - green → red: Mutual exclusion with french — not permitted
 
-Summary: 21 green, 3 amber; projected UCAS tariff 982
+Summary: 21 green, 3 amber; programme priority score 982

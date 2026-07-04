@@ -4,8 +4,8 @@ namespace EnrolmentRules.Engine;
 using Domain;
 
 /// <summary>
-///     Host-code aggregation over the final ratings (§1.6): the optional green choice cap, the UCAS tariff
-///     summary and the ranked shortlist. The cap is an opt-in downstream stage (off by default) that reads
+///     Host-code aggregation over the final ratings (§1.6): the programme priority score, ranked shortlist,
+///     and optional green choice cap. The cap is an opt-in downstream stage (off by default) that reads
 ///     the constraint pass's result, so when enabled it must run <em>after</em> <see cref="ConstraintPass" />
 ///     — the pipeline has a fixed phase order (predict → engine → constraints → cap/aggregate). All weights come from the
 ///     <see cref="Catalogue" /> and the loaded <see cref="PolicyThresholds" />; nothing here is a literal.
@@ -32,39 +32,42 @@ internal static class Aggregator
 
 		var greens = ratings
 			.Where(static r => r.Rating == Rating.Green)
-			.OrderBy(r => catalogue.Meta(r.Subject).UcasWeight)
+			.OrderBy(r => catalogue.Meta(r.Subject).PriorityWeight)
 			.ThenBy(static r => r.Subject)
 			.ToList();
 
 		var surplus = greens.Count - cap;
 		return surplus <= 0
 			? []
-			: [.. greens.Take(surplus).Select(static r => new Adjustment(r.Subject, Rating.Green, Rating.Amber, AdjustmentKind.Cap, ExceedsCapReason))];
+			: [
+				.. greens.Take(surplus)
+					.Select(static r => new Adjustment(r.Subject, Rating.Green, Rating.Amber, AdjustmentKind.Cap, ExceedsCapReason)),
+			];
 	}
 
 	/// <summary>
-	///     The aggregate summary over the final ratings: green/amber counts and the projected UCAS tariff
-	///     (full weight per green, <see cref="PolicyThresholds.AmberTariffFactor" /> of it per amber).
+	///     The aggregate summary over the final ratings: green/amber counts and the programme priority score
+	///     (full weight per green, <see cref="PolicyThresholds.AmberScoreFactor" /> of it per amber).
 	/// </summary>
 	public static EnrolmentSummary Summarise(
 		IReadOnlyList<SubjectRating> ratings, CatalogueData catalogue, PolicyThresholds thresholds)
 	{
-		var greenWeight = ratings.Where(static r => r.Rating == Rating.Green).Sum(r => catalogue.Meta(r.Subject).UcasWeight);
-		var amberWeight = ratings.Where(static r => r.Rating == Rating.Amber).Sum(r => catalogue.Meta(r.Subject).UcasWeight);
+		var greenWeight = ratings.Where(static r => r.Rating == Rating.Green).Sum(r => catalogue.Meta(r.Subject).PriorityWeight);
+		var amberWeight = ratings.Where(static r => r.Rating == Rating.Amber).Sum(r => catalogue.Meta(r.Subject).PriorityWeight);
 
 		return new(
 			ratings.Count(static r => r.Rating == Rating.Green),
 			ratings.Count(static r => r.Rating == Rating.Amber),
-			greenWeight + (thresholds.AmberTariffFactor * amberWeight));
+			greenWeight + (thresholds.AmberScoreFactor * amberWeight));
 	}
 
 	/// <summary>
 	///     The ranked shortlist: least-severe rating first (green &gt; amber &gt; red), ties broken by
-	///     descending <see cref="SubjectMeta.UcasWeight" />. Returns every subject; callers take the top-N.
+	///     descending <see cref="SubjectMeta.PriorityWeight" />. Returns every subject; callers take the top-N.
 	/// </summary>
 	public static IReadOnlyList<SubjectRating> Rank(IReadOnlyList<SubjectRating> ratings, CatalogueData catalogue) => [
 		.. ratings
 			.OrderBy(static r => (int)r.Rating)
-			.ThenByDescending(r => catalogue.Meta(r.Subject).UcasWeight),
+			.ThenByDescending(r => catalogue.Meta(r.Subject).PriorityWeight),
 	];
 }

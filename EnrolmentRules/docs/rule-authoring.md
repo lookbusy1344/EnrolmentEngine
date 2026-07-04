@@ -82,7 +82,7 @@ each student:
 3. Base ratings      workflows/subject-ratings.yaml → one green/amber/red per subject
 4. Constraint pass   cross-subject downgrades folded in (most-severe-wins)
 5. Green cap         (optional, off by default) — no-op unless a cap is set
-6. Summarise         UCAS tariff, green/amber counts, ranking
+6. Summarise         programme priority score, green/amber counts, ranking
 ```
 
 Consequences worth internalising before you author:
@@ -314,19 +314,19 @@ changed files.
 ### 4.1 `data/thresholds.yaml` — the tuning knobs
 
 The numbers the rules and constraint pass read. Retune a pass grade, an entry tier, a DfE floor, or
-the amber tariff factor here:
+the amber score factor here:
 
 ```yaml
 pass_grade: 4
 top_entry: 7
 min_dfe_green_probability_at_or_above: 0.60
-amber_tariff_factor: 0.5
+amber_score_factor: 0.5
 # max_green_choices: 4   # optional, normally omitted — see the green-cap note below
 ```
 
 `max_green_choices` is the **optional green cap** and is normally omitted (as in the shipped file): with
 it absent the cap is disabled and every green stays green. Add it — a positive integer — only when policy
-demands an auto-enrol ceiling, in which case the lowest-UCAS-weight surplus greens are demoted to amber.
+demands an auto-enrol ceiling, in which case the lowest-priority-weight surplus greens are demoted to amber.
 
 ### 4.2 `data/catalogue.yaml` — subject relationships
 
@@ -334,7 +334,7 @@ The single source of truth for the subject-relationship rules and the regression
 
 ```yaml
   - subject: further_maths
-    ucas_weight: 56
+    priority_weight: 56
     regression: { slope: 1.00, intercept: -2.00 }   # the prediction line
     prerequisites:
       - any_of: [ maths ]
@@ -494,7 +494,7 @@ Make History and Music mutually exclusive (amber). In `data/catalogue.yaml`, add
       - { other: history, severity: amber } # new
 ```
 
-The mutual-exclusion handling picks it up; the lower UCAS weight loses. No workflow change.
+The mutual-exclusion handling picks it up; the lower priority weight loses. No workflow change.
 
 ### 6.3 Add a new rating tier rule (YAML)
 
@@ -608,7 +608,7 @@ apply in never changes the outcome. The shipped relationship types:
 | Relationship            | Effect            | Trigger                                                                 |
 |-------------------------|-------------------|-------------------------------------------------------------------------|
 | Prerequisites           | → group severity  | A qualifying subject's dependency group is unmet (`any_of` / `requires`) |
-| Mutual exclusions       | → pair severity   | Both sides of a clash pair qualify; the **lower UCAS weight** loses      |
+| Mutual exclusions       | → pair severity   | Both sides of a clash pair qualify; the **lower priority weight** loses      |
 | Prior-choice exclusions | → pair severity   | A committed `chosen_a_levels` choice excludes a qualifying subject       |
 | Own-time                | → amber           | A qualifying subject's `required_activities` prefix is absent from hobbies|
 | Vetoes                  | → red             | A `blocking_activities` prefix is present in hobbies                      |
@@ -625,8 +625,8 @@ you edit [`data/catalogue.yaml`](#42-datacatalogueyaml--subject-relationships); 
 code. Adding a genuinely new *kind* of relationship (one the six above cannot express) is a code
 change with its own design discussion — rare, and out of scope for this guide.
 
-Finally the engine aggregates over the surviving ratings: it computes the UCAS tariff and green/amber
-summary (using `ucas_weight` and `amber_tariff_factor`), and applies the **optional green cap**. The
+Finally the engine aggregates over the surviving ratings: it computes the programme priority score and green/amber
+summary (using `priority_weight` and `amber_score_factor`), and applies the **optional green cap**. The
 cap is off in normal operation (`max_green_choices` unset, so every green stays green); when an admin
 sets it, the cap keeps only the highest-weighted greens and demotes the surplus to amber.
 

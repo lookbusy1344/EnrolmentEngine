@@ -3,7 +3,6 @@ namespace EnrolmentRules.Tests;
 using AwesomeAssertions;
 using Cli;
 using Domain;
-using Engine;
 using RulesEngine.Models;
 
 /// <summary>
@@ -222,8 +221,16 @@ public sealed class WorkflowLinterTests
 			new() {
 				WorkflowName = RatingEvaluator.SubjectRatingsWorkflow,
 				Rules = [
-					new() { RuleName = "maths:green", Expression = "facts.Predicted(\"maths\") >= ALevelGrade.A && facts.DfeProbabilityAtOrAbove(\"maths\", ALevelGrade.A) >= facts.MinDfeAmberProbabilityAtOrAbove" },
-					new() { RuleName = "maths:amber", Expression = "facts.Predicted(\"maths\") >= ALevelGrade.B && facts.DfeProbabilityAtOrAbove(\"maths\", ALevelGrade.B) >= facts.MinDfeAmberProbabilityAtOrAbove" },
+					new() {
+						RuleName = "maths:green",
+						Expression =
+							"facts.Predicted(\"maths\") >= ALevelGrade.A && facts.DfeProbabilityAtOrAbove(\"maths\", ALevelGrade.A) >= facts.MinDfeAmberProbabilityAtOrAbove",
+					},
+					new() {
+						RuleName = "maths:amber",
+						Expression =
+							"facts.Predicted(\"maths\") >= ALevelGrade.B && facts.DfeProbabilityAtOrAbove(\"maths\", ALevelGrade.B) >= facts.MinDfeAmberProbabilityAtOrAbove",
+					},
 					new() { RuleName = "maths:red", Expression = "true" },
 				],
 			},
@@ -244,8 +251,16 @@ public sealed class WorkflowLinterTests
 			new() {
 				WorkflowName = RatingEvaluator.SubjectRatingsWorkflow,
 				Rules = [
-					new() { RuleName = "maths:green", Expression = "facts.Predicted(\"maths\") >= ALevelGrade.A && facts.DfeProbabilityAtOrAbove(\"maths\", ALevelGrade.A) >= facts.MinDfeGreenProbabilityAtOrAbove" },
-					new() { RuleName = "maths:amber", Expression = "facts.Predicted(\"maths\") >= ALevelGrade.B && facts.DfeProbabilityAtOrAbove(\"maths\", ALevelGrade.B) >= facts.MinDfeGreenProbabilityAtOrAbove" },
+					new() {
+						RuleName = "maths:green",
+						Expression =
+							"facts.Predicted(\"maths\") >= ALevelGrade.A && facts.DfeProbabilityAtOrAbove(\"maths\", ALevelGrade.A) >= facts.MinDfeGreenProbabilityAtOrAbove",
+					},
+					new() {
+						RuleName = "maths:amber",
+						Expression =
+							"facts.Predicted(\"maths\") >= ALevelGrade.B && facts.DfeProbabilityAtOrAbove(\"maths\", ALevelGrade.B) >= facts.MinDfeGreenProbabilityAtOrAbove",
+					},
 					new() { RuleName = "maths:red", Expression = "true" },
 				],
 			},
@@ -268,8 +283,16 @@ public sealed class WorkflowLinterTests
 			new() {
 				WorkflowName = RatingEvaluator.SubjectRatingsWorkflow,
 				Rules = [
-					new() { RuleName = "maths:green", Expression = "facts.Predicted(\"maths\") >= ALevelGrade.B && facts.DfeProbabilityAtOrAbove(\"maths\", ALevelGrade.B) >= facts.MinDfeGreenProbabilityAtOrAbove" },
-					new() { RuleName = "maths:amber", Expression = "facts.Predicted(\"maths\") >= ALevelGrade.B && facts.DfeProbabilityAtOrAbove(\"maths\", ALevelGrade.B) >= facts.MinDfeAmberProbabilityAtOrAbove" },
+					new() {
+						RuleName = "maths:green",
+						Expression =
+							"facts.Predicted(\"maths\") >= ALevelGrade.B && facts.DfeProbabilityAtOrAbove(\"maths\", ALevelGrade.B) >= facts.MinDfeGreenProbabilityAtOrAbove",
+					},
+					new() {
+						RuleName = "maths:amber",
+						Expression =
+							"facts.Predicted(\"maths\") >= ALevelGrade.B && facts.DfeProbabilityAtOrAbove(\"maths\", ALevelGrade.B) >= facts.MinDfeAmberProbabilityAtOrAbove",
+					},
 					new() { RuleName = "maths:red", Expression = "true" },
 				],
 			},
@@ -420,7 +443,7 @@ public sealed class WorkflowLinterTests
 			+ """
 
 			    - subject: philosophy
-			      ucas_weight: 60
+			      priority_weight: 60
 			      regression: { slope: 0.90, intercept: -1.00 }
 			  """);
 

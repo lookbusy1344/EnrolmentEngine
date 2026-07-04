@@ -17,10 +17,7 @@ public readonly struct EquatableDictionary<TKey, TValue> : IReadOnlyDictionary<T
 {
 	private readonly Dictionary<TKey, TValue>? entries;
 
-	internal EquatableDictionary(Dictionary<TKey, TValue> entries)
-	{
-		this.entries = entries;
-	}
+	internal EquatableDictionary(Dictionary<TKey, TValue> entries) => this.entries = entries;
 
 	private Dictionary<TKey, TValue> Entries => entries ?? [];
 

@@ -79,6 +79,6 @@ public sealed class ExplanationRendererTests
 		rendered.Should().Contain("Entry equivalent satisfied by prior qualification");
 		rendered.Should().Contain("applied\\_science").And.Contain("btec\\_diploma").And.Contain("distinction");
 		rendered.Should().Contain("This was not downgraded.");
-		rendered.Should().Contain("1 green, 0 amber; projected UCAS tariff 50");
+		rendered.Should().Contain("1 green, 0 amber; programme priority score 50");
 	}
 }

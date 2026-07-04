@@ -23,7 +23,7 @@ internal sealed record CatalogueFile(EquatableArray<CatalogueEntry> Subjects)
 internal sealed record CatalogueEntry
 {
 	public Subject Subject { get; init; }
-	public int UcasWeight { get; init; }
+	public int PriorityWeight { get; init; }
 	public PredictionModel.Coefficients Regression { get; init; }
 	public EquatableArray<SubjectExclusion> Exclusions { get; init; } = [];
 	public EquatableArray<string> RequiredActivities { get; init; } = [];

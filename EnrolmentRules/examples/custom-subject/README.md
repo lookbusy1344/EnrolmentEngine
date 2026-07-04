@@ -5,7 +5,7 @@ This folder is a concrete Phase 3 reference for adding an A-level subject by dat
 It shows the three pieces that must move together:
 
 1. `data/catalogue.append.yaml`
-   Add the per-subject metadata row: UCAS weight, regression coefficients, and any exclusions /
+   Add the per-subject metadata row: priority weight, regression coefficients, and any exclusions /
    prerequisites / own-time policy.
 2. `workflows/subject-ratings.append.yaml`
    Add the subject's `green` / `amber` / `red` workflow rules.

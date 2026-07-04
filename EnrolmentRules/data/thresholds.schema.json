@@ -16,7 +16,7 @@
     "min_dfe_green_probability_at_or_above",
     "min_dfe_amber_probability_at_or_above",
     "adult_age",
-    "amber_tariff_factor"
+    "amber_score_factor"
   ],
   "properties": {
     "pass_grade": {
@@ -72,7 +72,7 @@
       "type": "integer",
       "minimum": 1
     },
-    "amber_tariff_factor": {
+    "amber_score_factor": {
       "type": "number",
       "minimum": 0,
       "maximum": 1

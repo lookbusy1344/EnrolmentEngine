@@ -32,6 +32,6 @@ public static class AgeCalculator
 
 	private static DateOnly BirthdayInYear(DateOnly dateOfBirth, int year) =>
 		dateOfBirth is { Month: 2, Day: 29 } && !DateTime.IsLeapYear(year)
-			? new DateOnly(year, 3, 1)
+			? new(year, 3, 1)
 			: new DateOnly(year, dateOfBirth.Month, dateOfBirth.Day);
 }

@@ -2,7 +2,6 @@ namespace EnrolmentRules.Cli;
 
 using System.Text.Json;
 using Domain;
-using Engine;
 using Prediction;
 using RulesEngine.Models;
 

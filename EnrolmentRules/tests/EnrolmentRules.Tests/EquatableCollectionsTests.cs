@@ -87,7 +87,9 @@ public sealed class EquatableCollectionsTests
 	public void student_document_dictionary_round_trips_through_source_generated_json()
 	{
 		var document = new StudentDocument(
-			new StudentInput("S1", new Dictionary<string, int> { ["maths"] = 7, ["physics"] = 6 }, ["chess"]) with { ChosenALevels = [Subject.Physics] });
+			new StudentInput("S1", new Dictionary<string, int> { ["maths"] = 7, ["physics"] = 6 }, ["chess"]) with {
+				ChosenALevels = [Subject.Physics],
+			});
 
 		var json = JsonSerializer.Serialize(document, EnrolmentJsonContext.Default.StudentDocument);
 		var back = JsonSerializer.Deserialize(json, EnrolmentJsonContext.Default.StudentDocument);

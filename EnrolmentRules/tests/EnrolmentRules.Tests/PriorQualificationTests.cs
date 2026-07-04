@@ -3,7 +3,6 @@ namespace EnrolmentRules.Tests;
 using System.Text.Json;
 using AwesomeAssertions;
 using Domain;
-using Engine;
 using FsCheck;
 using FsCheck.Fluent;
 using FsCheck.Xunit;

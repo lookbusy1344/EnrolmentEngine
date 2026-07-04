@@ -5,7 +5,7 @@ using System.Text.Json.Nodes;
 
 /// <summary>
 ///     Per-subject metadata that drives the host-code constraint pass and aggregation (§1.5–1.6):
-///     the UCAS tariff <see cref="UcasWeight" /> a green contributes, the subjects this one excludes
+///     the programme priority score <see cref="PriorityWeight" /> a green contributes, the subjects this one excludes
 ///     together with the severity of that exclusion (<see cref="Exclusions" />, a timetable-clash
 ///     block that can downgrade to amber or red), any required own-time activity prefixes
 ///     (<see cref="RequiredActivities" />, e.g. <c>plays_</c> for Music), any activity prefixes that
@@ -16,7 +16,7 @@ using System.Text.Json.Nodes;
 ///     own severity, e.g. Further Maths hard-requires Maths).
 /// </summary>
 public sealed record SubjectMeta(
-	int UcasWeight,
+	int PriorityWeight,
 	PredictionModel.Coefficients Regression,
 	EquatableArray<SubjectExclusion> Exclusions,
 	EquatableArray<string> RequiredActivities,
@@ -158,10 +158,10 @@ public sealed class CatalogueData
 				if (order.TryGetValue(subject, out var subjectOrder)
 					&& order.TryGetValue(exclusion.Other, out var otherOrder)
 					&& subjectOrder < otherOrder
-					&& meta.UcasWeight == otherMeta.UcasWeight) {
+					&& meta.PriorityWeight == otherMeta.PriorityWeight) {
 					throw new InvalidDataException(
 						$"Catalogue exclusion pair {EnumNames.NameOf(subject)} ↔ {EnumNames.NameOf(exclusion.Other)} "
-						+ $"must have distinct UCAS weights, but both are {meta.UcasWeight}.");
+						+ $"must have distinct priority weights, but both are {meta.PriorityWeight}.");
 				}
 			}
 
@@ -268,7 +268,7 @@ public static class Catalogue
 		var subjects = new List<Subject>();
 		foreach (var entry in CatalogueFile.From(document).Subjects) {
 			var meta = new SubjectMeta(
-				entry.UcasWeight,
+				entry.PriorityWeight,
 				entry.Regression,
 				[.. entry.Exclusions],
 				[.. entry.RequiredActivities],

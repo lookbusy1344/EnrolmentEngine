@@ -2,7 +2,6 @@ namespace EnrolmentRules.Tests;
 
 using AwesomeAssertions;
 using Domain;
-using Engine;
 
 /// <summary>
 ///     Integration-style tests for the cross-subject constraint pass, driving
@@ -167,7 +166,7 @@ public sealed class ConstraintPassIntegrationTests
 			Ratings((Subject.History, Rating.Green), (Subject.Art, Rating.Green)), Profile(), Harness.Catalogue);
 
 		var (loser, winner) =
-			Catalogue.Meta(Subject.History).UcasWeight < Catalogue.Meta(Subject.Art).UcasWeight
+			Catalogue.Meta(Subject.History).PriorityWeight < Catalogue.Meta(Subject.Art).PriorityWeight
 				? (Subject.History, Subject.Art)
 				: (Subject.Art, Subject.History);
 
@@ -184,7 +183,7 @@ public sealed class ConstraintPassIntegrationTests
 		var adjustments = ConstraintPass.Evaluate(
 			Ratings((Subject.French, Rating.Green), (Subject.German, Rating.Green)), Profile(), Harness.Catalogue);
 
-		var loser = Catalogue.Meta(Subject.French).UcasWeight < Catalogue.Meta(Subject.German).UcasWeight
+		var loser = Catalogue.Meta(Subject.French).PriorityWeight < Catalogue.Meta(Subject.German).PriorityWeight
 			? Subject.French
 			: Subject.German;
 		var winner = loser == Subject.French ? Subject.German : Subject.French;
@@ -308,7 +307,7 @@ public sealed class ConstraintPassIntegrationTests
 		// Order-independent: the monotone downgrades compose to the same final ratings either way.
 		forward.Should().BeEquivalentTo(reversed);
 
-		var loser = Catalogue.Meta(Subject.History).UcasWeight < Catalogue.Meta(Subject.Art).UcasWeight
+		var loser = Catalogue.Meta(Subject.History).PriorityWeight < Catalogue.Meta(Subject.Art).PriorityWeight
 			? Subject.History
 			: Subject.Art;
 		Of(forward, loser).Should().Be(Rating.Amber);

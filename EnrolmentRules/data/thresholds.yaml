@@ -13,9 +13,9 @@ adult_age: 19
 # max_green_choices is an optional, normally-unused feature: when omitted (as here) the green cap is
 # disabled and every subject rated green stays green — the engine reports what a student is allowed to
 # study, it does not force an "optimal" shortlist. Set it to a positive integer only if policy demands
-# an auto-enrol ceiling, in which case the lowest-UCAS-weight surplus greens are demoted to amber.
+# an auto-enrol ceiling, in which case the lowest-priority-weight surplus greens are demoted to amber.
 # max_green_choices: 4
-amber_tariff_factor: 0.5
+amber_score_factor: 0.5
 # advice_considers_unsat_gcses is a diagnostic knob, off by default. When false the counterfactual
 # advisor (--advise) only proposes raising GCSEs the student already sat — actionable advice, and a far
 # cheaper search. Set it to true to revert to the old behaviour, which may also propose sitting a brand

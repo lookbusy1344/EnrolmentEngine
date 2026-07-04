@@ -37,7 +37,7 @@ public static class ExplanationRenderer
 
 		var summary = result.Summary;
 		writer.WriteLine(
-			$"Summary: {summary.GreenCount} green, {summary.AmberCount} amber; projected UCAS tariff {summary.ProjectedTariff.ToString("0.##", CultureInfo.InvariantCulture)}");
+			$"Summary: {summary.GreenCount} green, {summary.AmberCount} amber; programme priority score {summary.ProgrammePriorityScore.ToString("0.##", CultureInfo.InvariantCulture)}");
 	}
 
 	private static void RenderExplanation(Explanation explanation, TextWriter writer)

@@ -1,7 +1,5 @@
 namespace EnrolmentRules.Extensions.DependencyInjection;
 
-using Engine;
-
 /// <summary>
 ///     Options for registering a reusable <see cref="EnrolmentEngine" /> into a dependency-injection
 ///     container. The engine itself remains stateless; these values identify the shipped data set and the

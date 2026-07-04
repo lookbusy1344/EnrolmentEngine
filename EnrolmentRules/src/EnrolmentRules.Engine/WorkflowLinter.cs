@@ -32,6 +32,11 @@ public static partial class WorkflowLinter
 		[("facts", "DfeProbabilityAtOrAbove")] = KeyVocabulary.Subject,
 	};
 
+	// The DfE confidence floors the two tiers read. Sourced by nameof so a rename of the RatingFacts member
+	// carries the linter with it rather than drifting from a hard-coded string.
+	private static readonly string GreenDfeFloor = nameof(RatingFacts.MinDfeGreenProbabilityAtOrAbove);
+	private static readonly string AmberDfeFloor = nameof(RatingFacts.MinDfeAmberProbabilityAtOrAbove);
+
 	/// <summary>Lint loaded workflows against an explicit catalogue snapshot.</summary>
 	public static IReadOnlyList<LintFinding> Lint(IReadOnlyList<Workflow> workflows, CatalogueData catalogue)
 	{
@@ -142,7 +147,8 @@ public static partial class WorkflowLinter
 			// silently promotes amber-level students to green. The ordering/existence checks above never see
 			// inside the expressions, so the tier boundary is pinned here from the green/amber pair itself.
 			if (byRating.TryGetValue(Rating.Green, out var greenRules) && greenRules.Length == 1
-				&& byRating.TryGetValue(Rating.Amber, out var amberRules) && amberRules.Length == 1) {
+																	   && byRating.TryGetValue(Rating.Amber, out var amberRules) &&
+																	   amberRules.Length == 1) {
 				foreach (var finding in LintTierStrength(workflowName, subject, greenRules[0].Rule, amberRules[0].Rule)) {
 					yield return finding;
 				}
@@ -159,11 +165,6 @@ public static partial class WorkflowLinter
 				$"rules exist for subject '{EnumNames.NameOf(subject)}' which is not in the catalogue; they will never produce a rating");
 		}
 	}
-
-	// The DfE confidence floors the two tiers read. Sourced by nameof so a rename of the RatingFacts member
-	// carries the linter with it rather than drifting from a hard-coded string.
-	private static readonly string GreenDfeFloor = nameof(RatingFacts.MinDfeGreenProbabilityAtOrAbove);
-	private static readonly string AmberDfeFloor = nameof(RatingFacts.MinDfeAmberProbabilityAtOrAbove);
 
 	private static IEnumerable<LintFinding> LintTierStrength(string workflowName, Subject subject, Rule green, Rule amber)
 	{

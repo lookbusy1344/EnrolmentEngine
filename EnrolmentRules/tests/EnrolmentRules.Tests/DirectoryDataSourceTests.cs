@@ -1,7 +1,6 @@
 namespace EnrolmentRules.Tests;
 
 using AwesomeAssertions;
-using Engine;
 
 /// <summary>
 ///     Directory-backed workflow opening must not leak streams when a later file open fails part-way

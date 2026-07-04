@@ -1,7 +1,6 @@
 namespace EnrolmentRules.Tests;
 
 using AwesomeAssertions;
-using Engine;
 
 /// <summary>
 ///     Production bootstrap must enforce semantic workflow lint, not just schema validation and probe

@@ -2,7 +2,6 @@ namespace EnrolmentRules.Tests;
 
 using AwesomeAssertions;
 using Domain;
-using Engine;
 
 /// <summary>
 ///     The age-gated entry demonstration (§1.1 per-student attributes): <c>date_of_birth</c> is the raw
@@ -58,16 +57,16 @@ public sealed class AgeGateTests
 		// non-leap year (the anniversary date does not exist), not 28 Feb.
 		var dob = new DateOnly(2024, 2, 29);
 
-		AgeCalculator.WholeYears(dob, new DateOnly(2025, 2, 28)).Should().Be(0);
-		AgeCalculator.WholeYears(dob, new DateOnly(2025, 3, 1)).Should().Be(1);
-		AgeCalculator.WholeYears(dob, new DateOnly(2026, 2, 28)).Should().Be(1);
-		AgeCalculator.WholeYears(dob, new DateOnly(2026, 3, 1)).Should().Be(2);
-		AgeCalculator.WholeYears(dob, new DateOnly(2027, 2, 28)).Should().Be(2);
-		AgeCalculator.WholeYears(dob, new DateOnly(2027, 3, 1)).Should().Be(3);
+		AgeCalculator.WholeYears(dob, new(2025, 2, 28)).Should().Be(0);
+		AgeCalculator.WholeYears(dob, new(2025, 3, 1)).Should().Be(1);
+		AgeCalculator.WholeYears(dob, new(2026, 2, 28)).Should().Be(1);
+		AgeCalculator.WholeYears(dob, new(2026, 3, 1)).Should().Be(2);
+		AgeCalculator.WholeYears(dob, new(2027, 2, 28)).Should().Be(2);
+		AgeCalculator.WholeYears(dob, new(2027, 3, 1)).Should().Be(3);
 
 		// 2028 is a leap year, so the anniversary genuinely falls on 29 Feb again.
-		AgeCalculator.WholeYears(dob, new DateOnly(2028, 2, 28)).Should().Be(3);
-		AgeCalculator.WholeYears(dob, new DateOnly(2028, 2, 29)).Should().Be(4);
+		AgeCalculator.WholeYears(dob, new(2028, 2, 28)).Should().Be(3);
+		AgeCalculator.WholeYears(dob, new(2028, 2, 29)).Should().Be(4);
 	}
 
 	[Fact]

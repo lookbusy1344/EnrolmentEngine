@@ -4,7 +4,6 @@ using System.Reflection;
 using System.Text.Json;
 using AwesomeAssertions;
 using Domain;
-using Engine;
 using Prediction;
 using RulesEngine.Interfaces;
 
@@ -44,7 +43,7 @@ public sealed class EligibilityGateTests
 		thresholds.MinDfeAmberProbabilityAtOrAbove.Should().BeApproximately(0.50, 1e-9);
 		thresholds.AdultAge.Should().Be(19);
 		thresholds.MaxGreenChoices.Should().BeNull(); // green cap is an optional feature, disabled in the shipped config
-		thresholds.AmberTariffFactor.Should().BeApproximately(0.5, 1e-9);
+		thresholds.AmberScoreFactor.Should().BeApproximately(0.5, 1e-9);
 		thresholds.AdviceConsidersUnsatGcses.Should().BeFalse(); // diagnostic advisor knob, off in the shipped config
 	}
 
@@ -65,7 +64,7 @@ public sealed class EligibilityGateTests
 								   min_dfe_green_probability_at_or_above: 0.60
 								   min_dfe_amber_probability_at_or_above: 0.50
 								   adult_age: 19
-								   amber_tariff_factor: 0.5
+								   amber_score_factor: 0.5
 								   """;
 
 		var defaulted = PolicyThresholdsStore.LoadAndValidate(new StringReader(withoutKnob), new StringReader(schema));

@@ -2,7 +2,6 @@ namespace EnrolmentRules.Tests;
 
 using AwesomeAssertions;
 using Domain;
-using Engine;
 
 /// <summary>
 ///     The twelve additional A-levels (economics … design technology) added as a pure data exercise —
@@ -112,7 +111,7 @@ public sealed class AdditionalSubjectsTests
 	[Fact]
 	public void economics_and_business_studies_are_a_soft_timetable_clash()
 	{
-		// Both green at the top; the amber mutual exclusion demotes the lower-UCAS-weight subject
+		// Both green at the top; the amber mutual exclusion demotes the lower-priority-weight subject
 		// (business studies, 34) and leaves the winner (economics, 45) green.
 		var engine = Harness.ShippedEngine();
 		var student = new StudentInput("S-CLASH", Uniform(9).ToDictionary(g => g.Item1, g => g.Item2), []);

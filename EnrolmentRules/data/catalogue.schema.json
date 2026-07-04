@@ -85,14 +85,14 @@
       "additionalProperties": false,
       "required": [
         "subject",
-        "ucas_weight",
+        "priority_weight",
         "regression"
       ],
       "properties": {
         "subject": {
           "$ref": "#/$defs/subject"
         },
-        "ucas_weight": {
+        "priority_weight": {
           "type": "integer",
           "exclusiveMinimum": 0
         },

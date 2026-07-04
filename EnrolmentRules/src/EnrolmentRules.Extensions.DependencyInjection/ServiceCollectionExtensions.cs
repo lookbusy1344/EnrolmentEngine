@@ -1,6 +1,5 @@
 namespace EnrolmentRules.Extensions.DependencyInjection;
 
-using Engine;
 using Microsoft.Extensions.DependencyInjection;
 
 /// <summary>Dependency-injection registration helpers for the enrolment engine.</summary>

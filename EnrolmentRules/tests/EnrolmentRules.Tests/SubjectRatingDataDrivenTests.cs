@@ -2,7 +2,6 @@ namespace EnrolmentRules.Tests;
 
 using AwesomeAssertions;
 using Domain;
-using Engine;
 using Prediction;
 
 /// <summary>
@@ -87,7 +86,7 @@ public sealed class SubjectRatingDataDrivenTests
 			+ """
 
 			    - subject: philosophy
-			      ucas_weight: 60
+			      priority_weight: 60
 			      regression: { slope: 0.90, intercept: -1.00 }
 			  """);
 

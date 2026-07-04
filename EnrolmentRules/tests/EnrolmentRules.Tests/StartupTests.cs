@@ -2,7 +2,6 @@ namespace EnrolmentRules.Tests;
 
 using AwesomeAssertions;
 using Domain;
-using Engine;
 using RulesEngine.Interfaces;
 using RulesEngine.Models;
 

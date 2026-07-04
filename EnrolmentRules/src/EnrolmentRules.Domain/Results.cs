@@ -16,11 +16,11 @@ public sealed record Adjustment(Subject Subject, Rating From, Rating To, [proper
 
 /// <summary>
 ///     The aggregate verdict over the final ratings (§1.6): how many subjects ended green and amber, and
-///     the projected UCAS tariff — full <see cref="SubjectMeta.UcasWeight" /> for each green plus
-///     <see cref="PolicyThresholds.AmberTariffFactor" /> of it for each amber. Computed after the (optional,
+///     the programme priority score — full <see cref="SubjectMeta.PriorityWeight" /> for each green plus
+///     <see cref="PolicyThresholds.AmberScoreFactor" /> of it for each amber. Computed after the (optional,
 ///     normally-disabled) green cap, so it reflects the post-cap counts when the cap is configured.
 /// </summary>
-public sealed record EnrolmentSummary(int GreenCount, int AmberCount, double ProjectedTariff);
+public sealed record EnrolmentSummary(int GreenCount, int AmberCount, double ProgrammePriorityScore);
 
 /// <summary>
 ///     One line of the §1.7 output: a subject, its <em>final</em> traffic-light rating and the deciding
@@ -31,7 +31,7 @@ public sealed record Recommendation(Subject Subject, Rating Rating, string Reaso
 
 /// <summary>
 ///     The whole-student verdict (§1.7): the eligibility outcome, one <see cref="Recommendation" /> per
-///     subject (ranked green → amber → red, then by descending UCAS weight), the aggregate
+///     subject (ranked green → amber → red, then by descending priority weight), the aggregate
 ///     <see cref="EnrolmentSummary" /> and the full host-code <see cref="Adjustment" /> trail (constraint
 ///     pass, plus the optional green cap when configured) that explains every downgrade. This is the
 ///     document the golden-file suite locks.

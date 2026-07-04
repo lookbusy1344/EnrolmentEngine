@@ -4,7 +4,6 @@ using System.Text.Json;
 using AwesomeAssertions;
 using Cli;
 using Domain;
-using Engine;
 
 /// <summary>
 ///     Counterfactual advisor tests. These exercise the public advice surface through the real engine
@@ -270,7 +269,7 @@ public sealed class AdvisorTests
 		// The green cap is an optional feature, off in the shipped config; enable it here to exercise the
 		// advisor's cap-blocked handling. Further Maths is red under the chosen-mode prerequisite (Maths is
 		// not committed), so it leaves the green pool; the marginal cap-blocked green is now Computer Studies
-		// (5th by UCAS weight behind Maths, Physics, Chemistry, Biology). No grade change can free a cap slot,
+		// (5th by priority weight behind Maths, Physics, Chemistry, Biology). No grade change can free a cap slot,
 		// so it is unreachable.
 		const int cap = 4;
 		var rules = Harness.BuildFromShippedWorkflows().Engine;

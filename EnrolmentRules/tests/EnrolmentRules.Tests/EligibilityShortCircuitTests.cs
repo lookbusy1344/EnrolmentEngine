@@ -2,7 +2,6 @@ namespace EnrolmentRules.Tests;
 
 using AwesomeAssertions;
 using Domain;
-using Engine;
 using Prediction;
 using RulesEngine.Interfaces;
 using RulesEngine.Models;
@@ -102,6 +101,15 @@ internal sealed class RecordingEngine(IRulesEngine inner) : IRulesEngine
 	{
 		ExecutedWorkflows.Add(workflowName);
 		return inner.ExecuteAllRulesAsync(workflowName, ruleParams);
+	}
+
+	public ValueTask<List<RuleResultTree>> ExecuteAllRulesAsync(
+		string workflowName,
+		RuleParameter[] ruleParams,
+		CancellationToken cancellationToken)
+	{
+		ExecutedWorkflows.Add(workflowName);
+		return inner.ExecuteAllRulesAsync(workflowName, ruleParams, cancellationToken);
 	}
 
 	public ValueTask<List<RuleResultTree>> ExecuteAllRulesAsync(string workflowName, params object[] inputs)

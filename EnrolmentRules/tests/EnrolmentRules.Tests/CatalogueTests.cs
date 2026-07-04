@@ -3,7 +3,6 @@ namespace EnrolmentRules.Tests;
 using System.Text;
 using AwesomeAssertions;
 using Domain;
-using Engine;
 
 /// <summary>
 ///     The subject catalogue is now rules-as-data: <c>data/catalogue.yaml</c>, loaded and schema-validated
@@ -24,8 +23,8 @@ public sealed class CatalogueTests
 		var furtherMaths = data.Meta(Subject.FurtherMaths).Prerequisites.Should().ContainSingle().Which;
 		furtherMaths.AnyOf.Should().Equal(Subject.Maths);
 		furtherMaths.Severity.Should().Be(Rating.Red);
-		data.Meta(Subject.Maths).UcasWeight.Should().Be(50);
-		data.Meta(Subject.FurtherMaths).UcasWeight.Should().Be(56);
+		data.Meta(Subject.Maths).PriorityWeight.Should().Be(50);
+		data.Meta(Subject.FurtherMaths).PriorityWeight.Should().Be(56);
 
 		data.Meta(Subject.French).Exclusions.Should().ContainSingle()
 			.Which.Should().Be(new SubjectExclusion(Subject.German, Rating.Red));
@@ -56,21 +55,21 @@ public sealed class CatalogueTests
 	}
 
 	[Fact]
-	public void mutually_excluding_subjects_must_have_distinct_ucas_weights()
+	public void mutually_excluding_subjects_must_have_distinct_priority_weights()
 	{
 		var dir = Path.Combine(Path.GetTempPath(), "enrolmentrules-tests", "catalogue-" + Guid.NewGuid().ToString("N"));
 		Directory.CreateDirectory(dir);
 		File.Copy(Path.Combine(DataDir, CatalogueStore.SchemaFileName), Path.Combine(dir, CatalogueStore.SchemaFileName));
 
 		var catalogue = File.ReadAllText(Path.Combine(DataDir, CatalogueStore.CatalogueFileName))
-			.Replace("  - subject: german\n    ucas_weight: 37", "  - subject: german\n    ucas_weight: 39", StringComparison.Ordinal);
+			.Replace("  - subject: german\n    priority_weight: 37", "  - subject: german\n    priority_weight: 39", StringComparison.Ordinal);
 		File.WriteAllText(Path.Combine(dir, CatalogueStore.CatalogueFileName), catalogue);
 
 		try {
 			var act = () => CatalogueStore.LoadAndValidate(dir);
 
 			act.Should().Throw<CatalogueException>()
-				.WithMessage("*distinct UCAS weights*")
+				.WithMessage("*distinct priority weights*")
 				.Which.InnerException.Should().BeOfType<InvalidDataException>()
 				.Which.Message.Should().Contain("french").And.Contain("german");
 		}
@@ -107,7 +106,7 @@ public sealed class CatalogueTests
 		var data = CatalogueStore.LoadAndValidate(DataDir);
 
 		// Meta is total over Subjects only because the coverage invariant passed at load.
-		Catalogue.Subjects.Should().OnlyContain(subject => data.Meta(subject).UcasWeight > 0);
+		Catalogue.Subjects.Should().OnlyContain(subject => data.Meta(subject).PriorityWeight > 0);
 	}
 
 	[Fact]
@@ -116,10 +115,10 @@ public sealed class CatalogueTests
 		const string yaml = """
 							subjects:
 							  - subject: maths
-							    ucas_weight: 50
+							    priority_weight: 50
 							    regression: { slope: 0.80, intercept: -1.00 }
 							  - subject: drama
-							    ucas_weight: 42
+							    priority_weight: 42
 							    regression: { slope: 0.75, intercept: -0.50 }
 							    prerequisites:
 							      - any_of: [maths]
@@ -128,7 +127,7 @@ public sealed class CatalogueTests
 		var data = Catalogue.Load(yaml);
 
 		data.Subjects.Should().Equal(Subject.Maths, new Subject("drama"));
-		data.Meta(new("drama")).UcasWeight.Should().Be(42);
+		data.Meta(new("drama")).PriorityWeight.Should().Be(42);
 		data.Meta(new("drama")).Prerequisites.Should().ContainSingle()
 			.Which.AnyOf.Should().Equal(Subject.Maths);
 	}
@@ -152,7 +151,7 @@ public sealed class CatalogueTests
 		const string yaml = """
 							subjects:
 							  - subject: biology
-							    ucas_weight: 44
+							    priority_weight: 44
 							    regression: { slope: 0.90, intercept: -2.30 }
 							    entry_equivalents:
 							      - { subject: applied_science, type: btec_diploma, min_grade: platinum }
@@ -185,7 +184,7 @@ public sealed class CatalogueTests
 		const string yaml = """
 							subjects:
 							  - subject: maths
-							    ucas_weight: 50
+							    priority_weight: 50
 							    regression: { slope: 0.80, intercept: -1.00 }
 							""";
 
@@ -200,7 +199,7 @@ public sealed class CatalogueTests
 		const string yaml = """
 							subjects:
 							  - subject: biology
-							    ucas_weight: 44
+							    priority_weight: 44
 							    regression: { slope: 0.90, intercept: -2.30 }
 							    restudy_bar:
 							      types: [a_level]
@@ -243,7 +242,7 @@ public sealed class CatalogueTests
 		const string yaml = """
 							subjects:
 							  - subject: maths
-							    ucas_weight: 50
+							    priority_weight: 50
 							    regression: { slope: 0.80, intercept: -1.00 }
 							    exclusions:
 							      - { other: drama, severity: red }
@@ -275,7 +274,7 @@ public sealed class CatalogueTests
 	{
 		var yaml = AllSubjects("""
 							     - subject: further_maths
-							       ucas_weight: 56
+							       priority_weight: 56
 							       regression: { slope: 1.00, intercept: -2.00 }
 							       prerequisites:
 							         - any_of: [maths, physics]
@@ -298,7 +297,7 @@ public sealed class CatalogueTests
 	{
 		var yaml = AllSubjects("""
 							     - subject: further_maths
-							       ucas_weight: 56
+							       priority_weight: 56
 							       regression: { slope: 1.00, intercept: -2.00 }
 							       prerequisites:
 							         - any_of: [maths]
@@ -315,7 +314,7 @@ public sealed class CatalogueTests
 	{
 		var yaml = AllSubjects("""
 							     - subject: further_maths
-							       ucas_weight: 56
+							       priority_weight: 56
 							       regression: { slope: 1.00, intercept: -2.00 }
 							       prerequisites:
 							         - any_of: []
@@ -331,7 +330,7 @@ public sealed class CatalogueTests
 	{
 		var yaml = AllSubjects("""
 							     - subject: maths
-							       ucas_weight: 99
+							       priority_weight: 99
 							       regression: { slope: 0.80, intercept: -1.00 }
 							   """, null);
 
@@ -346,7 +345,7 @@ public sealed class CatalogueTests
 		// French excludes German, but German does not name French back: undirected clashes must be mirrored.
 		var yaml = AllSubjects("""
 							     - subject: french
-							       ucas_weight: 39
+							       priority_weight: 39
 							       regression: { slope: 0.85, intercept: -1.85 }
 							       exclusions:
 							         - { other: german, severity: red }
@@ -366,10 +365,10 @@ public sealed class CatalogueTests
 		File.WriteAllText(Path.Combine(dir, CatalogueStore.CatalogueFileName), """
 																			   subjects:
 																			     - subject: maths
-																			       ucas_weight: 50
+																			       priority_weight: 50
 																			       regression: { slope: 0.80, intercept: -1.00 }
 																			     - subject: french
-																			       ucas_weight: 39
+																			       priority_weight: 39
 																			       regression: { slope: 0.85, intercept: -1.85 }
 																			       exclusions:
 																			         - { other: german, severity: purple }
@@ -386,7 +385,7 @@ public sealed class CatalogueTests
 		const string yaml = """
 							subjects:
 							  - subject: biology
-							    ucas_weight: 44
+							    priority_weight: 44
 							    regression: { slope: 0.90, intercept: -2.30 }
 							    entry_equivalents:
 							      - { subject: applied_science, type: btec_diploma, min_grade: platinum }
@@ -403,10 +402,10 @@ public sealed class CatalogueTests
 		const string yaml = """
 							subjects:
 							  - subject: maths
-							    ucas_weight: 50
+							    priority_weight: 50
 							    regression: { slope: 0.80, intercept: -1.00 }
 							  - subject: drama
-							    ucas_weight: 42
+							    priority_weight: 42
 							    regression: { slope: 0.75, intercept: -0.50 }
 							""";
 
@@ -422,7 +421,7 @@ public sealed class CatalogueTests
 		var lines = Catalogue.Subjects
 			.Where(subject => !string.Equals(EnumNames.NameOf(subject), omit, StringComparison.Ordinal))
 			.Select(static (subject, index) =>
-				$"  - subject: {EnumNames.NameOf(subject)}\n    ucas_weight: {index + 30}\n    regression: {{ slope: 0.80, intercept: -1.00 }}");
+				$"  - subject: {EnumNames.NameOf(subject)}\n    priority_weight: {index + 30}\n    regression: {{ slope: 0.80, intercept: -1.00 }}");
 		return "subjects:\n" + string.Join('\n', lines) + '\n' + extraFor;
 	}
 

@@ -172,7 +172,7 @@ internal static class ConstraintPass
 
 			if (qualifies) {
 				var (loser, winner) =
-					catalogue.Meta(a).UcasWeight <= catalogue.Meta(b).UcasWeight ? (a, b) : (b, a);
+					catalogue.Meta(a).PriorityWeight <= catalogue.Meta(b).PriorityWeight ? (a, b) : (b, a);
 				var winnerName = EnumNames.NameOf(winner);
 				yield return new(
 					loser, ratings[loser], severity, AdjustmentKind.MutualExclusion,

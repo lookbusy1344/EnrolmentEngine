@@ -112,7 +112,7 @@ Two properties are inherent to the engine, and the architecture is built around 
          ▼
 ┌───────────────────┐   plain C#, downstream of the engine
 │  3. Constraint    │   prerequisites, exclusions, own-time rules, vetoes, the optional green cap,
-│     pass + caps   │   tariff/summary — all the *cross-subject* decisions
+│     pass + caps   │   score/summary — all the *cross-subject* decisions
 └───────────────────┘
          │
          ▼
@@ -145,9 +145,9 @@ the rest of the project reads easily:
 | Bucket | Home | Evaluated by | Holds |
 | --- | --- | --- | --- |
 | **Per-student rules** | `workflows/eligibility.yaml`, `workflows/subject-ratings.yaml` | Microsoft **RulesEngine** (lambda strings) | The eligibility gate and each subject's green/amber/red base tier. A pure function of *one* student's facts. |
-| **Tuning values** | `data/thresholds.yaml` | Plain **data**, schema-validated by `PolicyThresholdsStore` → `PolicyThresholds` | The numeric knobs the lambdas read as `policy.PassGrade` / `facts.TopEntry` and the host pass reads directly: pass grade, min passes, entry thresholds, DfE floors, adult age, the optional green cap (normally unset), amber tariff factor. |
+| **Tuning values** | `data/thresholds.yaml` | Plain **data**, schema-validated by `PolicyThresholdsStore` → `PolicyThresholds` | The numeric knobs the lambdas read as `policy.PassGrade` / `facts.TopEntry` and the host pass reads directly: pass grade, min passes, entry thresholds, DfE floors, adult age, the optional green cap (normally unset), amber score factor. |
 | **Qualification scale** | `data/qualifications.yaml` | Plain **data**, schema-validated by `QualificationScaleStore` → `QualificationScale` | Grade ordering within each qualification type, plus the A-level-points equivalence used when prior qualifications lift a subject's prediction. |
-| **Subject-relationship rules** | `data/catalogue.yaml` | Plain **data**, schema-validated by `EnrolmentRules.Engine.Authoring.CatalogueStore` — *not* RulesEngine | UCAS weights, exclusion pairs, own-time/veto prefixes, prerequisites, entry equivalents, restudy bars, per-subject regression — which subjects relate to which. |
+| **Subject-relationship rules** | `data/catalogue.yaml` | Plain **data**, schema-validated by `EnrolmentRules.Engine.Authoring.CatalogueStore` — *not* RulesEngine | priority weights, exclusion pairs, own-time/veto prefixes, prerequisites, entry equivalents, restudy bars, per-subject regression — which subjects relate to which. |
 | **Relationship types + scale invariants** | internal engine machinery, `PredictionModel`/`ALevelGrade` math, `Thresholds` | Compiled **C#** | Not rules — the fixed *types* a rule can take and how they apply (a rule cannot read sibling rule outcomes), plus the GCSE-scale invariants. Changed only to add a new *kind* of relationship — rare, not part of normal operation. |
 
 The one-line model: **what** to decide for one student → workflow YAML; the *numbers* it turns on →
@@ -430,7 +430,7 @@ The five evaluation stages are fixed, each consuming the previous one's output:
    and the catch-all `physics:red`.
 4. **Cross-subject constraint pass** applies prerequisite, exclusion, own-time, and veto
    adjustments, moving a subject from green to amber or red on a cross-subject violation.
-5. **Aggregation** computes the summary counts and projected tariff (and applies the green cap only
+5. **Aggregation** computes the summary counts and programme priority score (and applies the green cap only
    if explicitly enabled — by default it does nothing and every green stays green).
 
 Three concrete rule patterns show up again and again:
@@ -537,7 +537,7 @@ ratings at once. It is a pure function `(ratings, profile) → Adjustment[]`. Si
 
   ```yaml
   - subject: further_maths
-    ucas_weight: 56
+    priority_weight: 56
     prerequisites:
       - any_of: [maths]
         requires: chosen
@@ -597,13 +597,13 @@ above is the *net* precedence after `Apply`. Promotion never happens.
 
 This runs **after** the constraint pass:
 
-- **Summary.** Green/amber counts and a **projected UCAS tariff** = full `UcasWeight` per green
-  + the loaded `AmberTariffFactor` (half) per amber. Weights live in `Catalogue`.
-- **Ranking.** Subjects ordered green → amber → red, ties broken by descending UCAS weight.
+- **Summary.** Green/amber counts and a **programme priority score** = full `PriorityWeight` per green
+  + the loaded `AmberScoreFactor` (half) per amber. Weights live in `Catalogue`.
+- **Ranking.** Subjects ordered green → amber → red, ties broken by descending priority weight.
 - **Green cap (optional, off by default).** `MaxGreenChoices` is normally unset in
   `data/thresholds.yaml`, so the cap does nothing and every green stays green — the system reports
   what a student is *allowed* to study, not an enforced shortlist. If an admin sets it to a positive
-  integer and more than that many subjects survive green, the lowest-UCAS-weight surplus greens are
+  integer and more than that many subjects survive green, the lowest-priority-weight surplus greens are
   demoted to amber with reason "exceeds auto-enrol cap". It must run here because it counts the greens
   that *survived* the constraint downgrades.
 
@@ -619,7 +619,7 @@ downgrade — constraint pass and (when enabled) cap alike.
   "eligible": true,
   "eligibility_reasons": [],
   "recommendations": [ { "subject": "maths", "rating": "green", "reason": "..." }, ... ],
-  "summary": { "green_count": 4, "amber_count": 5, "projected_tariff": 300 },
+  "summary": { "green_count": 4, "amber_count": 5, "programme_priority_score": 300 },
   "adjustments": [ { "subject": "art", "from": "green", "to": "amber", "reason": "Mutual exclusion with history — authorisation required" }, ... ]
 }
 ```
@@ -704,7 +704,7 @@ normal operation. They are listed only to mark the boundary.
 to require 6 GCSE passes instead of 5, set `min_passes: 6` — the `EnoughPasses` expression already
 reads `policy.MinPasses`, so no expression or code change is needed. The file is loaded and
 schema-validated at startup (`PolicyThresholdsStore`) and threaded in as `PolicyThresholds`, so the
-new value flows to *both* the eligibility lambda and the host pass (optional green cap, tariff, advice).
+new value flows to *both* the eligibility lambda and the host pass (optional green cap, score, advice).
 No recompile — but **you must add or update a test that drives the change through the engine** (see
 [defence in depth](#7-why-you-can-trust-untyped-rules-defence-in-depth)). A long-running host must
 also call `IEnrolmentEngineFactory.Reload` (or rebuild the engine) to pick up the edit; the

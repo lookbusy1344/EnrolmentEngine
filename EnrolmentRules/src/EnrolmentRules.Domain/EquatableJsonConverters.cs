@@ -74,13 +74,13 @@ internal sealed class EquatableDictionaryJsonConverter<TKey, TValue> : JsonConve
 		// The deserialized dictionary is freshly allocated and unaliased, so hand it straight to the
 		// ownership constructor rather than copying it again through the public CopyOf factory.
 		var entries = JsonSerializer.Deserialize(ref reader, info)
-			?? throw new JsonException("Expected a JSON object.");
+					  ?? throw new JsonException("Expected a JSON object.");
 		return new(entries);
 	}
 
 	public override void Write(Utf8JsonWriter writer, EquatableDictionary<TKey, TValue> value, JsonSerializerOptions options)
 	{
 		var info = (JsonTypeInfo<Dictionary<TKey, TValue>>)options.GetTypeInfo(typeof(Dictionary<TKey, TValue>));
-		JsonSerializer.Serialize(writer, new Dictionary<TKey, TValue>(value), info);
+		JsonSerializer.Serialize(writer, new(value), info);
 	}
 }

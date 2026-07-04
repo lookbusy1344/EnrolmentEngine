@@ -101,8 +101,8 @@ public static class PolicyThresholdsStore
 
 		if (thresholds.MinDfeGreenProbabilityAtOrAbove is < 0 or > 1
 			|| thresholds.MinDfeAmberProbabilityAtOrAbove is < 0 or > 1
-			|| thresholds.AmberTariffFactor is < 0 or > 1) {
-			throw new InvalidDataException("Probability and tariff factors must be within 0..1.");
+			|| thresholds.AmberScoreFactor is < 0 or > 1) {
+			throw new InvalidDataException("Probability and score factors must be within 0..1.");
 		}
 
 		if (thresholds.MinDfeAmberProbabilityAtOrAbove > thresholds.MinDfeGreenProbabilityAtOrAbove) {

@@ -31,7 +31,7 @@ public sealed record PolicyThresholds(
 	double MinDfeAmberProbabilityAtOrAbove,
 	int AdultAge,
 	int? MaxGreenChoices,
-	double AmberTariffFactor,
+	double AmberScoreFactor,
 	bool AdviceConsidersUnsatGcses = false,
 	int AdviceMaxGradeCost = 12,
 	int AdviceMaxSubjectsChanged = 3,

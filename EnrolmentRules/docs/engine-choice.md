@@ -25,7 +25,7 @@ RETE's agenda, conflict resolution, and truth maintenance are machinery for stat
 does not have. We would carry the cost of a fact session per evaluation, retraction
 semantics, salience, and conflict-resolution reasoning for capabilities we would never exercise.
 
-**The hard part is relational aggregation over the result set, not rule matching.** The UCAS tariff,
+**The hard part is relational aggregation over the result set, not rule matching.** The programme priority score,
 exclusion/prerequisite resolution, and the optional green cap all compare a subject against its siblings. RETE
 can express cross-fact joins, but a join network over every subject pair is a heavyweight,
 error-prone way to write what is, in compiled C#, a sort and a fold (internal engine machinery).

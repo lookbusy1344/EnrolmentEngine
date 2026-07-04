@@ -2,11 +2,10 @@ namespace EnrolmentRules.Tests;
 
 using AwesomeAssertions;
 using Domain;
-using Engine;
 
 /// <summary>
-///     Phase 6 — host-code aggregation over the <em>final</em> ratings: the UCAS tariff summary, the green
-///     choice cap (§1.6), and the ranked shortlist. The tariff and cap are cross-checked against an
+///     Phase 6 — host-code aggregation over the <em>final</em> ratings: the programme priority score summary, the green
+///     choice cap (§1.6), and the ranked shortlist. The score and cap are cross-checked against an
 ///     independent recomputation from the <see cref="Catalogue" /> weights — never a literal — so a wrong
 ///     weight or factor breaks a test. The cap runs <em>after</em> the constraint pass: it counts greens
 ///     that survived the exclusion/prereq/own-time downgrades.
@@ -45,10 +44,10 @@ public sealed class AggregationTests
 			["art"] = 6,
 		}, []);
 
-	private static int Weight(Subject subject) => Catalogue.Meta(subject).UcasWeight;
+	private static int Weight(Subject subject) => Catalogue.Meta(subject).PriorityWeight;
 
 	[Fact]
-	public void projected_tariff_is_full_weight_for_greens_plus_half_for_ambers()
+	public void programme_priority_score_is_full_weight_for_greens_plus_half_for_ambers()
 	{
 		var ratings = Ratings(
 			(Subject.Maths, Rating.Green), (Subject.Physics, Rating.Green), (Subject.Chemistry, Rating.Green),
@@ -58,15 +57,15 @@ public sealed class AggregationTests
 
 		// Independent recomputation from the catalogue weights and the loaded amber factor.
 		var expected = Weight(Subject.Maths) + Weight(Subject.Physics) + Weight(Subject.Chemistry)
-					   + (Harness.Thresholds.AmberTariffFactor * (Weight(Subject.Biology) + Weight(Subject.Art)));
+					   + (Harness.Thresholds.AmberScoreFactor * (Weight(Subject.Biology) + Weight(Subject.Art)));
 
 		summary.GreenCount.Should().Be(3);
 		summary.AmberCount.Should().Be(2);
-		summary.ProjectedTariff.Should().Be(expected);
+		summary.ProgrammePriorityScore.Should().Be(expected);
 	}
 
 	[Fact]
-	public void all_red_student_has_zero_tariff_and_a_well_formed_shortlist()
+	public void all_red_student_has_zero_programme_score_and_a_well_formed_shortlist()
 	{
 		var ratings = Ratings();
 
@@ -167,15 +166,15 @@ public sealed class AggregationTests
 	}
 
 	[Fact]
-	public void projected_tariff_honours_a_loaded_amber_factor_override()
+	public void programme_priority_score_honours_a_loaded_amber_factor_override()
 	{
-		// The amber tariff factor is loaded data: changing it must change the projected tariff.
-		var halved = Harness.Thresholds with { AmberTariffFactor = Harness.Thresholds.AmberTariffFactor / 2 };
+		// The amber score factor is loaded data: changing it must change the programme priority score.
+		var halved = Harness.Thresholds with { AmberScoreFactor = Harness.Thresholds.AmberScoreFactor / 2 };
 		var ratings = Ratings((Subject.Maths, Rating.Green), (Subject.Art, Rating.Amber));
 
 		var summary = Aggregator.Summarise(ratings, Catalogue.Default, halved);
 
-		summary.ProjectedTariff.Should().Be(Weight(Subject.Maths) + (halved.AmberTariffFactor * Weight(Subject.Art)));
+		summary.ProgrammePriorityScore.Should().Be(Weight(Subject.Maths) + (halved.AmberScoreFactor * Weight(Subject.Art)));
 	}
 
 	[Fact]

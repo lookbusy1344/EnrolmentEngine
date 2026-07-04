@@ -2,7 +2,6 @@ namespace EnrolmentRules.Tests;
 
 using AwesomeAssertions;
 using Domain;
-using Engine;
 
 /// <summary>
 ///     Direct unit tests for <see cref="ConstraintPass.Apply" />, pinning the two behaviours the
@@ -156,10 +155,7 @@ public sealed class ConstraintPassTests
 		var maths = Harness.Catalogue.Meta(Subject.Maths) with { BlockingActivities = ["hates_maths"] };
 		var economics = Harness.Catalogue.Meta(Subject.Economics) with { Exclusions = [] };
 		var catalogue = new CatalogueData(
-			new Dictionary<Subject, SubjectMeta> {
-				[Subject.Maths] = maths,
-				[Subject.Economics] = economics,
-			}, [Subject.Maths, Subject.Economics]);
+			new Dictionary<Subject, SubjectMeta> { [Subject.Maths] = maths, [Subject.Economics] = economics }, [Subject.Maths, Subject.Economics]);
 		var profile = new StudentProfile("S-PREREQ-VETO", 7.0, [], [], ["hates_maths"]);
 		SubjectRating[] ratings = [
 			new(Subject.Maths, Rating.Green, "maths base"),
@@ -182,10 +178,8 @@ public sealed class ConstraintPassTests
 		// over-firing prerequisites.
 		var economics = Harness.Catalogue.Meta(Subject.Economics) with { Exclusions = [] };
 		var catalogue = new CatalogueData(
-			new Dictionary<Subject, SubjectMeta> {
-				[Subject.Maths] = Harness.Catalogue.Meta(Subject.Maths),
-				[Subject.Economics] = economics,
-			}, [Subject.Maths, Subject.Economics]);
+			new Dictionary<Subject, SubjectMeta> { [Subject.Maths] = Harness.Catalogue.Meta(Subject.Maths), [Subject.Economics] = economics },
+			[Subject.Maths, Subject.Economics]);
 		var profile = new StudentProfile("S-PREREQ-MET", 7.0, [], [], []);
 		SubjectRating[] ratings = [
 			new(Subject.Maths, Rating.Green, "maths base"),

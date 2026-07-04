@@ -2,7 +2,6 @@ namespace EnrolmentRules.Tests;
 
 using AwesomeAssertions;
 using Domain;
-using Engine;
 using Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection;
 

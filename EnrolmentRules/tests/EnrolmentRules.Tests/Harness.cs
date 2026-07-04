@@ -1,7 +1,6 @@
 namespace EnrolmentRules.Tests;
 
 using Domain;
-using Engine;
 using Prediction;
 using RulesEngine.Interfaces;
 using RulesEngine.Models;

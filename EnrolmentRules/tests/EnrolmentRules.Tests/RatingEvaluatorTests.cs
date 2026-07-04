@@ -1,7 +1,6 @@
 namespace EnrolmentRules.Tests;
 
 using AwesomeAssertions;
-using Engine;
 using RulesEngine.Interfaces;
 using RulesEngine.Models;
 
@@ -37,6 +36,12 @@ public sealed class RatingEvaluatorTests
 		public ValueTask<List<RuleResultTree>> ExecuteAllRulesAsync(string workflowName, params RuleParameter[] ruleParams) =>
 			ValueTask.FromException<List<RuleResultTree>>(new InvalidOperationException($"workflow not found: {workflowName}"));
 
+		public ValueTask<List<RuleResultTree>> ExecuteAllRulesAsync(
+			string workflowName,
+			RuleParameter[] ruleParams,
+			CancellationToken cancellationToken) =>
+			ValueTask.FromException<List<RuleResultTree>>(new InvalidOperationException($"workflow not found: {workflowName}"));
+
 		public ValueTask<List<RuleResultTree>> ExecuteAllRulesAsync(string workflowName, params object[] inputs) =>
 			ValueTask.FromException<List<RuleResultTree>>(new InvalidOperationException($"workflow not found: {workflowName}"));
 
@@ -61,6 +66,15 @@ public sealed class RatingEvaluatorTests
 		public List<object> PolicyFacts { get; } = [];
 
 		public ValueTask<List<RuleResultTree>> ExecuteAllRulesAsync(string workflowName, params RuleParameter[] ruleParams)
+		{
+			PolicyFacts.Add(ruleParams.Single(parameter => parameter.Name == "policy").Value);
+			return ValueTask.FromResult<List<RuleResultTree>>([]);
+		}
+
+		public ValueTask<List<RuleResultTree>> ExecuteAllRulesAsync(
+			string workflowName,
+			RuleParameter[] ruleParams,
+			CancellationToken cancellationToken)
 		{
 			PolicyFacts.Add(ruleParams.Single(parameter => parameter.Name == "policy").Value);
 			return ValueTask.FromResult<List<RuleResultTree>>([]);

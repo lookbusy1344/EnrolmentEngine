@@ -2,7 +2,6 @@ namespace EnrolmentRules.Tests;
 
 using AwesomeAssertions;
 using Domain;
-using Engine;
 
 /// <summary>
 ///     Phase 3 — per-subject entry requirements + green/amber/red rating tiers as ordered workflow rules,

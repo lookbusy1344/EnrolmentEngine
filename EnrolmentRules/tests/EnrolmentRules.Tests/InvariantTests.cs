@@ -4,7 +4,6 @@ using System.Text.Json;
 using System.Text.RegularExpressions;
 using AwesomeAssertions;
 using Domain;
-using Engine;
 using FsCheck;
 using FsCheck.Fluent;
 using FsCheck.Xunit;
@@ -18,11 +17,11 @@ using RulesEngine.Interfaces;
 /// </summary>
 public sealed partial class InvariantTests
 {
-	// With the green cap disabled (the shipped default), the projected tariff is maximised when every
-	// subject is green — each contributing its full UCAS weight, with no amber discount. That sum is the
-	// upper bound any real student's tariff must stay within.
-	private static readonly double MaxProjectedTariff =
-		Catalogue.Subjects.Sum(static subject => Catalogue.Meta(subject).UcasWeight);
+	// With the green cap disabled (the shipped default), the programme priority score is maximised when every
+	// subject is green — each contributing its full priority weight, with no amber discount. That sum is the
+	// upper bound any real student's score must stay within.
+	private static readonly double MaxProgrammePriorityScore =
+		Catalogue.Subjects.Sum(static subject => Catalogue.Meta(subject).PriorityWeight);
 
 	private static readonly Qualification BiologyPriorALevel =
 		new(Subject.Biology.Value, QualificationType.ALevel, "e");
@@ -127,7 +126,7 @@ public sealed partial class InvariantTests
 			.Should()
 			.BeEquivalentTo(Catalogue.Subjects);
 
-		explained.Summary.ProjectedTariff.Should().BeInRange(0, MaxProjectedTariff);
+		explained.Summary.ProgrammePriorityScore.Should().BeInRange(0, MaxProgrammePriorityScore);
 
 		if (!explained.Eligible) {
 			return true;

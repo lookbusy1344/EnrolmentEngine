@@ -26,7 +26,7 @@ computational:
 | `RatingEvaluator.EvaluateWithGate` | Eligibility gate + per-subject tiers | Calls RulesEngine |
 | `RulesEngine.ExecuteAllRulesAsync` | Compiled-lambda evaluation over one student's facts | **CPU; completes synchronously** |
 | `ConstraintPass.Evaluate` / `Apply` | Cross-subject prerequisites, exclusions, vetoes | Synchronous already |
-| `Aggregator.CapGreens` / `Summarise` / `Rank` | Tariff fold, optional green cap, ordering | Synchronous already |
+| `Aggregator.CapGreens` / `Summarise` / `Rank` | Programme-priority-score fold, optional green cap, ordering | Synchronous already |
 
 The only `await` that reaches a library boundary is `RulesEngine.ExecuteAllRulesAsync`. And that
 call does not actually go async: RulesEngine compiles the YAML lambdas to delegates and **invokes
