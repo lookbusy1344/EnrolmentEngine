@@ -70,15 +70,15 @@ public sealed class AdditionalSubjectsTests
 	}
 
 	[Fact]
-	public void economics_entry_requires_maths_at_strong_entry()
+	public void economics_entry_requires_maths_at_standard_entry()
 	{
-		// English at top entry throughout, only Maths moves across the strong-entry boundary.
+		// English at top entry throughout, only Maths moves across the standard-entry boundary.
 		var below = Rate(
-			("maths", Harness.Thresholds.StrongEntry - 1), ("english_language", Harness.Thresholds.TopEntry));
+			("maths", Harness.Thresholds.StandardEntry - 1), ("english_language", Harness.Thresholds.TopEntry));
 		Of(below, Subject.Economics).Should().Be(Rating.Red);
 
 		var met = Rate(
-			("maths", Harness.Thresholds.TopEntry), ("english_language", Harness.Thresholds.TopEntry));
+			("maths", Harness.Thresholds.StandardEntry), ("english_language", Harness.Thresholds.TopEntry));
 		Of(met, Subject.Economics).Should().NotBe(Rating.Red);
 	}
 
@@ -95,33 +95,36 @@ public sealed class AdditionalSubjectsTests
 	}
 
 	[Fact]
-	public void spanish_requires_a_modern_language_gcse_at_strong_entry()
+	public void spanish_requires_a_modern_language_gcse_at_standard_entry()
 	{
-		// No spanish GCSE key exists, so a French or German GCSE at strong entry stands proxy for prior
+		// No spanish GCSE key exists, so a French or German GCSE at standard entry stands proxy for prior
 		// language study. Strong English alone is not enough.
 		var noLanguage = Rate(
 			("english_language", 9), ("maths", 9), ("history", 9));
 		Of(noLanguage, Subject.Spanish).Should().Be(Rating.Red);
 
 		var withFrench = Rate(
-			("french", Harness.Thresholds.StrongEntry), ("english_language", 9), ("maths", 9), ("history", 9));
+			("french", Harness.Thresholds.StandardEntry), ("english_language", 9), ("maths", 9), ("history", 9));
 		Of(withFrench, Subject.Spanish).Should().NotBe(Rating.Red);
 	}
 
 	[Fact]
-	public void economics_and_business_studies_are_a_soft_timetable_clash()
+	public void economics_and_business_studies_clash_only_after_one_is_chosen()
 	{
-		// Both green at the top; the amber mutual exclusion demotes the lower-priority-weight subject
-		// (business studies, 34) and leaves the winner (economics, 45) green.
 		var engine = Harness.ShippedEngine();
 		var student = new StudentInput("S-CLASH", Uniform(9).ToDictionary(g => g.Item1, g => g.Item2), []);
 
-		var result = engine.Evaluate(student);
-		var economics = result.Recommendations.Single(r => r.Subject == Subject.Economics);
-		var business = result.Recommendations.Single(r => r.Subject == Subject.BusinessStudies);
+		var unchosen = engine.Evaluate(student);
+		var economics = unchosen.Recommendations.Single(r => r.Subject == Subject.Economics);
+		var business = unchosen.Recommendations.Single(r => r.Subject == Subject.BusinessStudies);
 
 		economics.Rating.Should().Be(Rating.Green);
-		business.Rating.Should().Be(Rating.Amber);
-		business.Reason.Should().Contain("Mutual exclusion").And.Contain(EnumNames.NameOf(Subject.Economics));
+		business.Rating.Should().Be(Rating.Green);
+
+		var chosen = engine.Evaluate(student with { ChosenALevels = [Subject.Economics] });
+		chosen.Recommendations.Single(r => r.Subject == Subject.Economics).Rating.Should().Be(Rating.Green);
+		var excludedBusiness = chosen.Recommendations.Single(r => r.Subject == Subject.BusinessStudies);
+		excludedBusiness.Rating.Should().Be(Rating.Amber);
+		excludedBusiness.Reason.Should().Be($"Cannot be combined with chosen {EnumNames.NameOf(Subject.Economics)}");
 	}
 }

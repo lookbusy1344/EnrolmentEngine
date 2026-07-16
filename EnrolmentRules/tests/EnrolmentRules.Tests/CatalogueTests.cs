@@ -55,7 +55,7 @@ public sealed class CatalogueTests
 	}
 
 	[Fact]
-	public void mutually_excluding_subjects_must_have_distinct_priority_weights()
+	public void mutually_excluding_subjects_may_share_priority_weights()
 	{
 		var dir = Path.Combine(Path.GetTempPath(), "enrolmentrules-tests", "catalogue-" + Guid.NewGuid().ToString("N"));
 		Directory.CreateDirectory(dir);
@@ -68,10 +68,7 @@ public sealed class CatalogueTests
 		try {
 			var act = () => CatalogueStore.LoadAndValidate(dir);
 
-			act.Should().Throw<CatalogueException>()
-				.WithMessage("*distinct priority weights*")
-				.Which.InnerException.Should().BeOfType<InvalidDataException>()
-				.Which.Message.Should().Contain("french").And.Contain("german");
+			act.Should().NotThrow();
 		}
 		finally {
 			Directory.Delete(dir, true);

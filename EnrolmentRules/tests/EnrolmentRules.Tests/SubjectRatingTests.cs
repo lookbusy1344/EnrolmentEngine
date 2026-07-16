@@ -21,6 +21,23 @@ public sealed class SubjectRatingTests
 	private static Rating Of(IEnumerable<SubjectRating> ratings, Subject subject) =>
 		ratings.Single(r => r.Subject == subject).Rating;
 
+	// Rate one subject from a hand-built profile: predicted points and DfE evidence are supplied directly,
+	// bypassing prediction, so a tier boundary can be probed without hunting for a GCSE set that lands the
+	// average on the exact predicted value. The gcses still drive the entry gate through the engine.
+	private static Rating RateSynthetic(
+		Subject subject, double predictedPoints, TransitionEvidence evidence, params (string Subject, int Grade)[] gcses)
+	{
+		var profile = new StudentProfile("S-TEST", 6.0, [new(subject, predictedPoints)], [evidence], []);
+		var ratings = Harness.ShippedEvaluator()
+			.EvaluateRatings(profile, [.. gcses.Select(g => new GcseResult(g.Subject, g.Grade))]);
+		return ratings.Single(r => r.Subject == subject).Rating;
+	}
+
+	// All probability mass at A*, so P(≥ any grade) = 1 and neither DfE confidence floor ever blocks: the
+	// rating then turns purely on the predicted-points tier.
+	private static TransitionEvidence FullConfidence(Subject subject) =>
+		new(subject, "test", "synthetic", 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 1.0);
+
 	// A full set of GCSEs at one uniform grade, so the average equals that grade.
 	private static (string, int)[] Uniform(int grade) => [
 		("maths", grade), ("english_language", grade), ("physics", grade),
@@ -57,38 +74,50 @@ public sealed class SubjectRatingTests
 	}
 
 	[Fact]
-	public void english_lit_entry_requires_both_english_and_maths_at_top_entry()
+	public void english_lit_entry_requires_an_english_gcse_at_standard_entry()
 	{
-		// English Language one below TopEntry: the entry conjunction fails ⇒ red, regardless of prediction.
-		var below = Rate(("english_language", Harness.Thresholds.TopEntry - 1), ("maths", Harness.Thresholds.TopEntry));
+		// No English GCSE at standard entry (English Language one below): entry fails ⇒ red regardless of prediction.
+		var below = Rate(("english_language", Harness.Thresholds.StandardEntry - 1), ("maths", Harness.Thresholds.StandardEntry));
 		Of(below, Subject.EnglishLiterature).Should().Be(Rating.Red);
 
-		// Both at TopEntry (average 7.0): entry met and predicted 4.15 clears the green (B) threshold.
-		var both = Rate(("english_language", Harness.Thresholds.TopEntry), ("maths", Harness.Thresholds.TopEntry));
-		Of(both, Subject.EnglishLiterature).Should().Be(Rating.Green);
+		// English Language at standard entry satisfies the either-English entry ⇒ no longer barred at the gate.
+		var met = Rate(("english_language", Harness.Thresholds.StandardEntry), ("maths", Harness.Thresholds.StandardEntry));
+		Of(met, Subject.EnglishLiterature).Should().NotBe(Rating.Red);
 	}
 
 	[Fact]
-	public void maths_tier_boundary_straddles_the_green_threshold()
+	public void maths_entry_requires_maths_gcse_at_the_exceptional_grade()
 	{
-		// Maths GCSE 7, average 7.0 ⇒ predicted 4.6: clears amber (B) but not green (A) ⇒ amber.
-		Of(Rate(("maths", 7)), Subject.Maths).Should().Be(Rating.Amber);
+		// Maths GCSE one below the exceptional grade ⇒ the hard entry gate fails ⇒ red however strong the prediction.
+		Of(Rate(("maths", Harness.Thresholds.ExceptionalEntry - 1), ("art", 9)), Subject.Maths).Should().Be(Rating.Red);
 
-		// Adding a 9 lifts the average to 8.0 ⇒ predicted 5.4: clears the green (A) point threshold, and at
-		// the 8-to-9 prior-attainment band Maths P(≥A) ≈ 0.84 clears the green DfE confidence floor ⇒ green.
-		Of(Rate(("maths", 7), ("art", 9)), Subject.Maths).Should().Be(Rating.Green);
+		// Maths GCSE at the exceptional grade with a strong all-round profile ⇒ entry met and the prediction
+		// clears the green tier.
+		Of(Rate(("maths", Harness.Thresholds.ExceptionalEntry), ("art", 9)), Subject.Maths).Should().Be(Rating.Green);
+	}
+
+	[Fact]
+	public void tier_boundary_straddles_green_amber_and_red()
+	{
+		var confident = FullConfidence(Subject.Music);
+
+		// Entry (Music ≥ standard) met throughout; only the predicted points move across the tier lines.
+		// Predicted D clears the green tier; predicted E clears only amber; below E is red.
+		RateSynthetic(Subject.Music, ALevelGrade.D, confident, ("music", Harness.Thresholds.StandardEntry)).Should().Be(Rating.Green);
+		RateSynthetic(Subject.Music, ALevelGrade.E, confident, ("music", Harness.Thresholds.StandardEntry)).Should().Be(Rating.Amber);
+		RateSynthetic(Subject.Music, ALevelGrade.E - 0.5, confident, ("music", Harness.Thresholds.StandardEntry)).Should().Be(Rating.Red);
 	}
 
 	[Fact]
 	public void green_dfe_confidence_floor_demotes_a_points_eligible_subject_to_amber()
 	{
-		// Music GCSE 9 with average 6.75 ⇒ predicted 4.04: clears the green point threshold (Music green tests
-		// predicted ≥ B). But at the 6-to-7 prior-attainment band Music P(≥B) ≈ 0.52 sits between the amber
-		// (0.50) and green (0.60) DfE confidence floors, so green is blocked on confidence and the subject is
-		// amber. Reverting the green floor to the amber floor would flip this back to green and break here.
-		var ratings = Rate(("music", 9), ("history", 6), ("art", 6), ("biology", 6));
+		// Predicted D clears the green point tier, but P(≥D) = 0.55 sits between the amber (0.50) and green
+		// (0.60) DfE confidence floors, so green is blocked on confidence and the subject is amber. Reverting
+		// the green floor to the amber floor would flip this back to green and break here.
+		var midConfidence = new TransitionEvidence(Subject.Music, "test", "synthetic", 0.35, 0.10, 0.55, 0.0, 0.0, 0.0, 0.0);
 
-		Of(ratings, Subject.Music).Should().Be(Rating.Amber);
+		RateSynthetic(Subject.Music, ALevelGrade.D, midConfidence, ("music", Harness.Thresholds.StandardEntry))
+			.Should().Be(Rating.Amber);
 	}
 
 	[Fact]
@@ -102,7 +131,7 @@ public sealed class SubjectRatingTests
 			[]);
 		var evaluator = Harness.ShippedEvaluator();
 
-		var ratings = evaluator.EvaluateRatings(profile, [new("maths", Harness.Thresholds.TopEntry)]);
+		var ratings = evaluator.EvaluateRatings(profile, [new("maths", Harness.Thresholds.ExceptionalEntry)]);
 
 		// The point prediction clears green and amber, but both tiers now consume DfE probability evidence.
 		// With no matrix row on the profile, both tiers are blocked and red wins.
@@ -122,7 +151,7 @@ public sealed class SubjectRatingTests
 
 		var ratings = evaluator.EvaluateRatings(
 			profile,
-			[new("maths", Harness.Thresholds.TopEntry), new("physics", Harness.Thresholds.StrongEntry)]);
+			[new("maths", Harness.Thresholds.ExceptionalEntry), new("physics", Harness.Thresholds.StrongEntry)]);
 
 		// Physics clears entry and the predicted B green tier, but both green and amber are blocked without the DfE row.
 		Of(ratings, Subject.Physics).Should().Be(Rating.Red);
@@ -146,16 +175,16 @@ public sealed class SubjectRatingTests
 	}
 
 	[Fact]
-	public void english_lit_tier_boundary_straddles_the_amber_threshold()
+	public void english_lit_entry_is_satisfied_by_either_english_gcse()
 	{
-		// Entry met both times; the average moves the prediction across the amber/green tier line.
-		// Average 6.0 ⇒ predicted 3.3: amber. Average 7.0 ⇒ predicted 4.15: green.
-		var amber = Rate(
-			("english_language", 7), ("maths", 7), ("geography", 5), ("french", 5));
-		Of(amber, Subject.EnglishLiterature).Should().Be(Rating.Amber);
+		// A student who sat English Language but not English Literature GCSE still clears English Literature
+		// entry through the either-English rule, and a strong profile rates it green.
+		var viaLanguage = Rate(("english_language", 7), ("maths", 7));
+		Of(viaLanguage, Subject.EnglishLiterature).Should().Be(Rating.Green);
 
-		var green = Rate(("english_language", 7), ("maths", 7));
-		Of(green, Subject.EnglishLiterature).Should().Be(Rating.Green);
+		// Equally, the English Literature GCSE alone satisfies entry.
+		var viaLiterature = Rate(("english_literature", 7), ("maths", 7));
+		Of(viaLiterature, Subject.EnglishLiterature).Should().Be(Rating.Green);
 	}
 
 	[Fact]

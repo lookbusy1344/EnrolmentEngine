@@ -30,6 +30,7 @@ public sealed class PublicApiSurfaceTests
 				new[] {
 					"EnrolmentRules.Domain.AgeCalculator", "EnrolmentRules.Domain.ALevelGrade", "EnrolmentRules.Domain.AdjustmentKind",
 					"EnrolmentRules.Domain.Adjustment", "EnrolmentRules.Domain.AdviceResult", "EnrolmentRules.Domain.BatchJsonContext",
+					"EnrolmentRules.Domain.BuildInfo",
 					"EnrolmentRules.Domain.BatchOutcome", "EnrolmentRules.Domain.Catalogue", "EnrolmentRules.Domain.CatalogueData",
 					"EnrolmentRules.Domain.CatalogueDataException", "EnrolmentRules.Domain.EnrolmentDataException",
 					"EnrolmentRules.Domain.EnrolmentJsonContext", "EnrolmentRules.Domain.EnrolmentResult", "EnrolmentRules.Domain.EnrolmentSummary",

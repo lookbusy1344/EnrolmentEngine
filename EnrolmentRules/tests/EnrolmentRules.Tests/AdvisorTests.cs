@@ -34,28 +34,27 @@ public sealed class AdvisorTests
 	{
 		var engine = Harness.ShippedEngine();
 
-		var advice = engine.Advise(new("S-ADVISE", new Dictionary<string, int> {
+		var student = new StudentInput("S-ADVISE", new Dictionary<string, int> {
 			["english_language"] = 7,
-			["maths"] = 5,
+			["maths"] = 7,
 			["physics"] = 5,
 			["chemistry"] = 5,
 			["biology"] = 5,
-		}, []));
-		var chemistry = advice.Advice.Single(a => a.Subject == Subject.Chemistry);
+		}, []);
 
-		chemistry.Reachable.Should().BeTrue();
-		chemistry.Target.Should().Be(Rating.Amber);
-		chemistry.Changes.Should().NotBeEmpty();
+		var advice = engine.Advise(student);
+		// Maths is red on its hard Maths-8 entry gate; the smallest fix is a single-grade bump to the
+		// exceptional grade.
+		var maths = advice.Advice.Single(a => a.Subject == Subject.Maths);
 
-		var improved = ApplyChanges(new("S-ADVISE", new Dictionary<string, int> {
-			["english_language"] = 7,
-			["maths"] = 5,
-			["physics"] = 5,
-			["chemistry"] = 5,
-			["biology"] = 5,
-		}, []), chemistry.Changes);
+		maths.Reachable.Should().BeTrue();
+		maths.Target.Should().Be(Rating.Amber);
+		maths.Changes.Should().ContainSingle(c => c.GcseSubject == "maths" && c.From == 7 && c.To == 8);
+
+		var improved = ApplyChanges(student, maths.Changes);
 		var explained = engine.Explain(improved);
-		explained.Explanations.Single(e => e.Subject == Subject.Chemistry).Rating.Should().Be(Rating.Amber);
+		((int)explained.Explanations.Single(e => e.Subject == Subject.Maths).Rating)
+			.Should().BeLessThanOrEqualTo((int)maths.Target);
 	}
 
 	[Fact]
@@ -72,15 +71,17 @@ public sealed class AdvisorTests
 		}, []) { DateOfBirth = new DateOnly(2009, 9, 1) };
 
 		var advice = engine.Advise(student);
-		var chemistry = advice.Advice.Single(a => a.Subject == Subject.Chemistry);
+		// Maths is red on its Maths-8 entry gate; its amber target is met by a single bump that actually
+		// lands it green — a red→green step still satisfies the amber target.
+		var maths = advice.Advice.Single(a => a.Subject == Subject.Maths);
 
-		chemistry.Reachable.Should().BeTrue();
-		chemistry.Target.Should().Be(Rating.Amber);
-		chemistry.Changes.Should().BeEquivalentTo([new GradeChange("chemistry", 5, 6)]);
+		maths.Reachable.Should().BeTrue();
+		maths.Target.Should().Be(Rating.Amber);
+		maths.Changes.Should().BeEquivalentTo([new GradeChange("maths", 7, 8)]);
 
-		var improved = ApplyChanges(student, chemistry.Changes);
+		var improved = ApplyChanges(student, maths.Changes);
 		var explained = engine.Explain(improved);
-		((int)explained.Explanations.Single(e => e.Subject == Subject.Chemistry).Rating).Should().BeLessThanOrEqualTo((int)chemistry.Target);
+		((int)explained.Explanations.Single(e => e.Subject == Subject.Maths).Rating).Should().BeLessThanOrEqualTo((int)maths.Target);
 	}
 
 	[Fact]
@@ -254,13 +255,17 @@ public sealed class AdvisorTests
 		};
 
 		var advice = engine.Advise(student);
-		var biology = advice.Advice.Single(a => a.Subject == Subject.Biology);
+		// Maths is red on its Maths-8 gate and reachable by a single bump. Biology (GCSE 4) is green only
+		// because the applied_science distinction stands in for its entry and lifts its prediction — so if the
+		// prior qualification were dropped while replaying the reported change, biology would fall to red.
+		var maths = advice.Advice.Single(a => a.Subject == Subject.Maths);
 
-		biology.Reachable.Should().BeTrue();
+		maths.Reachable.Should().BeTrue();
 
-		var improved = ApplyChanges(student, biology.Changes);
+		var improved = ApplyChanges(student, maths.Changes);
 		var explained = engine.Explain(improved);
-		((int)explained.Explanations.Single(e => e.Subject == Subject.Biology).Rating).Should().BeLessThanOrEqualTo((int)biology.Target);
+		((int)explained.Explanations.Single(e => e.Subject == Subject.Maths).Rating).Should().BeLessThanOrEqualTo((int)maths.Target);
+		explained.Explanations.Single(e => e.Subject == Subject.Biology).Rating.Should().Be(Rating.Green);
 	}
 
 	[Fact]
@@ -396,9 +401,9 @@ public sealed class AdvisorTests
 		furtherMaths.Reachable.Should().BeFalse();
 		furtherMaths.BlockedReason.Should().Be(ConstraintPass.MathsPrerequisiteReason);
 
-		var chemistry = parsed.Advice.Single(a => a.Subject == Subject.Chemistry);
-		chemistry.Reachable.Should().BeTrue();
-		chemistry.Changes.Should().ContainSingle(c => c.GcseSubject == "chemistry" && c.From == 5 && c.To == 8);
+		var maths = parsed.Advice.Single(a => a.Subject == Subject.Maths);
+		maths.Reachable.Should().BeTrue();
+		maths.Changes.Should().ContainSingle(c => c.GcseSubject == "maths" && c.From == 5 && c.To == 8);
 	}
 
 	[Fact]
@@ -459,10 +464,11 @@ public sealed class AdvisorTests
 		}, []);
 
 		var advice = engine.Advise(student);
-		var chemistry = advice.Advice.Single(a => a.Subject == Subject.Chemistry);
+		// Maths needs a 3-grade bump (5 → 8) to clear its entry gate; a 1-grade budget cannot reach it.
+		var maths = advice.Advice.Single(a => a.Subject == Subject.Maths);
 
-		chemistry.Reachable.Should().BeFalse();
-		chemistry.BlockedReason.Should().Be("budget exhausted");
+		maths.Reachable.Should().BeFalse();
+		maths.BlockedReason.Should().Be("budget exhausted");
 	}
 
 	[Fact]

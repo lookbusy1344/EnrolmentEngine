@@ -1,0 +1,3 @@
+[*.{cs,vb,cshtml,razor}]
+
+dotnet_diagnostic.VSTHRD111.severity = silent # no need for ConfigureAwait()

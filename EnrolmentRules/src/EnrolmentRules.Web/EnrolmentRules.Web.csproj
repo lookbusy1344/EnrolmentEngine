@@ -1,0 +1,51 @@
+<Project Sdk="Microsoft.NET.Sdk.Web">
+
+    <PropertyGroup>
+        <IsPackable>false</IsPackable>
+        <GenerateDocumentationFile>false</GenerateDocumentationFile>
+    </PropertyGroup>
+
+    <ItemGroup>
+        <ProjectReference Include="..\EnrolmentRules.Domain\EnrolmentRules.Domain.csproj"/>
+        <ProjectReference Include="..\EnrolmentRules.Engine\EnrolmentRules.Engine.csproj"/>
+        <ProjectReference Include="..\EnrolmentRules.Extensions.DependencyInjection\EnrolmentRules.Extensions.DependencyInjection.csproj"/>
+    </ItemGroup>
+
+    <ItemGroup>
+        <!-- Restores wwwroot/lib/ (gitignored, see libman.json) on every build so a fresh clone doesn't
+             need a manual `libman restore` step before the site or its tests can run. -->
+        <PackageReference Include="Microsoft.Web.LibraryManager.Build" Version="3.0.114">
+            <PrivateAssets>all</PrivateAssets>
+            <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
+        </PackageReference>
+    </ItemGroup>
+
+    <ItemGroup>
+        <Content Include="..\..\workflows\**\*">
+            <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+            <CopyToPublishDirectory>PreserveNewest</CopyToPublishDirectory>
+            <TargetPath>workflows\%(RecursiveDir)%(Filename)%(Extension)</TargetPath>
+        </Content>
+        <Content Include="..\..\data\dfe-transition-matrices\**\*">
+            <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+            <CopyToPublishDirectory>PreserveNewest</CopyToPublishDirectory>
+            <TargetPath>data\dfe-transition-matrices\%(RecursiveDir)%(Filename)%(Extension)</TargetPath>
+        </Content>
+        <Content Include="..\..\data\catalogue.yaml;..\..\data\catalogue.schema.json">
+            <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+            <CopyToPublishDirectory>PreserveNewest</CopyToPublishDirectory>
+            <TargetPath>data\%(Filename)%(Extension)</TargetPath>
+        </Content>
+        <Content Include="..\..\data\qualifications.yaml;..\..\data\qualifications.schema.json">
+            <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+            <CopyToPublishDirectory>PreserveNewest</CopyToPublishDirectory>
+            <TargetPath>data\%(Filename)%(Extension)</TargetPath>
+        </Content>
+        <Content Include="..\..\data\thresholds.yaml;..\..\data\thresholds.schema.json">
+            <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+            <CopyToPublishDirectory>PreserveNewest</CopyToPublishDirectory>
+            <TargetPath>data\%(Filename)%(Extension)</TargetPath>
+        </Content>
+    </ItemGroup>
+
+</Project>

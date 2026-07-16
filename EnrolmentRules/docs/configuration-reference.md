@@ -40,7 +40,8 @@ Numeric tuning knobs read by the workflow expressions and host-side aggregation/
 | `min_passes` | integer `>= 1` | yes | Inclusive number of GCSE entries at or above `pass_grade` required by the `EnoughPasses` eligibility rule. Duplicate subjects cannot inflate the count because GCSE input is a subject-keyed map. |
 | `top_entry` | integer `1..9` | yes | Named high-selectivity GCSE boundary exposed to subject-rating expressions as `facts.TopEntry`. It has no intrinsic ordering relationship with the other entry fields: workflow expressions choose where and how to apply it. |
 | `strong_entry` | integer `1..9` | yes | Named medium-selectivity GCSE boundary exposed as `facts.StrongEntry`. A subject may test one or several GCSEs against it, or ignore it entirely. |
-| `standard_entry` | integer `1..9` | yes | Named baseline GCSE boundary exposed as `facts.StandardEntry`. It does not automatically apply to every subject; only expressions that reference it are affected. |
+| `standard_entry` | integer `1..9` | yes | Named baseline GCSE boundary exposed as `facts.StandardEntry`. It does not automatically apply to every subject; only expressions that reference it are affected. Most subjects gate their own cognate GCSE against this. |
+| `exceptional_entry` | integer `1..9` | yes | Named top-grade GCSE boundary exposed as `facts.ExceptionalEntry`, used as a hard gate for the most demanding subjects (Maths and Physics require Maths GCSE at this level). Must satisfy `standard_entry <= strong_entry <= top_entry <= exceptional_entry`. |
 | `further_maths_average_entry` | number `0..9` | yes | Inclusive whole-profile GCSE-average boundary exposed as `facts.FurtherMathsAverageEntry`. Despite the policy-oriented name, it affects whichever workflow expressions reference it. |
 | `humanities_average_entry` | number `0..9` | yes | Inclusive whole-profile GCSE-average boundary exposed as `facts.HumanitiesAverageEntry`, commonly used for subjects whose entry decision is based on overall attainment rather than one GCSE. |
 | `min_dfe_green_probability_at_or_above` | number `0..1` | yes | Inclusive probability floor exposed as `facts.MinDfeGreenProbabilityAtOrAbove`. A workflow normally compares it with the student's DfE probability of achieving a specified A-level grade or better; it has no effect unless the expression performs that comparison. |
@@ -67,6 +68,7 @@ min_passes: 5
 top_entry: 7
 strong_entry: 6
 standard_entry: 5
+exceptional_entry: 8
 further_maths_average_entry: 7.0
 humanities_average_entry: 5.0
 min_dfe_green_probability_at_or_above: 0.60
@@ -98,9 +100,9 @@ Each subject entry:
 | Field | Type | Required | Meaning |
 | --- | --- | --- | --- |
 | `subject` | `snake_case` string | yes | Canonical, case-sensitive subject identifier used in rule names, workflow fact lookups, results, relationships, and student choices. It must be unique and match the schema's lowercase identifier pattern. |
-| `priority_weight` | positive integer | yes | Subject policy priority. It contributes to `programme_priority_score`, orders subjects within a rating, decides the loser in a mutual exclusion, and—only when the optional green cap is enabled—decides which surplus greens are demoted. It is not a UCAS tariff value. Mutually excluding subjects must have distinct weights. |
+| `priority_weight` | positive integer | yes | Subject policy priority. It contributes to `programme_priority_score`, orders subjects within a rating, and—only when the optional green cap is enabled—decides which surplus greens are demoted. It is not a UCAS tariff value and does not resolve exclusions. |
 | `regression` | object | yes | Coefficients for converting the student's average GCSE score into this subject's predicted A-level points before prior-qualification uplift and workflow rating. |
-| `exclusions` | array | no | Pairwise timetable or policy clashes. The reciprocal subject must declare the same pair and severity. A red clash applies when both subjects qualify as green/amber; an amber clash applies only when both are green. Compiled machinery downgrades the lower-priority subject. |
+| `exclusions` | array | no | Pairwise timetable or policy clashes. The reciprocal subject must declare the same pair and severity. The clash does not downgrade either subject while both are merely viable; it activates when one side appears in `chosen_a_levels`, downgrading the qualifying other subject to the configured severity. |
 | `required_activities` | array of strings | no | Acceptable hobby-tag prefixes for an own-time requirement. At least one student hobby must start with at least one configured prefix; otherwise the subject is downgraded to amber. An empty/omitted list creates no requirement. |
 | `blocking_activities` | array of strings | no | Hobby-tag prefixes that veto the subject. Any student hobby starting with any configured prefix produces a red downgrade, even if a required-activity prefix also matches. |
 | `prerequisites` | array | no | Conjunctive list of dependency groups: every group must be satisfied, while the subjects inside one group's `any_of` are alternatives. Each unmet group produces its configured downgrade. |
@@ -119,7 +121,7 @@ Each subject entry:
 | Field | Type | Required | Meaning |
 | --- | --- | --- | --- |
 | `other` | `snake_case` subject id | yes | Id of the other catalogue subject in the clash. Self-references and unknown ids are rejected, and the other subject must contain the reciprocal declaration. |
-| `severity` | `amber` or `red` | yes | Maximum rating retained by the losing subject when the clash applies. `amber` preserves it as a caution; `red` blocks it. Reciprocal entries must agree. |
+| `severity` | `amber` or `red` | yes | Maximum rating retained by the other subject when this subject has been chosen and the clash applies. `amber` preserves it as a caution; `red` blocks it. Reciprocal entries must agree. |
 
 `prerequisites` entries:
 
@@ -372,7 +374,7 @@ Common expression inputs in this workflow:
 | `facts.HasEntryEquivalent("subject")` | Returns `true` when at least one prior qualification matches one of that catalogue subject's entry-equivalent routes by subject, type, and inclusive minimum ordinal. |
 | `facts.Average` | Arithmetic mean of all supplied GCSE grades. Missing subjects are not zero-filled; an empty GCSE map produces `0.0`. |
 | `facts.Age` | Student's age in completed years on the evaluation as-of date. A missing date of birth produces `0`, although normal document validation requires the field. |
-| `facts.TopEntry`, `facts.StrongEntry`, `facts.StandardEntry` | Direct projections of the three named GCSE boundaries in `data/thresholds.yaml`; they acquire meaning only through the comparisons written in a rule. |
+| `facts.TopEntry`, `facts.StrongEntry`, `facts.StandardEntry`, `facts.ExceptionalEntry` | Direct projections of the four named GCSE boundaries in `data/thresholds.yaml`; they acquire meaning only through the comparisons written in a rule. |
 | `facts.FurtherMathsAverageEntry`, `facts.HumanitiesAverageEntry` | Direct projections of the named GCSE-average boundaries. Their names are policy conventions, not restrictions on which subject rules can reference them. |
 | `facts.MinDfeGreenProbabilityAtOrAbove`, `facts.MinDfeAmberProbabilityAtOrAbove` | Direct projections of the configured `0..1` DfE probability floors for green and amber expressions. |
 | `facts.AdultAge` | Direct projection of the configured whole-years adult-age boundary; the expression supplies the comparison operator. |
@@ -391,18 +393,18 @@ Rules:
   - RuleName: physics:green
     SuccessEvent: Entry met; predicted A-level grade at or above the green threshold
     Expression: >-
-      facts.Gcse("maths") >= facts.TopEntry
-      && facts.Gcse("physics") >= facts.StrongEntry
-      && facts.Predicted("physics") >= ALevelGrade.B
-      && facts.DfeProbabilityAtOrAbove("physics", ALevelGrade.B) >= facts.MinDfeGreenProbabilityAtOrAbove
+      facts.Gcse("maths") >= facts.ExceptionalEntry
+      && facts.Gcse("physics") >= facts.StandardEntry
+      && facts.Predicted("physics") >= ALevelGrade.D
+      && facts.DfeProbabilityAtOrAbove("physics", ALevelGrade.D) >= facts.MinDfeGreenProbabilityAtOrAbove
 
   - RuleName: physics:amber
     SuccessEvent: Entry met; predicted A-level grade at or above the amber threshold
     Expression: >-
-      facts.Gcse("maths") >= facts.TopEntry
-      && facts.Gcse("physics") >= facts.StrongEntry
-      && facts.Predicted("physics") >= ALevelGrade.C
-      && facts.DfeProbabilityAtOrAbove("physics", ALevelGrade.C) >= facts.MinDfeAmberProbabilityAtOrAbove
+      facts.Gcse("maths") >= facts.ExceptionalEntry
+      && facts.Gcse("physics") >= facts.StandardEntry
+      && facts.Predicted("physics") >= ALevelGrade.E
+      && facts.DfeProbabilityAtOrAbove("physics", ALevelGrade.E) >= facts.MinDfeAmberProbabilityAtOrAbove
 
   - RuleName: physics:red
     SuccessEvent: Entry requirement unmet or predicted grade below the amber threshold
@@ -507,7 +509,7 @@ Fields shown:
 | Field | Meaning |
 | --- | --- |
 | `subject` | Canonical id for the new subject. The appended workflow's three `RuleName` prefixes must use exactly the same id. |
-| `priority_weight` | Positive policy weight used for aggregate scoring, same-rating ordering, mutual-exclusion resolution, and optional green-cap demotion. It must differ from the weight of any subject this one excludes. |
+| `priority_weight` | Positive policy weight used for aggregate scoring, same-rating ordering, and optional green-cap demotion. It does not resolve mutual exclusions. |
 | `regression.slope` / `regression.intercept` | Coefficients of the average-GCSE-to-A-level-points prediction line. Choose these from an evidenced model; the engine clamps the result to `0..6`. |
 
 ### `examples/custom-subject/workflows/subject-ratings.append.yaml`
@@ -521,11 +523,11 @@ Example:
   - RuleName: 'drama:green'
     SuccessEvent: 'Entry met; predicted A-level grade at or above the green threshold'
     Expression: >-
-      facts.Average >= facts.HumanitiesAverageEntry && facts.Predicted("drama") >= ALevelGrade.B
+      facts.Average >= facts.HumanitiesAverageEntry && facts.Predicted("drama") >= ALevelGrade.D
   - RuleName: 'drama:amber'
     SuccessEvent: 'Entry met; predicted A-level grade at or above the amber threshold'
     Expression: >-
-      facts.Average >= facts.HumanitiesAverageEntry && facts.Predicted("drama") >= ALevelGrade.C
+      facts.Average >= facts.HumanitiesAverageEntry && facts.Predicted("drama") >= ALevelGrade.E
   - RuleName: 'drama:red'
     SuccessEvent: 'Entry requirement unmet or predicted grade below the amber threshold'
     Expression: >-
@@ -546,7 +548,7 @@ Student fields:
 | --- | --- | --- | --- |
 | `student.id` | string | yes | Opaque correlation identifier copied unchanged to the evaluation result. It does not participate in any decision and need not encode personal information. |
 | `student.gcses` | object | yes | Case-insensitive subject-to-integer-grade map on the GCSE `1..9` scale. Present entries drive the average and pass count; an absent subject is returned as grade `0` by workflow lookup. |
-| `student.chosen_a_levels` | array of subject ids | no | Catalogue subjects to which the student is already committed. They can satisfy `chosen` and `qualifying` prerequisites and activate prior-choice exclusions; they are not automatically added to the recommendation set. |
+| `student.chosen_a_levels` | array of subject ids | no | Catalogue subjects to which the student is already committed. They can satisfy `chosen` and `qualifying` prerequisites and activate catalogue exclusions; they are not automatically added to the recommendation set. |
 | `student.hobbies` | array of strings | no | Activity tags compared case-insensitively with catalogue prefix rules. One tag may satisfy a required prefix and/or trigger a blocking prefix; omit for no declared activities. |
 | `student.prior_qualifications` | array | no | Existing typed qualifications. Matching entries can open an entry-equivalent route, raise its subject prediction to the configured equivalence, or trigger a same-subject restudy bar. |
 | `student.date_of_birth` | `YYYY-MM-DD` string | yes | Calendar date used with the evaluation's as-of date to calculate completed years for `facts.Age`. It is not interpreted relative to the machine's current date inside a run. |

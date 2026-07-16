@@ -33,8 +33,8 @@ public sealed record Recommendation(Subject Subject, Rating Rating, string Reaso
 ///     The whole-student verdict (§1.7): the eligibility outcome, one <see cref="Recommendation" /> per
 ///     subject (ranked green → amber → red, then by descending priority weight), the aggregate
 ///     <see cref="EnrolmentSummary" /> and the full host-code <see cref="Adjustment" /> trail (constraint
-///     pass, plus the optional green cap when configured) that explains every downgrade. This is the
-///     document the golden-file suite locks.
+///     pass, the chosen-subject cap, plus the optional green cap when configured) that explains every
+///     downgrade. This is the document the golden-file suite locks.
 /// </summary>
 public sealed record EnrolmentResult(
 	bool Eligible,

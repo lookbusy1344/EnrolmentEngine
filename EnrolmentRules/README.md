@@ -1,12 +1,18 @@
 # EnrolmentRules - A monotonic, rules-as-data engine for A-Level enrolment decisions
 
-This is a recreation of a proprietary project I developed about a decade ago, to assist in enrolment decision-making and ensure policies were
-consistently followed. The real system was also capable of writing the complete enrolment package into the management information system, and printing
-forms for signature.
+This is a recreation of a proprietary project I developed a few years ago, to assist in enrolment decision-making and ensure policies were
+consistently followed. The real system was also capable of writing the complete enrolment package into the management information system, and printing forms for signature.
 
 EnrolmentRules is a decision-support system for A-Level enrolment. It gives staff a consistent,
 explainable recommendation for each student and subject while keeping the final decision visible
 and accountable.
+
+### ▶ Live demo: <https://enrolment-web-716005672573.europe-west2.run.app>
+
+Anonymous, no sign-in. Enter GCSE facts and see the per-subject recommendations
+and their explanations. Hosted on Cloud Run and scaled to zero, so the first request after an
+idle period takes a second or two to wake the instance. See [docs/deployment.md](docs/deployment.md)
+to run it locally or host your own.
 
 ## What It Does
 
@@ -30,14 +36,17 @@ it can consider:
 - Predicted A-Level outcomes and published evidence about likely progression from GCSE to A-Level.
 - The student's age at the date of assessment, where different entry arrangements apply to adults.
 - Relevant qualifications already achieved, including equivalent routes into a subject.
-- A-Level choices already made, including combinations that are not permitted or not recommended.
+- A-Level choices already made, including combinations that become unavailable once another subject
+  in the clash has been chosen.
 - Subject prerequisites, conflicting subjects, previous study and restrictions on repeating a
   qualification.
 - Relevant activities or experience, such as evidence that an own-time practical requirement can
   be met.
 
 This allows the institution to apply the whole policy consistently, while still distinguishing
-routine cases from those that genuinely require professional judgement.
+routine cases from those that genuinely require professional judgement. Subjects in an exclusion
+pair remain available until one side is actually chosen; red recommendations are not selectable in
+the reference web UI.
 
 ## What It Delivers
 
@@ -74,6 +83,12 @@ interface. An organisation can place the same decision-making capability behind:
 This separation means the presentation can change without duplicating the enrolment policy. A web
 page, mobile app and back-office process can all receive the same recommendation from the same policy
 and student information.
+
+`src/EnrolmentRules.Web` is a small reference implementation of the staff-facing website option: a
+session-backed, no-database Razor Pages front-end. Run it locally with `./scripts/run-web.sh`; see
+[Web Interface](docs/technical-reference.md#web-interface) for details and Rider debugging setup.
+To run it as a container (OrbStack locally, or a free container host), see the
+[deployment guide](docs/deployment.md).
 
 ## Quality And Assurance
 

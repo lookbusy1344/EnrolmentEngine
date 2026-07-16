@@ -46,6 +46,7 @@ public static class CliRunner
 		Func<string> workflowsDirectory,
 		Func<string> dataDirectory) =>
 		args switch {
+			["--version"] or ["-v"] => RunVersion(stdout),
 			["--lint-workflows"] => RunLint(null, stdout, stderr),
 			["--lint-workflows", var dir] => RunLint(dir, stdout, stderr),
 			[var path] => RunProfile(path, stdout, stderr, dataDirectory),
@@ -66,7 +67,15 @@ public static class CliRunner
 		stderr.WriteLine("       enrolment --advise [--all-gcses] <student.json|.yaml>");
 		stderr.WriteLine("       enrolment --batch <students.jsonl>");
 		stderr.WriteLine("       enrolment --lint-workflows [workflows-dir]");
+		stderr.WriteLine("       enrolment --version|-v");
 		return ExitUsage;
+	}
+
+	/// <summary>Prints the build stamp — version and the git commit the binary was built from.</summary>
+	private static int RunVersion(TextWriter stdout)
+	{
+		stdout.WriteLine($"enrolment {BuildInfo.VersionWithCommit}");
+		return ExitOk;
 	}
 
 	/// <summary>

@@ -1,0 +1,818 @@
+/* ============================================================================
+   Green Shoots — theme for the A-Level chooser.
+   Concept: picking your A-Levels is planting your next stage of growth.
+   Layered on top of Bootstrap 5.3: we re-theme via Bootstrap's own CSS custom
+   properties where we can, and add bespoke components (hero, flashcards, RAG
+   status tabs, the sprout mark) on top. Brand green is deliberately kept
+   distinct from the red/amber/green *status* signal on the recommendation
+   cards, which carries its own meaning.
+   ============================================================================ */
+
+:root {
+    /* The page is always light-themed; without this, Safari infers the appearance of
+       CSS-unstylable native widgets (the <input type="date"> placeholder segments in
+       particular) from the OS dark-mode setting instead of the page, producing a
+       mismatched tint before any value is entered. */
+    color-scheme: light;
+
+    /* --- Ground & ink --------------------------------------------------- */
+    --paper: #f1f5ec; /* fresh green-tinted off-white (not beige)   */
+    --paper-deep: #e7eede; /* recessed panels                            */
+    --surface: #ffffff; /* cards sit bright against the paper         */
+    --ink: #12271b; /* deep evergreen, warmer than black          */
+    --moss: #4a5d50; /* secondary text                             */
+    --line: #d6e0cc; /* soft sage hairlines                        */
+
+    /* --- Growth accent -------------------------------------------------- */
+    --shoot: #24a45c; /* primary action / brand                     */
+    --shoot-deep: #1e7d46; /* hover / pressed                            */
+    --shoot-soft: #e3f1e4; /* tinted fills                               */
+    --forest: #14532b; /* legend/heading text on tinted fills — 7.8:1 on --shoot-soft */
+    --lime: #c9f27e; /* the one highlighter, used once             */
+
+    /* --- Status (traffic semantics, kept vivid & separate) -------------- */
+    --go: #1e9e4a;
+    --go-soft: #e4f4e6;
+    --maybe: #e39a00;
+    --maybe-soft: #fbf0d6;
+    --no: #db4a3d;
+    --no-soft: #fbe4e1;
+
+    /* --- Type ----------------------------------------------------------- */
+    --display: "Bricolage Grotesque", "Segoe UI", system-ui, sans-serif;
+    --body: "Inter", system-ui, -apple-system, "Segoe UI", sans-serif;
+
+    --radius: 14px;
+    --radius-sm: 9px;
+    --shadow: 0 1px 2px rgba(18, 39, 27, .06), 0 10px 30px -18px rgba(18, 39, 27, .35);
+    --ring: 0 0 0 3px rgba(36, 164, 92, .35);
+
+    /* --- Retheme Bootstrap primitives ---------------------------------- */
+    --bs-primary: var(--shoot);
+    --bs-primary-rgb: 36, 164, 92;
+    --bs-body-bg: var(--paper);
+    --bs-body-color: var(--ink);
+    --bs-body-font-family: var(--body);
+    --bs-border-color: var(--line);
+    --bs-border-radius: var(--radius-sm);
+    --bs-emphasis-color: var(--ink);
+    --bs-secondary-color: var(--moss);
+}
+
+/* ---------------------------------------------------------------------------
+   Base
+   --------------------------------------------------------------------------- */
+body {
+    background: var(--paper);
+    color: var(--ink);
+    font-family: var(--body);
+    font-size: 1.02rem;
+    line-height: 1.6;
+    /* faint growth field: soft light from the top, a hairline horizon */
+    background-image: radial-gradient(120% 60% at 50% -10%, rgba(36, 164, 92, .10), transparent 60%);
+    background-attachment: fixed;
+}
+
+main.container {
+    max-width: 1080px;
+    padding-block: 1.5rem 3rem;
+}
+
+::selection {
+    background: var(--lime);
+    color: var(--ink);
+}
+
+h1, h2, h3, legend, .h5, .h6 {
+    font-family: var(--display);
+    color: var(--ink);
+    letter-spacing: -.01em;
+}
+
+a {
+    color: var(--shoot-deep);
+    text-underline-offset: 3px;
+    text-decoration-thickness: 2px;
+}
+
+a:hover {
+    color: var(--ink);
+}
+
+:focus-visible {
+    outline: none;
+    box-shadow: var(--ring);
+    border-radius: 6px;
+}
+
+/* ---------------------------------------------------------------------------
+   Header / brand / footer shell
+   --------------------------------------------------------------------------- */
+.site-header {
+    display: flex;
+    align-items: baseline;
+    gap: .9rem;
+    max-width: 1080px;
+    margin-inline: auto;
+    padding: 1.3rem 1rem .2rem;
+}
+
+.brand {
+    display: inline-flex;
+    align-items: center;
+    gap: .55rem;
+    text-decoration: none;
+    color: var(--ink);
+}
+
+.brand-mark {
+    width: 30px;
+    height: 30px;
+    flex: none;
+    overflow: visible;
+}
+
+.brand-stem {
+    stroke: var(--ink);
+}
+
+.brand-leaf--left {
+    fill: var(--shoot);
+}
+
+.brand-leaf--right {
+    fill: var(--shoot-deep);
+}
+
+.brand-name {
+    font-family: var(--display);
+    font-weight: 800;
+    font-size: 1.35rem;
+    letter-spacing: -.02em;
+}
+
+.brand-tag {
+    margin: 0;
+    font-size: .82rem;
+    font-weight: 600;
+    color: var(--moss);
+    text-transform: uppercase;
+    letter-spacing: .12em;
+}
+
+.repo-link {
+    margin-inline-start: auto;
+    align-self: center;
+    display: inline-flex;
+    color: var(--moss);
+    transition: color .15s ease;
+}
+
+.repo-link:hover,
+.repo-link:focus-visible {
+    color: var(--ink);
+}
+
+.repo-mark {
+    width: 24px;
+    height: 24px;
+    fill: currentColor;
+}
+
+.site-footer {
+    max-width: 1080px;
+    margin: 2rem auto 3rem;
+    padding: 1.3rem 1rem 0;
+    border-top: 1px solid var(--line);
+    color: var(--moss);
+    font-size: .9rem;
+}
+
+.site-footer p {
+    margin: 0;
+    max-width: 60ch;
+}
+
+.site-footer .build-stamp {
+    margin-top: .6rem;
+    font-size: .8rem;
+    opacity: .75;
+}
+
+.build-stamp code {
+    font-size: inherit;
+    color: inherit;
+}
+
+/* ---------------------------------------------------------------------------
+   Hero — the thesis: your next thing to grow
+   --------------------------------------------------------------------------- */
+.hero {
+    position: relative;
+    margin-bottom: 2.2rem;
+    padding: 2rem 0 .5rem;
+}
+
+.hero-eyebrow {
+    font-family: var(--display);
+    font-weight: 700;
+    font-size: .8rem;
+    text-transform: uppercase;
+    letter-spacing: .16em;
+    color: var(--shoot-deep);
+    margin: 0 0 .6rem;
+}
+
+.hero h1 {
+    font-weight: 800;
+    font-size: clamp(2.6rem, 7vw, 4.6rem);
+    line-height: .98;
+    margin: 0 0 1rem;
+    max-width: 15ch;
+}
+
+/* the lime highlighter — used exactly once, on the verb that matters */
+.hero .grow {
+    position: relative;
+    white-space: nowrap;
+}
+
+.hero .grow::after {
+    content: "";
+    position: absolute;
+    left: -.05em;
+    right: -.05em;
+    bottom: .08em;
+    height: .34em;
+    background: var(--lime);
+    z-index: -1;
+    border-radius: 3px;
+    transform: skewX(-12deg) scaleX(var(--swipe, 1));
+    transform-origin: left;
+}
+
+.hero-lede {
+    font-size: 1.15rem;
+    color: var(--moss);
+    max-width: 46ch;
+    margin: 0;
+}
+
+.sprout {
+    position: absolute;
+    right: 1%;
+    bottom: 0;
+    width: clamp(90px, 16vw, 170px);
+    height: auto;
+    overflow: visible;
+}
+
+.sprout .stem {
+    stroke: var(--shoot-deep);
+}
+
+.sprout .leaf-a {
+    fill: var(--shoot);
+}
+
+.sprout .leaf-b {
+    fill: var(--shoot-deep);
+}
+
+.sprout .leaf-c {
+    fill: var(--lime);
+}
+
+.sprout .soil {
+    stroke: var(--line);
+}
+
+@media (max-width: 640px) {
+    .sprout {
+        display: none;
+    }
+}
+
+/* ---------------------------------------------------------------------------
+   Section rhythm & eyebrows
+   --------------------------------------------------------------------------- */
+.section-eyebrow {
+    display: block;
+    font-family: var(--display);
+    font-weight: 700;
+    font-size: .74rem;
+    text-transform: uppercase;
+    letter-spacing: .15em;
+    color: var(--shoot-deep);
+    margin-bottom: .25rem;
+}
+
+.facts-form > section > h2,
+section[aria-labelledby="results-heading"] > h2 {
+    font-weight: 800;
+    font-size: 1.75rem;
+    margin-bottom: 1.1rem;
+}
+
+/* ---------------------------------------------------------------------------
+   Chosen summary — the growing collection, kept in view
+   --------------------------------------------------------------------------- */
+.chosen-summary {
+    top: 0;
+    z-index: 20;
+    background: var(--surface) !important;
+    border: 1px solid var(--line) !important;
+    border-radius: var(--radius);
+    box-shadow: var(--shadow);
+    padding: .85rem 1.15rem !important;
+    margin-bottom: 2rem !important;
+}
+
+/* keeps redirect-fragment targets (e.g. #gcse-section) from landing under the sticky basket bar */
+#facts-heading,
+#gcse-section,
+#qualifications-section,
+#hobbies-section,
+#results-heading {
+    scroll-margin-top: 5rem;
+}
+
+.chosen-summary h2 {
+    font-size: .78rem;
+    text-transform: uppercase;
+    letter-spacing: .13em;
+    color: var(--moss);
+    margin-bottom: .4rem;
+    font-weight: 700;
+}
+
+.chosen-summary .text-body-secondary {
+    color: var(--moss) !important;
+    font-style: italic;
+}
+
+/* the chosen pills — markup is test-pinned (list-inline-item badge
+   text-bg-primary rounded-pill); we only restyle it */
+.chosen-summary .badge.text-bg-primary {
+    background: var(--shoot) !important;
+    color: #fff !important;
+    font-family: var(--body);
+    font-weight: 600;
+    font-size: .9rem;
+    padding: .5em .95em;
+    letter-spacing: 0;
+}
+
+.chosen-summary .list-inline-item {
+    margin-right: .4rem;
+    margin-bottom: .3rem;
+}
+
+/* ---------------------------------------------------------------------------
+   Forms — the facts you plant
+   --------------------------------------------------------------------------- */
+fieldset {
+    background: var(--surface);
+    border: 1px solid var(--line) !important;
+    border-radius: var(--radius) !important;
+    padding: 1.25rem 1.35rem 1.1rem !important;
+    margin-bottom: 1.5rem !important;
+    box-shadow: var(--shadow);
+}
+
+legend {
+    float: none;
+    width: auto;
+    font-family: var(--display);
+    /* !important: Bootstrap's .h6 utility (same specificity, later in cascade) otherwise wins and
+       drops this to font-weight 500, which read as too faint to work as a section title. */
+    font-weight: 700 !important;
+    font-size: 1rem !important;
+    color: var(--forest) !important;
+    padding: .2em .7em;
+    margin-bottom: 1rem;
+    background: var(--shoot-soft);
+    border-radius: 999px;
+}
+
+.form-label {
+    font-size: .8rem;
+    font-weight: 600;
+    color: var(--moss);
+    text-transform: uppercase;
+    letter-spacing: .04em;
+    margin-bottom: .3rem;
+}
+
+.form-control, .form-select {
+    background-color: var(--paper);
+    border: 1.5px solid var(--line);
+    border-radius: var(--radius-sm);
+    color: var(--ink);
+    font-weight: 500;
+    padding: .55rem .8rem;
+    transition: border-color .15s ease, box-shadow .15s ease, background-color .15s ease;
+}
+
+.form-control:hover, .form-select:hover {
+    border-color: #b9c9aa;
+}
+
+.form-control:focus, .form-select:focus {
+    background-color: var(--surface);
+    border-color: var(--shoot);
+    box-shadow: var(--ring);
+    color: var(--ink);
+}
+
+/* first (blank) row of the facts form reads as an invitation, not clutter */
+.date-field {
+    max-width: 15rem;
+}
+
+/* ---------------------------------------------------------------------------
+   Buttons
+   --------------------------------------------------------------------------- */
+.btn {
+    font-family: var(--display);
+    font-weight: 700;
+    border-radius: 999px;
+    padding: .6rem 1.35rem;
+    letter-spacing: -.005em;
+    transition: transform .12s ease, box-shadow .15s ease, background-color .15s ease, color .15s ease;
+}
+
+.btn:active {
+    transform: translateY(1px);
+}
+
+.btn-sm {
+    padding: .38rem .95rem;
+    font-size: .85rem;
+}
+
+.btn-primary {
+    --bs-btn-bg: var(--shoot);
+    --bs-btn-border-color: var(--shoot);
+    --bs-btn-hover-bg: var(--shoot-deep);
+    --bs-btn-hover-border-color: var(--shoot-deep);
+    --bs-btn-active-bg: var(--shoot-deep);
+    --bs-btn-active-border-color: var(--shoot-deep);
+    color: #fff;
+    box-shadow: 0 10px 20px -12px rgba(30, 125, 70, .8);
+}
+
+/* the main commit action gets weight */
+.facts-form > .btn-primary {
+    padding: .7rem 1.8rem;
+    font-size: 1.05rem;
+}
+
+.btn-outline-primary {
+    --bs-btn-color: var(--shoot-deep);
+    --bs-btn-border-color: var(--shoot);
+    --bs-btn-hover-bg: var(--shoot);
+    --bs-btn-hover-border-color: var(--shoot);
+    --bs-btn-hover-color: #fff;
+    --bs-btn-active-bg: var(--shoot-deep);
+    border-width: 1.5px;
+}
+
+.btn-outline-secondary {
+    --bs-btn-color: var(--moss);
+    --bs-btn-border-color: var(--line);
+    --bs-btn-hover-bg: var(--paper-deep);
+    --bs-btn-hover-border-color: var(--moss);
+    --bs-btn-hover-color: var(--ink);
+    --bs-btn-active-bg: var(--paper-deep);
+    border-width: 1.5px;
+}
+
+.btn-outline-danger {
+    --bs-btn-color: var(--no);
+    --bs-btn-border-color: #eab8b2;
+    --bs-btn-hover-bg: var(--no);
+    --bs-btn-hover-border-color: var(--no);
+    --bs-btn-hover-color: #fff;
+    border-width: 1.5px;
+}
+
+.btn:disabled, .btn.disabled {
+    --bs-btn-disabled-color: var(--moss);
+    --bs-btn-disabled-bg: var(--paper-deep);
+    --bs-btn-disabled-border-color: var(--line);
+    opacity: 1;
+}
+
+/* ---------------------------------------------------------------------------
+   Recommendation flashcards
+   --------------------------------------------------------------------------- */
+section[aria-labelledby="results-heading"] .card {
+    position: relative;
+    background: var(--surface);
+    border: 1px solid var(--line);
+    border-radius: var(--radius);
+    box-shadow: var(--shadow);
+    overflow: hidden;
+    transition: transform .16s ease, box-shadow .16s ease, border-color .16s ease;
+}
+
+section[aria-labelledby="results-heading"] .card:hover {
+    transform: translateY(-3px);
+    box-shadow: 0 1px 2px rgba(18, 39, 27, .06), 0 22px 40px -22px rgba(18, 39, 27, .5);
+    border-color: #c3d3b4;
+}
+
+/* a coloured stripe up the spine of each card echoes its verdict */
+section[aria-labelledby="results-heading"] .card::before {
+    content: "";
+    position: absolute;
+    inset: 0 auto 0 0;
+    width: 5px;
+    background: var(--line);
+}
+
+section[aria-labelledby="results-heading"] .card:has(.text-bg-success)::before {
+    background: var(--go);
+}
+
+section[aria-labelledby="results-heading"] .card:has(.text-bg-warning)::before {
+    background: var(--maybe);
+}
+
+section[aria-labelledby="results-heading"] .card:has(.text-bg-danger)::before {
+    background: var(--no);
+}
+
+.card-body {
+    padding: 1.15rem 1.25rem 1.25rem 1.4rem;
+}
+
+.card-title {
+    font-family: var(--display);
+    font-weight: 800;
+    font-size: 1.2rem !important;
+    color: var(--ink);
+    gap: .5rem;
+    margin-bottom: .55rem;
+}
+
+.card-text {
+    color: var(--moss);
+    font-size: .96rem;
+}
+
+/* RAG status pills — vivid, filled, each with its own icon + its word */
+.card-title .badge {
+    display: inline-flex;
+    align-items: center;
+    gap: .35em;
+    font-family: var(--body);
+    font-weight: 700;
+    font-size: .72rem;
+    text-transform: uppercase;
+    letter-spacing: .06em;
+    padding: .42em .75em;
+    border-radius: 999px;
+    flex: none;
+}
+
+.badge.text-bg-success {
+    background: var(--go) !important;
+    color: #fff !important;
+}
+
+.badge.text-bg-warning {
+    background: var(--maybe) !important;
+    color: #422c00 !important;
+}
+
+.badge.text-bg-danger {
+    background: var(--no) !important;
+    color: #fff !important;
+}
+
+/* Icon per verdict, drawn as a currentColor mask so it inherits the pill's text
+   colour: thumbs-up = go, balance scales = worth weighing, stop octagon = no. */
+.card-title .badge::before {
+    content: "";
+    width: 1.05em;
+    height: 1.05em;
+    flex: none;
+    background: currentColor;
+    -webkit-mask: var(--verdict-icon) center / contain no-repeat;
+    mask: var(--verdict-icon) center / contain no-repeat;
+}
+
+.badge.text-bg-success {
+    --verdict-icon: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Cpath d='M1 21h4V9H1v12zm22-11c0-1.1-.9-2-2-2h-6.31l.95-4.57.03-.32c0-.41-.17-.79-.44-1.06L14.17 1 7.59 7.59C7.22 7.95 7 8.45 7 9v10c0 1.1.9 2 2 2h9c.83 0 1.54-.5 1.84-1.22l3.02-7.05c.09-.23.14-.47.14-.73v-2z'/%3E%3C/svg%3E");
+}
+
+.badge.text-bg-warning {
+    --verdict-icon: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Cpath d='M12 3c-1.1 0-2 .9-2 2 0 .74.4 1.38 1 1.72V7H4v2h1.11L2 16c0 1.66 1.79 3 4 3s4-1.34 4-3l-3.11-7H11v11H8v2h8v-2h-3V9h4.89L14 16c0 1.66 1.79 3 4 3s4-1.34 4-3l-3.11-7H20V7h-7v-.28c.6-.34 1-.98 1-1.72 0-1.1-.9-2-2-2zM5.5 14.5L7 11l1.5 3.5h-3zm11 0L18 11l1.5 3.5h-3z'/%3E%3C/svg%3E");
+}
+
+.badge.text-bg-danger {
+    --verdict-icon: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Cpath d='M7.05 1.6h9.9L22.4 7.05v9.9L16.95 22.4h-9.9L1.6 16.95v-9.9L7.05 1.6zm.53 6.34L10.94 12l-3.36 4.06 1.36 1.36L12 13.06l3.06 3.36 1.36-1.36L13.06 12l3.36-4.06-1.36-1.36L12 9.94 8.94 6.58 7.58 7.94z'/%3E%3C/svg%3E");
+}
+
+/* details / working-out drawer */
+section[aria-labelledby="results-heading"] details {
+    margin-top: .5rem;
+    border-top: 1px dashed var(--line);
+    padding-top: .5rem;
+}
+
+section[aria-labelledby="results-heading"] summary {
+    font-family: var(--display);
+    font-weight: 700;
+    font-size: .82rem;
+    color: var(--shoot-deep);
+    cursor: pointer;
+    list-style: none;
+    display: inline-flex;
+    align-items: center;
+    gap: .35rem;
+}
+
+section[aria-labelledby="results-heading"] summary::-webkit-details-marker {
+    display: none;
+}
+
+section[aria-labelledby="results-heading"] summary::before {
+    content: "▸";
+    transition: transform .15s ease;
+    display: inline-block;
+}
+
+section[aria-labelledby="results-heading"] details[open] summary::before {
+    transform: rotate(90deg);
+}
+
+section[aria-labelledby="results-heading"] dl {
+    margin-top: .6rem;
+    font-size: .86rem;
+    display: grid;
+    grid-template-columns: auto 1fr;
+    gap: .15rem .8rem;
+}
+
+section[aria-labelledby="results-heading"] dt {
+    color: var(--moss);
+    font-weight: 600;
+    text-transform: uppercase;
+    font-size: .7rem;
+    letter-spacing: .05em;
+    align-self: start;
+    padding-top: .1rem;
+}
+
+section[aria-labelledby="results-heading"] dd {
+    margin: 0;
+    color: var(--ink);
+}
+
+section[aria-labelledby="results-heading"] dd ul {
+    padding-left: 1.1rem;
+    margin: 0;
+}
+
+/* ---------------------------------------------------------------------------
+   Alerts — eligibility gate & validation
+   --------------------------------------------------------------------------- */
+.alert {
+    border-radius: var(--radius);
+    border: 1px solid;
+    padding: 1.1rem 1.25rem;
+    box-shadow: var(--shadow);
+}
+
+.alert-danger {
+    background: var(--no-soft);
+    border-color: #f0c4bf;
+    color: #7a231b;
+}
+
+.alert-danger .fw-bold {
+    color: var(--no);
+    font-family: var(--display);
+}
+
+.alert ul {
+    margin-bottom: 0;
+}
+
+/* the empty-state prompt before any facts are entered */
+section[aria-labelledby="results-heading"] > p {
+    background: var(--surface);
+    border: 1px dashed var(--line);
+    border-radius: var(--radius);
+    padding: 1.5rem;
+    color: var(--moss);
+    text-align: center;
+    margin: 0;
+}
+
+/* ---------------------------------------------------------------------------
+   Reset control — quiet, set apart
+   --------------------------------------------------------------------------- */
+form[action*="Reset"], .facts-form + form {
+    margin-top: -.5rem;
+}
+
+/* ---------------------------------------------------------------------------
+   Motion — sprout draws itself in, once, and only if wanted
+   --------------------------------------------------------------------------- */
+@keyframes stem-grow {
+    from {
+        stroke-dashoffset: 120;
+    }
+    to {
+        stroke-dashoffset: 0;
+    }
+}
+
+@keyframes leaf-in {
+    from {
+        opacity: 0;
+        transform: scale(.4) rotate(-8deg);
+    }
+    to {
+        opacity: 1;
+        transform: scale(1) rotate(0);
+    }
+}
+
+@keyframes swipe-in {
+    from {
+        transform: skewX(-12deg) scaleX(0);
+    }
+    to {
+        transform: skewX(-12deg) scaleX(1);
+    }
+}
+
+@media (prefers-reduced-motion: no-preference) {
+    .sprout .stem {
+        stroke-dasharray: 120;
+        animation: stem-grow 1s ease-out both;
+    }
+
+    .sprout .leaf-a {
+        transform-origin: 60% 60%;
+        animation: leaf-in .5s ease-out .55s both;
+    }
+
+    .sprout .leaf-b {
+        transform-origin: 40% 55%;
+        animation: leaf-in .5s ease-out .8s both;
+    }
+
+    .sprout .leaf-c {
+        transform-origin: 50% 40%;
+        animation: leaf-in .5s ease-out 1.05s both;
+    }
+
+    .brand-mark {
+        overflow: visible;
+    }
+
+    .brand-leaf {
+        transform-origin: 50% 60%;
+        animation: leaf-in .5s ease-out both;
+    }
+
+    .brand-leaf--left {
+        animation-delay: .1s;
+    }
+
+    .brand-leaf--right {
+        animation-delay: .25s;
+    }
+
+    .hero .grow::after {
+        animation: swipe-in .6s cubic-bezier(.6, 0, .2, 1) .5s both;
+    }
+
+    section[aria-labelledby="results-heading"] .card {
+        animation: leaf-in .4s ease-out both;
+    }
+}
+
+/* ---------------------------------------------------------------------------
+   Responsive
+   --------------------------------------------------------------------------- */
+@media (max-width: 640px) {
+    .site-header {
+        flex-wrap: wrap;
+        gap: .4rem .8rem;
+    }
+
+    .hero {
+        padding-top: 1rem;
+    }
+
+    main.container {
+        padding-inline: 1rem;
+    }
+}

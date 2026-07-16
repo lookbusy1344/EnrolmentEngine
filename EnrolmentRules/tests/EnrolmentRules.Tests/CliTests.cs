@@ -438,6 +438,32 @@ public sealed class CliTests
 		}
 	}
 
+	[Theory]
+	[InlineData("--version")]
+	[InlineData("-v")]
+	public void cli_version_prints_the_build_stamp_to_stdout(string flag)
+	{
+		using var stdout = new StringWriter();
+		using var stderr = new StringWriter();
+
+		var exit = CliRunner.Run([flag], stdout, stderr);
+
+		exit.Should().Be(CliRunner.ExitOk);
+		stdout.ToString().Should().Contain(BuildInfo.VersionWithCommit);
+		stderr.ToString().Should().BeEmpty();
+	}
+
+	[Fact]
+	public void cli_usage_advertises_the_version_flag()
+	{
+		using var stdout = new StringWriter();
+		using var stderr = new StringWriter();
+
+		CliRunner.Run([], stdout, stderr).Should().Be(CliRunner.ExitUsage);
+
+		stderr.ToString().Should().Contain("--version");
+	}
+
 	[Fact]
 	public void cli_lint_workflows_uses_the_sibling_qualification_scale_for_catalogue_validation()
 	{

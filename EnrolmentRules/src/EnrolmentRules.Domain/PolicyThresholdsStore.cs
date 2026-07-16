@@ -89,9 +89,15 @@ public static class PolicyThresholdsStore
 				$"standard_entry {thresholds.StandardEntry} is out of range ({min}–{max}).");
 		}
 
-		if (thresholds.StandardEntry > thresholds.StrongEntry || thresholds.StrongEntry > thresholds.TopEntry) {
+		if (thresholds.ExceptionalEntry is < Thresholds.MinGcseGrade or > Thresholds.MaxGcseGrade) {
 			throw new InvalidDataException(
-				"Entry thresholds must satisfy standard_entry <= strong_entry <= top_entry.");
+				$"exceptional_entry {thresholds.ExceptionalEntry} is out of range ({min}–{max}).");
+		}
+
+		if (thresholds.StandardEntry > thresholds.StrongEntry || thresholds.StrongEntry > thresholds.TopEntry
+			|| thresholds.TopEntry > thresholds.ExceptionalEntry) {
+			throw new InvalidDataException(
+				"Entry thresholds must satisfy standard_entry <= strong_entry <= top_entry <= exceptional_entry.");
 		}
 
 		if (thresholds.FurtherMathsAverageEntry is < Thresholds.MinGcseGrade or > Thresholds.MaxGcseGrade
@@ -111,6 +117,23 @@ public static class PolicyThresholdsStore
 
 		if (thresholds.AdultAge <= 0) {
 			throw new InvalidDataException("adult_age must be positive.");
+		}
+
+		if (thresholds.MaxChosenALevels < 1) {
+			throw new InvalidDataException("max_chosen_a_levels must be at least 1.");
+		}
+
+		if (thresholds.HighAttainmentMaxChosenALevels < 1) {
+			throw new InvalidDataException("high_attainment_max_chosen_a_levels must be at least 1.");
+		}
+
+		if (thresholds.HighAttainmentMaxChosenALevels < thresholds.MaxChosenALevels) {
+			throw new InvalidDataException(
+				"high_attainment_max_chosen_a_levels must be greater than or equal to max_chosen_a_levels.");
+		}
+
+		if (thresholds.HighAttainmentAverageGcse is < Thresholds.MinGcseGrade or > Thresholds.MaxGcseGrade) {
+			throw new InvalidDataException("high_attainment_average_gcse must stay within the GCSE scale.");
 		}
 
 		// max_green_choices is optional: absent (null) disables the green cap entirely. When present it

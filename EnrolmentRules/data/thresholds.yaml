@@ -5,11 +5,17 @@ min_passes: 5
 top_entry: 7
 strong_entry: 6
 standard_entry: 5
+# exceptional_entry is a hard GCSE gate (a top grade) for the most demanding subjects: Maths and
+# Physics require Maths GCSE at this level, ANDed with the regression-based rating tiers.
+exceptional_entry: 8
 further_maths_average_entry: 7.0
 humanities_average_entry: 5.0
 min_dfe_green_probability_at_or_above: 0.60
 min_dfe_amber_probability_at_or_above: 0.50
 adult_age: 19
+max_chosen_a_levels: 3
+high_attainment_max_chosen_a_levels: 4
+high_attainment_average_gcse: 7.5
 # max_green_choices is an optional, normally-unused feature: when omitted (as here) the green cap is
 # disabled and every subject rated green stays green — the engine reports what a student is allowed to
 # study, it does not force an "optimal" shortlist. Set it to a positive integer only if policy demands

@@ -42,6 +42,25 @@
         </PackageReference>
     </ItemGroup>
 
+    <!-- Stamp the git commit into InformationalVersion (the SDK appends "+$(SourceRevisionId)"), so a
+         running CLI or web instance can name the build it came from. A source drop with no git checkout
+         leaves SourceRevisionId empty and BuildInfo degrades to "unknown" rather than failing the build. -->
+    <Target Name="StampGitCommit" BeforeTargets="GetAssemblyVersion" Condition="'$(SourceRevisionId)' == ''">
+        <Exec Command="git rev-parse --short=10 HEAD" ConsoleToMSBuild="true" StandardOutputImportance="low"
+              ContinueOnError="true" IgnoreExitCode="true" EchoOff="true">
+            <Output TaskParameter="ConsoleOutput" PropertyName="GitCommitHash"/>
+            <Output TaskParameter="ExitCode" PropertyName="GitCommitExitCode"/>
+        </Exec>
+        <Exec Command="git status --porcelain --untracked-files=no" ConsoleToMSBuild="true" StandardOutputImportance="low"
+              ContinueOnError="true" IgnoreExitCode="true" EchoOff="true" Condition="'$(GitCommitExitCode)' == '0'">
+            <Output TaskParameter="ConsoleOutput" PropertyName="GitWorkingTreeStatus"/>
+        </Exec>
+        <PropertyGroup Condition="'$(GitCommitExitCode)' == '0' AND '$(GitCommitHash)' != ''">
+            <SourceRevisionId>$(GitCommitHash)</SourceRevisionId>
+            <SourceRevisionId Condition="'$(GitWorkingTreeStatus)' != ''">$(SourceRevisionId)-dirty</SourceRevisionId>
+        </PropertyGroup>
+    </Target>
+
     <ItemGroup Condition="'$(IsPackable)' != 'false'">
         <None Include="$(MSBuildThisFileDirectory)README.md" Pack="true" PackagePath="\" Visible="false"/>
         <None Include="$(MSBuildThisFileDirectory)LICENSE" Pack="true" PackagePath="\" Visible="false"/>

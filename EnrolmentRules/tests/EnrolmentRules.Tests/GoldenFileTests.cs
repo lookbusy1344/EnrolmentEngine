@@ -86,32 +86,33 @@ public sealed class GoldenFileTests
 	}
 
 	[Fact]
-	public void strong_constraints_fixture_exercises_exclusion_and_own_time()
+	public void strong_constraints_fixture_keeps_unchosen_exclusion_pairs_available()
 	{
-		// All eights ⇒ every subject green at base; the host-code pass then fires the exclusion, own-time and
-		// prerequisite (Further Maths needs a committed Maths) downgrades. The green cap is disabled in the
+		// All eights ⇒ every subject green at base; the host-code pass then fires own-time and
+		// prerequisite (Further Maths needs a committed Maths) downgrades. Exclusion pairs remain available
+		// until one side is chosen. The green cap is disabled in the
 		// shipped config, so the surviving greens are NOT clamped — every legitimate green stays green.
 		var result = EvaluateFixture("strong-constraints");
 
 		result.Eligible.Should().BeTrue();
 		Harness.Thresholds.MaxGreenChoices.Should().BeNull();
 		result.Adjustments.Should().NotContain(a => a.Reason == Aggregator.ExceedsCapReason);
+		result.Adjustments.Should().NotContain(a => a.Kind == AdjustmentKind.ChosenSubjectExclusion);
 
 		var art = result.Recommendations.Single(r => r.Subject == Subject.Art);
-		art.Rating.Should().Be(Rating.Amber);
-		art.Reason.Should().Contain("Mutual exclusion").And.Contain(EnumNames.NameOf(Subject.History));
+		art.Rating.Should().Be(Rating.Green);
 
 		var music = result.Recommendations.Single(r => r.Subject == Subject.Music);
 		music.Rating.Should().Be(Rating.Amber);
-		music.Reason.Should().Be(ConstraintPass.OwnTimeReason);
+		music.Reason.Should().StartWith(ConstraintPass.OwnTimeReason);
 	}
 
 	[Fact]
-	public void chosen_prior_choice_red_fixture_excludes_german_and_downgrades_french()
+	public void chosen_prior_choice_red_fixture_excludes_french_via_the_chosen_german()
 	{
-		// An all-8s student (except German at 5) who has committed to German A-level: French
-		// is excluded as a prior choice, Art is demoted by mutual exclusion with History,
-		// and German itself is red from its own low grade.
+		// An all-8s student (except German at 5) who has committed to German A-level: French is excluded by the
+		// chosen subject and goes red. German's own grade 5 now clears the relaxed standard entry, so the
+		// committed subject itself stays green.
 		var result = EvaluateFixture("chosen-prior-choice-red");
 
 		result.Eligible.Should().BeTrue();
@@ -121,12 +122,9 @@ public sealed class GoldenFileTests
 		french.Reason.Should().Be("Cannot be combined with chosen german");
 
 		var german = result.Recommendations.Single(r => r.Subject == Subject.German);
-		german.Rating.Should().Be(Rating.Red);
-		german.Reason.Should().Contain("amber threshold");
+		german.Rating.Should().Be(Rating.Green);
 
-		var art = result.Recommendations.Single(r => r.Subject == Subject.Art);
-		art.Rating.Should().Be(Rating.Amber);
-		art.Reason.Should().Contain("Mutual exclusion").And.Contain("history");
+		result.Recommendations.Single(r => r.Subject == Subject.Art).Rating.Should().Be(Rating.Green);
 
 		result.Adjustments.Should().ContainSingle(a =>
 			a.Subject == Subject.French && a.From == Rating.Green && a.To == Rating.Red
@@ -149,7 +147,7 @@ public sealed class GoldenFileTests
 
 		result.Eligible.Should().BeTrue();
 		result.Summary.GreenCount.Should().Be(cap);
-		result.Adjustments.Should().Contain(a => a.Reason == Aggregator.ExceedsCapReason);
+		result.Adjustments.Should().Contain(a => a.Reason.StartsWith(Aggregator.ExceedsCapReason, StringComparison.Ordinal));
 	}
 
 	[Fact]

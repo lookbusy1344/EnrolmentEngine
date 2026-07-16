@@ -145,7 +145,7 @@ the rest of the project reads easily:
 | Bucket | Home | Evaluated by | Holds |
 | --- | --- | --- | --- |
 | **Per-student rules** | `workflows/eligibility.yaml`, `workflows/subject-ratings.yaml` | Microsoft **RulesEngine** (lambda strings) | The eligibility gate and each subject's green/amber/red base tier. A pure function of *one* student's facts. |
-| **Tuning values** | `data/thresholds.yaml` | Plain **data**, schema-validated by `PolicyThresholdsStore` → `PolicyThresholds` | The numeric knobs the lambdas read as `policy.PassGrade` / `facts.TopEntry` and the host pass reads directly: pass grade, min passes, entry thresholds, DfE floors, adult age, the optional green cap (normally unset), amber score factor. |
+| **Tuning values** | `data/thresholds.yaml` | Plain **data**, schema-validated by `PolicyThresholdsStore` → `PolicyThresholds` | The numeric knobs the lambdas read as `policy.PassGrade` / `facts.TopEntry` and the host pass reads directly: pass grade, min passes, entry thresholds, DfE floors, adult age, the whole-student chosen-subject cap, the optional green cap (normally unset), amber score factor. |
 | **Qualification scale** | `data/qualifications.yaml` | Plain **data**, schema-validated by `QualificationScaleStore` → `QualificationScale` | Grade ordering within each qualification type, plus the A-level-points equivalence used when prior qualifications lift a subject's prediction. |
 | **Subject-relationship rules** | `data/catalogue.yaml` | Plain **data**, schema-validated by `EnrolmentRules.Engine.Authoring.CatalogueStore` — *not* RulesEngine | priority weights, exclusion pairs, own-time/veto prefixes, prerequisites, entry equivalents, restudy bars, per-subject regression — which subjects relate to which. |
 | **Relationship types + scale invariants** | internal engine machinery, `PredictionModel`/`ALevelGrade` math, `Thresholds` | Compiled **C#** | Not rules — the fixed *types* a rule can take and how they apply (a rule cannot read sibling rule outcomes), plus the GCSE-scale invariants. Changed only to add a new *kind* of relationship — rare, not part of normal operation. |
@@ -339,18 +339,18 @@ literally `"true"` — a catch-all that always matches.
 Example for Physics:
 
 ```jsonc
-"physics:green": "facts.Gcse(\"maths\") >= facts.TopEntry && facts.Gcse(\"physics\") >= facts.StrongEntry && facts.Predicted(\"physics\") >= ALevelGrade.B && facts.DfeProbabilityAtOrAbove(\"physics\", ALevelGrade.B) >= facts.MinDfeGreenProbabilityAtOrAbove"
-"physics:amber": "facts.Gcse(\"maths\") >= facts.TopEntry && facts.Gcse(\"physics\") >= facts.StrongEntry && facts.Predicted(\"physics\") >= ALevelGrade.C && facts.DfeProbabilityAtOrAbove(\"physics\", ALevelGrade.C) >= facts.MinDfeAmberProbabilityAtOrAbove"
+"physics:green": "facts.Gcse(\"maths\") >= facts.ExceptionalEntry && facts.Gcse(\"physics\") >= facts.StandardEntry && facts.Predicted(\"physics\") >= ALevelGrade.D && facts.DfeProbabilityAtOrAbove(\"physics\", ALevelGrade.D) >= facts.MinDfeGreenProbabilityAtOrAbove"
+"physics:amber": "facts.Gcse(\"maths\") >= facts.ExceptionalEntry && facts.Gcse(\"physics\") >= facts.StandardEntry && facts.Predicted(\"physics\") >= ALevelGrade.E && facts.DfeProbabilityAtOrAbove(\"physics\", ALevelGrade.E) >= facts.MinDfeAmberProbabilityAtOrAbove"
 "physics:red":   "true"
 ```
 
-Maths uses the same shape with a higher green grade threshold:
+Maths uses the same shape, also gating hard on Maths GCSE at the exceptional grade:
 
 ```jsonc
 "maths:green":
-  "facts.Gcse(\"maths\") >= facts.TopEntry
-   && facts.Predicted(\"maths\") >= ALevelGrade.A
-   && facts.DfeProbabilityAtOrAbove(\"maths\", ALevelGrade.A)
+  "facts.Gcse(\"maths\") >= facts.ExceptionalEntry
+   && facts.Predicted(\"maths\") >= ALevelGrade.D
+   && facts.DfeProbabilityAtOrAbove(\"maths\", ALevelGrade.D)
         >= facts.MinDfeGreenProbabilityAtOrAbove"
 ```
 
@@ -375,10 +375,10 @@ Rules:
   - RuleName: 'physics:green'
     SuccessEvent: 'Entry met; predicted A-level grade at or above the green threshold'
     Expression: >-
-      facts.Gcse("maths") >= facts.TopEntry &&
-      facts.Gcse("physics") >= facts.StrongEntry &&
-      facts.Predicted("physics") >= ALevelGrade.B &&
-      facts.DfeProbabilityAtOrAbove("physics", ALevelGrade.B)
+      facts.Gcse("maths") >= facts.ExceptionalEntry &&
+      facts.Gcse("physics") >= facts.StandardEntry &&
+      facts.Predicted("physics") >= ALevelGrade.D &&
+      facts.DfeProbabilityAtOrAbove("physics", ALevelGrade.D)
         >= facts.MinDfeGreenProbabilityAtOrAbove
 ```
 
@@ -411,14 +411,14 @@ Rules:
   - RuleName: 'art:green'
     SuccessEvent: 'Entry met (age-gated GCSE threshold); predicted A-level grade at or above the green threshold'
     Expression: >-
-      facts.Gcse("art") >= (facts.Age >= facts.AdultAge ? facts.TopEntry : facts.StrongEntry) &&
-      facts.Predicted("art") >= ALevelGrade.B &&
-      facts.DfeProbabilityAtOrAbove("art", ALevelGrade.B)
+      facts.Gcse("art") >= (facts.Age >= facts.AdultAge ? facts.TopEntry : facts.StandardEntry) &&
+      facts.Predicted("art") >= ALevelGrade.D &&
+      facts.DfeProbabilityAtOrAbove("art", ALevelGrade.D)
         >= facts.MinDfeGreenProbabilityAtOrAbove
 ```
 
 `facts.Age` is the whole-years age derived in step 1. The gate *policy* — adults (≥ `AdultAge`)
-must reach `TopEntry`, younger students only `StrongEntry` — lives entirely in the rule data; host
+must reach `TopEntry`, younger students only `StandardEntry` — lives entirely in the rule data; host
 code only exposes the value. This is the template for any new per-student attribute: derive it in
 prediction, expose it on the internal facts object, and decide with it in the YAML.
 
@@ -450,9 +450,9 @@ The important reading rule is:
 The entry requirement is **not a separate gate sitting alongside green and amber. It is the
 shared first clause inside both tiers.** Compare the two Physics expressions above: their entry
 clauses
-(`facts.Gcse("maths") >= TopEntry && facts.Gcse("physics") >= StrongEntry`) are *identical* —
-only the predicted-grade and DfE-probability bars differ (≥B/green-probability for green,
-≥C/amber-probability for amber). So amber is a strict **superset** of green: a green-eligible
+(`facts.Gcse("maths") >= ExceptionalEntry && facts.Gcse("physics") >= StandardEntry`) are *identical* —
+only the predicted-grade and DfE-probability bars differ (≥D/green-probability for green,
+≥E/amber-probability for amber). So amber is a strict **superset** of green: a green-eligible
 student also satisfies amber (and the always-true red), and the first-hit-wins scan is what
 collapses that overlap into one tier.
 
@@ -473,9 +473,9 @@ Two things still gate enrolment around this per-subject rating:
    runs and every subject is emitted red — so amber-or-better only matters once the gate is passed.
 2. **Downstream:** the cross-subject constraint pass (and, if enabled, the optional green cap) can
    still downgrade a subject that cleared its amber/green bar — an unmet prerequisite forces red, and
-   a mutual exclusion or own-time miss can knock green to amber. A red-severity exclusion can also
-   force red when the rule says so. The green cap is off by default, so normally nothing demotes a
-   subject purely for being "surplus".
+   a chosen-subject exclusion or own-time miss can knock green to amber. A red-severity exclusion can
+   also force red when the rule says so. The green cap is off by default, so normally nothing demotes
+   a subject purely for being "surplus".
 
 Each non-red tier requires three independent facts:
 
@@ -550,12 +550,10 @@ ratings at once. It is a pure function `(ratings, profile) → Adjustment[]`. Si
   green/amber Maths satisfy it; switching `severity` to `amber` would make the dependency advisory
   (demote to amber, not red). A prerequisite only ever *gates* — it can keep Further Maths out of green,
   never put it in.
-- **Mutual exclusion → amber or red.** For each clashing pair in the catalogue (here **History ↔ Art**
-  and the illustrative **French ↔ German** clash), the rule's configured severity applies when
-  the pair qualifies: amber pairs require both to be green, red pairs block either green or amber
-  on the lower-weight side.
-- **Prior-choice exclusion → amber or red.** A committed `ChosenALevels` choice always wins, so any
-  qualifying subject that the chosen A-level excludes is downgraded to that exclusion's severity.
+- **Chosen-subject exclusion → amber or red.** For each clashing pair in the catalogue (here
+  **History ↔ Art** and the illustrative **French ↔ German** clash), both subjects keep their
+  unconstrained ratings until one side is committed in `ChosenALevels`. A qualifying subject that
+  the chosen A-level excludes is then downgraded to the pair's configured severity.
 - **Own-time → amber.** A subject that requires a non-academic activity (here **Music** requires
   a `plays_*` hobby) but whose student lacks it is demoted to **amber**.
 - **Veto → red.** A subject barred outright by an incompatible activity tag (here an illustrative
@@ -584,8 +582,8 @@ that matches:
 | --- | --- | --- |
 | 1 | Eligibility gate fails | **Red** — every subject, nothing below can lift it |
 | 2 | Per-subject **veto** (incompatible activity tag) | **Red** — overrides the tier entirely |
-| 3 | Unmet **hard** prerequisite, or a red-severity exclusion | **Red** — overrides the tier |
-| 4 | **Green** tier matches (entry + prediction + green probability) | **Green** — may still demote to amber via an amber exclusion, an unmet advisory (amber) prerequisite, an own-time miss, or (if enabled) the optional green cap |
+| 3 | Unmet **hard** prerequisite, or a red-severity chosen-subject exclusion | **Red** — overrides the tier |
+| 4 | **Green** tier matches (entry + prediction + green probability) | **Green** — may still demote to amber via an amber chosen-subject exclusion, an unmet advisory (amber) prerequisite, an own-time miss, or (if enabled) the optional green cap |
 | 5 | **Amber** tier matches (entry + prediction + amber probability) | **Amber** |
 | 6 | Nothing matched | **Red** — the catch-all fallback |
 
@@ -620,7 +618,7 @@ downgrade — constraint pass and (when enabled) cap alike.
   "eligibility_reasons": [],
   "recommendations": [ { "subject": "maths", "rating": "green", "reason": "..." }, ... ],
   "summary": { "green_count": 4, "amber_count": 5, "programme_priority_score": 300 },
-  "adjustments": [ { "subject": "art", "from": "green", "to": "amber", "reason": "Mutual exclusion with history — authorisation required" }, ... ]
+  "adjustments": [ { "subject": "art", "from": "green", "to": "amber", "reason": "Cannot be combined with chosen history" }, ... ]
 }
 ```
 
@@ -737,9 +735,9 @@ for an existing `QualificationType`. The set of qualification types is compiled 
 adding a genuinely new type requires a C# enum member plus coordinated schema and test changes.
 
 **Adding a new relationship *type* (engine evolution, not config).** Only when you need a kind of
-relation that does not exist yet — beyond prerequisite, mutual exclusion, prior-choice exclusion,
-own-time, veto, and restudy bar — do you touch the internal constraint / aggregation machinery. The existing six
-types cover the policy you can express as data; a seventh is a structural change to the engine, not a
+relation that does not exist yet — beyond prerequisite, chosen-subject exclusion,
+own-time, veto, and restudy bar — do you touch the internal constraint / aggregation machinery. The existing
+types cover the policy you can express as data; a new one is a structural change to the engine, not a
 routine edit, and not the kind of thing that changes within an academic year. This is a project
 change, out of scope for normal operation — see the
 [relationship-types appendix](rule-authoring.md#appendix-how-the-engine-applies-your-rules-background) of the

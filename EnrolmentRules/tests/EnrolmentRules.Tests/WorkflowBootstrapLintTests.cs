@@ -18,23 +18,23 @@ public sealed class WorkflowBootstrapLintTests
 				static content => content.Replace(
 					"""
 					  - RuleName: 'maths:green'
-					    SuccessEvent: 'Entry met; predicted A-level grade at or above the green threshold'
+					    SuccessEvent: 'Entry met (Maths GCSE at the exceptional grade); predicted A-level grade at or above the green threshold'
 					    Expression: >-
-					      facts.Gcse("maths") >= facts.TopEntry && facts.Predicted("maths") >= ALevelGrade.A && facts.DfeProbabilityAtOrAbove("maths", ALevelGrade.A) >= facts.MinDfeGreenProbabilityAtOrAbove
+					      facts.Gcse("maths") >= facts.ExceptionalEntry && facts.Predicted("maths") >= ALevelGrade.D && facts.DfeProbabilityAtOrAbove("maths", ALevelGrade.D) >= facts.MinDfeGreenProbabilityAtOrAbove
 					  - RuleName: 'maths:amber'
-					    SuccessEvent: 'Entry met; predicted A-level grade at or above the amber threshold'
+					    SuccessEvent: 'Entry met (Maths GCSE at the exceptional grade); predicted A-level grade at or above the amber threshold'
 					    Expression: >-
-					      facts.Gcse("maths") >= facts.TopEntry && facts.Predicted("maths") >= ALevelGrade.B && facts.DfeProbabilityAtOrAbove("maths", ALevelGrade.B) >= facts.MinDfeAmberProbabilityAtOrAbove
+					      facts.Gcse("maths") >= facts.ExceptionalEntry && facts.Predicted("maths") >= ALevelGrade.E && facts.DfeProbabilityAtOrAbove("maths", ALevelGrade.E) >= facts.MinDfeAmberProbabilityAtOrAbove
 					""",
 					"""
 					  - RuleName: 'maths:amber'
-					    SuccessEvent: 'Entry met; predicted A-level grade at or above the amber threshold'
+					    SuccessEvent: 'Entry met (Maths GCSE at the exceptional grade); predicted A-level grade at or above the amber threshold'
 					    Expression: >-
-					      facts.Gcse("maths") >= facts.TopEntry && facts.Predicted("maths") >= ALevelGrade.B && facts.DfeProbabilityAtOrAbove("maths", ALevelGrade.B) >= facts.MinDfeAmberProbabilityAtOrAbove
+					      facts.Gcse("maths") >= facts.ExceptionalEntry && facts.Predicted("maths") >= ALevelGrade.E && facts.DfeProbabilityAtOrAbove("maths", ALevelGrade.E) >= facts.MinDfeAmberProbabilityAtOrAbove
 					  - RuleName: 'maths:green'
-					    SuccessEvent: 'Entry met; predicted A-level grade at or above the green threshold'
+					    SuccessEvent: 'Entry met (Maths GCSE at the exceptional grade); predicted A-level grade at or above the green threshold'
 					    Expression: >-
-					      facts.Gcse("maths") >= facts.TopEntry && facts.Predicted("maths") >= ALevelGrade.A && facts.DfeProbabilityAtOrAbove("maths", ALevelGrade.A) >= facts.MinDfeGreenProbabilityAtOrAbove
+					      facts.Gcse("maths") >= facts.ExceptionalEntry && facts.Predicted("maths") >= ALevelGrade.D && facts.DfeProbabilityAtOrAbove("maths", ALevelGrade.D) >= facts.MinDfeGreenProbabilityAtOrAbove
 					""",
 					StringComparison.Ordinal));
 
@@ -58,9 +58,9 @@ public sealed class WorkflowBootstrapLintTests
 				static content => content.Replace(
 					"""
 					  - RuleName: 'maths:amber'
-					    SuccessEvent: 'Entry met; predicted A-level grade at or above the amber threshold'
+					    SuccessEvent: 'Entry met (Maths GCSE at the exceptional grade); predicted A-level grade at or above the amber threshold'
 					    Expression: >-
-					      facts.Gcse("maths") >= facts.TopEntry && facts.Predicted("maths") >= ALevelGrade.B && facts.DfeProbabilityAtOrAbove("maths", ALevelGrade.B) >= facts.MinDfeAmberProbabilityAtOrAbove
+					      facts.Gcse("maths") >= facts.ExceptionalEntry && facts.Predicted("maths") >= ALevelGrade.E && facts.DfeProbabilityAtOrAbove("maths", ALevelGrade.E) >= facts.MinDfeAmberProbabilityAtOrAbove
 					""",
 					string.Empty,
 					StringComparison.Ordinal));
@@ -144,7 +144,7 @@ public sealed class WorkflowBootstrapLintTests
 		try {
 			RewriteSubjectRatings(
 				fixture,
-				static content => content.Replace("facts.Predicted(\"maths\") >= ALevelGrade.A", "facts.Predicted(\"mathz\") >= ALevelGrade.A",
+				static content => content.Replace("facts.Predicted(\"maths\") >= ALevelGrade.D", "facts.Predicted(\"mathz\") >= ALevelGrade.D",
 					StringComparison.Ordinal));
 
 			var act = () => EnrolmentEngine.Create(WorkflowsDir(fixture), DataDir(fixture), Harness.AsOf);

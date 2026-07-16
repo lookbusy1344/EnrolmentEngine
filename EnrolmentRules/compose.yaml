@@ -1,0 +1,21 @@
+# Docker Compose for the EnrolmentRules.Web front-end.
+#
+# Local / VPS use (builds from the Dockerfile in this folder):
+#   docker compose up -d --build
+#   docker compose logs -f
+#   docker compose down
+#
+# To run a pre-built registry image instead of building, comment out `build:` and
+# set `image:` to your pushed tag (e.g. ghcr.io/lookbusy1344/enrolment-web:latest).
+# See docs/deployment.md for registry and reverse-proxy (HTTPS) instructions.
+
+services:
+  web:
+    build: .
+    image: enrolment-web
+    restart: unless-stopped
+    ports:
+      - "8080:8080"
+    environment:
+      ASPNETCORE_ENVIRONMENT: Production
+      # ASPNETCORE_HTTP_PORTS: "8080"   # override if your host expects another port

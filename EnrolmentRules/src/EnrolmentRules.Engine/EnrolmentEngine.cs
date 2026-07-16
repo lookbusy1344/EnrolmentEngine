@@ -304,9 +304,9 @@ public sealed class EnrolmentEngine : IEnrolmentEngine
 	}
 
 	/// <summary>
-	///     Run the pipeline once. Order is fixed (predict → engine → constraints → cap → aggregate): the cap
-	///     (optional, a no-op unless a green cap is configured) counts the greens that survived the constraint
-	///     downgrades, so it must read the constraint pass's result. The two adjustment stages compose by
+	///     Run the pipeline once. Order is fixed (predict → engine → constraints → chosen-subject cap →
+	///     green cap → aggregate): both caps read the post-constraint ratings, and the optional green cap
+	///     counts greens that survived every earlier downgrade. The adjustment stages compose by
 	///     most-severe-wins into the final ratings.
 	/// </summary>
 	private Evaluation Run(StudentInput student, DateOnly asOf, CancellationToken cancellationToken)
@@ -323,11 +323,13 @@ public sealed class EnrolmentEngine : IEnrolmentEngine
 		var afterConstraints = ConstraintPass.Apply(baseRatings, constraintAdjustments);
 		cancellationToken.ThrowIfCancellationRequested();
 
-		var capAdjustments = Aggregator.CapGreens(afterConstraints, Catalogue, evaluator.Thresholds);
-		var finalRatings = ConstraintPass.Apply(afterConstraints, capAdjustments);
+		var chosenSubjectCapAdjustments = Aggregator.CapChosenSubjects(afterConstraints, profile, evaluator.Thresholds);
+		var afterChosenSubjectCap = ConstraintPass.Apply(afterConstraints, chosenSubjectCapAdjustments);
+		var greenCapAdjustments = Aggregator.CapGreens(afterChosenSubjectCap, Catalogue, evaluator.Thresholds);
+		var finalRatings = ConstraintPass.Apply(afterChosenSubjectCap, greenCapAdjustments);
 		cancellationToken.ThrowIfCancellationRequested();
 
-		EquatableArray<Adjustment> adjustments = [.. constraintAdjustments, .. capAdjustments];
+		EquatableArray<Adjustment> adjustments = [.. constraintAdjustments, .. chosenSubjectCapAdjustments, .. greenCapAdjustments];
 		return new(profile, gate, [.. baseRatings], [.. finalRatings], adjustments,
 			Aggregator.Summarise(finalRatings, Catalogue, evaluator.Thresholds));
 	}

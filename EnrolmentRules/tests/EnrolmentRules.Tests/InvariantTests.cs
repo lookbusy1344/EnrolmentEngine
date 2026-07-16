@@ -132,18 +132,6 @@ public sealed partial class InvariantTests
 			return true;
 		}
 
-		// No green-count ceiling: the green cap is an optional feature, disabled in the shipped config, so
-		// every legitimate green stays green. The exclusion-pair invariant below is what still bounds greens.
-		var greenSubjects = explained.Explanations
-			.Where(static explanation => explanation.Rating == Rating.Green)
-			.Select(static explanation => explanation.Subject)
-			.ToHashSet();
-
-		foreach (var (a, b, _) in Catalogue.ExclusionPairs) {
-			var bothGreen = greenSubjects.Contains(a) && greenSubjects.Contains(b);
-			bothGreen.Should().BeFalse($"excluding pair {a}/{b} cannot both survive green");
-		}
-
 		foreach (var explanation in explained.Explanations) {
 			((int)explanation.Rating).Should().BeGreaterThanOrEqualTo(
 				(int)explanation.BaseRating,

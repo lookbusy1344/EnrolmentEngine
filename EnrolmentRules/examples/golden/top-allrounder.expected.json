@@ -8,14 +8,84 @@
       "reason": "Entry met (Maths and Art at standard entry); predicted A-level grade at or above the green threshold"
     },
     {
+      "subject": "law",
+      "rating": "green",
+      "reason": "Entry met (English at standard entry and humanities average); predicted A-level grade at or above the green threshold"
+    },
+    {
+      "subject": "religious_studies",
+      "rating": "green",
+      "reason": "Entry met (English at standard entry and humanities average); predicted A-level grade at or above the green threshold"
+    },
+    {
+      "subject": "politics",
+      "rating": "green",
+      "reason": "Entry met (English at standard entry and humanities average); predicted A-level grade at or above the green threshold"
+    },
+    {
+      "subject": "maths",
+      "rating": "green",
+      "reason": "Entry met (Maths GCSE at the exceptional grade); predicted A-level grade at or above the green threshold"
+    },
+    {
+      "subject": "geography",
+      "rating": "green",
+      "reason": "Entry met (humanities average and English at standard entry); predicted A-level grade at or above the green threshold"
+    },
+    {
+      "subject": "physics",
+      "rating": "green",
+      "reason": "Entry met (Physics at standard entry and Maths GCSE at the exceptional grade); predicted A-level grade at or above the green threshold"
+    },
+    {
+      "subject": "psychology",
+      "rating": "green",
+      "reason": "Entry met (Biology, Maths and English at standard entry); predicted A-level grade at or above the green threshold"
+    },
+    {
+      "subject": "chemistry",
+      "rating": "green",
+      "reason": "Entry met (Chemistry at standard entry); predicted A-level grade at or above the green threshold"
+    },
+    {
+      "subject": "economics",
+      "rating": "green",
+      "reason": "Entry met (Maths and English at standard entry); predicted A-level grade at or above the green threshold"
+    },
+    {
+      "subject": "biology",
+      "rating": "green",
+      "reason": "Entry met (Biology at standard entry or a prior-qualification equivalent); predicted A-level grade at or above the green threshold"
+    },
+    {
+      "subject": "english_literature",
+      "rating": "green",
+      "reason": "Entry met (an English GCSE at standard entry); predicted A-level grade at or above the green threshold"
+    },
+    {
       "subject": "english_language",
       "rating": "green",
-      "reason": "Entry met; predicted A-level grade at or above the green threshold"
+      "reason": "Entry met (English Language at standard entry); predicted A-level grade at or above the green threshold"
+    },
+    {
+      "subject": "history",
+      "rating": "green",
+      "reason": "Entry met (humanities average); predicted A-level grade at or above the green threshold"
     },
     {
       "subject": "art",
       "rating": "green",
       "reason": "Entry met (age-gated GCSE threshold); predicted A-level grade at or above the green threshold"
+    },
+    {
+      "subject": "music",
+      "rating": "green",
+      "reason": "Entry met (Music at standard entry); predicted A-level grade at or above the green threshold"
+    },
+    {
+      "subject": "business_studies",
+      "rating": "green",
+      "reason": "Entry met (Maths and English at standard entry); predicted A-level grade at or above the green threshold"
     },
     {
       "subject": "sociology",
@@ -31,76 +101,6 @@
       "subject": "drama",
       "rating": "green",
       "reason": "Entry met (English at standard entry); predicted A-level grade at or above the green threshold"
-    },
-    {
-      "subject": "law",
-      "rating": "amber",
-      "reason": "Entry met (English at strong entry and humanities average); predicted A-level grade at or above the amber threshold"
-    },
-    {
-      "subject": "religious_studies",
-      "rating": "amber",
-      "reason": "Entry met (English at standard entry and humanities average); predicted A-level grade at or above the amber threshold"
-    },
-    {
-      "subject": "politics",
-      "rating": "amber",
-      "reason": "Entry met (English at strong entry and humanities average); predicted A-level grade at or above the amber threshold"
-    },
-    {
-      "subject": "maths",
-      "rating": "amber",
-      "reason": "Entry met; predicted A-level grade at or above the amber threshold"
-    },
-    {
-      "subject": "geography",
-      "rating": "amber",
-      "reason": "Entry met (humanities average and English at standard entry); predicted A-level grade at or above the amber threshold"
-    },
-    {
-      "subject": "physics",
-      "rating": "amber",
-      "reason": "Entry met; predicted A-level grade at or above the amber threshold"
-    },
-    {
-      "subject": "psychology",
-      "rating": "amber",
-      "reason": "Entry met (Biology, Maths and English at standard entry); predicted A-level grade at or above the amber threshold"
-    },
-    {
-      "subject": "chemistry",
-      "rating": "amber",
-      "reason": "Entry met; predicted A-level grade at or above the amber threshold"
-    },
-    {
-      "subject": "economics",
-      "rating": "amber",
-      "reason": "Entry met (Maths at strong entry and English at standard entry); predicted A-level grade at or above the amber threshold"
-    },
-    {
-      "subject": "biology",
-      "rating": "amber",
-      "reason": "Entry met; predicted A-level grade at or above the amber threshold"
-    },
-    {
-      "subject": "english_literature",
-      "rating": "amber",
-      "reason": "Entry met (English Language and Maths at a top GCSE score); predicted A-level grade at or above the amber threshold"
-    },
-    {
-      "subject": "history",
-      "rating": "amber",
-      "reason": "Entry met; predicted A-level grade at or above the amber threshold"
-    },
-    {
-      "subject": "music",
-      "rating": "amber",
-      "reason": "Entry met; predicted A-level grade at or above the amber threshold"
-    },
-    {
-      "subject": "business_studies",
-      "rating": "amber",
-      "reason": "Entry met (Maths and English at standard entry); predicted A-level grade at or above the amber threshold"
     },
     {
       "subject": "further_maths",
@@ -134,9 +134,9 @@
     }
   ],
   "summary": {
-    "green_count": 6,
-    "amber_count": 14,
-    "programme_priority_score": 546.5
+    "green_count": 20,
+    "amber_count": 0,
+    "programme_priority_score": 865
   },
   "adjustments": []
 }

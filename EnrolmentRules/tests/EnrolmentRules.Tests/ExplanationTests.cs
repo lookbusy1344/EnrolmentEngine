@@ -80,10 +80,10 @@ public sealed class ExplanationTests
 	public void explanation_cites_the_constraint_that_overrode_the_base_rule()
 	{
 		var engine = Harness.ShippedEngine();
-		var explained = engine.Explain(StrongStudent("plays_piano"));
+		var explained = engine.Explain(StrongStudent("plays_piano") with { ChosenALevels = [Subject.History] });
 
-		// History ↔ Art clash: both green at base, Art is the lower-weight loser → amber. The explanation
-		// must cite the exclusion adjustment, not just the base art:green rule.
+		// History ↔ Art clash: both green at base, but Art is downgraded only once History is chosen.
+		// The explanation must cite the exclusion adjustment, not just the base art:green rule.
 		var art = Of(explained, Subject.Art);
 
 		art.BaseRating.Should().Be(Rating.Green);
@@ -93,7 +93,7 @@ public sealed class ExplanationTests
 		var exclusion = art.Overrides.Should().ContainSingle().Which;
 		exclusion.From.Should().Be(Rating.Green);
 		exclusion.To.Should().Be(Rating.Amber);
-		exclusion.Reason.Should().Contain("Mutual exclusion").And.Contain(EnumNames.NameOf(Subject.History));
+		exclusion.Reason.Should().Be($"Cannot be combined with chosen {EnumNames.NameOf(Subject.History)}");
 		art.Reason.Should().Be(exclusion.Reason);
 	}
 

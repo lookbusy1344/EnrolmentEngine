@@ -127,7 +127,7 @@ A student document has this shape:
 - `hobbies` — opaque free-form activity tags, matched by **prefix** for own-time requirements and
   vetoes (e.g. `plays_` matches `plays_piano`).
 - `chosen_a_levels` — A-levels the student has already committed to. Constraint *triggers*, not
-  filters: they drive prerequisites (`requires: chosen`) and prior-choice exclusions.
+  filters: they drive prerequisites (`requires: chosen`) and activate catalogue exclusions.
 - `prior_qualifications` — typed Level-3 facts (`subject`/`type`/`grade`) that can open an entry
   path, lift the prediction, or trip a restudy bar.
 - `date_of_birth` — the raw fact; **age is derived**, not stored (see below).
@@ -222,7 +222,7 @@ boilerplate; you write the `Expression`.
 | `facts.HasEntryEquivalent("biology")`           | `bool`   | A prior qualification satisfies entry                 |
 | `facts.Average`                                 | `double` | Mean GCSE score                                       |
 | `facts.Age`                                     | `int`    | Whole years at reference date                         |
-| `facts.TopEntry` / `StrongEntry` / `StandardEntry` | `int` | Entry thresholds (forwarded from policy)              |
+| `facts.TopEntry` / `StrongEntry` / `StandardEntry` / `ExceptionalEntry` | `int` | Entry thresholds (forwarded from policy)  |
 | `facts.FurtherMathsAverageEntry` / `HumanitiesAverageEntry` | `double` | Average-based entry bars                  |
 | `facts.MinDfeGreenProbabilityAtOrAbove` / `…Amber…` | `double` | DfE probability floors                            |
 | `facts.AdultAge`                                | `int`    | Adult-age cutoff for age-gated entry                  |
@@ -250,16 +250,17 @@ A standard subject tier reads as *entry gate AND predicted-points bar AND DfE-pr
 
 ```yaml
   - RuleName: 'physics:green'
-    SuccessEvent: 'Entry met; predicted A-level grade at or above the green threshold'
+    SuccessEvent: 'Entry met (Physics at standard entry and Maths GCSE at the exceptional grade); predicted A-level grade at or above the green threshold'
     Expression: >-
-      facts.Gcse("maths") >= facts.TopEntry
-      && facts.Gcse("physics") >= facts.StrongEntry
-      && facts.Predicted("physics") >= ALevelGrade.B
-      && facts.DfeProbabilityAtOrAbove("physics", ALevelGrade.B) >= facts.MinDfeGreenProbabilityAtOrAbove
+      facts.Gcse("maths") >= facts.ExceptionalEntry
+      && facts.Gcse("physics") >= facts.StandardEntry
+      && facts.Predicted("physics") >= ALevelGrade.D
+      && facts.DfeProbabilityAtOrAbove("physics", ALevelGrade.D) >= facts.MinDfeGreenProbabilityAtOrAbove
 ```
 
-The amber tier loosens the bars (e.g. `ALevelGrade.C` and `MinDfeAmberProbabilityAtOrAbove`); the red
-tier is always the literal catch-all:
+Physics (like Maths) gates hard on Maths GCSE at `facts.ExceptionalEntry`; most other subjects gate
+their own cognate GCSE at `facts.StandardEntry`. The amber tier loosens the bars (predicted
+`ALevelGrade.E` and `MinDfeAmberProbabilityAtOrAbove`); the red tier is always the literal catch-all:
 
 ```yaml
   - RuleName: 'physics:red'
@@ -272,9 +273,9 @@ Other shipped patterns worth copying:
 
 - **Average-based entry** (no single GCSE gate): `facts.Average >= facts.HumanitiesAverageEntry && …`
   (History).
-- **Age-gated entry** with a ternary: `facts.Gcse("art") >= (facts.Age >= facts.AdultAge ? facts.TopEntry : facts.StrongEntry)` (Art).
+- **Age-gated entry** with a ternary: `facts.Gcse("art") >= (facts.Age >= facts.AdultAge ? facts.TopEntry : facts.StandardEntry)` (Art).
 - **Entry equivalents** as an OR with the GCSE path:
-  `(facts.Gcse("biology") >= facts.StrongEntry && facts.Gcse("chemistry") >= facts.StandardEntry || facts.HasEntryEquivalent("biology")) && …`.
+  `(facts.Gcse("biology") >= facts.StandardEntry || facts.HasEntryEquivalent("biology")) && …`.
 - **A `LocalParams` sub-expression** for a reused value (eligibility's pass count):
 
 ```yaml
@@ -313,16 +314,24 @@ changed files.
 
 ### 4.1 `data/thresholds.yaml` — the tuning knobs
 
-The numbers the rules and constraint pass read. Retune a pass grade, an entry tier, a DfE floor, or
-the amber score factor here:
+The numbers the rules and constraint pass read. Retune a pass grade, an entry tier, a DfE floor, the
+whole-student chosen-subject cap, or the amber score factor here:
 
 ```yaml
 pass_grade: 4
 top_entry: 7
 min_dfe_green_probability_at_or_above: 0.60
+max_chosen_a_levels: 3
+high_attainment_max_chosen_a_levels: 4
+high_attainment_average_gcse: 7.5
 amber_score_factor: 0.5
 # max_green_choices: 4   # optional, normally omitted — see the green-cap note below
 ```
+
+`max_chosen_a_levels`, `high_attainment_max_chosen_a_levels`, and
+`high_attainment_average_gcse` drive the whole-student selection cap in host code: most students may
+choose up to the normal cap, while students whose average GCSE score meets the threshold may choose
+up to the higher cap.
 
 `max_green_choices` is the **optional green cap** and is normally omitted (as in the shipped file): with
 it absent the cap is disabled and every green stays green. Add it — a positive integer — only when policy
@@ -494,7 +503,9 @@ Make History and Music mutually exclusive (amber). In `data/catalogue.yaml`, add
       - { other: history, severity: amber } # new
 ```
 
-The mutual-exclusion handling picks it up; the lower priority weight loses. No workflow change.
+The chosen-subject exclusion handling picks it up: once History is chosen, Music is downgraded to
+amber, and once Music is chosen, History is downgraded to amber. With neither subject chosen, both
+remain at their unconstrained ratings. No workflow change.
 
 ### 6.3 Add a new rating tier rule (YAML)
 
@@ -505,14 +516,14 @@ A new subject `geography` needs tiers. Add to `workflows/subject-ratings.yaml`:
     SuccessEvent: 'Entry met; predicted A-level grade at or above the green threshold'
     Expression: >-
       facts.Average >= facts.HumanitiesAverageEntry
-      && facts.Predicted("geography") >= ALevelGrade.B
-      && facts.DfeProbabilityAtOrAbove("geography", ALevelGrade.B) >= facts.MinDfeGreenProbabilityAtOrAbove
+      && facts.Predicted("geography") >= ALevelGrade.D
+      && facts.DfeProbabilityAtOrAbove("geography", ALevelGrade.D) >= facts.MinDfeGreenProbabilityAtOrAbove
   - RuleName: 'geography:amber'
     SuccessEvent: 'Entry met; predicted A-level grade at or above the amber threshold'
     Expression: >-
       facts.Average >= facts.HumanitiesAverageEntry
-      && facts.Predicted("geography") >= ALevelGrade.C
-      && facts.DfeProbabilityAtOrAbove("geography", ALevelGrade.C) >= facts.MinDfeAmberProbabilityAtOrAbove
+      && facts.Predicted("geography") >= ALevelGrade.E
+      && facts.DfeProbabilityAtOrAbove("geography", ALevelGrade.E) >= facts.MinDfeAmberProbabilityAtOrAbove
   - RuleName: 'geography:red'
     SuccessEvent: 'Entry requirement unmet or predicted grade below the amber threshold'
     Expression: >-
@@ -575,7 +586,7 @@ The mistakes that pass a casual review — worth a deliberate check.
 
 **Rating-rule surface** — `facts.Gcse(k)`, `facts.Predicted(k)`,
 `facts.DfeProbabilityAtOrAbove(k, g)`, `facts.HasEntryEquivalent(k)`, `facts.Average`, `facts.Age`,
-`facts.TopEntry`/`StrongEntry`/`StandardEntry`, `facts.*AverageEntry`, `facts.MinDfe*ProbabilityAtOrAbove`,
+`facts.TopEntry`/`StrongEntry`/`StandardEntry`/`ExceptionalEntry`, `facts.*AverageEntry`, `facts.MinDfe*ProbabilityAtOrAbove`,
 `facts.AdultAge`, `ALevelGrade.*`.
 
 **Eligibility-rule surface** — `lookup.Grade(k)`, `gcses` (array), `policy.PassGrade`,
@@ -608,8 +619,7 @@ apply in never changes the outcome. The shipped relationship types:
 | Relationship            | Effect            | Trigger                                                                 |
 |-------------------------|-------------------|-------------------------------------------------------------------------|
 | Prerequisites           | → group severity  | A qualifying subject's dependency group is unmet (`any_of` / `requires`) |
-| Mutual exclusions       | → pair severity   | Both sides of a clash pair qualify; the **lower priority weight** loses      |
-| Prior-choice exclusions | → pair severity   | A committed `chosen_a_levels` choice excludes a qualifying subject       |
+| Chosen-subject exclusions | → pair severity | A committed `chosen_a_levels` choice excludes a qualifying subject       |
 | Own-time                | → amber           | A qualifying subject's `required_activities` prefix is absent from hobbies|
 | Vetoes                  | → red             | A `blocking_activities` prefix is present in hobbies                      |
 | Restudy bars            | → bar severity    | A held prior qualification of a barred `type` in the same subject         |

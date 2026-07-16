@@ -160,39 +160,37 @@ public sealed class ConstraintPassIntegrationTests
 	}
 
 	[Fact]
-	public void mutual_exclusion_downgrades_only_the_lower_weight_subject_to_amber()
+	public void amber_exclusion_pair_does_not_downgrade_before_a_subject_is_chosen()
 	{
 		var adjustments = ConstraintPass.Evaluate(
 			Ratings((Subject.History, Rating.Green), (Subject.Art, Rating.Green)), Profile(), Harness.Catalogue);
 
-		var (loser, winner) =
-			Catalogue.Meta(Subject.History).PriorityWeight < Catalogue.Meta(Subject.Art).PriorityWeight
-				? (Subject.History, Subject.Art)
-				: (Subject.Art, Subject.History);
-
-		var exclusion = adjustments.Should().ContainSingle().Which;
-		exclusion.Subject.Should().Be(loser);
-		exclusion.From.Should().Be(Rating.Green);
-		exclusion.To.Should().Be(Rating.Amber);
-		exclusion.Reason.Should().Contain("Mutual exclusion").And.Contain(EnumNames.NameOf(winner));
+		adjustments.Should().BeEmpty();
 	}
 
 	[Fact]
-	public void red_severity_mutual_exclusion_downgrades_the_lower_weight_subject_to_red()
+	public void red_exclusion_pair_does_not_downgrade_before_a_subject_is_chosen()
 	{
 		var adjustments = ConstraintPass.Evaluate(
 			Ratings((Subject.French, Rating.Green), (Subject.German, Rating.Green)), Profile(), Harness.Catalogue);
 
-		var loser = Catalogue.Meta(Subject.French).PriorityWeight < Catalogue.Meta(Subject.German).PriorityWeight
-			? Subject.French
-			: Subject.German;
-		var winner = loser == Subject.French ? Subject.German : Subject.French;
+		adjustments.Should().BeEmpty();
+	}
+
+	[Fact]
+	public void chosen_subject_activates_an_amber_exclusion_against_the_other_side()
+	{
+		var ratings = Ratings((Subject.History, Rating.Green), (Subject.Art, Rating.Green));
+		var profile = Profile() with { ChosenALevels = [Subject.History] };
+
+		var adjustments = ConstraintPass.Evaluate(ratings, profile, Harness.Catalogue);
 
 		var exclusion = adjustments.Should().ContainSingle().Which;
-		exclusion.Subject.Should().Be(loser);
+		exclusion.Subject.Should().Be(Subject.Art);
 		exclusion.From.Should().Be(Rating.Green);
-		exclusion.To.Should().Be(Rating.Red);
-		exclusion.Reason.Should().Contain("Mutual exclusion").And.Contain(EnumNames.NameOf(winner));
+		exclusion.To.Should().Be(Rating.Amber);
+		exclusion.Kind.Should().Be(AdjustmentKind.ChosenSubjectExclusion);
+		exclusion.Reason.Should().Be($"Cannot be combined with chosen {EnumNames.NameOf(Subject.History)}");
 	}
 
 	[Fact]
@@ -257,7 +255,20 @@ public sealed class ConstraintPassIntegrationTests
 		ownTime.Subject.Should().Be(Subject.Music);
 		ownTime.From.Should().Be(Rating.Green);
 		ownTime.To.Should().Be(Rating.Amber);
-		ownTime.Reason.Should().Be(ConstraintPass.OwnTimeReason);
+		ownTime.Reason.Should().StartWith(ConstraintPass.OwnTimeReason);
+	}
+
+	[Fact]
+	public void own_time_reason_names_the_required_activity_the_student_lacks()
+	{
+		// The catalogue requires a "plays_" activity for music; the reason has to say so, otherwise the
+		// student is told to seek authorisation without being told what would remove the need.
+		var adjustments = ConstraintPass.Evaluate(Ratings((Subject.Music, Rating.Green)), Profile("reads_books"), Harness.Catalogue);
+
+		var reason = adjustments.Should().ContainSingle().Which.Reason;
+		foreach (var prefix in Harness.Catalogue.Meta(Subject.Music).RequiredActivities) {
+			reason.Should().Contain(prefix);
+		}
 	}
 
 	[Fact]
@@ -276,7 +287,7 @@ public sealed class ConstraintPassIntegrationTests
 		ownTime.Subject.Should().Be(Subject.Music);
 		ownTime.From.Should().Be(Rating.Amber);
 		ownTime.To.Should().Be(Rating.Amber);
-		ownTime.Reason.Should().Be(ConstraintPass.OwnTimeReason);
+		ownTime.Reason.Should().StartWith(ConstraintPass.OwnTimeReason);
 	}
 
 	[Fact]
@@ -295,11 +306,11 @@ public sealed class ConstraintPassIntegrationTests
 	[Fact]
 	public void adjustments_commute_so_applying_them_is_order_independent()
 	{
-		// Two independent downgrades in one pass: an exclusion (History/Art) and an own-time (Music).
+		// Two independent downgrades in one pass: a chosen-subject exclusion (History/Art) and own-time (Music).
 		var ratings = Ratings(
 			(Subject.Maths, Rating.Green), (Subject.History, Rating.Green),
 			(Subject.Art, Rating.Green), (Subject.Music, Rating.Green));
-		var adjustments = ConstraintPass.Evaluate(ratings, Profile(), Harness.Catalogue);
+		var adjustments = ConstraintPass.Evaluate(ratings, Profile() with { ChosenALevels = [Subject.History] }, Harness.Catalogue);
 
 		var forward = ConstraintPass.Apply(ratings, adjustments);
 		var reversed = ConstraintPass.Apply(ratings, [.. adjustments.Reverse()]);
@@ -307,10 +318,7 @@ public sealed class ConstraintPassIntegrationTests
 		// Order-independent: the monotone downgrades compose to the same final ratings either way.
 		forward.Should().BeEquivalentTo(reversed);
 
-		var loser = Catalogue.Meta(Subject.History).PriorityWeight < Catalogue.Meta(Subject.Art).PriorityWeight
-			? Subject.History
-			: Subject.Art;
-		Of(forward, loser).Should().Be(Rating.Amber);
+		Of(forward, Subject.Art).Should().Be(Rating.Amber);
 		Of(forward, Subject.Music).Should().Be(Rating.Amber);
 		Of(forward, Subject.Maths).Should().Be(Rating.Green); // untouched
 	}

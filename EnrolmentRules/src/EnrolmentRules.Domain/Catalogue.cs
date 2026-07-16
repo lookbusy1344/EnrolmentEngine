@@ -154,15 +154,6 @@ public sealed class CatalogueData
 						$"Catalogue exclusion {EnumNames.NameOf(subject)} → {EnumNames.NameOf(exclusion.Other)} "
 						+ $"({EnumNames.NameOf(exclusion.Severity)}) is not declared symmetrically.");
 				}
-
-				if (order.TryGetValue(subject, out var subjectOrder)
-					&& order.TryGetValue(exclusion.Other, out var otherOrder)
-					&& subjectOrder < otherOrder
-					&& meta.PriorityWeight == otherMeta.PriorityWeight) {
-					throw new InvalidDataException(
-						$"Catalogue exclusion pair {EnumNames.NameOf(subject)} ↔ {EnumNames.NameOf(exclusion.Other)} "
-						+ $"must have distinct priority weights, but both are {meta.PriorityWeight}.");
-				}
 			}
 
 			// A prerequisite group with no alternatives can never be satisfied — it would force the dependent

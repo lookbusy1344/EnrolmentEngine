@@ -1,5 +1,6 @@
 namespace EnrolmentRules.Tests;
 
+using System.Globalization;
 using AwesomeAssertions;
 using Domain;
 
@@ -42,7 +43,24 @@ public sealed class AggregationTests
 			["history"] = 6,
 			["music"] = 6,
 			["art"] = 6,
-		}, []);
+		}, []) { DateOfBirth = new(2009, 9, 1) };
+
+	private static StudentInput VeryStrongStudent() =>
+		new("S-VERY-STRONG", new Dictionary<string, int> {
+			["english_language"] = 8,
+			["maths"] = 8,
+			["physics"] = 8,
+			["chemistry"] = 8,
+			["biology"] = 8,
+			["english_literature"] = 8,
+			["french"] = 8,
+			["german"] = 8,
+			["physical_education"] = 8,
+			["computer_studies"] = 8,
+			["history"] = 8,
+			["music"] = 8,
+			["art"] = 8,
+		}, []) { DateOfBirth = new(2009, 9, 1) };
 
 	private static int Weight(Subject subject) => Catalogue.Meta(subject).PriorityWeight;
 
@@ -91,7 +109,22 @@ public sealed class AggregationTests
 		capped.Subject.Should().Be(lowest);
 		capped.From.Should().Be(Rating.Green);
 		capped.To.Should().Be(Rating.Amber);
-		capped.Reason.Should().Be(Aggregator.ExceedsCapReason);
+		capped.Reason.Should().StartWith(Aggregator.ExceedsCapReason);
+	}
+
+	[Fact]
+	public void green_cap_reason_names_the_cap_the_green_count_and_the_ranking_that_demoted_the_subject()
+	{
+		var greens = Catalogue.Subjects.Take(Cap + 1).ToArray();
+		var lowest = greens.OrderBy(Weight).First();
+
+		var adjustments = Aggregator.CapGreens(Ratings([.. greens.Select(s => (s, Rating.Green))]), Catalogue.Default, CappedThresholds);
+
+		var reason = adjustments.Should().ContainSingle().Which.Reason;
+		reason.Should().Contain($"{greens.Length} subjects rated green");
+		reason.Should().Contain($"cap of {Cap}");
+		// The student needs to know it lost on priority weight, not on merit.
+		reason.Should().Contain(Weight(lowest).ToString(CultureInfo.InvariantCulture));
 	}
 
 	[Fact]
@@ -185,8 +218,10 @@ public sealed class AggregationTests
 			(Subject.Maths, Rating.Green), (Subject.Physics, Rating.Green), (Subject.Chemistry, Rating.Green),
 			(Subject.Biology, Rating.Green), (Subject.History, Rating.Green), (Subject.Art, Rating.Green));
 
-		// Constraint pass first: the exclusion demotes the lower-weight pair member (Art) to amber.
-		var afterConstraints = ConstraintPass.Apply(sixGreens, ConstraintPass.Evaluate(sixGreens, new("S", 7.0, [], [], []), Harness.Catalogue));
+		// Constraint pass first: choosing History demotes Art to amber.
+		var afterConstraints = ConstraintPass.Apply(
+			sixGreens,
+			ConstraintPass.Evaluate(sixGreens, new("S", 7.0, [], [], []) { ChosenALevels = [Subject.History] }, Harness.Catalogue));
 
 		var capOnConstrained = Aggregator.CapGreens(afterConstraints, Catalogue.Default, CappedThresholds);
 		var capOnBase = Aggregator.CapGreens(sixGreens, Catalogue.Default, CappedThresholds);
@@ -199,7 +234,7 @@ public sealed class AggregationTests
 	}
 
 	[Fact]
-	public void french_and_german_both_chosen_are_red_with_mutual_exclusion_winning_for_german()
+	public void french_and_german_both_chosen_are_red_from_chosen_subject_exclusions()
 	{
 		var engine = Harness.ShippedEngine();
 		var student = StrongStudent() with { ChosenALevels = [Subject.French, Subject.German] };
@@ -214,26 +249,116 @@ public sealed class AggregationTests
 		var german = result.Recommendations.Single(r => r.Subject == Subject.German);
 
 		french.Reason.Should().Be($"Cannot be combined with chosen {EnumNames.NameOf(Subject.German)}");
-		german.Reason.Should().Be($"Mutual exclusion with {EnumNames.NameOf(Subject.French)} — not permitted");
+		german.Reason.Should().Be($"Cannot be combined with chosen {EnumNames.NameOf(Subject.French)}");
 
 		var choiceAdjustments = result.Adjustments
 			.Where(a => a.Subject == Subject.French || a.Subject == Subject.German)
 			.ToArray();
-		choiceAdjustments.Should().HaveCount(3);
+		choiceAdjustments.Should().HaveCount(2);
 		choiceAdjustments.Should().Contain(a =>
 			a.Subject == Subject.French
-			&& a.From == Rating.Amber
+			&& a.From == Rating.Green
 			&& a.To == Rating.Red
 			&& a.Reason == $"Cannot be combined with chosen {EnumNames.NameOf(Subject.German)}");
 		choiceAdjustments.Should().Contain(a =>
 			a.Subject == Subject.German
-			&& a.From == Rating.Amber
+			&& a.From == Rating.Green
 			&& a.To == Rating.Red
 			&& a.Reason == $"Cannot be combined with chosen {EnumNames.NameOf(Subject.French)}");
-		choiceAdjustments.Should().Contain(a =>
-			a.Subject == Subject.German
-			&& a.From == Rating.Amber
+	}
+
+	[Fact]
+	public void normal_attainment_student_with_two_choices_leaves_another_qualifying_subject_selectable()
+	{
+		var engine = Harness.ShippedEngine();
+		var student = StrongStudent() with { ChosenALevels = [Subject.Maths, Subject.Physics] };
+
+		var result = engine.Evaluate(student);
+
+		result.Eligible.Should().BeTrue();
+		result.Recommendations.Single(r => r.Subject == Subject.Chemistry).Rating.Should().NotBe(Rating.Red);
+		result.Adjustments.Should().NotContain(a => a.Kind == AdjustmentKind.ChosenSubjectCap);
+	}
+
+	[Fact]
+	public void normal_attainment_student_with_three_choices_blocks_further_unchosen_subjects()
+	{
+		var engine = Harness.ShippedEngine();
+		var student = StrongStudent() with { ChosenALevels = [Subject.Maths, Subject.Physics, Subject.Chemistry] };
+
+		var result = engine.Evaluate(student);
+
+		result.Eligible.Should().BeTrue();
+		var biology = result.Recommendations.Single(r => r.Subject == Subject.Biology);
+		biology.Rating.Should().Be(Rating.Red);
+		biology.Reason.Should().StartWith(Aggregator.ExceedsChosenSubjectCapReason);
+		result.Adjustments.Should().Contain(a =>
+			a.Subject == Subject.Biology
+			&& a.Kind == AdjustmentKind.ChosenSubjectCap
 			&& a.To == Rating.Red
-			&& a.Reason == $"Mutual exclusion with {EnumNames.NameOf(Subject.French)} — not permitted");
+			&& a.Reason == biology.Reason);
+		result.Recommendations.Where(r => student.ChosenALevels.Contains(r.Subject))
+			.Should().NotContain(r => r.Reason.StartsWith(Aggregator.ExceedsChosenSubjectCapReason, StringComparison.Ordinal));
+	}
+
+	[Fact]
+	public void chosen_subject_cap_reason_names_the_count_the_limit_and_the_chosen_subjects()
+	{
+		var engine = Harness.ShippedEngine();
+		var student = StrongStudent() with { ChosenALevels = [Subject.Maths, Subject.Physics, Subject.Chemistry] };
+
+		var result = engine.Evaluate(student);
+
+		var reason = result.Recommendations.Single(r => r.Subject == Subject.Biology).Reason;
+		reason.Should().Contain($"3 of {Harness.Thresholds.MaxChosenALevels}");
+		foreach (var chosen in student.ChosenALevels) {
+			reason.Should().Contain(EnumNames.NameOf(chosen));
+		}
+
+		// A normal-attainment student is told the higher limit exists and what would unlock it.
+		reason.Should().Contain(Harness.Thresholds.HighAttainmentMaxChosenALevels.ToString(CultureInfo.InvariantCulture));
+		reason.Should().Contain(Harness.Thresholds.HighAttainmentAverageGcse.ToString("0.0", CultureInfo.InvariantCulture));
+	}
+
+	[Fact]
+	public void high_attainment_chosen_subject_cap_reason_says_the_limit_is_already_raised()
+	{
+		var engine = Harness.ShippedEngine();
+		var student = VeryStrongStudent() with { ChosenALevels = [Subject.Maths, Subject.Physics, Subject.Chemistry, Subject.Biology] };
+
+		var result = engine.Evaluate(student);
+
+		var reason = result.Recommendations.Single(r => r.Subject == Subject.History).Reason;
+		reason.Should().Contain($"4 of {Harness.Thresholds.HighAttainmentMaxChosenALevels}");
+		reason.Should().Contain(Aggregator.RaisedLimitNote);
+	}
+
+	[Fact]
+	public void high_attainment_student_with_three_choices_can_still_take_a_fourth()
+	{
+		var engine = Harness.ShippedEngine();
+		var student = VeryStrongStudent() with { ChosenALevels = [Subject.Maths, Subject.Physics, Subject.Chemistry] };
+
+		var result = engine.Evaluate(student);
+
+		result.Eligible.Should().BeTrue();
+		result.Recommendations.Single(r => r.Subject == Subject.Biology).Rating.Should().NotBe(Rating.Red);
+		result.Adjustments.Should().NotContain(a => a.Kind == AdjustmentKind.ChosenSubjectCap);
+	}
+
+	[Fact]
+	public void high_attainment_student_with_four_choices_blocks_further_unchosen_subjects()
+	{
+		var engine = Harness.ShippedEngine();
+		var student = VeryStrongStudent() with { ChosenALevels = [Subject.Maths, Subject.Physics, Subject.Chemistry, Subject.Biology] };
+
+		var result = engine.Evaluate(student);
+
+		result.Eligible.Should().BeTrue();
+		result.Recommendations.Single(r => r.Subject == Subject.History).Reason.Should().StartWith(Aggregator.ExceedsChosenSubjectCapReason);
+		result.Adjustments.Should().Contain(a =>
+			a.Subject == Subject.History
+			&& a.Kind == AdjustmentKind.ChosenSubjectCap
+			&& a.To == Rating.Red);
 	}
 }

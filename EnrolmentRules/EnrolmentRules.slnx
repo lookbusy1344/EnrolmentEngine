@@ -6,9 +6,11 @@
         <Project Path="src/EnrolmentRules.Engine/EnrolmentRules.Engine.csproj"/>
         <Project Path="src/EnrolmentRules.Extensions.DependencyInjection/EnrolmentRules.Extensions.DependencyInjection.csproj"/>
         <Project Path="src/EnrolmentRules.Prediction/EnrolmentRules.Prediction.csproj"/>
+        <Project Path="src/EnrolmentRules.Web/EnrolmentRules.Web.csproj"/>
     </Folder>
     <Folder Name="/tests/">
         <Project Path="tests/EnrolmentRules.TestProcessHost/EnrolmentRules.TestProcessHost.csproj"/>
         <Project Path="tests/EnrolmentRules.Tests/EnrolmentRules.Tests.csproj"/>
+        <Project Path="tests/EnrolmentRules.Web.Tests/EnrolmentRules.Web.Tests.csproj"/>
     </Folder>
 </Solution>

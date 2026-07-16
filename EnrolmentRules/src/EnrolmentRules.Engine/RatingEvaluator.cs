@@ -302,6 +302,8 @@ internal sealed class RatingFacts(
 
 	public int StandardEntry => policy.StandardEntry;
 
+	public int ExceptionalEntry => policy.ExceptionalEntry;
+
 	public double FurtherMathsAverageEntry => policy.FurtherMathsAverageEntry;
 
 	public double HumanitiesAverageEntry => policy.HumanitiesAverageEntry;

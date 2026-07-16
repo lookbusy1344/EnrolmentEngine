@@ -37,11 +37,15 @@ public sealed class EligibilityGateTests
 		thresholds.TopEntry.Should().Be(7);
 		thresholds.StrongEntry.Should().Be(6);
 		thresholds.StandardEntry.Should().Be(5);
+		thresholds.ExceptionalEntry.Should().Be(8);
 		thresholds.FurtherMathsAverageEntry.Should().BeApproximately(7.0, 1e-9);
 		thresholds.HumanitiesAverageEntry.Should().BeApproximately(5.0, 1e-9);
 		thresholds.MinDfeGreenProbabilityAtOrAbove.Should().BeApproximately(0.60, 1e-9);
 		thresholds.MinDfeAmberProbabilityAtOrAbove.Should().BeApproximately(0.50, 1e-9);
 		thresholds.AdultAge.Should().Be(19);
+		thresholds.MaxChosenALevels.Should().Be(3);
+		thresholds.HighAttainmentMaxChosenALevels.Should().Be(4);
+		thresholds.HighAttainmentAverageGcse.Should().BeApproximately(7.5, 1e-9);
 		thresholds.MaxGreenChoices.Should().BeNull(); // green cap is an optional feature, disabled in the shipped config
 		thresholds.AmberScoreFactor.Should().BeApproximately(0.5, 1e-9);
 		thresholds.AdviceConsidersUnsatGcses.Should().BeFalse(); // diagnostic advisor knob, off in the shipped config
@@ -59,11 +63,15 @@ public sealed class EligibilityGateTests
 								   top_entry: 7
 								   strong_entry: 6
 								   standard_entry: 5
+								   exceptional_entry: 8
 								   further_maths_average_entry: 7.0
 								   humanities_average_entry: 5.0
 								   min_dfe_green_probability_at_or_above: 0.60
 								   min_dfe_amber_probability_at_or_above: 0.50
 								   adult_age: 19
+								   max_chosen_a_levels: 3
+								   high_attainment_max_chosen_a_levels: 4
+								   high_attainment_average_gcse: 7.5
 								   amber_score_factor: 0.5
 								   """;
 
@@ -73,6 +81,34 @@ public sealed class EligibilityGateTests
 		var enabled = PolicyThresholdsStore.LoadAndValidate(
 			new StringReader(withoutKnob + "\nadvice_considers_unsat_gcses: true"), new StringReader(schema));
 		enabled.AdviceConsidersUnsatGcses.Should().BeTrue();
+	}
+
+	[Fact]
+	public void high_attainment_choice_cap_must_not_be_lower_than_the_normal_choice_cap()
+	{
+		var schema = File.ReadAllText(Path.Combine(DataDir, PolicyThresholdsStore.SchemaFileName));
+		const string invalid = """
+		                       pass_grade: 4
+		                       min_passes: 5
+		                       top_entry: 7
+		                       strong_entry: 6
+		                       standard_entry: 5
+		                       exceptional_entry: 8
+		                       further_maths_average_entry: 7.0
+		                       humanities_average_entry: 5.0
+		                       min_dfe_green_probability_at_or_above: 0.60
+		                       min_dfe_amber_probability_at_or_above: 0.50
+		                       adult_age: 19
+		                       max_chosen_a_levels: 4
+		                       high_attainment_max_chosen_a_levels: 3
+		                       high_attainment_average_gcse: 7.5
+		                       amber_score_factor: 0.5
+		                       """;
+
+		var act = () => PolicyThresholdsStore.LoadAndValidate(new StringReader(invalid), new StringReader(schema));
+
+		act.Should().Throw<PolicyThresholdsException>()
+			.WithMessage("*high_attainment_max_chosen_a_levels must be greater than or equal to max_chosen_a_levels*");
 	}
 
 	[Fact]

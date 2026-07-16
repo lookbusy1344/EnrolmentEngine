@@ -97,6 +97,12 @@ public sealed class PredictionTests
 		var coefficients = ShippedCatalogue.Meta(subject).Regression;
 		var expected = coefficients.Predict(average);
 
+		// The strong-subject override lifts a subject whose own cognate GCSE beats the average: the same
+		// regression line is fed the individual grade and the higher of the two wins.
+		if (gcses.TryGetValue(subjectName, out var ownGrade)) {
+			expected = Math.Max(expected, coefficients.Predict(ownGrade));
+		}
+
 		var predicted = profile.PredictedGrades.Single(p => p.Subject == subject).PredictedPoints;
 		predicted.Should().BeApproximately(expected, Tolerance);
 	}
@@ -118,8 +124,13 @@ public sealed class PredictionTests
 
 		var profile = GradePredictor.Predict(student, gcses, Harness.AsOf, tweaked, Harness.Scale);
 
+		// Maths GCSE 7 beats the 6.0 average, so the strong-subject override feeds the tweaked line the
+		// individual grade and takes the higher point value.
+		var tweakedLine = new PredictionModel.Coefficients(0.50, 0.25);
+		var expected = Math.Max(tweakedLine.Predict(average), tweakedLine.Predict(7));
+
 		var predicted = profile.PredictedGrades.Single(p => p.Subject == Subject.Maths).PredictedPoints;
-		predicted.Should().BeApproximately(Math.Clamp((0.50 * average) + 0.25, ALevelGrade.Min, ALevelGrade.Max), Tolerance);
+		predicted.Should().BeApproximately(expected, Tolerance);
 		predicted.Should().NotBeApproximately(shipped.Meta(Subject.Maths).Regression.Predict(average), Tolerance);
 	}
 

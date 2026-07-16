@@ -231,7 +231,7 @@ public sealed class ConstraintPassScenarioTests
 	}
 
 	[Fact]
-	public void qualifying_french_and_german_mutual_exclusion_demotes_german_to_red()
+	public void qualifying_exclusion_pair_stays_available_until_one_side_is_chosen()
 	{
 		var explained = engine.Explain(StrongEligibleStudent());
 
@@ -240,8 +240,8 @@ public sealed class ConstraintPassScenarioTests
 		var german = explained.Explanations.Single(explanation => explanation.Subject == Subject.German);
 		french.Rating.Should().Be(Rating.Green);
 		german.BaseRating.Should().Be(Rating.Green);
-		german.Rating.Should().Be(Rating.Red);
-		german.Overrides.Should().ContainSingle(override_ =>
-			override_.To == Rating.Red && override_.Reason.Contains("Mutual exclusion", StringComparison.Ordinal));
+		german.Rating.Should().Be(Rating.Green);
+		french.Overrides.Should().NotContain(override_ => override_.Kind == AdjustmentKind.ChosenSubjectExclusion);
+		german.Overrides.Should().NotContain(override_ => override_.Kind == AdjustmentKind.ChosenSubjectExclusion);
 	}
 }

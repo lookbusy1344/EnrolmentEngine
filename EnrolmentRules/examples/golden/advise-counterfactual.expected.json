@@ -3,6 +3,20 @@
   "eligibility_reasons": [],
   "advice": [
     {
+      "subject": "economics",
+      "current": "amber",
+      "target": "green",
+      "changes": [
+        {
+          "gcse_subject": "maths",
+          "from": 5,
+          "to": 8
+        }
+      ],
+      "reachable": true,
+      "blocked_reason": null
+    },
+    {
       "subject": "further_maths",
       "current": "red",
       "target": "amber",
@@ -27,75 +41,14 @@
       "blocked_reason": "Entry requirement unmet or predicted grade below the amber threshold"
     },
     {
-      "subject": "law",
-      "current": "red",
-      "target": "amber",
-      "changes": [
-        {
-          "gcse_subject": "biology",
-          "from": 5,
-          "to": 7
-        }
-      ],
-      "reachable": true,
-      "blocked_reason": null
-    },
-    {
-      "subject": "religious_studies",
-      "current": "red",
-      "target": "amber",
-      "changes": [
-        {
-          "gcse_subject": "biology",
-          "from": 5,
-          "to": 7
-        }
-      ],
-      "reachable": true,
-      "blocked_reason": null
-    },
-    {
-      "subject": "politics",
-      "current": "red",
-      "target": "amber",
-      "changes": [
-        {
-          "gcse_subject": "biology",
-          "from": 5,
-          "to": 7
-        }
-      ],
-      "reachable": true,
-      "blocked_reason": null
-    },
-    {
       "subject": "maths",
       "current": "red",
       "target": "amber",
       "changes": [
         {
-          "gcse_subject": "biology",
-          "from": 5,
-          "to": 6
-        },
-        {
           "gcse_subject": "maths",
           "from": 5,
-          "to": 9
-        }
-      ],
-      "reachable": true,
-      "blocked_reason": null
-    },
-    {
-      "subject": "geography",
-      "current": "red",
-      "target": "amber",
-      "changes": [
-        {
-          "gcse_subject": "biology",
-          "from": 5,
-          "to": 7
+          "to": 8
         }
       ],
       "reachable": true,
@@ -108,67 +61,6 @@
       "changes": [
         {
           "gcse_subject": "maths",
-          "from": 5,
-          "to": 7
-        },
-        {
-          "gcse_subject": "physics",
-          "from": 5,
-          "to": 6
-        }
-      ],
-      "reachable": true,
-      "blocked_reason": null
-    },
-    {
-      "subject": "psychology",
-      "current": "red",
-      "target": "amber",
-      "changes": [
-        {
-          "gcse_subject": "biology",
-          "from": 5,
-          "to": 7
-        }
-      ],
-      "reachable": true,
-      "blocked_reason": null
-    },
-    {
-      "subject": "chemistry",
-      "current": "red",
-      "target": "amber",
-      "changes": [
-        {
-          "gcse_subject": "chemistry",
-          "from": 5,
-          "to": 8
-        }
-      ],
-      "reachable": true,
-      "blocked_reason": null
-    },
-    {
-      "subject": "economics",
-      "current": "red",
-      "target": "amber",
-      "changes": [
-        {
-          "gcse_subject": "maths",
-          "from": 5,
-          "to": 7
-        }
-      ],
-      "reachable": true,
-      "blocked_reason": null
-    },
-    {
-      "subject": "biology",
-      "current": "red",
-      "target": "amber",
-      "changes": [
-        {
-          "gcse_subject": "biology",
           "from": 5,
           "to": 8
         }
@@ -183,48 +75,6 @@
       "changes": [],
       "reachable": false,
       "blocked_reason": "Entry requirement unmet or predicted grade below the amber threshold"
-    },
-    {
-      "subject": "english_literature",
-      "current": "red",
-      "target": "amber",
-      "changes": [
-        {
-          "gcse_subject": "maths",
-          "from": 5,
-          "to": 7
-        }
-      ],
-      "reachable": true,
-      "blocked_reason": null
-    },
-    {
-      "subject": "english_language",
-      "current": "red",
-      "target": "amber",
-      "changes": [
-        {
-          "gcse_subject": "biology",
-          "from": 5,
-          "to": 6
-        }
-      ],
-      "reachable": true,
-      "blocked_reason": null
-    },
-    {
-      "subject": "history",
-      "current": "red",
-      "target": "amber",
-      "changes": [
-        {
-          "gcse_subject": "biology",
-          "from": 5,
-          "to": 7
-        }
-      ],
-      "reachable": true,
-      "blocked_reason": null
     },
     {
       "subject": "french",
@@ -265,62 +115,6 @@
       "changes": [],
       "reachable": false,
       "blocked_reason": "Entry requirement unmet or predicted grade below the amber threshold"
-    },
-    {
-      "subject": "business_studies",
-      "current": "red",
-      "target": "amber",
-      "changes": [
-        {
-          "gcse_subject": "biology",
-          "from": 5,
-          "to": 7
-        }
-      ],
-      "reachable": true,
-      "blocked_reason": null
-    },
-    {
-      "subject": "sociology",
-      "current": "red",
-      "target": "amber",
-      "changes": [
-        {
-          "gcse_subject": "biology",
-          "from": 5,
-          "to": 6
-        }
-      ],
-      "reachable": true,
-      "blocked_reason": null
-    },
-    {
-      "subject": "media_studies",
-      "current": "red",
-      "target": "amber",
-      "changes": [
-        {
-          "gcse_subject": "biology",
-          "from": 5,
-          "to": 6
-        }
-      ],
-      "reachable": true,
-      "blocked_reason": null
-    },
-    {
-      "subject": "drama",
-      "current": "red",
-      "target": "amber",
-      "changes": [
-        {
-          "gcse_subject": "biology",
-          "from": 5,
-          "to": 6
-        }
-      ],
-      "reachable": true,
-      "blocked_reason": null
     }
   ],
   "gate": null,

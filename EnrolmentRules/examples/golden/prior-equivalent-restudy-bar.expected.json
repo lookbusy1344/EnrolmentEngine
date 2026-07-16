@@ -10,12 +10,12 @@
     {
       "subject": "spanish",
       "rating": "green",
-      "reason": "Entry met (a modern language GCSE at strong entry); predicted A-level grade at or above the green threshold"
+      "reason": "Entry met (a modern language GCSE at standard entry); predicted A-level grade at or above the green threshold"
     },
     {
       "subject": "law",
       "rating": "green",
-      "reason": "Entry met (English at strong entry and humanities average); predicted A-level grade at or above the green threshold"
+      "reason": "Entry met (English at standard entry and humanities average); predicted A-level grade at or above the green threshold"
     },
     {
       "subject": "religious_studies",
@@ -25,7 +25,12 @@
     {
       "subject": "politics",
       "rating": "green",
-      "reason": "Entry met (English at strong entry and humanities average); predicted A-level grade at or above the green threshold"
+      "reason": "Entry met (English at standard entry and humanities average); predicted A-level grade at or above the green threshold"
+    },
+    {
+      "subject": "maths",
+      "rating": "green",
+      "reason": "Entry met (Maths GCSE at the exceptional grade); predicted A-level grade at or above the green threshold"
     },
     {
       "subject": "geography",
@@ -35,47 +40,62 @@
     {
       "subject": "physics",
       "rating": "green",
-      "reason": "Entry met; predicted A-level grade at or above the green threshold"
+      "reason": "Entry met (Physics at standard entry and Maths GCSE at the exceptional grade); predicted A-level grade at or above the green threshold"
     },
     {
       "subject": "chemistry",
       "rating": "green",
-      "reason": "Entry met; predicted A-level grade at or above the green threshold"
+      "reason": "Entry met (Chemistry at standard entry); predicted A-level grade at or above the green threshold"
     },
     {
       "subject": "economics",
       "rating": "green",
-      "reason": "Entry met (Maths at strong entry and English at standard entry); predicted A-level grade at or above the green threshold"
+      "reason": "Entry met (Maths and English at standard entry); predicted A-level grade at or above the green threshold"
     },
     {
       "subject": "computer_studies",
       "rating": "green",
-      "reason": "Entry met; predicted A-level grade at or above the green threshold"
+      "reason": "Entry met (Computer Studies at standard entry); predicted A-level grade at or above the green threshold"
     },
     {
       "subject": "english_literature",
       "rating": "green",
-      "reason": "Entry met (English Language and Maths at a top GCSE score); predicted A-level grade at or above the green threshold"
+      "reason": "Entry met (an English GCSE at standard entry); predicted A-level grade at or above the green threshold"
     },
     {
       "subject": "english_language",
       "rating": "green",
-      "reason": "Entry met; predicted A-level grade at or above the green threshold"
+      "reason": "Entry met (English Language at standard entry); predicted A-level grade at or above the green threshold"
     },
     {
       "subject": "history",
       "rating": "green",
-      "reason": "Entry met; predicted A-level grade at or above the green threshold"
+      "reason": "Entry met (humanities average); predicted A-level grade at or above the green threshold"
     },
     {
       "subject": "french",
       "rating": "green",
-      "reason": "Entry met; predicted A-level grade at or above the green threshold"
+      "reason": "Entry met (French at standard entry); predicted A-level grade at or above the green threshold"
+    },
+    {
+      "subject": "art",
+      "rating": "green",
+      "reason": "Entry met (age-gated GCSE threshold); predicted A-level grade at or above the green threshold"
+    },
+    {
+      "subject": "german",
+      "rating": "green",
+      "reason": "Entry met (German at standard entry); predicted A-level grade at or above the green threshold"
     },
     {
       "subject": "physical_education",
       "rating": "green",
-      "reason": "Entry met; predicted A-level grade at or above the green threshold"
+      "reason": "Entry met (Physical Education at standard entry); predicted A-level grade at or above the green threshold"
+    },
+    {
+      "subject": "business_studies",
+      "rating": "green",
+      "reason": "Entry met (Maths and English at standard entry); predicted A-level grade at or above the green threshold"
     },
     {
       "subject": "sociology",
@@ -93,24 +113,9 @@
       "reason": "Entry met (English at standard entry); predicted A-level grade at or above the green threshold"
     },
     {
-      "subject": "maths",
-      "rating": "amber",
-      "reason": "Entry met; predicted A-level grade at or above the amber threshold"
-    },
-    {
-      "subject": "art",
-      "rating": "amber",
-      "reason": "Mutual exclusion with history \u2014 authorisation required"
-    },
-    {
       "subject": "music",
       "rating": "amber",
-      "reason": "requires own-time practice \u2014 authorisation required"
-    },
-    {
-      "subject": "business_studies",
-      "rating": "amber",
-      "reason": "Mutual exclusion with economics \u2014 authorisation required"
+      "reason": "requires own-time practice \u2014 authorisation required (no activity starting with \u0027plays_\u0027 in your listed hobbies)"
     },
     {
       "subject": "further_maths",
@@ -126,48 +131,25 @@
       "subject": "biology",
       "rating": "red",
       "reason": "Barred \u2014 already holds a level-3 qualification in biology"
-    },
-    {
-      "subject": "german",
-      "rating": "red",
-      "reason": "Mutual exclusion with french \u2014 not permitted"
     }
   ],
   "summary": {
-    "green_count": 18,
-    "amber_count": 4,
-    "programme_priority_score": 866
+    "green_count": 22,
+    "amber_count": 1,
+    "programme_priority_score": 964
   },
   "adjustments": [
     {
       "subject": "further_maths",
-      "from": "amber",
+      "from": "green",
       "to": "red",
       "reason": "maths prerequisite not met"
-    },
-    {
-      "subject": "german",
-      "from": "green",
-      "to": "red",
-      "reason": "Mutual exclusion with french \u2014 not permitted"
-    },
-    {
-      "subject": "art",
-      "from": "green",
-      "to": "amber",
-      "reason": "Mutual exclusion with history \u2014 authorisation required"
-    },
-    {
-      "subject": "business_studies",
-      "from": "green",
-      "to": "amber",
-      "reason": "Mutual exclusion with economics \u2014 authorisation required"
     },
     {
       "subject": "music",
       "from": "green",
       "to": "amber",
-      "reason": "requires own-time practice \u2014 authorisation required"
+      "reason": "requires own-time practice \u2014 authorisation required (no activity starting with \u0027plays_\u0027 in your listed hobbies)"
     },
     {
       "subject": "biology",

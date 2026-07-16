@@ -20,6 +20,12 @@ public sealed class PolicyFacts(PolicyThresholds thresholds)
 
 	public int StandardEntry { get; } = thresholds.StandardEntry;
 
+	/// <summary>
+	///     The exceptional GCSE bar (a top grade) used as a hard entry gate for the most demanding
+	///     subjects — Maths and Physics require Maths at this level regardless of the regression tiers.
+	/// </summary>
+	public int ExceptionalEntry { get; } = thresholds.ExceptionalEntry;
+
 	public double FurtherMathsAverageEntry { get; } = thresholds.FurtherMathsAverageEntry;
 
 	public double HumanitiesAverageEntry { get; } = thresholds.HumanitiesAverageEntry;

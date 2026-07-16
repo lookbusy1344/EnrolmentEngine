@@ -24,11 +24,11 @@ public enum AdjustmentKind
 	/// <summary>An unmet prerequisite group (amber or red).</summary>
 	Prerequisite = 2,
 
-	/// <summary>A clash with a committed A-level choice (amber or red).</summary>
-	PriorChoiceExclusion = 3,
+	/// <summary>An exclusion edge activated by a committed A-level choice (amber or red).</summary>
+	ChosenSubjectExclusion = 3,
 
-	/// <summary>A mutual-exclusion clash between two qualifying subjects (amber or red).</summary>
-	MutualExclusion = 4,
+	/// <summary>The whole-student committed-choice cap: once full, further unchosen subjects are red.</summary>
+	ChosenSubjectCap = 4,
 
 	/// <summary>An incompatible activity barring the subject outright (red).</summary>
 	Veto = 5,

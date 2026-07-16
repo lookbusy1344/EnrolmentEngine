@@ -6,9 +6,16 @@ namespace EnrolmentRules.Domain;
 ///     them as data rather than compile-time constants.
 /// </summary>
 /// <remarks>
-///     <see cref="MaxGreenChoices" /> is optional and normally unset: when it is <c>null</c> the green
-///     cap is disabled and every green stays green. A positive value opts the cap in (see
-///     <c>Aggregator.CapGreens</c>).
+///     <see cref="MaxChosenALevels" />, <see cref="HighAttainmentMaxChosenALevels" />, and
+///     <see cref="HighAttainmentAverageGcse" /> drive the selected-programme cap in host code: most
+///     students may choose up to <see cref="MaxChosenALevels" />, while students at or above
+///     <see cref="HighAttainmentAverageGcse" /> may choose up to
+///     <see cref="HighAttainmentMaxChosenALevels" />.
+///     <para>
+///         <see cref="MaxGreenChoices" /> is optional and normally unset: when it is <c>null</c> the green
+///         cap is disabled and every green stays green. A positive value opts the cap in (see
+///         <c>Aggregator.CapGreens</c>).
+///     </para>
 ///     <para>
 ///         <see cref="AdviceConsidersUnsatGcses" /> is a diagnostic knob, off by default: when
 ///         <c>false</c> the counterfactual advisor only proposes raising GCSEs the student already sat;
@@ -25,11 +32,15 @@ public sealed record PolicyThresholds(
 	int TopEntry,
 	int StrongEntry,
 	int StandardEntry,
+	int ExceptionalEntry,
 	double FurtherMathsAverageEntry,
 	double HumanitiesAverageEntry,
 	double MinDfeGreenProbabilityAtOrAbove,
 	double MinDfeAmberProbabilityAtOrAbove,
 	int AdultAge,
+	int MaxChosenALevels,
+	int HighAttainmentMaxChosenALevels,
+	double HighAttainmentAverageGcse,
 	int? MaxGreenChoices,
 	double AmberScoreFactor,
 	bool AdviceConsidersUnsatGcses = false,

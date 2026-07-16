@@ -1,6 +1,6 @@
 # EnrolmentRules Technical Reference
 
-This is a recreation of a proprietary project I developed about a decade ago, to assist in enrolment decision-making and ensure policies were
+This is a recreation of a proprietary project I developed a few years ago, to assist in enrolment decision-making and ensure policies were
 consistently followed. The real system was also capable of writing the complete enrolment package into the management information system, and printing
 forms for signature.
 
@@ -63,7 +63,7 @@ YAML edit, not a code change — as is editing the per-student rules in `workflo
 tuning knobs in `data/thresholds.yaml`.
 
 What stays compiled is not a rule but the fixed, small catalogue of **relationship *types*** — the
-half-dozen shapes a rule can take (prerequisite, mutual exclusion, prior-choice exclusion,
+shapes a rule can take (prerequisite, chosen-subject exclusion,
 own-time, veto, restudy bar) and how their downgrades compose. That machinery is internal to the
 engine and not part of the supported consumer surface.
 These types are deliberately static: you touch them only to invent a *new kind* of relationship
@@ -106,9 +106,11 @@ Start with the [guided walk-through](walkthrough.md).
 | `src/EnrolmentRules.Engine`                         | The `EnrolmentEngine` facade and the mainline evaluation contracts (`IEnrolmentEngine`, `IEnrolmentEvaluator`, `IEnrolmentAdvisor`). Supporting bootstrap and authoring APIs live in explicit `Hosting` / `Authoring` namespaces. |
 | `src/EnrolmentRules.Extensions.DependencyInjection` | `AddEnrolmentEngineFactory` / `AddEnrolmentEngine` registration helpers for `Microsoft.Extensions.DependencyInjection` hosts.                                                           |
 | `src/EnrolmentRules.Cli`                            | `enrolment` executable and table/JSON/batch command line modes.                                                                                                                         |
+| `src/EnrolmentRules.Web`                            | Razor Pages reference web front-end: session-backed anonymous facts editing, live re-explanation, no database. See [Web Interface](#web-interface) below.                              |
 | `src/EnrolmentRules.Benchmarks`                     | BenchmarkDotNet harness for engine throughput.                                                                                                                                          |
 | `tests/EnrolmentRules.Tests`                        | xUnit and Awesome Assertions coverage, including engine-driven rule tests, invariants, and golden files.                                                                                |
 | `tests/EnrolmentRules.TestProcessHost`              | Out-of-process fixture exercised by the CLI/process tests.                                                                                                                              |
+| `tests/EnrolmentRules.Web.Tests`                    | `WebApplicationFactory`-driven integration tests for the web front-end (session round-trip, form posts, rendered explanations).                                                        |
 | `workflows`                                         | Hot-swappable RulesEngine workflow YAML and its schema.                                                                                                                                 |
 | `examples`                                          | Single-student JSON, JSONL batch input, and golden-file fixtures.                                                                                                                       |
 | `docs/*.md`                                         | Reference docs for the pipeline, configuration surfaces, rule authoring, and engine-choice rationale.                                                                                   |
@@ -201,22 +203,28 @@ their A-levels, never an actual enrolment. The tiers are:
 The upstream prediction stage computes the mean GCSE score, an A-level-points prediction, and DfE
 transition-matrix probability evidence for every catalogue subject. Prediction uses the A-level
 scale `A*=6`, `A=5`, `B=4`, `C=3`, `D=2`, `E=1`, `U=0`; this is separate from the GCSE 1-9 scale.
+The base prediction runs the per-subject regression on the **average** GCSE, but a standout grade in
+the subject's own cognate GCSE overrides it: the same regression line is fed the individual grade and
+the higher of the two wins (`max`), so a strong individual result lifts that subject without dragging
+prediction down when the grade is weaker than the average. DfE evidence stays average-based.
 
 Two distinct mechanisms decide a subject's rating; keep them apart:
 
 1. **Base tier** — a RulesEngine workflow picks green/amber/red by a first-hit-wins scan (green
    criteria, else amber, else red). This stage *is* an ordered cascade.
-2. **Cross-subject constraints** — prerequisites, mutual exclusions, prior-choice exclusions,
+2. **Cross-subject constraints** — prerequisites, chosen-subject exclusions,
    own-time requirements, per-subject vetoes, and restudy bars. Each only ever moves a rating toward
    red, so *applying* them commutes and folds in by most-severe-wins, order-independently.
-   *Evaluation*, though, runs in two phases: the single-subject and pairwise constraints (veto,
+   *Evaluation*, though, runs in two phases: the single-subject and choice-activated constraints (veto,
    restudy bar, exclusions, own-time) read the base tier, then prerequisites read the ratings *after*
    those downgrades — so a dependency a sibling constraint drove to red no longer satisfies a
    `qualifying` prerequisite. That order is fixed but acyclic (prerequisites never feed the other
    constraints), not a fixpoint iteration.
-3. **Optional green cap** — when explicitly enabled, this runs after the constraint fold because it
-   counts only greens that survived those downgrades. It is also downgrade-only, but it is a distinct,
-   ordered aggregation phase rather than one of the commuting base-rating constraints.
+3. **Programme-size caps** — the whole-student chosen-subject cap runs after the constraint fold:
+   once the student has already committed to the maximum allowed programme size, every further unchosen
+   green/amber subject is forced red. The optional green cap, when enabled, runs after that and counts
+   only greens that survived the earlier downgrades. Both are downgrade-only, but they are distinct,
+   ordered aggregation phases rather than commuting base-rating constraints.
 
 The precedence table in the walk-through reads as one top-down ladder, but that is the *net* result
 after the fold, not the execution order: the base tier is emitted first, then every downgrade is
@@ -234,21 +242,21 @@ This is the shape of a real authored workflow file in `workflows/`:
 WorkflowName: 'subject-ratings'
 Rules:
   - RuleName: 'english_literature:green'
-    SuccessEvent: 'Entry met; predicted A-level grade at or above the green threshold'
+    SuccessEvent: 'Entry met (an English GCSE at standard entry); predicted A-level grade at or above the green threshold'
     Expression: >-
-      facts.Gcse("english_language") >= facts.TopEntry &&
-      facts.Gcse("maths") >= facts.TopEntry &&
-      facts.Predicted("english_literature") >= ALevelGrade.B &&
-      facts.DfeProbabilityAtOrAbove("english_literature", ALevelGrade.B)
+      (facts.Gcse("english_literature") >= facts.StandardEntry ||
+       facts.Gcse("english_language") >= facts.StandardEntry) &&
+      facts.Predicted("english_literature") >= ALevelGrade.D &&
+      facts.DfeProbabilityAtOrAbove("english_literature", ALevelGrade.D)
         >= facts.MinDfeGreenProbabilityAtOrAbove
 
   - RuleName: 'english_literature:amber'
-    SuccessEvent: 'Entry met; predicted A-level grade at or above the amber threshold'
+    SuccessEvent: 'Entry met (an English GCSE at standard entry); predicted A-level grade at or above the amber threshold'
     Expression: >-
-      facts.Gcse("english_language") >= facts.TopEntry &&
-      facts.Gcse("maths") >= facts.TopEntry &&
-      facts.Predicted("english_literature") >= ALevelGrade.C &&
-      facts.DfeProbabilityAtOrAbove("english_literature", ALevelGrade.C)
+      (facts.Gcse("english_literature") >= facts.StandardEntry ||
+       facts.Gcse("english_language") >= facts.StandardEntry) &&
+      facts.Predicted("english_literature") >= ALevelGrade.E &&
+      facts.DfeProbabilityAtOrAbove("english_literature", ALevelGrade.E)
         >= facts.MinDfeAmberProbabilityAtOrAbove
 
   - RuleName: 'english_literature:red'
@@ -257,21 +265,28 @@ Rules:
       true
 ```
 
+Entry bars are deliberately lenient — a subject's own cognate GCSE at `facts.StandardEntry`
+(grade 5) is broadly enough to enrol — and the rating tiers are generous: a predicted **D**
+(`ALevelGrade.D`) clears green and a predicted **E** clears amber. Two subjects are exceptions:
+Maths and Physics gate hard on `facts.Gcse("maths") >= facts.ExceptionalEntry` (a top grade,
+shipped as 8), ANDed with the same regression tiers.
+
 The loader supplies `RuleExpressionType = LambdaExpression` automatically for actual
 rules, so the YAML stays focused on the business logic.
 
 Entry thresholds can branch on derived per-student signals. Art's GCSE bar is age-gated entirely
 in the YAML — host code exposes `facts.Age` (derived from `date_of_birth`) and the loaded tuning
-values (`facts.AdultAge`, `facts.TopEntry`, `facts.StrongEntry`); the branching policy lives in the
-rule expression:
+values (`facts.AdultAge`, `facts.TopEntry`, `facts.StandardEntry`); the branching policy lives in the
+rule expression (adults face the higher `facts.TopEntry` bar, under-adults the accessible
+`facts.StandardEntry`):
 
 ```yaml
   - RuleName: 'art:green'
     SuccessEvent: 'Entry met (age-gated GCSE threshold); predicted A-level grade at or above the green threshold'
     Expression: >-
-      facts.Gcse("art") >= (facts.Age >= facts.AdultAge ? facts.TopEntry : facts.StrongEntry) &&
-      facts.Predicted("art") >= ALevelGrade.B &&
-      facts.DfeProbabilityAtOrAbove("art", ALevelGrade.B) >= facts.MinDfeGreenProbabilityAtOrAbove
+      facts.Gcse("art") >= (facts.Age >= facts.AdultAge ? facts.TopEntry : facts.StandardEntry) &&
+      facts.Predicted("art") >= ALevelGrade.D &&
+      facts.DfeProbabilityAtOrAbove("art", ALevelGrade.D) >= facts.MinDfeGreenProbabilityAtOrAbove
 ```
 
 ### Workflow Authoring
@@ -355,6 +370,17 @@ Pass a directory to lint a candidate workflow set before shipping it:
 dotnet run --project src/EnrolmentRules.Cli -- --lint-workflows path/to/workflows
 ```
 
+Report the build stamp — the version and the git commit the binaries were built from, so a decision can
+be traced back to the exact build that produced it. The commit is stamped into `InformationalVersion`
+at build time (the `StampGitCommit` target in `Directory.Build.props`), carries a `-dirty` suffix when
+built from a working tree with uncommitted changes, and degrades to `unknown` when built from a source
+drop with no git checkout. The web front-end shows the same stamp in its footer, linked to the commit
+on GitHub.
+
+```bash
+dotnet run --project src/EnrolmentRules.Cli -- --version
+```
+
 Evaluate a JSONL batch with one shared stateless engine:
 
 ```bash
@@ -373,6 +399,57 @@ Batch output is JSONL. Each output line includes the student id and either a suc
 |  `3` | Input or workflow loading error.                                    |
 |  `4` | Single-student evaluation completed, but the student is ineligible. |
 |  `5` | `--lint-workflows` found at least one error-severity finding.       |
+
+## Web Interface
+
+`src/EnrolmentRules.Web` is a small ASP.NET Core Razor Pages front-end demonstrating the
+"staff-facing website" integration path from [Designed For Integration](../README.md#designed-for-integration).
+It is a reference host, not a packable library project:
+
+- **No accounts, no database, no persistence.** Facts (GCSEs, prior qualifications, hobbies, date
+  of birth, chosen A-levels) are held in the ASP.NET Core session, keyed by a browser cookie.
+  Closing the browser, letting the session expire, or clicking Reset all lose the current
+  selection — there is nothing durable behind it.
+- Every GET re-runs `IEnrolmentEngine.TryExplain` against the session snapshot, so the rendered
+  page is always a fresh evaluation, never a cached one.
+- Red unchosen subjects are rendered as unavailable and the `ChooseSubject` POST handler rechecks
+  the current final rating before mutating the session. A chosen subject still renders `Remove`, even
+  if it is now red, so a counsellor can unwind a conflicting combination.
+- Client-side vocabulary (GCSE subject keys, prior-qualification subjects/types, hobby tags) comes
+  from the same catalogue/scale the engine is bound to (`GcseSubjects.Known`,
+  `IEnrolmentEngine.Catalogue`) — the web layer holds no parallel copy of policy data.
+- Static assets (Bootstrap 5) are restored via [libman](https://github.com/aspnet/LibraryManager)
+  on every `dotnet build` (`Microsoft.Web.LibraryManager.Build`, driven by `libman.json`) into
+  `wwwroot/lib/`, which is gitignored — nothing vendored is committed.
+
+### Running it locally
+
+`dotnet run --project src/EnrolmentRules.Web` will build, but ASP.NET Core sets the process's
+content root to the **project source directory** for `dotnet run`, not the build output — so the
+relative `workflows/` and `data/` paths the app looks for won't be found there (they're only
+present in the build output, copied in by the same `<Content Include>` pattern the CLI project
+uses). Build, then run the published executable directly from its own output directory instead:
+
+```bash
+./scripts/run-web.sh
+```
+
+which is equivalent to:
+
+```bash
+dotnet build src/EnrolmentRules.Web/EnrolmentRules.Web.csproj
+cd src/EnrolmentRules.Web/bin/Debug/net10.0
+ASPNETCORE_URLS="http://localhost:5299" ASPNETCORE_ENVIRONMENT=Development ./EnrolmentRules.Web
+```
+
+Then open `http://localhost:5299/`. Stop it with `Ctrl+C` (or `pkill -f EnrolmentRules.Web` if it
+was started in the background).
+
+For debugging in Rider, use the committed `EnrolmentRules.Web` run configuration (under
+`.idea/.idea.EnrolmentRules/.idea/runConfigurations/`) — it already sets the working directory,
+port, and `ASPNETCORE_ENVIRONMENT` correctly. `Properties/launchSettings.json` provides the same
+port/environment for `dotnet run`-based tooling, but doesn't fix the content-root issue above on
+its own.
 
 ## Using EnrolmentRules As A Library
 

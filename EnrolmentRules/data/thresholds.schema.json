@@ -11,11 +11,15 @@
     "top_entry",
     "strong_entry",
     "standard_entry",
+    "exceptional_entry",
     "further_maths_average_entry",
     "humanities_average_entry",
     "min_dfe_green_probability_at_or_above",
     "min_dfe_amber_probability_at_or_above",
     "adult_age",
+    "max_chosen_a_levels",
+    "high_attainment_max_chosen_a_levels",
+    "high_attainment_average_gcse",
     "amber_score_factor"
   ],
   "properties": {
@@ -43,6 +47,11 @@
       "minimum": 1,
       "maximum": 9
     },
+    "exceptional_entry": {
+      "type": "integer",
+      "minimum": 1,
+      "maximum": 9
+    },
     "further_maths_average_entry": {
       "type": "number",
       "minimum": 0,
@@ -66,6 +75,22 @@
     "adult_age": {
       "type": "integer",
       "minimum": 1
+    },
+    "max_chosen_a_levels": {
+      "description": "Normal maximum number of committed A-level choices for one student.",
+      "type": "integer",
+      "minimum": 1
+    },
+    "high_attainment_max_chosen_a_levels": {
+      "description": "Maximum committed A-level choices for a student whose average GCSE score meets the high-attainment threshold.",
+      "type": "integer",
+      "minimum": 1
+    },
+    "high_attainment_average_gcse": {
+      "description": "Average GCSE score at or above which the high-attainment choice cap applies.",
+      "type": "number",
+      "minimum": 0,
+      "maximum": 9
     },
     "max_green_choices": {
       "description": "Optional, normally omitted. When set, caps the number of auto-enrol greens and demotes the lowest-weight surplus to amber. Omit to disable the cap so every green stays green.",

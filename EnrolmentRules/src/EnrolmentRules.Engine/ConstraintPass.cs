@@ -18,21 +18,18 @@ internal static class ConstraintPass
 	public const string OwnTimeReason = "requires own-time practice — authorisation required";
 	public const string VetoReasonPrefix = "Barred — incompatible activity: ";
 	public const string RestudyBarReasonPrefix = "Barred — already holds a level-3 qualification in ";
-	private const string MutualExclusionAmberReasonPrefix = "Mutual exclusion with ";
-	private const string MutualExclusionAmberReasonSuffix = " — authorisation required";
-	private const string MutualExclusionRedReasonPrefix = "Mutual exclusion with ";
-	private const string MutualExclusionRedReasonSuffix = " — not permitted";
-	private const string PriorChoiceExclusionReasonPrefix = "Cannot be combined with chosen ";
+	private const string ChosenSubjectExclusionReasonPrefix = "Cannot be combined with chosen ";
 	private const string PrerequisiteReasonSuffix = " prerequisite not met";
 	private const string PrerequisiteReasonAlternativeSeparator = " or ";
+	private const string OwnTimeActivitySeparator = " or ";
 
 	/// <summary>The canonical reason for the (single-subject, hard) Maths prerequisite Further Maths carries.</summary>
 	public static readonly string MathsPrerequisiteReason =
 		EnumNames.NameOf(Subject.Maths) + PrerequisiteReasonSuffix;
 
 	/// <summary>
-	///     Collect every downgrade for one student in two phases. The non-prerequisite constraints (mutual and
-	///     prior-choice exclusion, own-time, veto, restudy bar) read only the <em>base</em> ratings; a
+	///     Collect every downgrade for one student in two phases. The non-prerequisite constraints (chosen-subject
+	///     exclusion, own-time, veto, restudy bar) read only the <em>base</em> ratings; a
 	///     prerequisite then reads the ratings <em>after</em> those downgrades, so a dependency a sibling
 	///     constraint drove to red no longer satisfies a dependent's requirement. Because none of the
 	///     non-prerequisite constraints read prerequisite output, this is a fixed two-phase order — not a
@@ -47,8 +44,7 @@ internal static class ConstraintPass
 		var baseRating = ratings.ToDictionary(static r => r.Subject, static r => r.Rating);
 
 		IReadOnlyList<Adjustment> nonPrerequisite = [
-			.. MutualExclusions(baseRating, catalogue),
-			.. PriorChoiceExclusions(baseRating, profile.ChosenALevels, catalogue),
+			.. ChosenSubjectExclusions(baseRating, profile.ChosenALevels, catalogue),
 			.. OwnTime(baseRating, profile.Hobbies, catalogue),
 			.. Vetoes(baseRating, profile.Hobbies, catalogue),
 			.. RestudyBars(baseRating, profile.PriorQualifications, catalogue),
@@ -92,9 +88,6 @@ internal static class ConstraintPass
 	/// <summary>A subject "qualifies" if it has a green or amber base rating (i.e. is not red / not absent).</summary>
 	private static bool Qualifies(Dictionary<Subject, Rating> ratings, Subject subject) =>
 		ratings.TryGetValue(subject, out var rating) && rating != Rating.Red;
-
-	private static bool IsGreen(Dictionary<Subject, Rating> ratings, Subject subject) =>
-		ratings.GetValueOrDefault(subject, Rating.Red) == Rating.Green;
 
 	// Prerequisite (→ amber or red): for each qualifying subject, every dependency group must be satisfied —
 	// a group is met when any one of its alternatives qualifies in this run or is a committed A-level (a
@@ -160,32 +153,9 @@ internal static class ConstraintPass
 		string.Join(PrerequisiteReasonAlternativeSeparator, group.AnyOf.Select(EnumNames.NameOf))
 		+ PrerequisiteReasonSuffix;
 
-	// Mutual exclusion: when both subjects of a clash pair qualify, the lower-weight one is demoted to
-	// the pair's configured severity. Amber pairs still require both to be green; red pairs block either
-	// green or amber on the lower-weight side.
-	private static IEnumerable<Adjustment> MutualExclusions(Dictionary<Subject, Rating> ratings, CatalogueData catalogue)
-	{
-		foreach (var (a, b, severity) in catalogue.ExclusionPairs) {
-			var qualifies = severity == Rating.Red
-				? Qualifies(ratings, a) && Qualifies(ratings, b)
-				: IsGreen(ratings, a) && IsGreen(ratings, b);
-
-			if (qualifies) {
-				var (loser, winner) =
-					catalogue.Meta(a).PriorityWeight <= catalogue.Meta(b).PriorityWeight ? (a, b) : (b, a);
-				var winnerName = EnumNames.NameOf(winner);
-				yield return new(
-					loser, ratings[loser], severity, AdjustmentKind.MutualExclusion,
-					severity == Rating.Red
-						? $"{MutualExclusionRedReasonPrefix}{winnerName}{MutualExclusionRedReasonSuffix}"
-						: $"{MutualExclusionAmberReasonPrefix}{winnerName}{MutualExclusionAmberReasonSuffix}");
-			}
-		}
-	}
-
-	// Prior-choice exclusions: a committed choice always wins, so every qualifying subject that excludes
-	// a chosen A-level is downgraded to the configured severity.
-	private static IEnumerable<Adjustment> PriorChoiceExclusions(
+	// Chosen-subject exclusions: a committed choice activates its exclusion edges, so every qualifying subject
+	// that the chosen A-level excludes is downgraded to the configured severity.
+	private static IEnumerable<Adjustment> ChosenSubjectExclusions(
 		Dictionary<Subject, Rating> ratings,
 		IReadOnlyList<Subject> chosenALevels,
 		CatalogueData catalogue)
@@ -195,8 +165,8 @@ internal static class ConstraintPass
 				if (Qualifies(ratings, exclusion.Other)) {
 					var chosenName = EnumNames.NameOf(chosen);
 					yield return new(
-						exclusion.Other, ratings[exclusion.Other], exclusion.Severity, AdjustmentKind.PriorChoiceExclusion,
-						$"{PriorChoiceExclusionReasonPrefix}{chosenName}");
+						exclusion.Other, ratings[exclusion.Other], exclusion.Severity, AdjustmentKind.ChosenSubjectExclusion,
+						$"{ChosenSubjectExclusionReasonPrefix}{chosenName}");
 				}
 			}
 		}
@@ -212,7 +182,9 @@ internal static class ConstraintPass
 	{
 		foreach (var subject in catalogue.Subjects.Where(subject => catalogue.Meta(subject).RequiredActivities.Count > 0)) {
 			if (Qualifies(ratings, subject) && !OwnTimeSatisfied(catalogue, subject, hobbies)) {
-				yield return new(subject, ratings[subject], Rating.Amber, AdjustmentKind.OwnTime, OwnTimeReason);
+				yield return new(
+					subject, ratings[subject], Rating.Amber, AdjustmentKind.OwnTime,
+					OwnTimeReasonFor(catalogue.Meta(subject).RequiredActivities));
 			}
 		}
 	}
@@ -268,6 +240,16 @@ internal static class ConstraintPass
 			}
 		}
 	}
+
+	/// <summary>
+	///     The own-time reason, naming the activity tags that would satisfy the requirement. The requirement
+	///     is about the student's activities, not the subject, so a bare
+	///     <see cref="OwnTimeReason" /> tells them to seek authorisation without saying what would remove the
+	///     need for it. The tags are catalogue prefixes (<c>plays_</c> matching <c>plays_piano</c>), so they
+	///     are reported as a starts-with match rather than an exact activity name.
+	/// </summary>
+	private static string OwnTimeReasonFor(IReadOnlyList<string> requiredActivities) =>
+		$"{OwnTimeReason} (no activity starting with {string.Join(OwnTimeActivitySeparator, requiredActivities.Select(static prefix => $"'{prefix}'"))} in your listed hobbies)";
 
 	private static bool OwnTimeSatisfied(CatalogueData catalogue, Subject subject, IReadOnlyList<string> hobbies) =>
 		catalogue.Meta(subject).RequiredActivities.Any(prefix =>
