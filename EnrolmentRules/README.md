@@ -1,20 +1,28 @@
 # EnrolmentRules - A monotonic, rules-as-data engine for A-Level enrolment decisions
 
 This is a recreation of a proprietary project I developed a few years ago, to assist in enrolment decision-making and ensure policies were
-consistently followed. The real system was also capable of writing the complete enrolment package into the management information system, and printing forms for signature.
+consistently followed. The real system was also capable of writing the complete enrolment package into the management information system, and printing
+forms for signature.
 
 EnrolmentRules is a decision-support system for A-Level enrolment. It gives staff a consistent,
 explainable recommendation for each student and subject while keeping the final decision visible
 and accountable.
 
-### ▶ Live demo: <https://enrolment-web-716005672573.europe-west2.run.app>
+### ▶ [Green Shoots demo site](https://enrolment-web-716005672573.europe-west2.run.app)
 
-Anonymous, no sign-in. Enter GCSE facts and see the per-subject recommendations
-and their explanations. Hosted on Cloud Run and scaled to zero, so the first request after an
-idle period takes a second or two to wake the instance. See [docs/deployment.md](docs/deployment.md)
+**May take a couple of seconds to wake the docker image** be patient!
+
+*Green Shoots* is the engine's front end demo: staff enter a student's GCSE results and any prior
+qualifications, and instantly get a recommendation for every A-Level subject on offer, each with a
+plain-English reason. It gives admissions and pastoral staff a consistent, defensible answer for
+every student in seconds rather than a judgement call that varies by who's on duty, and a clear
+audit trail for why a decision was made if it's ever challenged.
+
+The system is anonymous, with no sign-in. Hosted on Google Cloud Run and scaled to zero, so the first request after an
+idle period **takes a second or two to wake** the instance. See [docs/deployment.md](docs/deployment.md)
 to run it locally or host your own.
 
-## What It Does
+## What the Engine Does
 
 For each student, the system first checks whether they meet the institution's overall entry policy.
 It then assesses every available A-Level subject and gives it a clear recommendation:
@@ -71,23 +79,22 @@ running service can also reload an approved policy set without replacing the sof
 
 ## Designed For Integration
 
-EnrolmentRules is a reusable decision library rather than a fixed application with one user
+The engine is a reusable decision library rather than a fixed application with one user
 interface. An organisation can place the same decision-making capability behind:
 
-- a staff-facing website;
-- a student or staff mobile app;
-- a desktop enrolment application;
-- a command-line or batch-processing tool;
-- an internal service used by a management information system or other existing software.
+- an intranet or website similar to [Green Shoots demo site](https://enrolment-web-716005672573.europe-west2.run.app)
+- a student or staff mobile app
+- a desktop enrolment application
+- a command-line or batch-processing tool
+- an internal service used by your existing MIS software
 
 This separation means the presentation can change without duplicating the enrolment policy. A web
 page, mobile app and back-office process can all receive the same recommendation from the same policy
 and student information.
 
-`src/EnrolmentRules.Web` is a small reference implementation of the staff-facing website option: a
-session-backed, no-database Razor Pages front-end. Run it locally with `./scripts/run-web.sh`; see
+`src/EnrolmentRules.Web` is a small reference implementation of the website option. Run it locally with `./scripts/run-web.sh`; see
 [Web Interface](docs/technical-reference.md#web-interface) for details and Rider debugging setup.
-To run it as a container (OrbStack locally, or a free container host), see the
+To run it as a container (OrbStack locally, or a free container host), see the technical
 [deployment guide](docs/deployment.md).
 
 ## Quality And Assurance

@@ -11,9 +11,6 @@ using Subject = Domain.Subject;
 
 public sealed class IndexModel(IEnrolmentSessionStore sessionStore, IEnrolmentEngine engine, TimeProvider timeProvider) : PageModel
 {
-	private static readonly IReadOnlyList<QualificationType> CachedQualificationTypeOptions =
-		Array.AsReadOnly(Enum.GetValues<QualificationType>());
-
 	/// <summary>
 	///     Age assumed for a student who hasn't entered a date of birth yet, used only to pre-fill the date
 	///     field with a plausible value (a blank/placeholder date renders oddly dimmed in Safari's native
@@ -21,6 +18,9 @@ public sealed class IndexModel(IEnrolmentSessionStore sessionStore, IEnrolmentEn
 	///     remains editable and, like every other fact, isn't saved until the student submits the form.
 	/// </summary>
 	private const int TypicalEnrollmentAgeYears = 16;
+
+	private static readonly IReadOnlyList<QualificationType> CachedQualificationTypeOptions =
+		Array.AsReadOnly(Enum.GetValues<QualificationType>());
 
 	/// <summary>
 	///     Illustrative hobby tags with no catalogue backing today — the catalogue currently defines only

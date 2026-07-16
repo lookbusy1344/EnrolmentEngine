@@ -29,7 +29,7 @@ public sealed class AgeDisplayTests : IClassFixture<WebAppFactory>
 		var html = await followUp.Content.ReadAsStringAsync();
 
 		var expectedAge = AgeCalculator.WholeYears(dob, DateOnly.FromDateTime(DateTime.UtcNow));
-		html.Should().Contain($"id=\"DateOfBirthAge\"");
+		html.Should().Contain("id=\"DateOfBirthAge\"");
 		html.Should().Contain($"Age: {expectedAge}");
 	}
 
@@ -41,7 +41,7 @@ public sealed class AgeDisplayTests : IClassFixture<WebAppFactory>
 		using var response = await client.GetAsync(new Uri("/", UriKind.Relative));
 		var html = await response.Content.ReadAsStringAsync();
 
-		html.Should().Contain($"id=\"DateOfBirthAge\"");
+		html.Should().Contain("id=\"DateOfBirthAge\"");
 		html.Should().MatchRegex("Age: \\d+");
 	}
 

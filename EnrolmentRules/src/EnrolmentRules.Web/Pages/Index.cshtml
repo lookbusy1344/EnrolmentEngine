@@ -1,5 +1,4 @@
 @page
-@using EnrolmentRules.Domain
 @using EnrolmentRules.Web.Models
 @model IndexModel
 @{
@@ -194,6 +193,7 @@
 				<p class="mb-0">@choiceLimitReason</p>
 			</div>
 		}
+
 		<div class="row row-cols-1 row-cols-md-2 row-cols-lg-3 g-3">
 			@foreach (var explanation in results.Result.Explanations) {
 				var chosen = Model.ChosenALevels.Contains(explanation.Subject);

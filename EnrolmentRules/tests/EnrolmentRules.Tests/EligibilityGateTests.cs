@@ -88,22 +88,22 @@ public sealed class EligibilityGateTests
 	{
 		var schema = File.ReadAllText(Path.Combine(DataDir, PolicyThresholdsStore.SchemaFileName));
 		const string invalid = """
-		                       pass_grade: 4
-		                       min_passes: 5
-		                       top_entry: 7
-		                       strong_entry: 6
-		                       standard_entry: 5
-		                       exceptional_entry: 8
-		                       further_maths_average_entry: 7.0
-		                       humanities_average_entry: 5.0
-		                       min_dfe_green_probability_at_or_above: 0.60
-		                       min_dfe_amber_probability_at_or_above: 0.50
-		                       adult_age: 19
-		                       max_chosen_a_levels: 4
-		                       high_attainment_max_chosen_a_levels: 3
-		                       high_attainment_average_gcse: 7.5
-		                       amber_score_factor: 0.5
-		                       """;
+							   pass_grade: 4
+							   min_passes: 5
+							   top_entry: 7
+							   strong_entry: 6
+							   standard_entry: 5
+							   exceptional_entry: 8
+							   further_maths_average_entry: 7.0
+							   humanities_average_entry: 5.0
+							   min_dfe_green_probability_at_or_above: 0.60
+							   min_dfe_amber_probability_at_or_above: 0.50
+							   adult_age: 19
+							   max_chosen_a_levels: 4
+							   high_attainment_max_chosen_a_levels: 3
+							   high_attainment_average_gcse: 7.5
+							   amber_score_factor: 0.5
+							   """;
 
 		var act = () => PolicyThresholdsStore.LoadAndValidate(new StringReader(invalid), new StringReader(schema));
 

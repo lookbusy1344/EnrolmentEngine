@@ -32,10 +32,7 @@ public sealed partial class BuildInfoTests
 	}
 
 	[Fact]
-	public void the_commit_stays_bare_so_it_can_address_a_commit_url()
-	{
-		BuildInfo.Commit.Should().NotEndWith("-dirty");
-	}
+	public void the_commit_stays_bare_so_it_can_address_a_commit_url() => BuildInfo.Commit.Should().NotEndWith("-dirty");
 
 	[Fact]
 	public void the_full_stamp_joins_the_version_and_the_commit_and_marks_an_uncommitted_build()

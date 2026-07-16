@@ -29,9 +29,9 @@ public static class BuildInfo
 	public static string Version { get; } = InformationalVersion.Split(MetadataSeparator)[0];
 
 	private static string Revision { get; } = InformationalVersion.Split(MetadataSeparator) is [_, var revision, ..]
-		&& !string.IsNullOrWhiteSpace(revision)
-			? revision
-			: UnknownCommit;
+											  && !string.IsNullOrWhiteSpace(revision)
+												  ? revision
+												  : UnknownCommit;
 
 	/// <summary>
 	///     The abbreviated git commit the build came from — bare, so it is usable in a commit URL — or

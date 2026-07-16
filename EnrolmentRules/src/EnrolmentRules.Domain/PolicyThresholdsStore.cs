@@ -95,7 +95,7 @@ public static class PolicyThresholdsStore
 		}
 
 		if (thresholds.StandardEntry > thresholds.StrongEntry || thresholds.StrongEntry > thresholds.TopEntry
-			|| thresholds.TopEntry > thresholds.ExceptionalEntry) {
+															  || thresholds.TopEntry > thresholds.ExceptionalEntry) {
 			throw new InvalidDataException(
 				"Entry thresholds must satisfy standard_entry <= strong_entry <= top_entry <= exceptional_entry.");
 		}

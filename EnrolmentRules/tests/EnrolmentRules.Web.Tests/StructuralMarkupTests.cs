@@ -4,7 +4,7 @@ using System.Globalization;
 using System.Text.Encodings.Web;
 using System.Text.RegularExpressions;
 using AwesomeAssertions;
-using EnrolmentRules.Domain;
+using Domain;
 
 public sealed partial class StructuralMarkupTests : IClassFixture<WebAppFactory>
 {
@@ -60,14 +60,15 @@ public sealed partial class StructuralMarkupTests : IClassFixture<WebAppFactory>
 	}
 
 	[Fact]
-	public async Task Footer_shows_the_build_stamp_linked_to_the_commit()
+	public async Task Footer_shows_the_build_stamp_as_plain_text()
 	{
 		var html = await GetIndexHtmlAsync();
 
 		// Razor HTML-encodes the '+' separating version from commit metadata.
 		html.Should().Contain(HtmlEncoder.Default.Encode(BuildInfo.VersionWithCommit),
 			"visitors need to know which build answered them");
-		html.Should().Contain($"https://github.com/lookbusy1344/EnrolmentEngine/commit/{BuildInfo.Commit}");
+		html.Should().NotContain($"https://github.com/lookbusy1344/EnrolmentEngine/commit/{BuildInfo.Commit}",
+			"the build stamp is plain text, not a link to the commit");
 	}
 
 	private async Task<string> GetIndexHtmlAsync()
