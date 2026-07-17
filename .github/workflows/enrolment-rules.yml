@@ -34,8 +34,18 @@ jobs:
     steps:
       - uses: actions/checkout@v7
 
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v6
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v7
+        with:
+          node-version: '22'
+          cache: 'pnpm'
+          cache-dependency-path: 'EnrolmentRules/src/EnrolmentRules.Web/ClientApp/pnpm-lock.yaml'
+
       - name: Setup .NET
-        uses: actions/setup-dotnet@v5
+        uses: actions/setup-dotnet@v6
         with:
           dotnet-version: '10.0.x'
 
