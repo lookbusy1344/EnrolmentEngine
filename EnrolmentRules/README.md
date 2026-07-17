@@ -1,4 +1,4 @@
-# EnrolmentRules - A monotonic, rules-as-data engine for A-Level enrolment decisions
+# Enrolment Rules Engine - A monotonic, rules-as-data engine for A-Level enrolment decisions
 
 This is a recreation of a proprietary project I developed a few years ago, to assist in enrolment decision-making and ensure policies were
 consistently followed. The real system was also capable of writing the complete enrolment package into the management information system, and printing
@@ -34,6 +34,19 @@ It then assesses every available A-Level subject and gives it a clear recommenda
 The system provides explainable recommendations based on specific policy conditions. These results can either serve as 1) advisory support for staff
 judgment or 2) enforced as a hard gate to guarantee consistent decision-making. The original system evolved from 1 to 2, with management override (not
 replicated here).
+
+## AI in Production
+
+This engine is a genuine application of AI using multiple techniques: **statistical learning** with a **symbolic AI**
+engine on top. Linear regression over GCSE results predicts each student's likely A-Level outcome
+from historical attainment data - the statistical learning half.
+That prediction then feeds a symbolic AI engine, which evaluates the institution's published
+policy - entry thresholds, subject ratings, prerequisites, exclusions - as explicit,
+human-readable rules rather than learned weights. The payoff of stacking them this way: every
+recommendation is completely reproducible and highly interpretable. Run the same student through
+the same policy and you get the same answer, every time, with a plain-English reason attached -
+none of the black-box guesswork that comes with a purely statistical model. Managers have full
+control over rule application.
 
 ## Information It Can Consider
 

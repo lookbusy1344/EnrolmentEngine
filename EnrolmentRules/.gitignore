@@ -13,4 +13,5 @@ src/EnrolmentRules.Web/wwwroot/lib/
 # .gcloudignore/.dockerignore — the build needs it. The script deletes it on exit.
 .sourcerevision
 
+# duplicated just to ensure ignore rules are self-contained in project
 **/wwwroot/lib/
