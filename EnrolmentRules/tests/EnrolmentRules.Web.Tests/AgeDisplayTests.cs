@@ -15,7 +15,7 @@ public sealed class AgeDisplayTests : IClassFixture<WebAppFactory>
 	{
 		using var client = factory.CreateClient(new() { AllowAutoRedirect = false });
 
-		using var getResponse = await client.GetAsync(new Uri("/", UriKind.Relative));
+		using var getResponse = await client.GetAsync(new Uri("/razor", UriKind.Relative));
 		var token = await ExtractAntiForgeryTokenAsync(getResponse);
 
 		var dob = new DateOnly(1990, 6, 15);
@@ -24,7 +24,7 @@ public sealed class AgeDisplayTests : IClassFixture<WebAppFactory>
 			["DateOfBirth"] = dob.ToString("yyyy-MM-dd", CultureInfo.InvariantCulture),
 		});
 
-		using var postResponse = await client.PostAsync(new Uri("/?handler=SaveFacts", UriKind.Relative), content);
+		using var postResponse = await client.PostAsync(new Uri("/razor?handler=SaveFacts", UriKind.Relative), content);
 		using var followUp = await client.GetAsync(postResponse.Headers.Location);
 		var html = await followUp.Content.ReadAsStringAsync();
 
@@ -38,7 +38,7 @@ public sealed class AgeDisplayTests : IClassFixture<WebAppFactory>
 	{
 		using var client = factory.CreateClient();
 
-		using var response = await client.GetAsync(new Uri("/", UriKind.Relative));
+		using var response = await client.GetAsync(new Uri("/razor", UriKind.Relative));
 		var html = await response.Content.ReadAsStringAsync();
 
 		html.Should().Contain("id=\"DateOfBirthAge\"");

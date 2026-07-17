@@ -9,6 +9,8 @@ public interface IEnrolmentEvaluator
 
 	QualificationScale Scale { get; }
 
+	PolicyThresholds Thresholds { get; }
+
 	EnrolmentResult Evaluate(StudentInput student, CancellationToken cancellationToken = default);
 
 	EnrolmentResult Evaluate(StudentInput student, DateOnly asOf, CancellationToken cancellationToken = default);
@@ -24,4 +26,7 @@ public interface IEnrolmentEvaluator
 	ValidatedEvaluation<ExplainedResult> TryExplain(StudentInput student, CancellationToken cancellationToken = default);
 
 	ValidatedEvaluation<ExplainedResult> TryExplain(StudentInput student, DateOnly asOf, CancellationToken cancellationToken = default);
+
+	/// <inheritdoc cref="EnrolmentEngine.StaleChoices" />
+	IReadOnlyList<Subject> StaleChoices(StudentInput student, CancellationToken cancellationToken = default);
 }

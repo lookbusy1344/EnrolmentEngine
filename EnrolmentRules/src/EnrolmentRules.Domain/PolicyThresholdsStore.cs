@@ -101,7 +101,8 @@ public static class PolicyThresholdsStore
 		}
 
 		if (thresholds.FurtherMathsAverageEntry is < Thresholds.MinGcseGrade or > Thresholds.MaxGcseGrade
-			|| thresholds.HumanitiesAverageEntry is < Thresholds.MinGcseGrade or > Thresholds.MaxGcseGrade) {
+			|| thresholds.HumanitiesAverageEntry is < Thresholds.MinGcseGrade or > Thresholds.MaxGcseGrade
+			|| thresholds.AccessibleAverageEntry is < Thresholds.MinGcseGrade or > Thresholds.MaxGcseGrade) {
 			throw new InvalidDataException("Average entry thresholds must stay within the GCSE scale.");
 		}
 

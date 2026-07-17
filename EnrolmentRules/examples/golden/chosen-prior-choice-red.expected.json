@@ -45,7 +45,7 @@
     {
       "subject": "psychology",
       "rating": "green",
-      "reason": "Entry met (Biology, Maths and English at standard entry); predicted A-level grade at or above the green threshold"
+      "reason": "Entry met (Maths and English at pass grade); predicted A-level grade at or above the green threshold"
     },
     {
       "subject": "chemistry",
@@ -105,12 +105,12 @@
     {
       "subject": "sociology",
       "rating": "green",
-      "reason": "Entry met (humanities average and English at standard entry); predicted A-level grade at or above the green threshold"
+      "reason": "Entry met (accessible average and English at pass grade); predicted A-level grade at or above the green threshold"
     },
     {
       "subject": "media_studies",
       "rating": "green",
-      "reason": "Entry met (English at standard entry); predicted A-level grade at or above the green threshold"
+      "reason": "Entry met (English at pass grade); predicted A-level grade at or above the green threshold"
     },
     {
       "subject": "drama",

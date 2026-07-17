@@ -14,13 +14,13 @@ public sealed class ChooseRemoveSubjectTests : IClassFixture<WebAppFactory>
 	{
 		using var client = factory.CreateClient(new() { AllowAutoRedirect = false });
 
-		using var getResponse = await client.GetAsync(new Uri("/", UriKind.Relative));
+		using var getResponse = await client.GetAsync(new Uri("/razor", UriKind.Relative));
 		var token = await ExtractAntiForgeryTokenAsync(getResponse);
 
 		var form = EligibleStudentForm(token);
 
 		using var saveContent = new FormUrlEncodedContent(form);
-		using var saveResponse = await client.PostAsync(new Uri("/?handler=SaveFacts", UriKind.Relative), saveContent);
+		using var saveResponse = await client.PostAsync(new Uri("/razor?handler=SaveFacts", UriKind.Relative), saveContent);
 		using var afterSave = await client.GetAsync(saveResponse.Headers.Location);
 		var htmlAfterSave = await afterSave.Content.ReadAsStringAsync();
 		htmlAfterSave.Should().Contain("french").And.Contain("Green");
@@ -30,7 +30,7 @@ public sealed class ChooseRemoveSubjectTests : IClassFixture<WebAppFactory>
 			["__RequestVerificationToken"] = chooseToken,
 			["subject"] = "german",
 		});
-		using var chooseResponse = await client.PostAsync(new Uri("/?handler=ChooseSubject", UriKind.Relative), chooseContent);
+		using var chooseResponse = await client.PostAsync(new Uri("/razor?handler=ChooseSubject", UriKind.Relative), chooseContent);
 		using var afterChoose = await client.GetAsync(chooseResponse.Headers.Location);
 		var htmlAfterChoose = await afterChoose.Content.ReadAsStringAsync();
 		htmlAfterChoose.Should().Contain("Cannot be combined with chosen german");
@@ -41,7 +41,7 @@ public sealed class ChooseRemoveSubjectTests : IClassFixture<WebAppFactory>
 			["__RequestVerificationToken"] = removeToken,
 			["subject"] = "german",
 		});
-		using var removeResponse = await client.PostAsync(new Uri("/?handler=RemoveSubject", UriKind.Relative), removeContent);
+		using var removeResponse = await client.PostAsync(new Uri("/razor?handler=RemoveSubject", UriKind.Relative), removeContent);
 		using var afterRemove = await client.GetAsync(removeResponse.Headers.Location);
 		var htmlAfterRemove = await afterRemove.Content.ReadAsStringAsync();
 		htmlAfterRemove.Should().NotContain("Cannot be combined with chosen german");
@@ -53,10 +53,10 @@ public sealed class ChooseRemoveSubjectTests : IClassFixture<WebAppFactory>
 	{
 		using var client = factory.CreateClient(new() { AllowAutoRedirect = false });
 
-		using var getResponse = await client.GetAsync(new Uri("/", UriKind.Relative));
+		using var getResponse = await client.GetAsync(new Uri("/razor", UriKind.Relative));
 		var token = await ExtractAntiForgeryTokenAsync(getResponse);
 		using var saveContent = new FormUrlEncodedContent(EligibleStudentForm(token));
-		using var saveResponse = await client.PostAsync(new Uri("/?handler=SaveFacts", UriKind.Relative), saveContent);
+		using var saveResponse = await client.PostAsync(new Uri("/razor?handler=SaveFacts", UriKind.Relative), saveContent);
 		using var afterSave = await client.GetAsync(saveResponse.Headers.Location);
 		var htmlAfterSave = await afterSave.Content.ReadAsStringAsync();
 
@@ -68,7 +68,7 @@ public sealed class ChooseRemoveSubjectTests : IClassFixture<WebAppFactory>
 			["__RequestVerificationToken"] = chooseToken,
 			["subject"] = "further_maths",
 		});
-		using var forgedChooseResponse = await client.PostAsync(new Uri("/?handler=ChooseSubject", UriKind.Relative), forgedChooseContent);
+		using var forgedChooseResponse = await client.PostAsync(new Uri("/razor?handler=ChooseSubject", UriKind.Relative), forgedChooseContent);
 		using var afterForgedChoose = await client.GetAsync(forgedChooseResponse.Headers.Location);
 		var htmlAfterForgedChoose = await afterForgedChoose.Content.ReadAsStringAsync();
 
@@ -77,14 +77,50 @@ public sealed class ChooseRemoveSubjectTests : IClassFixture<WebAppFactory>
 	}
 
 	[Fact]
+	public async Task Lowering_gcses_ejects_a_chosen_subject_that_is_no_longer_green()
+	{
+		using var client = factory.CreateClient(new() { AllowAutoRedirect = false });
+
+		using var getResponse = await client.GetAsync(new Uri("/razor", UriKind.Relative));
+		var token = await ExtractAntiForgeryTokenAsync(getResponse);
+		using var saveContent = new FormUrlEncodedContent(EligibleStudentForm(token));
+		using var saveResponse = await client.PostAsync(new Uri("/razor?handler=SaveFacts", UriKind.Relative), saveContent);
+		using var afterSave = await client.GetAsync(saveResponse.Headers.Location);
+
+		// French is green on the strong grades, so it can be chosen.
+		var chooseToken = await ExtractAntiForgeryTokenAsync(afterSave);
+		using var chooseContent = new FormUrlEncodedContent(new Dictionary<string, string> {
+			["__RequestVerificationToken"] = chooseToken,
+			["subject"] = "french",
+		});
+		using var chooseResponse = await client.PostAsync(new Uri("/razor?handler=ChooseSubject", UriKind.Relative), chooseContent);
+		using var afterChoose = await client.GetAsync(chooseResponse.Headers.Location);
+		var htmlAfterChoose = await afterChoose.Content.ReadAsStringAsync();
+		htmlAfterChoose.Should().Contain("list-inline-item badge text-bg-primary rounded-pill\">French");
+
+		// Now collapse every grade to a 1: the student fails the eligibility gate, so French goes red.
+		var lowerToken = await ExtractAntiForgeryTokenAsync(afterChoose);
+		using var lowerContent = new FormUrlEncodedContent(LoweredStudentForm(lowerToken));
+		using var lowerResponse = await client.PostAsync(new Uri("/razor?handler=SaveFacts", UriKind.Relative), lowerContent);
+		using var afterLower = await client.GetAsync(lowerResponse.Headers.Location);
+		var htmlAfterLower = await afterLower.Content.ReadAsStringAsync();
+
+		htmlAfterLower.Should().NotContain("list-inline-item badge text-bg-primary rounded-pill\">French");
+		htmlAfterLower.Should().Contain("None chosen yet.");
+		htmlAfterLower.Should().Contain("no longer available with your current grades");
+		// The page still renders a verdict rather than the engine's refusal: the basket was pruned first.
+		htmlAfterLower.Should().NotContain("chosen_a_levels");
+	}
+
+	[Fact]
 	public async Task Normal_attainment_student_cannot_forge_a_fourth_choice_once_three_are_chosen()
 	{
 		using var client = factory.CreateClient(new() { AllowAutoRedirect = false });
 
-		using var getResponse = await client.GetAsync(new Uri("/", UriKind.Relative));
+		using var getResponse = await client.GetAsync(new Uri("/razor", UriKind.Relative));
 		var token = await ExtractAntiForgeryTokenAsync(getResponse);
 		using var saveContent = new FormUrlEncodedContent(NormalAttainmentStudentForm(token));
-		using var saveResponse = await client.PostAsync(new Uri("/?handler=SaveFacts", UriKind.Relative), saveContent);
+		using var saveResponse = await client.PostAsync(new Uri("/razor?handler=SaveFacts", UriKind.Relative), saveContent);
 		var currentLocation = saveResponse.Headers.Location;
 		foreach (var subject in new[] { "chemistry", "biology", "history" }) {
 			using var currentPage = await client.GetAsync(currentLocation);
@@ -93,7 +129,7 @@ public sealed class ChooseRemoveSubjectTests : IClassFixture<WebAppFactory>
 				["__RequestVerificationToken"] = chooseToken,
 				["subject"] = subject,
 			});
-			using var chooseResponse = await client.PostAsync(new Uri("/?handler=ChooseSubject", UriKind.Relative), chooseContent);
+			using var chooseResponse = await client.PostAsync(new Uri("/razor?handler=ChooseSubject", UriKind.Relative), chooseContent);
 			currentLocation = chooseResponse.Headers.Location;
 		}
 
@@ -112,7 +148,7 @@ public sealed class ChooseRemoveSubjectTests : IClassFixture<WebAppFactory>
 			["__RequestVerificationToken"] = forgedToken,
 			["subject"] = "french",
 		});
-		using var forgedChooseResponse = await client.PostAsync(new Uri("/?handler=ChooseSubject", UriKind.Relative), forgedChooseContent);
+		using var forgedChooseResponse = await client.PostAsync(new Uri("/razor?handler=ChooseSubject", UriKind.Relative), forgedChooseContent);
 		using var afterForgedChoose = await client.GetAsync(forgedChooseResponse.Headers.Location);
 		var htmlAfterForgedChoose = await afterForgedChoose.Content.ReadAsStringAsync();
 
@@ -120,6 +156,17 @@ public sealed class ChooseRemoveSubjectTests : IClassFixture<WebAppFactory>
 		htmlAfterForgedChoose.Should().Contain("list-inline-item badge text-bg-primary rounded-pill\">Biology");
 		htmlAfterForgedChoose.Should().Contain("list-inline-item badge text-bg-primary rounded-pill\">History");
 		htmlAfterForgedChoose.Should().NotContain("list-inline-item badge text-bg-primary rounded-pill\">French");
+	}
+
+	/// <summary>The same facts as <see cref="EligibleStudentForm" /> with every grade dropped to a 1.</summary>
+	private static Dictionary<string, string> LoweredStudentForm(string token)
+	{
+		var form = EligibleStudentForm(token);
+		foreach (var key in form.Keys.Where(static key => key.EndsWith(".Grade", StringComparison.Ordinal)).ToList()) {
+			form[key] = "1";
+		}
+
+		return form;
 	}
 
 	private static Dictionary<string, string> EligibleStudentForm(string token)

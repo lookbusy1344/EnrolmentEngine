@@ -74,7 +74,7 @@ public sealed partial class StructuralMarkupTests : IClassFixture<WebAppFactory>
 	private async Task<string> GetIndexHtmlAsync()
 	{
 		using var client = factory.CreateClient();
-		using var response = await client.GetAsync(new Uri("/", UriKind.Relative));
+		using var response = await client.GetAsync(new Uri("/razor", UriKind.Relative));
 		return await response.Content.ReadAsStringAsync();
 	}
 
@@ -83,7 +83,7 @@ public sealed partial class StructuralMarkupTests : IClassFixture<WebAppFactory>
 	{
 		using var client = factory.CreateClient(new() { AllowAutoRedirect = false });
 
-		using var getResponse = await client.GetAsync(new Uri("/", UriKind.Relative));
+		using var getResponse = await client.GetAsync(new Uri("/razor", UriKind.Relative));
 		var token = await ExtractAntiForgeryTokenAsync(getResponse);
 
 		// examples/golden/strong-constraints.json — a known-eligible student.
@@ -102,7 +102,7 @@ public sealed partial class StructuralMarkupTests : IClassFixture<WebAppFactory>
 		}
 
 		using var content = new FormUrlEncodedContent(form);
-		using var postResponse = await client.PostAsync(new Uri("/?handler=SaveFacts", UriKind.Relative), content);
+		using var postResponse = await client.PostAsync(new Uri("/razor?handler=SaveFacts", UriKind.Relative), content);
 		using var followUp = await client.GetAsync(postResponse.Headers.Location);
 		return await followUp.Content.ReadAsStringAsync();
 	}

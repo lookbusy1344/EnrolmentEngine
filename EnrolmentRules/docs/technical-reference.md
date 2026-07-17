@@ -151,6 +151,29 @@ GCSE grades are validated on the 1-9 scale. Missing subjects are treated as abse
 zeroes. Hobbies are opaque tags used by host constraints such as Music's own-time requirement.
 `chosen_a_levels` records already-committed A-level choices. It feeds only the host constraint
 pass; it does not change prediction, base rating, or ranking.
+
+**A committed choice may never be red.** A choice is only ever made against a subject rated green or
+amber, so a red one means the document is self-inconsistent: the facts moved underneath the choice
+after it was made — typically the GCSE grades were lowered, but a new blocking hobby, a prior
+qualification, or a sibling choice that excludes it will do the same. There is no defensible verdict
+to return for such a document, so `TryEvaluate` and `TryExplain` **reject it outright** —
+`Validation.Errors` names each offending entry with the reason it went red, and `Value` is null. Amber
+choices are unaffected: only red is rejected, which matches the rule the front ends apply when
+offering a Choose button. `TryAdvise` is deliberately exempt: it answers "what would have to change",
+which is exactly what a student holding a red choice needs, and advising returns counterfactuals
+rather than accepting anything.
+The check is not part of `StudentValidator` because a rating exists only *after* prediction,
+the engine and the constraint pass have run, and the constraint pass reads `chosen_a_levels` as an
+input; it is a post-run check reported as input validation.
+
+A caller holding a mutable basket does not surface that rejection to the student — it prunes and
+re-evaluates. `IEnrolmentEvaluator.StaleChoices(student)` returns exactly the subjects a `Try*` call
+would reject, which is what both web front ends drop before evaluating (`/api/enrolment/evaluate`
+mirrors it as `ejectedChoices`). One pass always suffices: dropping choices only ever removes
+downgrades, so nothing left in the basket can newly turn red.
+
+The unchecked `Evaluate`/`Explain` paths are unaffected — they still rate a red chosen subject red
+and return a result. Rejection is a `Try*` boundary concern, not a pipeline one.
 `prior_qualifications` carries typed prior study separately from GCSEs. Each entry is validated
 against `data/qualifications.yaml`, which defines the grade ordering and A-level-points
 equivalence for each qualification type/grade pair. The list is used upstream to open
@@ -402,16 +425,19 @@ Batch output is JSONL. Each output line includes the student id and either a suc
 
 ## Web Interface
 
-`src/EnrolmentRules.Web` is a small ASP.NET Core Razor Pages front-end demonstrating the
-"staff-facing website" integration path from [Designed For Integration](../README.md#designed-for-integration).
-It is a reference host, not a packable library project:
+`src/EnrolmentRules.Web` is a small ASP.NET Core web host demonstrating the "staff-facing
+website" integration path from [Designed For Integration](../README.md#designed-for-integration).
+It serves both the original Razor Pages workflow at `/razor` and a Vue 3 workflow at `/app`; `/`
+redirects to the configured default experience. It is a reference host, not a packable library
+project:
 
-- **No accounts, no database, no persistence.** Facts (GCSEs, prior qualifications, hobbies, date
-  of birth, chosen A-levels) are held in the ASP.NET Core session, keyed by a browser cookie.
-  Closing the browser, letting the session expire, or clicking Reset all lose the current
-  selection — there is nothing durable behind it.
-- Every GET re-runs `IEnrolmentEngine.TryExplain` against the session snapshot, so the rendered
-  page is always a fresh evaluation, never a cached one.
+- **No accounts, no database, no durable persistence.** The Razor workflow stores the current
+  anonymous facts in ASP.NET Core session, keyed by a browser cookie. The Vue workflow calls a
+  stateless JSON API and posts the full editable snapshot on every evaluation; browser
+  `localStorage` is used only as a refresh convenience.
+- Razor GETs re-run `IEnrolmentEngine.TryExplain` against the session snapshot, so the rendered
+  page is always a fresh evaluation, never a cached one. Vue evaluations do the same through
+  `POST /api/enrolment/evaluate`.
 - Red unchosen subjects are rendered as unavailable and the `ChooseSubject` POST handler rechecks
   the current final rating before mutating the session. A chosen subject still renders `Remove`, even
   if it is now red, so a counsellor can unwind a conflicting combination.
@@ -421,6 +447,29 @@ It is a reference host, not a packable library project:
 - Static assets (Bootstrap 5) are restored via [libman](https://github.com/aspnet/LibraryManager)
   on every `dotnet build` (`Microsoft.Web.LibraryManager.Build`, driven by `libman.json`) into
   `wwwroot/lib/`, which is gitignored — nothing vendored is committed.
+- The Vue bundle is generated from `src/EnrolmentRules.Web/ClientApp/` into `wwwroot/app/`, which
+  is also gitignored. Do not check in `wwwroot/app`; commit the TypeScript/Vue source and
+  `pnpm-lock.yaml`. `dotnet build` runs the ClientApp build before ASP.NET static-asset discovery,
+  and `dotnet publish` includes the generated manifest and hashed assets.
+
+### Web build and verification scripts
+
+Build just the generated Vue assets:
+
+```bash
+./scripts/build-clientapp.sh
+```
+
+Run the focused web gate, including the Vue build, ASP.NET web integration tests, frontend verify,
+and Playwright e2e tests:
+
+```bash
+./scripts/verify-web.sh
+```
+
+For ordinary solution-wide commits, still use the root commit gate. For changes under
+`src/EnrolmentRules.Web/ClientApp/`, `pnpm verify` remains the frontend unit/static gate; `pnpm e2e`
+or `./scripts/verify-web.sh` is the browser workflow gate.
 
 ### Running it locally
 
@@ -434,7 +483,13 @@ uses). Build, then run the published executable directly from its own output dir
 ./scripts/run-web.sh
 ```
 
-which is equivalent to:
+which runs two watchers side by side: `dotnet watch run` for the C#/Razor side, and Vite's own watch
+build (`pnpm build:watch`) for the Vue side. `ASPNETCORE_WEBROOT` points at the source `wwwroot` so
+Vite's output is served the moment it lands, and `ViteManifestReader` re-reads `manifest.json` per
+request — so a Vue edit needs no dotnet restart, just a browser refresh (F5). There is no HMR; that
+is the cost of serving the real ASP.NET host rather than the Vite dev server.
+
+Without the watchers, it is equivalent to:
 
 ```bash
 dotnet build src/EnrolmentRules.Web/EnrolmentRules.Web.csproj
@@ -489,6 +544,11 @@ of throwing, so the host can map problems to 400 responses without a catch block
 *content* only — a null `StudentInput` is a programming error, so every evaluation entry point
 (including the `Try*` overloads) throws `ArgumentNullException` at the boundary rather than returning
 a validation failure.
+
+`TryEvaluate` and `TryExplain` also reject a document naming a `chosen_a_levels` entry the pipeline
+now rates red (see [Student Input](#student-input)); `TryAdvise` does not. A host with an editable
+basket should call `StaleChoices` first and drop what it returns, rather than presenting the
+rejection to the user.
 
 ```csharp
 ValidatedEvaluation<EnrolmentResult> validated = enrolment.TryEvaluate(student);

@@ -16,7 +16,7 @@ public sealed class RedirectFragmentTests : IClassFixture<WebAppFactory>
 	public async Task Saving_facts_via_the_main_button_redirects_to_the_results_section()
 	{
 		using var client = factory.CreateClient(new() { AllowAutoRedirect = false });
-		using var getResponse = await client.GetAsync(new Uri("/", UriKind.Relative));
+		using var getResponse = await client.GetAsync(new Uri("/razor", UriKind.Relative));
 		var token = await ExtractAntiForgeryTokenAsync(getResponse);
 
 		using var content = new FormUrlEncodedContent(new Dictionary<string, string> {
@@ -24,7 +24,7 @@ public sealed class RedirectFragmentTests : IClassFixture<WebAppFactory>
 			["Gcses[0].Subject"] = "maths",
 			["Gcses[0].Grade"] = "8",
 		});
-		using var response = await client.PostAsync(new Uri("/?handler=SaveFacts", UriKind.Relative), content);
+		using var response = await client.PostAsync(new Uri("/razor?handler=SaveFacts", UriKind.Relative), content);
 
 		response.Headers.Location!.OriginalString.Should().EndWith("#results-heading");
 	}
@@ -36,7 +36,7 @@ public sealed class RedirectFragmentTests : IClassFixture<WebAppFactory>
 	public async Task Saving_facts_via_a_section_add_button_redirects_back_to_that_section(string sectionFragment)
 	{
 		using var client = factory.CreateClient(new() { AllowAutoRedirect = false });
-		using var getResponse = await client.GetAsync(new Uri("/", UriKind.Relative));
+		using var getResponse = await client.GetAsync(new Uri("/razor", UriKind.Relative));
 		var token = await ExtractAntiForgeryTokenAsync(getResponse);
 
 		using var content = new FormUrlEncodedContent(new Dictionary<string, string> {
@@ -44,7 +44,7 @@ public sealed class RedirectFragmentTests : IClassFixture<WebAppFactory>
 			["Gcses[0].Subject"] = "maths",
 			["Gcses[0].Grade"] = "8",
 		});
-		using var response = await client.PostAsync(new Uri($"/?handler=SaveFacts&fragment={sectionFragment}", UriKind.Relative), content);
+		using var response = await client.PostAsync(new Uri($"/razor?handler=SaveFacts&fragment={sectionFragment}", UriKind.Relative), content);
 
 		response.Headers.Location!.OriginalString.Should().EndWith($"#{sectionFragment}");
 	}
@@ -53,7 +53,7 @@ public sealed class RedirectFragmentTests : IClassFixture<WebAppFactory>
 	public async Task Removing_a_gcse_row_redirects_back_to_the_gcse_section()
 	{
 		using var client = factory.CreateClient(new() { AllowAutoRedirect = false });
-		using var getResponse = await client.GetAsync(new Uri("/", UriKind.Relative));
+		using var getResponse = await client.GetAsync(new Uri("/razor", UriKind.Relative));
 		var token = await ExtractAntiForgeryTokenAsync(getResponse);
 
 		using var content = new FormUrlEncodedContent(new Dictionary<string, string> {
@@ -61,7 +61,7 @@ public sealed class RedirectFragmentTests : IClassFixture<WebAppFactory>
 			["Gcses[0].Subject"] = "maths",
 			["Gcses[0].Grade"] = "8",
 		});
-		using var response = await client.PostAsync(new Uri("/?handler=RemoveGcseRow&index=0", UriKind.Relative), content);
+		using var response = await client.PostAsync(new Uri("/razor?handler=RemoveGcseRow&index=0", UriKind.Relative), content);
 
 		response.Headers.Location!.OriginalString.Should().EndWith("#gcse-section");
 	}
@@ -70,7 +70,7 @@ public sealed class RedirectFragmentTests : IClassFixture<WebAppFactory>
 	public async Task Removing_a_prior_qualification_row_redirects_back_to_the_qualifications_section()
 	{
 		using var client = factory.CreateClient(new() { AllowAutoRedirect = false });
-		using var getResponse = await client.GetAsync(new Uri("/", UriKind.Relative));
+		using var getResponse = await client.GetAsync(new Uri("/razor", UriKind.Relative));
 		var token = await ExtractAntiForgeryTokenAsync(getResponse);
 
 		using var content = new FormUrlEncodedContent(new Dictionary<string, string> {
@@ -79,7 +79,7 @@ public sealed class RedirectFragmentTests : IClassFixture<WebAppFactory>
 			["PriorQualifications[0].Type"] = "Gcse",
 			["PriorQualifications[0].Grade"] = "7",
 		});
-		using var response = await client.PostAsync(new Uri("/?handler=RemoveQualificationRow&index=0", UriKind.Relative), content);
+		using var response = await client.PostAsync(new Uri("/razor?handler=RemoveQualificationRow&index=0", UriKind.Relative), content);
 
 		response.Headers.Location!.OriginalString.Should().EndWith("#qualifications-section");
 	}
@@ -88,14 +88,14 @@ public sealed class RedirectFragmentTests : IClassFixture<WebAppFactory>
 	public async Task Removing_a_hobby_row_redirects_back_to_the_hobbies_section()
 	{
 		using var client = factory.CreateClient(new() { AllowAutoRedirect = false });
-		using var getResponse = await client.GetAsync(new Uri("/", UriKind.Relative));
+		using var getResponse = await client.GetAsync(new Uri("/razor", UriKind.Relative));
 		var token = await ExtractAntiForgeryTokenAsync(getResponse);
 
 		using var content = new FormUrlEncodedContent(new Dictionary<string, string> {
 			["__RequestVerificationToken"] = token,
 			["Hobbies[0]"] = "chess_club",
 		});
-		using var response = await client.PostAsync(new Uri("/?handler=RemoveHobbyRow&index=0", UriKind.Relative), content);
+		using var response = await client.PostAsync(new Uri("/razor?handler=RemoveHobbyRow&index=0", UriKind.Relative), content);
 
 		response.Headers.Location!.OriginalString.Should().EndWith("#hobbies-section");
 	}

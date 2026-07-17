@@ -14,4 +14,21 @@ public static class Thresholds
 
 	/// <summary>Highest GCSE grade on the 1–9 scale.</summary>
 	public const int MaxGcseGrade = 9;
+
+	/// <summary>
+	///     Fit a raw typed grade onto the 1–9 integer scale: round to the nearest whole grade, then clamp to
+	///     [<see cref="MinGcseGrade" />, <see cref="MaxGcseGrade" />]. Rounding happens first so a value like
+	///     9.6 lands on 9 rather than rounding off the scale.
+	///     <para>
+	///         This is an <em>input</em> convenience for the web front-ends, not a relaxation of the boundary:
+	///         <see cref="StudentValidator" /> still rejects an out-of-range grade, so the CLI and the evaluate
+	///         endpoint keep failing fast on one rather than silently scoring a different student.
+	///     </para>
+	///     <para>
+	///         Halves round away from zero to match JavaScript's <c>Math.round</c>, which the Vue mirror in
+	///         <c>ClientApp/src/state/gcseGrade.ts</c> uses — the two must agree on 6.5 ⇒ 7.
+	///     </para>
+	/// </summary>
+	public static int NormalizeGcseGrade(double raw) =>
+		Math.Clamp((int)Math.Round(raw, MidpointRounding.AwayFromZero), MinGcseGrade, MaxGcseGrade);
 }

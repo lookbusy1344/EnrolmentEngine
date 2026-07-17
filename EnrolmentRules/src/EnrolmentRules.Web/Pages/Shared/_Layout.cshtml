@@ -11,7 +11,10 @@
 	<link rel="stylesheet"
 	      href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,500;12..96,700;12..96,800&family=Inter:wght@400;500;600&display=swap"/>
 	<link rel="stylesheet" href="~/lib/bootstrap/css/bootstrap.min.css"/>
-	<link rel="stylesheet" href="~/css/site.css"/>
+	<!-- asp-append-version stamps a content hash onto the query string. Without it the browser caches
+	     site.css indefinitely and a CSS edit silently doesn't show up on refresh; the Vue bundle needs
+	     no equivalent because Vite content-hashes its filenames. -->
+	<link rel="stylesheet" href="~/css/site.css" asp-append-version="true"/>
 </head>
 <body>
 <header class="site-header">
@@ -36,7 +39,6 @@
 	@RenderBody()
 </main>
 <footer class="site-footer">
-	<p>Green Shoots helps you see which A-Levels are open to you. It's guidance, not a final decision — talk it through with the college.</p>
 	<p class="build-stamp">
 		Build
 		<code>@BuildInfo.VersionWithCommit</code>

@@ -1,0 +1,12 @@
+@page "/app"
+@model AppModel
+@{
+	ViewData["Title"] = "Enrolment · dynamic";
+}
+
+<div id="enrolment-vue-app"></div>
+
+@foreach (var stylesheet in Model.Assets.StylesheetPaths) {
+	<link rel="stylesheet" href="@stylesheet"/>
+}
+<script type="module" src="@Model.Assets.ScriptPath"></script>

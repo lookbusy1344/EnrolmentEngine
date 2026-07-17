@@ -294,9 +294,16 @@ internal sealed class RatingFacts(
 	public int Age { get; } = profile.Age;
 
 	// The policy knobs the rating lambdas read, forwarded from the single PolicyFacts surface rather than
-	// copied — one source of truth for the values. Eligibility-only and host-aggregation knobs (PassGrade,
-	// MinPasses, MaxGreenChoices, AmberScoreFactor) are deliberately absent: no rating rule references them.
+	// copied — one source of truth for the values. Host-aggregation and eligibility-only knobs (MinPasses,
+	// MaxGreenChoices, AmberScoreFactor) are deliberately absent: no rating rule references them.
 	public int TopEntry => policy.TopEntry;
+
+	/// <summary>
+	///     The pass grade, read by the accessible tier (psychology, sociology, media studies) as its entry
+	///     bar so those subjects open at the eligibility minimum without lowering the shared
+	///     <see cref="StandardEntry" /> every other subject reads.
+	/// </summary>
+	public int PassGrade => policy.PassGrade;
 
 	public int StrongEntry => policy.StrongEntry;
 
@@ -307,6 +314,8 @@ internal sealed class RatingFacts(
 	public double FurtherMathsAverageEntry => policy.FurtherMathsAverageEntry;
 
 	public double HumanitiesAverageEntry => policy.HumanitiesAverageEntry;
+
+	public double AccessibleAverageEntry => policy.AccessibleAverageEntry;
 
 	public double MinDfeGreenProbabilityAtOrAbove => policy.MinDfeGreenProbabilityAtOrAbove;
 

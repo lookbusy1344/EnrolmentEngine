@@ -30,8 +30,8 @@ public static class BuildInfo
 
 	private static string Revision { get; } = InformationalVersion.Split(MetadataSeparator) is [_, var revision, ..]
 											  && !string.IsNullOrWhiteSpace(revision)
-												  ? revision
-												  : UnknownCommit;
+		? revision
+		: UnknownCommit;
 
 	/// <summary>
 	///     The abbreviated git commit the build came from — bare, so it is usable in a commit URL — or

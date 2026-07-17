@@ -16,7 +16,7 @@ public static class GcseSubjects
 	/// <summary>The recognised GCSE subject keys (snake_case, matching the document and workflow lambdas).</summary>
 	public static IReadOnlySet<string> Known { get; } = new[] {
 		"maths", "english_language", "english_literature", "physics", "chemistry", "biology", "french", "german", "physical_education",
-		"computer_studies", "history", "music", "art",
+		"computer_studies", "history", "music", "art", "psychology", "sociology",
 	}.ToFrozenSet(StringComparer.Ordinal);
 
 	/// <summary>Whether <paramref name="subject" /> is a recognised GCSE subject key.</summary>

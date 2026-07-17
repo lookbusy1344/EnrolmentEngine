@@ -20,9 +20,9 @@ public sealed class PublicApiSurfaceTests
 	}
 
 	[Fact]
-	public void Index_model_exposes_cached_qualification_type_options()
+	public void Razor_model_exposes_cached_qualification_type_options()
 	{
-		var property = typeof(IndexModel).GetProperty(nameof(IndexModel.QualificationTypeOptions));
+		var property = typeof(RazorModel).GetProperty(nameof(RazorModel.QualificationTypeOptions));
 
 		property.Should().NotBeNull();
 		property!.PropertyType.Should().BeAssignableTo<IReadOnlyList<QualificationType>>();

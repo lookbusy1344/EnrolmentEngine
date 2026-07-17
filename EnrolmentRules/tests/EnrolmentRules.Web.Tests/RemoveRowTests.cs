@@ -13,7 +13,7 @@ public sealed class RemoveRowTests : IClassFixture<WebAppFactory>
 	{
 		using var client = factory.CreateClient(new() { AllowAutoRedirect = false });
 
-		using var getResponse = await client.GetAsync(new Uri("/", UriKind.Relative));
+		using var getResponse = await client.GetAsync(new Uri("/razor", UriKind.Relative));
 		var token = await ExtractAntiForgeryTokenAsync(getResponse);
 
 		// A real browser submits every field currently in the form regardless of which button (or
@@ -26,7 +26,7 @@ public sealed class RemoveRowTests : IClassFixture<WebAppFactory>
 			["Gcses[1].Subject"] = "physics",
 			["Gcses[1].Grade"] = "7",
 		});
-		using var saveResponse = await client.PostAsync(new Uri("/?handler=SaveFacts", UriKind.Relative), saveContent);
+		using var saveResponse = await client.PostAsync(new Uri("/razor?handler=SaveFacts", UriKind.Relative), saveContent);
 		using var afterSave = await client.GetAsync(saveResponse.Headers.Location);
 		var htmlAfterSave = await afterSave.Content.ReadAsStringAsync();
 		htmlAfterSave.Should().Contain("value=\"maths\" selected").And.Contain("value=\"physics\" selected");
@@ -40,7 +40,7 @@ public sealed class RemoveRowTests : IClassFixture<WebAppFactory>
 			["Gcses[1].Subject"] = "physics",
 			["Gcses[1].Grade"] = "7",
 		});
-		using var removeResponse = await client.PostAsync(new Uri("/?handler=RemoveGcseRow&index=0", UriKind.Relative), removeContent);
+		using var removeResponse = await client.PostAsync(new Uri("/razor?handler=RemoveGcseRow&index=0", UriKind.Relative), removeContent);
 		using var afterRemove = await client.GetAsync(removeResponse.Headers.Location);
 		var htmlAfterRemove = await afterRemove.Content.ReadAsStringAsync();
 

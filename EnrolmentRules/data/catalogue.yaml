@@ -93,12 +93,16 @@ subjects:
   - subject: geography
     priority_weight: 49
     regression: { slope: 0.85, intercept: -1.85 }
+  # Psychology, sociology and media studies form the accessible tier: their intercepts are set so a
+  # student on the eligibility minimum (a 4.0 average) is predicted a D and rates green, giving them a
+  # programme rather than an all-red sheet. `regression` is per-subject, so these only move their own
+  # subject's prediction — no other subject's tier shifts with them.
   - subject: psychology
     priority_weight: 47
-    regression: { slope: 0.85, intercept: -1.90 }
+    regression: { slope: 0.85, intercept: -1.35 }
   - subject: sociology
     priority_weight: 33
-    regression: { slope: 0.82, intercept: -1.55 }
+    regression: { slope: 0.82, intercept: -1.25 }
   - subject: business_studies
     priority_weight: 34
     regression: { slope: 0.83, intercept: -1.65 }
@@ -115,7 +119,7 @@ subjects:
     regression: { slope: 0.80, intercept: -1.40 }
   - subject: media_studies
     priority_weight: 31
-    regression: { slope: 0.80, intercept: -1.35 }
+    regression: { slope: 0.80, intercept: -1.15 }
   - subject: law
     priority_weight: 53
     regression: { slope: 0.86, intercept: -1.95 }

@@ -43,6 +43,11 @@
       "reason": "Entry met (Physics at standard entry and Maths GCSE at the exceptional grade); predicted A-level grade at or above the green threshold"
     },
     {
+      "subject": "psychology",
+      "rating": "green",
+      "reason": "Entry met (Maths and English at pass grade); predicted A-level grade at or above the green threshold"
+    },
+    {
       "subject": "chemistry",
       "rating": "green",
       "reason": "Entry met (Chemistry at standard entry); predicted A-level grade at or above the green threshold"
@@ -100,12 +105,12 @@
     {
       "subject": "sociology",
       "rating": "green",
-      "reason": "Entry met (humanities average and English at standard entry); predicted A-level grade at or above the green threshold"
+      "reason": "Entry met (accessible average and English at pass grade); predicted A-level grade at or above the green threshold"
     },
     {
       "subject": "media_studies",
       "rating": "green",
-      "reason": "Entry met (English at standard entry); predicted A-level grade at or above the green threshold"
+      "reason": "Entry met (English at pass grade); predicted A-level grade at or above the green threshold"
     },
     {
       "subject": "drama",
@@ -123,20 +128,15 @@
       "reason": "maths prerequisite not met"
     },
     {
-      "subject": "psychology",
-      "rating": "red",
-      "reason": "Entry requirement unmet or predicted grade below the amber threshold"
-    },
-    {
       "subject": "biology",
       "rating": "red",
       "reason": "Barred \u2014 already holds a level-3 qualification in biology"
     }
   ],
   "summary": {
-    "green_count": 22,
+    "green_count": 23,
     "amber_count": 1,
-    "programme_priority_score": 964
+    "programme_priority_score": 1011
   },
   "adjustments": [
     {

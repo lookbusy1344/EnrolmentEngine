@@ -30,6 +30,13 @@ public sealed class PolicyFacts(PolicyThresholds thresholds)
 
 	public double HumanitiesAverageEntry { get; } = thresholds.HumanitiesAverageEntry;
 
+	/// <summary>
+	///     The average-GCSE bar for the accessible subjects (sociology). Separate from
+	///     <see cref="HumanitiesAverageEntry" /> so the accessible tier can sit at the eligibility minimum
+	///     without opening the other humanities that share that bar.
+	/// </summary>
+	public double AccessibleAverageEntry { get; } = thresholds.AccessibleAverageEntry;
+
 	public double MinDfeGreenProbabilityAtOrAbove { get; } = thresholds.MinDfeGreenProbabilityAtOrAbove;
 
 	public double MinDfeAmberProbabilityAtOrAbove { get; } = thresholds.MinDfeAmberProbabilityAtOrAbove;

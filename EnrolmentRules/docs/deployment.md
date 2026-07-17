@@ -61,6 +61,22 @@ Chiseled/Alpine images have no package manager or shell, so add tools in the **b
 stage, not the runtime stage, and debug via `docker logs` rather than `docker exec`. After
 changing the base, rebuild and re-run the §1 smoke test.
 
+### Frontend build tooling (Node/pnpm)
+
+`EnrolmentRules.Web.csproj`'s `BuildClientApp` MSBuild target runs `pnpm install`/`pnpm run
+build` for the Vue `ClientApp/` during `dotnet restore`/`build`/`publish` — the .NET SDK image
+has neither Node nor pnpm, so the build stage installs both before `COPY . .`:
+
+- **Node** is fetched as a plain `nodejs.org` release tarball (`linux-x64`/`linux-arm64`
+  matching `$TARGETARCH`) and unpacked into `/usr/local`, rather than added via NodeSource's
+  apt repo — the SDK image ships no `gnupg`, which that repo's key-import step needs.
+- **pnpm** comes from Corepack, which ships inside the Node tarball. `corepack enable` wires up
+  a `pnpm` shim that resolves the exact version pinned by `ClientApp/package.json`'s
+  `"packageManager"` field — the version `pnpm-lock.yaml` was generated with — rather than
+  whatever `npm i -g pnpm` would fetch on a given day.
+
+Both are build-stage only; the runtime stage never sees Node, pnpm, or `ClientApp/`.
+
 ### ReadyToRun
 
 The publish passes `-p:PublishReadyToRun=true` with an explicit `-r <RID>` (derived from
@@ -91,6 +107,14 @@ docker run --rm -p 8080:8080 enrolment-web
 ```
 
 Open <http://localhost:8080>. Stop with `Ctrl-C`.
+
+The footer reports `0.1.0+unknown` unless you pass the commit in. The build can't derive it
+itself: the git root is the *parent* monorepo directory while the build context is this folder,
+so no `.git` is ever inside the context.
+
+```bash
+docker build --build-arg SOURCE_REVISION_ID="$(git rev-parse --short=10 HEAD)" -t enrolment-web .
+```
 
 Or with Compose (builds and runs `compose.yaml`):
 
@@ -223,6 +247,35 @@ service **public to anyone with the URL**; drop it for a private service.
 `--source .` builds on Cloud Build, which does not set BuildKit's `TARGETARCH`. The
 `Dockerfile`'s `${TARGETARCH:-amd64}` default resolves the R2R RID to `linux-x64` there, which
 is correct for Cloud Build — no buildx-specific setup needed.
+
+#### Use the deploy script, or the footer reads `0.1.0+unknown`
+
+**Prefer `scripts/deploy-cloudrun.sh` over calling `gcloud run deploy --source .` by hand.** It
+runs exactly the command above, but first writes the commit to `.sourcerevision` so the build can
+stamp it. Deploying by hand works, but the running service then can't name the build it came from.
+
+```bash
+./scripts/deploy-cloudrun.sh              # SERVICE= and REGION= override the defaults
+```
+
+The reason it needs a file at all is worth knowing before you try to "simplify" it away:
+
+- **The build can't see git.** The git root is the *parent* monorepo directory while the Docker
+  build context is `EnrolmentRules/`, so no `.git` is ever inside the context. This is not
+  something `.dockerignore` controls — the checkout is simply above the context root.
+- **`--source .` can't pass a build arg.** Cloud Build gets a bare source tree. The
+  `--set-build-env-vars` family is documented for *buildpacks* builds, not for feeding `ARG`
+  values into a Dockerfile build. So the `Dockerfile`'s `SOURCE_REVISION_ID` arg — fine for a
+  `docker build` you invoke yourself (§1, §2) — is unreachable here.
+
+A file carried in the build context is therefore the only channel, which is what
+`Directory.Build.props`' `StampGitCommit` reads when git fails. The script deletes it on exit,
+and `.gitignore` ignores it.
+
+> **`.gcloudignore` must keep existing.** With no `.gcloudignore`, gcloud auto-generates one from
+> `.gitignore` — which lists `.sourcerevision`. That would drop the very file the build needs and
+> silently stamp every deploy `unknown` again. The committed `.gcloudignore` exists to make the
+> upload set explicit rather than inherited.
 
 To deploy a pre-built image instead: `gcloud run deploy enrolment-web --image ghcr.io/...
 --region europe-west2 --allow-unauthenticated` (mirror the image into Artifact Registry first
@@ -484,6 +537,10 @@ sessions.
   the compiled binary locally rather than `dotnet run`.
 - **Client-side libs.** `wwwroot/lib/` is gitignored and `.dockerignore`d; the LibMan build
   target restores it inside the image during publish. No manual `libman restore` needed.
+- **Vue assets.** `wwwroot/app/` is likewise gitignored and `.dockerignore`d; the
+  `BuildClientApp` MSBuild target rebuilds it from `ClientApp/` (source + `pnpm-lock.yaml`)
+  during the same publish, using the Node/pnpm toolchain described above. No compiled frontend
+  output is ever checked in or expected to already exist in the build context.
 - **Image size.** Framework-dependent image (shares the aspnet runtime layer). For a
   smaller/standalone image, switch to a self-contained, trimmed publish — not done here because
   it complicates the build for little benefit on these hosts.

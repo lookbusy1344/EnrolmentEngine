@@ -223,6 +223,44 @@ a:hover {
     margin: 0 0 .6rem;
 }
 
+/* Which of the two front-ends you're looking at — a footnote to the eyebrow, not a heading. */
+.mode-tag,
+.mode-switch {
+    font-size: .72rem;
+    letter-spacing: .1em;
+    color: var(--moss);
+}
+
+/* Separators live in CSS, not the markup: Vue's compiler condenses the newline between these
+   elements away, so source whitespace cannot be relied on to keep them apart. */
+.mode-tag::before {
+    content: "·";
+    margin: 0 .45em;
+}
+
+/* The link is the lighter, bracketed sibling of the tag — the tag says where you are, the link
+   says where you could go. The leading non-breaking space is load-bearing: Vue's compiler
+   condenses the newline between the two elements away, so source whitespace cannot separate them. */
+.mode-switch {
+    font-weight: 400;
+    text-decoration: none;
+}
+
+.mode-switch::before {
+    content: "\00a0(";
+}
+
+.mode-switch::after {
+    content: ")";
+}
+
+.mode-switch:hover,
+.mode-switch:focus-visible {
+    color: var(--shoot-deep);
+    text-decoration: underline;
+    text-underline-offset: .25em;
+}
+
 .hero h1 {
     font-weight: 800;
     font-size: clamp(2.6rem, 7vw, 4.6rem);
@@ -425,9 +463,8 @@ legend {
     color: var(--ink);
 }
 
-/* first (blank) row of the facts form reads as an invitation, not clutter */
 .date-field {
-    max-width: 15rem;
+    max-width: none;
 }
 
 /* ---------------------------------------------------------------------------

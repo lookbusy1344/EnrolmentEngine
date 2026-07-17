@@ -14,6 +14,7 @@
     "exceptional_entry",
     "further_maths_average_entry",
     "humanities_average_entry",
+    "accessible_average_entry",
     "min_dfe_green_probability_at_or_above",
     "min_dfe_amber_probability_at_or_above",
     "adult_age",
@@ -58,6 +59,12 @@
       "maximum": 9
     },
     "humanities_average_entry": {
+      "type": "number",
+      "minimum": 0,
+      "maximum": 9
+    },
+    "accessible_average_entry": {
+      "description": "Average GCSE bar for the accessible subjects (sociology), kept separate from humanities_average_entry so lowering it cannot open history, geography, politics, religious studies or law with it.",
       "type": "number",
       "minimum": 0,
       "maximum": 9

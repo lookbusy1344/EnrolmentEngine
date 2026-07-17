@@ -27,6 +27,32 @@ public sealed class ValidatedEvaluationTests
 
 	private static StudentInput EligibleStudent() => StudentWithMathsGrade(6);
 
+	/// <summary>
+	///     The <c>examples/golden/strong-constraints.json</c> facts: eligible, a stable mix of ratings, and
+	///     the fixture the web suite drives through both front ends. Music rates green on its own tier but is
+	///     demoted to amber by its unmet own-time requirement ("chess_club" is not a "plays_" activity), and
+	///     Further Maths rates red — the two cases the stale-choice guard has to tell apart.
+	/// </summary>
+	private static StudentInput StrongStudent() =>
+		new(
+			"S-STRONG",
+			new Dictionary<string, int> {
+				["maths"] = 8,
+				["english_language"] = 8,
+				["english_literature"] = 8,
+				["physics"] = 8,
+				["chemistry"] = 8,
+				["biology"] = 8,
+				["french"] = 8,
+				["german"] = 8,
+				["physical_education"] = 8,
+				["computer_studies"] = 8,
+				["history"] = 8,
+				["music"] = 8,
+				["art"] = 8,
+			},
+			["chess_club"]) { DateOfBirth = ValidDob };
+
 	private static CatalogueData MathsOnlyCatalogue() =>
 		new(
 			new Dictionary<Subject, SubjectMeta> { [Subject.Maths] = Harness.Catalogue.Meta(Subject.Maths) },
@@ -122,6 +148,100 @@ public sealed class ValidatedEvaluationTests
 
 		tryOutcome.Validation.IsValid.Should().BeTrue();
 		tryOutcome.Value.Should().BeEquivalentTo(direct);
+	}
+
+	// ---- stale committed choices (a choice that was green when made, and has since gone red) --------
+
+	[Fact]
+	public void try_evaluate_rejects_a_chosen_a_level_the_pipeline_now_rates_red()
+	{
+		// Further Maths requires Maths as a committed choice; choosing it alone leaves the prerequisite
+		// unmet, so it rates red — the shape of a choice whose facts moved under it after it was made.
+		var student = EligibleStudent() with { ChosenALevels = [Subject.FurtherMaths] };
+
+		var outcome = engine.TryEvaluate(student);
+
+		outcome.Validation.IsValid.Should().BeFalse();
+		outcome.Value.Should().BeNull();
+		outcome.Validation.Errors.Should().ContainSingle()
+			.Which.Should().Contain("chosen_a_levels").And.Contain("further_maths");
+	}
+
+	[Fact]
+	public void a_rejected_chosen_a_level_reports_the_reason_it_went_red()
+	{
+		var student = StrongStudent() with { ChosenALevels = [Subject.FurtherMaths] };
+
+		var outcome = engine.TryExplain(student);
+
+		outcome.Validation.Errors.Should().ContainSingle()
+			.Which.Should().Contain(ConstraintPass.MathsPrerequisiteReason);
+	}
+
+	[Fact]
+	public void try_explain_rejects_a_chosen_a_level_the_pipeline_now_rates_red()
+	{
+		var student = EligibleStudent() with { ChosenALevels = [Subject.FurtherMaths] };
+
+		var outcome = engine.TryExplain(student);
+
+		outcome.Validation.IsValid.Should().BeFalse();
+		outcome.Value.Should().BeNull();
+	}
+
+	[Fact]
+	public void an_ineligible_student_has_every_chosen_a_level_rejected()
+	{
+		// The gate reds every subject, so nothing the student committed to survives.
+		var student = new StudentInput("S-INELIGIBLE", new Dictionary<string, int> { ["maths"] = 6 }, []) {
+			DateOfBirth = ValidDob,
+			ChosenALevels = [Subject.Maths, Subject.Physics],
+		};
+
+		var outcome = engine.TryEvaluate(student);
+
+		outcome.Validation.IsValid.Should().BeFalse();
+		outcome.Value.Should().BeNull();
+		outcome.Validation.Errors.Should().HaveCount(2);
+	}
+
+	[Fact]
+	public void an_amber_chosen_a_level_is_still_accepted()
+	{
+		// Only red is rejected: Music's own-time requirement demotes it to amber for a student with no
+		// "plays_" hobby, and an amber choice remains a choice the student may hold.
+		var student = StrongStudent() with { ChosenALevels = [Subject.Music] };
+
+		var outcome = engine.TryExplain(student);
+
+		outcome.Validation.IsValid.Should().BeTrue();
+		outcome.Value!.Explanations.Single(e => e.Subject == Subject.Music).Rating.Should().Be(Rating.Amber);
+	}
+
+	[Fact]
+	public void try_advise_still_advises_a_student_holding_a_now_red_choice()
+	{
+		// The deliberate exemption: advice exists to say what would have to change, so a red committed
+		// choice is the case that most needs an answer rather than a refusal. TryEvaluate/TryExplain
+		// refuse the same document — nothing is accepted by advising on it.
+		var student = EligibleStudent() with { ChosenALevels = [Subject.FurtherMaths] };
+
+		var outcome = engine.TryAdvise(student);
+
+		outcome.Validation.IsValid.Should().BeTrue();
+		outcome.Value.Should().NotBeNull();
+		engine.TryExplain(student).Value.Should().BeNull();
+	}
+
+	[Fact]
+	public void explain_still_reports_a_red_chosen_a_level_without_validating_it()
+	{
+		// The unchecked path is unchanged: rejection is a Try* boundary concern, not a pipeline one.
+		var student = EligibleStudent() with { ChosenALevels = [Subject.FurtherMaths] };
+
+		var result = engine.Explain(student);
+
+		result.Explanations.Single(e => e.Subject == Subject.FurtherMaths).Rating.Should().Be(Rating.Red);
 	}
 
 	[Fact]

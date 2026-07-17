@@ -13,9 +13,14 @@ public sealed class GcseRowBinding
 {
 	public string? Subject { get; set; }
 
-	public int? Grade { get; set; }
+	/// <summary>
+	///     The raw posted grade, bound as a <see cref="double" /> rather than an <see cref="int" /> so a typed
+	///     decimal reaches <see cref="ToRow" /> to be rounded instead of failing model binding and silently
+	///     arriving as "no grade".
+	/// </summary>
+	public double? Grade { get; set; }
 
-	public GcseRow ToRow() => new(Subject, Grade);
+	public GcseRow ToRow() => new(Subject, Grade is { } grade ? Thresholds.NormalizeGcseGrade(grade) : null);
 
 	public static GcseRowBinding FromRow(GcseRow row) => new() { Subject = row.Subject, Grade = row.Grade };
 }

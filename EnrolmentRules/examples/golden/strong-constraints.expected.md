@@ -40,8 +40,8 @@ The engine rated this **green** because: Entry met (Physics at standard entry an
 This was not downgraded.
 
 ## psychology
-Final rating: green. Entry met (Biology, Maths and English at standard entry); predicted A-level grade at or above the green threshold
-The engine rated this **green** because: Entry met (Biology, Maths and English at standard entry); predicted A-level grade at or above the green threshold (predicted A, ~4.9).
+Final rating: green. Entry met (Maths and English at pass grade); predicted A-level grade at or above the green threshold
+The engine rated this **green** because: Entry met (Maths and English at pass grade); predicted A-level grade at or above the green threshold (predicted A, ~5.45).
 This was not downgraded.
 
 ## chemistry
@@ -105,13 +105,13 @@ The engine rated this **green** because: Entry met (Maths and English at standar
 This was not downgraded.
 
 ## sociology
-Final rating: green. Entry met (humanities average and English at standard entry); predicted A-level grade at or above the green threshold
-The engine rated this **green** because: Entry met (humanities average and English at standard entry); predicted A-level grade at or above the green threshold (predicted A, ~5.01).
+Final rating: green. Entry met (accessible average and English at pass grade); predicted A-level grade at or above the green threshold
+The engine rated this **green** because: Entry met (accessible average and English at pass grade); predicted A-level grade at or above the green threshold (predicted A, ~5.31).
 This was not downgraded.
 
 ## media\_studies
-Final rating: green. Entry met (English at standard entry); predicted A-level grade at or above the green threshold
-The engine rated this **green** because: Entry met (English at standard entry); predicted A-level grade at or above the green threshold (predicted A, ~5.05).
+Final rating: green. Entry met (English at pass grade); predicted A-level grade at or above the green threshold
+The engine rated this **green** because: Entry met (English at pass grade); predicted A-level grade at or above the green threshold (predicted A, ~5.25).
 This was not downgraded.
 
 ## drama

@@ -14,7 +14,7 @@ public sealed class RenderExplanationsTests : IClassFixture<WebAppFactory>
 	{
 		using var client = factory.CreateClient(new() { AllowAutoRedirect = false });
 
-		using var getResponse = await client.GetAsync(new Uri("/", UriKind.Relative));
+		using var getResponse = await client.GetAsync(new Uri("/razor", UriKind.Relative));
 		var token = await ExtractAntiForgeryTokenAsync(getResponse);
 
 		// examples/golden/strong-constraints.json — a known-eligible student with a stable mix of ratings.
@@ -33,7 +33,7 @@ public sealed class RenderExplanationsTests : IClassFixture<WebAppFactory>
 		}
 
 		using var content = new FormUrlEncodedContent(form);
-		using var postResponse = await client.PostAsync(new Uri("/?handler=SaveFacts", UriKind.Relative), content);
+		using var postResponse = await client.PostAsync(new Uri("/razor?handler=SaveFacts", UriKind.Relative), content);
 		using var followUp = await client.GetAsync(postResponse.Headers.Location);
 		var html = await followUp.Content.ReadAsStringAsync();
 

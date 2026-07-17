@@ -192,26 +192,29 @@ Rules:
     SuccessEvent: 'Entry requirement unmet or predicted grade below the amber threshold'
     Expression: >-
       true
+  # No Biology term: the accessible tier must open on *any* five passes at pass_grade, and naming a
+  # specific GCSE bars whoever did not sit it. Maths and English are named for intent only — the
+  # eligibility gate already requires both at pass_grade, so they cannot fail here.
   - RuleName: 'psychology:green'
-    SuccessEvent: 'Entry met (Biology, Maths and English at standard entry); predicted A-level grade at or above the green threshold'
+    SuccessEvent: 'Entry met (Maths and English at pass grade); predicted A-level grade at or above the green threshold'
     Expression: >-
-      facts.Gcse("biology") >= facts.StandardEntry && facts.Gcse("maths") >= facts.StandardEntry && facts.Gcse("english_language") >= facts.StandardEntry && facts.Predicted("psychology") >= ALevelGrade.D && facts.DfeProbabilityAtOrAbove("psychology", ALevelGrade.D) >= facts.MinDfeGreenProbabilityAtOrAbove
+      facts.Gcse("maths") >= facts.PassGrade && facts.Gcse("english_language") >= facts.PassGrade && facts.Predicted("psychology") >= ALevelGrade.D && facts.DfeProbabilityAtOrAbove("psychology", ALevelGrade.D) >= facts.MinDfeGreenProbabilityAtOrAbove
   - RuleName: 'psychology:amber'
-    SuccessEvent: 'Entry met (Biology, Maths and English at standard entry); predicted A-level grade at or above the amber threshold'
+    SuccessEvent: 'Entry met (Maths and English at pass grade); predicted A-level grade at or above the amber threshold'
     Expression: >-
-      facts.Gcse("biology") >= facts.StandardEntry && facts.Gcse("maths") >= facts.StandardEntry && facts.Gcse("english_language") >= facts.StandardEntry && facts.Predicted("psychology") >= ALevelGrade.E && facts.DfeProbabilityAtOrAbove("psychology", ALevelGrade.E) >= facts.MinDfeAmberProbabilityAtOrAbove
+      facts.Gcse("maths") >= facts.PassGrade && facts.Gcse("english_language") >= facts.PassGrade && facts.Predicted("psychology") >= ALevelGrade.E && facts.DfeProbabilityAtOrAbove("psychology", ALevelGrade.E) >= facts.MinDfeAmberProbabilityAtOrAbove
   - RuleName: 'psychology:red'
     SuccessEvent: 'Entry requirement unmet or predicted grade below the amber threshold'
     Expression: >-
       true
   - RuleName: 'sociology:green'
-    SuccessEvent: 'Entry met (humanities average and English at standard entry); predicted A-level grade at or above the green threshold'
+    SuccessEvent: 'Entry met (accessible average and English at pass grade); predicted A-level grade at or above the green threshold'
     Expression: >-
-      facts.Average >= facts.HumanitiesAverageEntry && facts.Gcse("english_language") >= facts.StandardEntry && facts.Predicted("sociology") >= ALevelGrade.D && facts.DfeProbabilityAtOrAbove("sociology", ALevelGrade.D) >= facts.MinDfeGreenProbabilityAtOrAbove
+      facts.Average >= facts.AccessibleAverageEntry && facts.Gcse("english_language") >= facts.PassGrade && facts.Predicted("sociology") >= ALevelGrade.D && facts.DfeProbabilityAtOrAbove("sociology", ALevelGrade.D) >= facts.MinDfeGreenProbabilityAtOrAbove
   - RuleName: 'sociology:amber'
-    SuccessEvent: 'Entry met (humanities average and English at standard entry); predicted A-level grade at or above the amber threshold'
+    SuccessEvent: 'Entry met (accessible average and English at pass grade); predicted A-level grade at or above the amber threshold'
     Expression: >-
-      facts.Average >= facts.HumanitiesAverageEntry && facts.Gcse("english_language") >= facts.StandardEntry && facts.Predicted("sociology") >= ALevelGrade.E && facts.DfeProbabilityAtOrAbove("sociology", ALevelGrade.E) >= facts.MinDfeAmberProbabilityAtOrAbove
+      facts.Average >= facts.AccessibleAverageEntry && facts.Gcse("english_language") >= facts.PassGrade && facts.Predicted("sociology") >= ALevelGrade.E && facts.DfeProbabilityAtOrAbove("sociology", ALevelGrade.E) >= facts.MinDfeAmberProbabilityAtOrAbove
   - RuleName: 'sociology:red'
     SuccessEvent: 'Entry requirement unmet or predicted grade below the amber threshold'
     Expression: >-
@@ -265,13 +268,13 @@ Rules:
     Expression: >-
       true
   - RuleName: 'media_studies:green'
-    SuccessEvent: 'Entry met (English at standard entry); predicted A-level grade at or above the green threshold'
+    SuccessEvent: 'Entry met (English at pass grade); predicted A-level grade at or above the green threshold'
     Expression: >-
-      facts.Gcse("english_language") >= facts.StandardEntry && facts.Predicted("media_studies") >= ALevelGrade.D && facts.DfeProbabilityAtOrAbove("media_studies", ALevelGrade.D) >= facts.MinDfeGreenProbabilityAtOrAbove
+      facts.Gcse("english_language") >= facts.PassGrade && facts.Predicted("media_studies") >= ALevelGrade.D && facts.DfeProbabilityAtOrAbove("media_studies", ALevelGrade.D) >= facts.MinDfeGreenProbabilityAtOrAbove
   - RuleName: 'media_studies:amber'
-    SuccessEvent: 'Entry met (English at standard entry); predicted A-level grade at or above the amber threshold'
+    SuccessEvent: 'Entry met (English at pass grade); predicted A-level grade at or above the amber threshold'
     Expression: >-
-      facts.Gcse("english_language") >= facts.StandardEntry && facts.Predicted("media_studies") >= ALevelGrade.E && facts.DfeProbabilityAtOrAbove("media_studies", ALevelGrade.E) >= facts.MinDfeAmberProbabilityAtOrAbove
+      facts.Gcse("english_language") >= facts.PassGrade && facts.Predicted("media_studies") >= ALevelGrade.E && facts.DfeProbabilityAtOrAbove("media_studies", ALevelGrade.E) >= facts.MinDfeAmberProbabilityAtOrAbove
   - RuleName: 'media_studies:red'
     SuccessEvent: 'Entry requirement unmet or predicted grade below the amber threshold'
     Expression: >-

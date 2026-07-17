@@ -66,6 +66,7 @@ public sealed class EligibilityGateTests
 								   exceptional_entry: 8
 								   further_maths_average_entry: 7.0
 								   humanities_average_entry: 5.0
+								   accessible_average_entry: 4.0
 								   min_dfe_green_probability_at_or_above: 0.60
 								   min_dfe_amber_probability_at_or_above: 0.50
 								   adult_age: 19
@@ -96,6 +97,7 @@ public sealed class EligibilityGateTests
 							   exceptional_entry: 8
 							   further_maths_average_entry: 7.0
 							   humanities_average_entry: 5.0
+							   accessible_average_entry: 4.0
 							   min_dfe_green_probability_at_or_above: 0.60
 							   min_dfe_amber_probability_at_or_above: 0.50
 							   adult_age: 19

@@ -70,6 +70,9 @@ public sealed class EnrolmentEngine : IEnrolmentEngine
 	/// <summary>The qualification scale this engine evaluates against.</summary>
 	public QualificationScale Scale => evaluator.Scale;
 
+	/// <summary>The policy knobs (choice caps, entry bands, etc.) this engine evaluates against.</summary>
+	public PolicyThresholds Thresholds => evaluator.Thresholds;
+
 	/// <summary>The whole-student §1.7 verdict (the document the golden-file suite locks), as of the bound date.</summary>
 	public EnrolmentResult Evaluate(StudentInput student, CancellationToken cancellationToken = default)
 	{
@@ -138,56 +141,52 @@ public sealed class EnrolmentEngine : IEnrolmentEngine
 		return CounterfactualAdvisor.Advise(this, student, evaluator.Thresholds, asOf, considerUnsatGcses, cancellationToken: cancellationToken);
 	}
 
-	/// <inheritdoc cref="IEnrolmentEvaluator.TryEvaluate(StudentInput, CancellationToken)" />
-	public ValidatedEvaluation<EnrolmentResult> TryEvaluate(StudentInput student, CancellationToken cancellationToken = default)
+	/// <summary>
+	///     The committed choices the student may no longer hold: every <c>chosen_a_levels</c> entry the
+	///     pipeline now rates red. A choice is only ever made against a green or amber subject, so a red one
+	///     means the facts moved underneath it after it was committed — the <c>Try*</c> calls refuse any
+	///     document that still names one, and a caller holding a mutable basket (both web front ends) prunes
+	///     against this list and re-evaluates rather than presenting the refusal to the student.
+	/// </summary>
+	/// <remarks>
+	///     Returns empty for a student with no choices, and for one whose facts do not validate — there is no
+	///     trustworthy rating to prune against, and the caller will surface the facts' own validation errors
+	///     from a <c>Try*</c> call anyway. One pass suffices: dropping choices only removes downgrades, so no
+	///     surviving choice can newly turn red.
+	/// </remarks>
+	public IReadOnlyList<Subject> StaleChoices(StudentInput student, CancellationToken cancellationToken = default)
 	{
-		var validation = ValidateInput(student);
-		return validation.IsValid
-			? new(validation, Evaluate(student, asOf(), cancellationToken))
-			: new(validation, null);
+		ArgumentNullException.ThrowIfNull(student);
+		return student.ChosenALevels.Count == 0 || !ValidateInput(student).IsValid
+			? []
+			: [.. StaleChoiceRatings(Run(student, asOf(), cancellationToken)).Select(static rating => rating.Subject)];
 	}
+
+	/// <inheritdoc cref="IEnrolmentEvaluator.TryEvaluate(StudentInput, CancellationToken)" />
+	public ValidatedEvaluation<EnrolmentResult> TryEvaluate(StudentInput student, CancellationToken cancellationToken = default) =>
+		TryRun(student, asOf(), ToResult, cancellationToken);
 
 	/// <inheritdoc cref="IEnrolmentEvaluator.TryEvaluate(StudentInput, DateOnly, CancellationToken)" />
 	public ValidatedEvaluation<EnrolmentResult> TryEvaluate(
 		StudentInput student,
 		DateOnly asOf,
-		CancellationToken cancellationToken = default)
-	{
-		var validation = ValidateInput(student);
-		return validation.IsValid
-			? new(validation, Evaluate(student, asOf, cancellationToken))
-			: new(validation, null);
-	}
+		CancellationToken cancellationToken = default) =>
+		TryRun(student, asOf, ToResult, cancellationToken);
 
 	/// <inheritdoc cref="IEnrolmentEvaluator.TryExplain(StudentInput, CancellationToken)" />
-	public ValidatedEvaluation<ExplainedResult> TryExplain(StudentInput student, CancellationToken cancellationToken = default)
-	{
-		var validation = ValidateInput(student);
-		return validation.IsValid
-			? new(validation, Explain(student, asOf(), cancellationToken))
-			: new(validation, null);
-	}
+	public ValidatedEvaluation<ExplainedResult> TryExplain(StudentInput student, CancellationToken cancellationToken = default) =>
+		TryRun(student, asOf(), ToExplained, cancellationToken);
 
 	/// <inheritdoc cref="IEnrolmentEvaluator.TryExplain(StudentInput, DateOnly, CancellationToken)" />
 	public ValidatedEvaluation<ExplainedResult> TryExplain(
 		StudentInput student,
 		DateOnly asOf,
-		CancellationToken cancellationToken = default)
-	{
-		var validation = ValidateInput(student);
-		return validation.IsValid
-			? new(validation, Explain(student, asOf, cancellationToken))
-			: new(validation, null);
-	}
+		CancellationToken cancellationToken = default) =>
+		TryRun(student, asOf, ToExplained, cancellationToken);
 
 	/// <inheritdoc cref="IEnrolmentAdvisor.TryAdvise(StudentInput, CancellationToken)" />
-	public ValidatedEvaluation<AdviceResult> TryAdvise(StudentInput student, CancellationToken cancellationToken = default)
-	{
-		var validation = ValidateInput(student);
-		return validation.IsValid
-			? new(validation, Advise(student, asOf(), cancellationToken))
-			: new(validation, null);
-	}
+	public ValidatedEvaluation<AdviceResult> TryAdvise(StudentInput student, CancellationToken cancellationToken = default) =>
+		TryAdvise(student, asOf(), evaluator.Thresholds.AdviceConsidersUnsatGcses, cancellationToken);
 
 	/// <inheritdoc cref="IEnrolmentAdvisor.TryAdvise(StudentInput, DateOnly, CancellationToken)" />
 	public ValidatedEvaluation<AdviceResult> TryAdvise(
@@ -200,15 +199,17 @@ public sealed class EnrolmentEngine : IEnrolmentEngine
 	public ValidatedEvaluation<AdviceResult> TryAdvise(
 		StudentInput student,
 		bool considerUnsatGcses,
-		CancellationToken cancellationToken = default)
-	{
-		var validation = ValidateInput(student);
-		return validation.IsValid
-			? new(validation, Advise(student, asOf(), considerUnsatGcses, cancellationToken))
-			: new(validation, null);
-	}
+		CancellationToken cancellationToken = default) =>
+		TryAdvise(student, asOf(), considerUnsatGcses, cancellationToken);
 
 	/// <inheritdoc cref="IEnrolmentAdvisor.TryAdvise(StudentInput, DateOnly, bool, CancellationToken)" />
+	/// <remarks>
+	///     Deliberately exempt from the stale-choice guard the other <c>Try*</c> entry points apply. Those
+	///     answer "what is this student's verdict", and a red committed choice has no defensible answer. This
+	///     one answers "what would have to change", which is precisely the question a student with a red
+	///     choice needs answered — refusing the document would withhold the advice from the only people who
+	///     need it. Nothing is accepted by advising: it returns counterfactuals, never an enrolment.
+	/// </remarks>
 	public ValidatedEvaluation<AdviceResult> TryAdvise(
 		StudentInput student,
 		DateOnly asOf,
@@ -333,6 +334,64 @@ public sealed class EnrolmentEngine : IEnrolmentEngine
 		return new(profile, gate, [.. baseRatings], [.. finalRatings], adjustments,
 			Aggregator.Summarise(finalRatings, Catalogue, evaluator.Thresholds));
 	}
+
+	/// <summary>
+	///     The shared <c>Try*</c> boundary: validate the document, run the pipeline once, refuse it if any
+	///     committed choice has gone red, and only then project the run. The pipeline runs at most once —
+	///     <paramref name="project" /> is a pure projection of the same <see cref="Evaluation" /> the
+	///     stale-choice guard inspected, so the verdict and the guard can never disagree.
+	/// </summary>
+	private ValidatedEvaluation<T> TryRun<T>(
+		StudentInput student,
+		DateOnly asOf,
+		Func<Evaluation, T> project,
+		CancellationToken cancellationToken)
+		where T : class
+	{
+		var validation = ValidateInput(student);
+		if (!validation.IsValid) {
+			return new(validation, null);
+		}
+
+		var evaluation = Run(student, asOf, cancellationToken);
+		var rejected = RejectedChoices(evaluation);
+		return rejected.Count > 0
+			? new(new([.. rejected]), null)
+			: new(validation, project(evaluation));
+	}
+
+	/// <summary>
+	///     The stale-choice guard: a <c>chosen_a_levels</c> entry the pipeline rates red is not a choice the
+	///     student may hold. A commitment is only ever made against a subject that rated green or amber, so a
+	///     red one means the facts moved underneath it — lower GCSEs, a new blocking hobby, a prior
+	///     qualification, or a sibling choice that excludes it. The document is then self-inconsistent: it
+	///     asserts a commitment the rules forbid, and honouring it would enrol the student on a course they
+	///     are barred from. It is reported as a validation error rather than an adjustment because there is no
+	///     defensible verdict to return — the caller must drop the choice and re-evaluate.
+	/// </summary>
+	/// <remarks>
+	///     This cannot live in <see cref="StudentValidator" /> alongside the other <c>chosen_a_levels</c>
+	///     checks: a rating exists only after prediction, the engine and the constraint pass have run, and the
+	///     constraint pass reads <c>ChosenALevels</c> as an input. So it is a post-run check that reports
+	///     <em>as</em> input validation. Pruning terminates in one pass: dropping choices only ever removes
+	///     downgrades (the pass is monotone), so ratings can only improve and no surviving choice can newly
+	///     turn red.
+	/// </remarks>
+	private static IReadOnlyList<SubjectRating> StaleChoiceRatings(Evaluation evaluation)
+	{
+		var finalBySubject = evaluation.FinalRatings.ToDictionary(static r => r.Subject);
+		return [
+			.. evaluation.Profile.ChosenALevels
+				.Select(subject => finalBySubject[subject])
+				.Where(static rating => rating.Rating == Rating.Red),
+		];
+	}
+
+	private static IReadOnlyList<string> RejectedChoices(Evaluation evaluation) => [
+		.. StaleChoiceRatings(evaluation)
+			.Select(static rating =>
+				$"chosen_a_levels entry '{EnumNames.NameOf(rating.Subject)}' is no longer available: {rating.Reason}"),
+	];
 
 	private ValidationOutcome ValidateInput(StudentInput student) =>
 		new([.. StudentValidator.Validate(student, Catalogue, Scale)]);

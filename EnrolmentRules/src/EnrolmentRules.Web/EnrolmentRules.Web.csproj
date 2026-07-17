@@ -46,6 +46,53 @@
             <CopyToPublishDirectory>PreserveNewest</CopyToPublishDirectory>
             <TargetPath>data\%(Filename)%(Extension)</TargetPath>
         </Content>
+        <!-- Web SDK already globs wwwroot/**/* as Content (CopyToPublishDirectory); Update (not
+             Include) adds CopyToOutputDirectory without duplicating the item. Without this, launching
+             the built executable straight from bin/ (see CLAUDE.md's "Running the web interface
+             locally") finds no wwwroot next to it, so IWebHostEnvironment.WebRootPath is null and
+             ViteManifestReader/site.css/Bootstrap all 404 — the same reason workflows/ and data/ are
+             copied to output above. -->
+        <Content Update="wwwroot\**\*">
+            <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+        </Content>
+        <!-- RazorSDK auto-watches every wwwroot/**/* Content item and tries to hot-swap it via
+             dotnet watch's static-asset reload path. Vite gives every build a new content-hashed
+             filename under wwwroot/app/ and deletes the old one, so that swap races the deletion and
+             kills the whole watch session with "No file exists for the asset". Watch="false" opts the
+             generated bundle out: scripts/run-web.sh runs Vite's own watch build to rebuild it
+             instead, and the app re-reads manifest.json per request (see ViteManifestReader), so a Vue
+             edit needs no dotnet restart, leaving dotnet watch to handle only the C#/Razor side. -->
+        <Content Update="wwwroot\app\**\*" Watch="false"/>
     </ItemGroup>
+
+    <ItemGroup>
+        <ClientAppBuildInput Include="ClientApp\index.html"/>
+        <ClientAppBuildInput Include="ClientApp\package.json"/>
+        <ClientAppBuildInput Include="ClientApp\pnpm-lock.yaml"/>
+        <ClientAppBuildInput Include="ClientApp\tsconfig*.json"/>
+        <ClientAppBuildInput Include="ClientApp\vite.config.ts"/>
+        <ClientAppBuildInput Include="ClientApp\src\**\*"/>
+        <ClientAppBuildInput Include="ClientApp\public\**\*"/>
+    </ItemGroup>
+
+    <!-- Builds the Vue ClientApp before ASP.NET static-asset discovery, so a clean checkout has
+         wwwroot/app/manifest.json for WebApplicationFactory tests, build-output launches, and publish.
+         The generated files stay ignored; the committed source + pnpm-lock.yaml are the authority. -->
+    <Target Name="BuildClientApp"
+            BeforeTargets="BeforeBuild"
+            Inputs="@(ClientAppBuildInput)"
+            Outputs="$(MSBuildProjectDirectory)\wwwroot\app\manifest.json">
+        <Exec Command="pnpm install --frozen-lockfile" WorkingDirectory="$(MSBuildProjectDirectory)/ClientApp"/>
+        <Exec Command="pnpm run build" WorkingDirectory="$(MSBuildProjectDirectory)/ClientApp"/>
+    </Target>
+
+    <Target Name="CopyClientAppToOutput" AfterTargets="Build">
+        <ItemGroup>
+            <ClientAppGeneratedAsset Include="wwwroot\app\**\*"/>
+        </ItemGroup>
+        <Copy SourceFiles="@(ClientAppGeneratedAsset)"
+              DestinationFiles="@(ClientAppGeneratedAsset->'$(OutDir)wwwroot/app/%(RecursiveDir)%(Filename)%(Extension)')"
+              SkipUnchangedFiles="true"/>
+    </Target>
 
 </Project>

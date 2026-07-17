@@ -16,6 +16,8 @@ internal sealed class ReloadingEnrolmentEngineProxy(IEnrolmentEngineFactory fact
 
 	public QualificationScale Scale => Evaluator.Scale;
 
+	public PolicyThresholds Thresholds => Evaluator.Thresholds;
+
 	public EnrolmentResult Evaluate(StudentInput student, CancellationToken cancellationToken = default) =>
 		Evaluator.Evaluate(student, cancellationToken);
 
@@ -52,6 +54,9 @@ internal sealed class ReloadingEnrolmentEngineProxy(IEnrolmentEngineFactory fact
 		DateOnly asOf,
 		CancellationToken cancellationToken = default) =>
 		Evaluator.TryEvaluate(student, asOf, cancellationToken);
+
+	public IReadOnlyList<Subject> StaleChoices(StudentInput student, CancellationToken cancellationToken = default) =>
+		Evaluator.StaleChoices(student, cancellationToken);
 
 	public ValidatedEvaluation<ExplainedResult> TryExplain(StudentInput student, CancellationToken cancellationToken = default) =>
 		Evaluator.TryExplain(student, cancellationToken);

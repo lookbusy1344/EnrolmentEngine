@@ -92,7 +92,9 @@ This separation means the presentation can change without duplicating the enrolm
 page, mobile app and back-office process can all receive the same recommendation from the same policy
 and student information.
 
-`src/EnrolmentRules.Web` is a small reference implementation of the website option. Run it locally with `./scripts/run-web.sh`; see
+`src/EnrolmentRules.Web` is a small reference implementation of the website option. Run it locally
+with `./scripts/run-web.sh`, which builds the generated Vue assets and then watches both the C# and
+Vue sources, rebuilding each on change; run the focused web gate with `./scripts/verify-web.sh`. See
 [Web Interface](docs/technical-reference.md#web-interface) for details and Rider debugging setup.
 To run it as a container (OrbStack locally, or a free container host), see the technical
 [deployment guide](docs/deployment.md).

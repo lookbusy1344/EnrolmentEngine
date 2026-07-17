@@ -11,6 +11,11 @@ using Domain;
 /// </summary>
 public sealed class SubjectRatingTests
 {
+	// The accessible tier, deliberately rated green at a 4.0 average so a borderline-eligible student has a
+	// programme to enrol on. Every other subject stays red there.
+	private static readonly HashSet<Subject> AccessibleSubjects =
+		[Subject.Psychology, Subject.Sociology, Subject.MediaStudies];
+
 	private static IReadOnlyList<SubjectRating> Rate(params (string Subject, int Grade)[] gcses)
 	{
 		var student = new StudentInput("S-TEST", gcses.ToDictionary(g => g.Subject, g => g.Grade), []);
@@ -56,12 +61,16 @@ public sealed class SubjectRatingTests
 	}
 
 	[Fact]
-	public void weak_student_is_red_in_every_subject()
+	public void weak_student_is_red_in_every_subject_outside_the_accessible_tier()
 	{
-		// Average 4.0: every entry requirement fails (supporting GCSEs and the average are all too low).
+		// Average 4.0: every entry requirement fails (supporting GCSEs and the average are all too low)
+		// except in the accessible tier, which is tuned to open at pass_grade — see AccessibleSubjectsTests.
 		var ratings = Rate(Uniform(4));
 
-		ratings.Should().OnlyContain(r => r.Rating == Rating.Red);
+		ratings.Where(r => !AccessibleSubjects.Contains(r.Subject))
+			.Should().OnlyContain(r => r.Rating == Rating.Red);
+		ratings.Where(r => AccessibleSubjects.Contains(r.Subject))
+			.Should().OnlyContain(r => r.Rating == Rating.Green);
 	}
 
 	[Fact]

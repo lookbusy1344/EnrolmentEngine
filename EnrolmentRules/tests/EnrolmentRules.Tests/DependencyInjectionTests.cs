@@ -362,6 +362,8 @@ public sealed class DependencyInjectionTests
 
 		public QualificationScale Scale => QualificationScale.Default;
 
+		public PolicyThresholds Thresholds => Harness.Thresholds;
+
 		public EnrolmentResult Evaluate(StudentInput student, CancellationToken cancellationToken = default) =>
 			Evaluate(student, default, CancellationToken.None);
 
@@ -373,6 +375,8 @@ public sealed class DependencyInjectionTests
 
 		public ExplainedResult Explain(StudentInput student, DateOnly asOf, CancellationToken cancellationToken = default) =>
 			new(false, [], [], new(0, 0, 0.0));
+
+		public IReadOnlyList<Subject> StaleChoices(StudentInput student, CancellationToken cancellationToken = default) => [];
 
 		public AdviceResult Advise(StudentInput student, CancellationToken cancellationToken = default) =>
 			Advise(student, default(DateOnly), CancellationToken.None);

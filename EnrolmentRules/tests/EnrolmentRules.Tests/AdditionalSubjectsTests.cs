@@ -23,6 +23,10 @@ public sealed class AdditionalSubjectsTests
 		Subject.MediaStudies, Subject.Law, Subject.Spanish, Subject.DesignTechnology,
 	];
 
+	// The accessible tier, deliberately rated green at a 4.0 average so a borderline-eligible student has a
+	// programme to enrol on. Every other added subject stays red there.
+	private static readonly Subject[] Accessible = [Subject.Psychology, Subject.Sociology, Subject.MediaStudies];
+
 	// A full set of GCSEs at one uniform grade, so the average equals that grade.
 	private static (string, int)[] Uniform(int grade) => [
 		("maths", grade), ("english_language", grade), ("physics", grade),
@@ -61,12 +65,14 @@ public sealed class AdditionalSubjectsTests
 	}
 
 	[Fact]
-	public void a_weak_student_is_red_in_every_added_subject()
+	public void a_weak_student_is_red_in_every_added_subject_outside_the_accessible_tier()
 	{
-		// Average 4.0 ⇒ every entry gate fails (supporting GCSEs and the average are all too low).
+		// Average 4.0 ⇒ every entry gate fails (supporting GCSEs and the average are all too low) except in
+		// the accessible tier, which is tuned to open at pass_grade — see AccessibleSubjectsTests.
 		var ratings = Rate(Uniform(4));
 
-		Added.Should().OnlyContain(subject => Of(ratings, subject) == Rating.Red);
+		Added.Except(Accessible).Should().OnlyContain(subject => Of(ratings, subject) == Rating.Red);
+		Accessible.Should().OnlyContain(subject => Of(ratings, subject) == Rating.Green);
 	}
 
 	[Fact]

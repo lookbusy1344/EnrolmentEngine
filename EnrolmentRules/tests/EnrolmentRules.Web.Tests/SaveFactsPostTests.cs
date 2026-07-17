@@ -14,7 +14,7 @@ public sealed class SaveFactsPostTests : IClassFixture<WebAppFactory>
 	{
 		using var client = factory.CreateClient(new() { AllowAutoRedirect = false });
 
-		using var getResponse = await client.GetAsync(new Uri("/", UriKind.Relative));
+		using var getResponse = await client.GetAsync(new Uri("/razor", UriKind.Relative));
 		var antiForgeryToken = await ExtractAntiForgeryTokenAsync(getResponse);
 
 		using var content = new FormUrlEncodedContent(new Dictionary<string, string> {
@@ -28,7 +28,7 @@ public sealed class SaveFactsPostTests : IClassFixture<WebAppFactory>
 			["Hobbies[0]"] = "chess_club",
 		});
 
-		using var postResponse = await client.PostAsync(new Uri("/?handler=SaveFacts", UriKind.Relative), content);
+		using var postResponse = await client.PostAsync(new Uri("/razor?handler=SaveFacts", UriKind.Relative), content);
 		postResponse.StatusCode.Should().Be(HttpStatusCode.Redirect);
 
 		using var followUp = await client.GetAsync(postResponse.Headers.Location);
@@ -38,6 +38,35 @@ public sealed class SaveFactsPostTests : IClassFixture<WebAppFactory>
 		html.Should().Contain("maths");
 		html.Should().Contain("chess_club");
 		html.Should().Contain("English");
+	}
+
+	[Theory]
+	[InlineData("47", "9")]
+	[InlineData("0", "1")]
+	[InlineData("-3", "1")]
+	[InlineData("7.6", "8")]
+	[InlineData("7.4", "7")]
+	public async Task Posting_a_grade_off_the_scale_normalises_it_before_it_reaches_the_session(string posted, string expected)
+	{
+		using var client = factory.CreateClient(new() { AllowAutoRedirect = false });
+
+		using var getResponse = await client.GetAsync(new Uri("/razor", UriKind.Relative));
+		var antiForgeryToken = await ExtractAntiForgeryTokenAsync(getResponse);
+
+		using var content = new FormUrlEncodedContent(new Dictionary<string, string> {
+			["__RequestVerificationToken"] = antiForgeryToken,
+			["DateOfBirth"] = "2009-06-01",
+			["Gcses[0].Subject"] = "maths",
+			["Gcses[0].Grade"] = posted,
+		});
+
+		using var postResponse = await client.PostAsync(new Uri("/razor?handler=SaveFacts", UriKind.Relative), content);
+		postResponse.StatusCode.Should().Be(HttpStatusCode.Redirect);
+
+		using var followUp = await client.GetAsync(postResponse.Headers.Location);
+		var html = await followUp.Content.ReadAsStringAsync();
+
+		html.Should().Contain($"name=\"Gcses[0].Grade\" class=\"form-control\" value=\"{expected}\"");
 	}
 
 	private static async Task<string> ExtractAntiForgeryTokenAsync(HttpResponseMessage response)

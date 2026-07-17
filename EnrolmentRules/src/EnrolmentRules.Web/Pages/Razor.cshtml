@@ -1,0 +1,281 @@
+@page "/razor"
+@using EnrolmentRules.Web.Models
+@model RazorModel
+@{
+	ViewData["Title"] = "Enrolment · server rendered";
+}
+
+<section class="hero" aria-labelledby="hero-heading">
+	<p class="hero-eyebrow">GCSEs in → A-Levels out
+		<span class="mode-tag">Server rendered</span>
+		<a class="mode-switch" href="/app">Dynamic version</a>
+	</p>
+	<h1 id="hero-heading">See how your skills can <span class="grow">grow</span>.</h1>
+	<p class="hero-lede">Add your grades and interests. We'll show which A-Levels are wide open, worth a look, or not a fit yet — so you can plant the
+		right next step. A demo built on the <a href="https://github.com/lookbusy1344/EnrolmentEngine/tree/main/EnrolmentRules" target="_blank"
+		                                        rel="noopener noreferrer">enrolment engine</a>.</p>
+	<svg class="sprout" viewBox="0 0 120 140" aria-hidden="true" focusable="false">
+		<path class="soil" d="M18 120h84" fill="none" stroke-width="2.5" stroke-linecap="round"/>
+		<path class="stem" d="M60 122V54" fill="none" stroke-width="4" stroke-linecap="round"/>
+		<path class="leaf-a" d="M60 78C60 58 40 46 14 50c0 20 20 34 46 28Z"/>
+		<path class="leaf-b" d="M60 66C60 42 82 28 108 34c0 22-22 38-48 32Z"/>
+		<path class="leaf-c" d="M60 54c-6-14 2-30 16-34 6 14-2 30-16 34Z"/>
+	</svg>
+</section>
+
+<section class="chosen-summary sticky-top bg-body border-bottom py-2 mb-4" aria-labelledby="chosen-heading">
+	<h2 id="chosen-heading" class="h5">Your basket</h2>
+	@if (Model.ChosenALevels.Count == 0) {
+		<p class="mb-0 text-body-secondary">None chosen yet.</p>
+	} else {
+		<ul class="list-inline mb-0">
+			@foreach (var subject in Model.ChosenALevels) {
+				<li class="list-inline-item badge text-bg-primary rounded-pill">@TextFormatting.Prettify(subject.Value)</li>
+			}
+		</ul>
+	}
+</section>
+
+@if (Model.EjectedALevels.Count > 0) {
+	<div class="alert alert-warning" role="status">
+		Removed from your basket — no longer available with your current grades:
+		@string.Join(", ", Model.EjectedALevels.Select(subject => TextFormatting.Prettify(subject.Value))).
+	</div>
+}
+
+<!-- novalidate: the grade field carries min/max so the spinner and assistive tech know the scale, but
+     browser constraint validation would block the submit outright on an out-of-range value, leaving the
+     user stuck behind a bubble instead of letting the server normalise it (GcseRowBinding.ToRow). The
+     other submit buttons already opt out individually with formnovalidate. -->
+<form method="post" asp-page-handler="SaveFacts" class="facts-form mb-4" novalidate>
+	<section aria-labelledby="facts-heading">
+		<span class="section-eyebrow">Step 1</span>
+		<h2 id="facts-heading">About you</h2>
+
+		<div class="mb-3 date-field">
+			<label for="DateOfBirth" class="form-label">Date of birth</label>
+			<!-- IndexModel pre-fills this with a plausible date (not a real fact yet, just a display
+			     default) rather than leaving it empty: Safari renders an empty native date input's
+			     "today's date" hint in a dimmed shade CSS cannot override (WebKit doesn't expose the
+			     ::-webkit-datetime-edit-* internals the way Chromium does). -->
+			<div class="d-flex align-items-center gap-2 flex-nowrap">
+				<input type="date" id="DateOfBirth" name="DateOfBirth" class="form-control w-auto flex-shrink-0"
+				       value="@(Model.DateOfBirth?.ToString("yyyy-MM-dd"))"/>
+				<span id="DateOfBirthAge" class="form-text mb-0 text-nowrap">Age: @Model.Age</span>
+				<!-- Any save round-trip already recalculates the age against the current field value, so
+				     this button is a convenience for an instant recheck, not a requirement. -->
+				<button type="submit" formaction="?handler=SaveFacts&amp;fragment=facts-heading" formmethod="post" formnovalidate
+				        class="btn btn-sm btn-outline-secondary text-nowrap">Update age
+				</button>
+			</div>
+		</div>
+
+		<fieldset id="gcse-section" class="border rounded p-3 mb-3">
+			<legend class="h6">GCSEs</legend>
+			@for (var i = 0; i < Model.Gcses.Count; i++) {
+				<div class="row g-2 mb-2 align-items-end">
+					<div class="col-sm-6">
+						<label for="Gcses_@(i)__Subject" class="form-label">Subject</label>
+						<select id="Gcses_@(i)__Subject" name="Gcses[@i].Subject" class="form-select">
+							<option value="">-- select --</option>
+							@foreach (var subjectKey in Model.GcseSubjectOptions) {
+								if (!Model.IsGcseSubjectChosenElsewhere(i, subjectKey)) {
+									<option value="@subjectKey"
+									        selected="@(Model.Gcses[i].Subject == subjectKey)">@TextFormatting.Prettify(subjectKey)</option>
+								}
+							}
+						</select>
+					</div>
+					<div class="col-sm-3">
+						<label for="Gcses_@(i)__Grade" class="form-label">Grade</label>
+						<!-- step="any" rather than the implicit step="1": a number input rejects an off-step value
+						     client-side, so with the default the browser would block a decimal from ever being
+						     submitted and GcseRowBinding could never round it. min/max stay as spinner hints;
+						     the server normalises regardless (Thresholds.NormalizeGcseGrade). -->
+						<input type="number" id="Gcses_@(i)__Grade" name="Gcses[@i].Grade" class="form-control" value="@Model.Gcses[i].Grade" min="1"
+						       max="9" step="any" placeholder="1-9"/>
+					</div>
+					@if (!Model.Gcses[i].ToRow().IsEmpty) {
+						<div class="col-sm-3">
+							<button type="submit" formaction="?handler=RemoveGcseRow&amp;index=@i" formmethod="post" formnovalidate
+							        class="btn btn-sm btn-outline-danger">Remove
+							</button>
+						</div>
+					}
+				</div>
+			}
+			<button type="submit" formaction="?handler=SaveFacts&amp;fragment=gcse-section" formmethod="post" formnovalidate
+			        class="btn btn-sm btn-outline-primary">Add
+			</button>
+		</fieldset>
+
+		<fieldset id="qualifications-section" class="border rounded p-3 mb-3">
+			<legend class="h6">Prior qualifications</legend>
+			@for (var i = 0; i < Model.PriorQualifications.Count; i++) {
+				var row = Model.PriorQualifications[i];
+				<div class="row g-2 mb-2 align-items-end">
+					<div class="col-sm-4">
+						<label for="PriorQualifications_@(i)__Subject" class="form-label">Subject</label>
+						<select id="PriorQualifications_@(i)__Subject" name="PriorQualifications[@i].Subject" class="form-select">
+							<option value="">-- select --</option>
+							@foreach (var subjectKey in Model.PriorQualificationSubjectOptions) {
+								<option value="@subjectKey" selected="@(row.Subject == subjectKey)">@TextFormatting.Prettify(subjectKey)</option>
+							}
+						</select>
+					</div>
+					<div class="col-sm-3">
+						<label for="PriorQualifications_@(i)__Type" class="form-label">Type</label>
+						<select id="PriorQualifications_@(i)__Type" name="PriorQualifications[@i].Type" class="form-select">
+							<option value="">-- select --</option>
+							@foreach (var type in Model.QualificationTypeOptions) {
+								<option value="@type" selected="@(row.Type == type)">@TextFormatting.Label(type)</option>
+							}
+						</select>
+					</div>
+					<div class="col-sm-3">
+						<label for="PriorQualifications_@(i)__Grade" class="form-label">Grade</label>
+						<input type="text" id="PriorQualifications_@(i)__Grade" name="PriorQualifications[@i].Grade" class="form-control"
+						       value="@row.Grade"/>
+					</div>
+					@if (!row.ToRow().IsEmpty) {
+						<div class="col-sm-2">
+							<button type="submit" formaction="?handler=RemoveQualificationRow&amp;index=@i" formmethod="post" formnovalidate
+							        class="btn btn-sm btn-outline-danger">Remove
+							</button>
+						</div>
+					}
+				</div>
+			}
+			<button type="submit" formaction="?handler=SaveFacts&amp;fragment=qualifications-section" formmethod="post" formnovalidate
+			        class="btn btn-sm btn-outline-primary">Add
+			</button>
+		</fieldset>
+
+		<fieldset id="hobbies-section" class="border rounded p-3 mb-3">
+			<legend class="h6">Hobbies</legend>
+			@for (var i = 0; i < Model.Hobbies.Count; i++) {
+				<div class="row g-2 mb-2 align-items-end">
+					<div class="col-sm-6">
+						<label for="Hobbies_@(i)_" class="form-label">Hobby</label>
+						<select id="Hobbies_@(i)_" name="Hobbies[@i]" class="form-select">
+							<option value="">-- select --</option>
+							@foreach (var hobby in Model.HobbyOptions) {
+								<option value="@hobby" selected="@(Model.Hobbies[i] == hobby)">@TextFormatting.Prettify(hobby)</option>
+							}
+						</select>
+					</div>
+					@if (!string.IsNullOrWhiteSpace(Model.Hobbies[i])) {
+						<div class="col-sm-3">
+							<button type="submit" formaction="?handler=RemoveHobbyRow&amp;index=@i" formmethod="post" formnovalidate
+							        class="btn btn-sm btn-outline-danger">Remove
+							</button>
+						</div>
+					}
+				</div>
+			}
+			<button type="submit" formaction="?handler=SaveFacts&amp;fragment=hobbies-section" formmethod="post" formnovalidate
+			        class="btn btn-sm btn-outline-primary">Add
+			</button>
+		</fieldset>
+	</section>
+	<button type="submit" class="btn btn-primary">Save &amp; see options</button>
+</form>
+
+<form method="post" asp-page-handler="Reset" class="mb-4">
+	<button type="submit" class="btn btn-outline-secondary">Start over</button>
+</form>
+
+<section aria-labelledby="results-heading">
+	<span class="section-eyebrow">Step 2</span>
+	<h2 id="results-heading">What's open to you</h2>
+	@if (Model.Results is not { } results) {
+		<p>Add a GCSE, a prior qualification or your date of birth, then save — your options sprout up here.</p>
+	} else if (!results.IsValid) {
+		<div class="alert alert-danger" role="alert">
+			<ul class="mb-0">
+				@foreach (var error in results.ValidationErrors) {
+					<li>@error</li>
+				}
+			</ul>
+		</div>
+	} else if (!results.Result!.Eligible) {
+		<div class="alert alert-danger" role="alert">
+			<p class="fw-bold">Not eligible.</p>
+			<ul class="mb-0">
+				@foreach (var reason in results.Result.EligibilityReasons) {
+					<li>@reason</li>
+				}
+			</ul>
+		</div>
+	} else {
+		var choiceLimitReason = results.Result.Explanations
+			.SelectMany(e => e.Overrides)
+			.FirstOrDefault(a => a.Kind == AdjustmentKind.ChosenSubjectCap)?.Reason;
+		if (choiceLimitReason is not null) {
+			<div id="choice-limit-notice" class="alert alert-info" role="status">
+				<p class="fw-bold mb-1">Choice limit reached.</p>
+				<p class="mb-0">@choiceLimitReason</p>
+			</div>
+		}
+
+		<div class="row row-cols-1 row-cols-md-2 row-cols-lg-3 g-3">
+			@foreach (var explanation in results.Result.Explanations) {
+				var chosen = Model.ChosenALevels.Contains(explanation.Subject);
+				var canChoose = explanation.Rating != Rating.Red;
+				var reasonId = $"reason-{explanation.Subject.Value}";
+				<div class="col">
+					<article class="card h-100">
+						<div class="card-body">
+							<h3 class="card-title h6 d-flex justify-content-between align-items-center">
+								@TextFormatting.Prettify(explanation.Subject.Value)
+								<span class="badge @RatingDisplay.CssClass(explanation.Rating)"><span
+										class="visually-hidden">Rating: </span>@explanation.Rating</span>
+							</h3>
+							<p id="@reasonId" class="card-text">@explanation.Reason</p>
+							<details>
+								<summary>Details</summary>
+								<dl class="mb-0">
+									<dt>Base rating</dt>
+									<dd>@explanation.BaseRating (@explanation.BaseReason)</dd>
+									<dt>Rule</dt>
+									<dd>@explanation.Rule</dd>
+									<dt>Predicted points</dt>
+									<dd>@explanation.PredictedPoints.ToString("0.00")</dd>
+									@if (explanation.EntryEquivalentReason is { } entryReason) {
+										<dt>Entry equivalence</dt>
+										<dd>@entryReason</dd>
+									}
+									@if (explanation.Overrides.Count > 0) {
+										<dt>Overrides</dt>
+										<dd>
+											<ul class="mb-0">
+												@foreach (var adjustment in explanation.Overrides) {
+													<li>@adjustment.From → @adjustment.To: @adjustment.Reason</li>
+												}
+											</ul>
+										</dd>
+									}
+								</dl>
+							</details>
+							@if (chosen) {
+								<form method="post" asp-page-handler="RemoveSubject" class="mt-2">
+									<input type="hidden" name="subject" value="@explanation.Subject.Value"/>
+									<button type="submit" class="btn btn-sm btn-outline-danger">Remove</button>
+								</form>
+							} else if (canChoose) {
+								<form method="post" asp-page-handler="ChooseSubject" class="mt-2">
+									<input type="hidden" name="subject" value="@explanation.Subject.Value"/>
+									<button type="submit" class="btn btn-sm btn-outline-primary">Choose</button>
+								</form>
+							} else {
+								<button type="button" class="btn btn-sm btn-outline-secondary mt-2" disabled aria-describedby="@reasonId">
+									Unavailable
+								</button>
+							}
+						</div>
+					</article>
+				</div>
+			}
+		</div>
+	}
+</section>
