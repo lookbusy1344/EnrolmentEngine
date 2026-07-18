@@ -65,12 +65,16 @@ public sealed class SubjectRatingTests
 	{
 		// Average 4.0: every entry requirement fails (supporting GCSEs and the average are all too low)
 		// except in the accessible tier, which is tuned to open at pass_grade — see AccessibleSubjectsTests.
+		// Physical Education's entry gate also opens at pass_grade (biology/psychology/PE GCSE), but its
+		// regression was not retuned for the accessible tier, so a 4.0 average rates it amber, not green.
 		var ratings = Rate(Uniform(4));
+		var outsideAccessibleTier = AccessibleSubjects.Append(Subject.PhysicalEducation);
 
-		ratings.Where(r => !AccessibleSubjects.Contains(r.Subject))
+		ratings.Where(r => !outsideAccessibleTier.Contains(r.Subject))
 			.Should().OnlyContain(r => r.Rating == Rating.Red);
 		ratings.Where(r => AccessibleSubjects.Contains(r.Subject))
 			.Should().OnlyContain(r => r.Rating == Rating.Green);
+		Of(ratings, Subject.PhysicalEducation).Should().Be(Rating.Amber);
 	}
 
 	[Fact]
@@ -194,6 +198,30 @@ public sealed class SubjectRatingTests
 		// Equally, the English Literature GCSE alone satisfies entry.
 		var viaLiterature = Rate(("english_literature", 7), ("maths", 7));
 		Of(viaLiterature, Subject.EnglishLiterature).Should().Be(Rating.Green);
+	}
+
+	[Fact]
+	public void physical_education_entry_is_satisfied_by_biology_psychology_or_pe_at_pass_grade()
+	{
+		// A student who sat Biology but not PE GCSE still clears PE entry through the either-of rule.
+		var viaBiology = Rate(("biology", 7), ("maths", 7), ("english_language", 7));
+		Of(viaBiology, Subject.PhysicalEducation).Should().Be(Rating.Green);
+
+		// Equally, Psychology GCSE alone satisfies entry.
+		var viaPsychology = Rate(("psychology", 7), ("maths", 7), ("english_language", 7));
+		Of(viaPsychology, Subject.PhysicalEducation).Should().Be(Rating.Green);
+
+		// PE GCSE itself still satisfies entry.
+		var viaPe = Rate(("physical_education", 7), ("maths", 7), ("english_language", 7));
+		Of(viaPe, Subject.PhysicalEducation).Should().Be(Rating.Green);
+
+		// None of the three, at pass grade only: entry unmet ⇒ red regardless of average.
+		var viaNone = Rate(("maths", 7), ("english_language", 7), ("history", 7));
+		Of(viaNone, Subject.PhysicalEducation).Should().Be(Rating.Red);
+
+		// Grade 4 (pass grade) in any of the three is enough — this is meant to be an accessible course.
+		var atPassGrade = Rate(("biology", 4), ("maths", 4), ("english_language", 4), ("history", 4), ("art", 4));
+		Of(atPassGrade, Subject.PhysicalEducation).Should().NotBe(Rating.Red);
 	}
 
 	[Fact]

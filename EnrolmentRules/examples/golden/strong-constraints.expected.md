@@ -95,8 +95,8 @@ The engine rated this **green** because: Entry met (German at standard entry); p
 This was not downgraded.
 
 ## physical\_education
-Final rating: green. Entry met (Physical Education at standard entry); predicted A-level grade at or above the green threshold
-The engine rated this **green** because: Entry met (Physical Education at standard entry); predicted A-level grade at or above the green threshold (predicted A, ~4.95).
+Final rating: green. Entry met (Biology, Psychology or Physical Education GCSE at pass grade); predicted A-level grade at or above the green threshold
+The engine rated this **green** because: Entry met (Biology, Psychology or Physical Education GCSE at pass grade); predicted A-level grade at or above the green threshold (predicted A, ~4.95).
 This was not downgraded.
 
 ## business\_studies

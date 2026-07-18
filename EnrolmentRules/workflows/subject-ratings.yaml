@@ -109,13 +109,13 @@ Rules:
     Expression: >-
       true
   - RuleName: 'physical_education:green'
-    SuccessEvent: 'Entry met (Physical Education at standard entry); predicted A-level grade at or above the green threshold'
+    SuccessEvent: 'Entry met (Biology, Psychology or Physical Education GCSE at pass grade); predicted A-level grade at or above the green threshold'
     Expression: >-
-      facts.Gcse("physical_education") >= facts.StandardEntry && facts.Predicted("physical_education") >= ALevelGrade.D && facts.DfeProbabilityAtOrAbove("physical_education", ALevelGrade.D) >= facts.MinDfeGreenProbabilityAtOrAbove
+      (facts.Gcse("biology") >= facts.PassGrade || facts.Gcse("psychology") >= facts.PassGrade || facts.Gcse("physical_education") >= facts.PassGrade) && facts.Predicted("physical_education") >= ALevelGrade.D && facts.DfeProbabilityAtOrAbove("physical_education", ALevelGrade.D) >= facts.MinDfeGreenProbabilityAtOrAbove
   - RuleName: 'physical_education:amber'
-    SuccessEvent: 'Entry met (Physical Education at standard entry); predicted A-level grade at or above the amber threshold'
+    SuccessEvent: 'Entry met (Biology, Psychology or Physical Education GCSE at pass grade); predicted A-level grade at or above the amber threshold'
     Expression: >-
-      facts.Gcse("physical_education") >= facts.StandardEntry && facts.Predicted("physical_education") >= ALevelGrade.E && facts.DfeProbabilityAtOrAbove("physical_education", ALevelGrade.E) >= facts.MinDfeAmberProbabilityAtOrAbove
+      (facts.Gcse("biology") >= facts.PassGrade || facts.Gcse("psychology") >= facts.PassGrade || facts.Gcse("physical_education") >= facts.PassGrade) && facts.Predicted("physical_education") >= ALevelGrade.E && facts.DfeProbabilityAtOrAbove("physical_education", ALevelGrade.E) >= facts.MinDfeAmberProbabilityAtOrAbove
   - RuleName: 'physical_education:red'
     SuccessEvent: 'Entry requirement unmet or predicted grade below the amber threshold'
     Expression: >-

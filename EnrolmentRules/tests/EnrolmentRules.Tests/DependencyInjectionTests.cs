@@ -378,6 +378,8 @@ public sealed class DependencyInjectionTests
 
 		public IReadOnlyList<Subject> StaleChoices(StudentInput student, CancellationToken cancellationToken = default) => [];
 
+		public SubjectCriteria Describe(Subject subject) => new(subject, [], [], [], []);
+
 		public AdviceResult Advise(StudentInput student, CancellationToken cancellationToken = default) =>
 			Advise(student, default(DateOnly), CancellationToken.None);
 

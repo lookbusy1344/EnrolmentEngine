@@ -1,8 +1,10 @@
 namespace EnrolmentRules.Engine;
 
+using Authoring;
 using Domain;
 using Prediction;
 using RulesEngine.Interfaces;
+using RulesEngine.Models;
 
 /// <summary>
 ///     The façade over the whole pipeline (§1.7): predict → engine (eligibility + per-subject tiers) →
@@ -12,12 +14,18 @@ using RulesEngine.Interfaces;
 public sealed class EnrolmentEngine : IEnrolmentEngine
 {
 	private readonly Func<DateOnly> asOf;
+	private readonly CriteriaExplainer? criteria;
 	private readonly RatingEvaluator evaluator;
 	private readonly DfeTransitionMatrix matrix;
 
 	/// <summary>Bind a fixed reference date: the parameterless overloads always evaluate as of <paramref name="asOf" />.</summary>
-	internal EnrolmentEngine(RatingEvaluator evaluator, CatalogueData catalogue, DateOnly asOf, DfeTransitionMatrix? matrix = null)
-		: this(evaluator, catalogue, () => asOf, matrix)
+	internal EnrolmentEngine(
+		RatingEvaluator evaluator,
+		CatalogueData catalogue,
+		DateOnly asOf,
+		DfeTransitionMatrix? matrix = null,
+		IReadOnlyList<Workflow>? workflows = null)
+		: this(evaluator, catalogue, () => asOf, matrix, workflows)
 	{
 	}
 
@@ -28,9 +36,15 @@ public sealed class EnrolmentEngine : IEnrolmentEngine
 	///     clock instead of freezing the date at construction. The engine stays stateless: the source is a pure
 	///     read, and callers wanting an explicit date use the per-call overloads.
 	/// </summary>
-	internal EnrolmentEngine(RatingEvaluator evaluator, CatalogueData catalogue, Func<DateOnly> asOf, DfeTransitionMatrix? matrix = null)
+	internal EnrolmentEngine(
+		RatingEvaluator evaluator,
+		CatalogueData catalogue,
+		Func<DateOnly> asOf,
+		DfeTransitionMatrix? matrix = null,
+		IReadOnlyList<Workflow>? workflows = null)
 	{
 		this.evaluator = evaluator;
+		criteria = workflows is null ? null : new(workflows, evaluator.Thresholds, evaluator.Catalogue);
 		Catalogue = evaluator.Catalogue;
 		if (!ReferenceEquals(Catalogue, catalogue)) {
 			throw new InvalidOperationException("The engine catalogue must match the evaluator catalogue.");
@@ -55,8 +69,9 @@ public sealed class EnrolmentEngine : IEnrolmentEngine
 		PolicyThresholds thresholds,
 		CatalogueData catalogue,
 		DateOnly asOf,
-		QualificationScale scale)
-		: this(new(engine, thresholds, catalogue, scale), catalogue, asOf)
+		QualificationScale scale,
+		IReadOnlyList<Workflow>? workflows = null)
+		: this(new(engine, thresholds, catalogue, scale), catalogue, asOf, null, workflows)
 	{
 	}
 
@@ -72,6 +87,18 @@ public sealed class EnrolmentEngine : IEnrolmentEngine
 
 	/// <summary>The policy knobs (choice caps, entry bands, etc.) this engine evaluates against.</summary>
 	public PolicyThresholds Thresholds => evaluator.Thresholds;
+
+	/// <inheritdoc />
+	/// <remarks>
+	///     Narrated from the same workflow graph this engine evaluates, so the criteria a student is shown
+	///     and the rules that decide their rating can never be different revisions.
+	/// </remarks>
+	public SubjectCriteria Describe(Subject subject) =>
+		criteria is null
+			? throw new InvalidOperationException(
+				"This engine was constructed without its workflow graph, so its rules cannot be described. "
+				+ "Build it through EnrolmentEngine.Create (or the DI registration), which always supplies one.")
+			: criteria.Describe(subject);
 
 	/// <summary>The whole-student §1.7 verdict (the document the golden-file suite locks), as of the bound date.</summary>
 	public EnrolmentResult Evaluate(StudentInput student, CancellationToken cancellationToken = default)
@@ -293,9 +320,9 @@ public sealed class EnrolmentEngine : IEnrolmentEngine
 		var workflowFiles = source.OpenWorkflows();
 		try {
 			using var workflowSchemaStream = source.OpenWorkflowSchema();
-			var engine = WorkflowStore.LoadValidateBuildAndProbe(workflowFiles, workflowSchemaStream, catalogue, thresholds, matrix, scale);
+			var built = WorkflowStore.LoadValidateBuildAndProbe(workflowFiles, workflowSchemaStream, catalogue, thresholds, matrix, scale);
 			cancellationToken.ThrowIfCancellationRequested();
-			return new(new(engine, thresholds, catalogue, scale), catalogue, asOf, matrix);
+			return new(new(built.Engine, thresholds, catalogue, scale), catalogue, asOf, matrix, built.Workflows);
 		}
 		finally {
 			foreach (var workflow in workflowFiles) {

@@ -12,6 +12,8 @@ internal sealed class ReloadingEnrolmentEngineProxy(IEnrolmentEngineFactory fact
 
 	private IEnrolmentAdvisor Advisor => factory.Current;
 
+	private IEnrolmentCriteriaExplainer Explainer => factory.Current;
+
 	public CatalogueData Catalogue => Evaluator.Catalogue;
 
 	public QualificationScale Scale => Evaluator.Scale;
@@ -57,6 +59,12 @@ internal sealed class ReloadingEnrolmentEngineProxy(IEnrolmentEngineFactory fact
 
 	public IReadOnlyList<Subject> StaleChoices(StudentInput student, CancellationToken cancellationToken = default) =>
 		Evaluator.StaleChoices(student, cancellationToken);
+
+	/// <summary>
+	///     Resolved through the factory like every other call, so a reload that retunes a threshold or edits
+	///     an entry rule changes the criteria this returns without a container rebuild.
+	/// </summary>
+	public SubjectCriteria Describe(Subject subject) => Explainer.Describe(subject);
 
 	public ValidatedEvaluation<ExplainedResult> TryExplain(StudentInput student, CancellationToken cancellationToken = default) =>
 		Evaluator.TryExplain(student, cancellationToken);

@@ -46,6 +46,7 @@ public sealed class PublicApiSurfaceTests
 					"EnrolmentRules.Domain.QualificationScale", "EnrolmentRules.Domain.QualificationScaleEntry",
 					"EnrolmentRules.Domain.QualificationScaleException", "EnrolmentRules.Domain.QualificationScaleStore",
 					"EnrolmentRules.Domain.QualificationType", "EnrolmentRules.Domain.Rating", "EnrolmentRules.Domain.RatingExtensions",
+					"EnrolmentRules.Domain.RatingMeaning", "EnrolmentRules.Domain.SubjectCriteria",
 					"EnrolmentRules.Domain.Recommendation", "EnrolmentRules.Domain.RestudyBar", "EnrolmentRules.Domain.StudentDocument",
 					"EnrolmentRules.Domain.StudentInput", "EnrolmentRules.Domain.StudentProfile", "EnrolmentRules.Domain.StudentValidator",
 					"EnrolmentRules.Domain.Subject", "EnrolmentRules.Domain.SubjectAdvice", "EnrolmentRules.Domain.SubjectExclusion",
@@ -61,6 +62,8 @@ public sealed class PublicApiSurfaceTests
 			(typeof(IEnrolmentEngine).Assembly,
 				new[] {
 					"EnrolmentRules.Engine.Authoring.CatalogueException", "EnrolmentRules.Engine.Authoring.CatalogueStore",
+					"EnrolmentRules.Engine.Authoring.CriteriaExplainer", "EnrolmentRules.Engine.Authoring.CriteriaNarrationException",
+					"EnrolmentRules.Engine.Authoring.ExpressionNarrator", "EnrolmentRules.Engine.IEnrolmentCriteriaExplainer",
 					"EnrolmentRules.Engine.Authoring.WorkflowException", "EnrolmentRules.Engine.Authoring.WorkflowLintException",
 					"EnrolmentRules.Engine.Authoring.WorkflowLinter", "EnrolmentRules.Engine.Authoring.WorkflowProbeException",
 					"EnrolmentRules.Engine.Authoring.WorkflowSchemaException", "EnrolmentRules.Engine.Authoring.WorkflowStore",

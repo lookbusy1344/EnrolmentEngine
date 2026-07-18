@@ -368,6 +368,32 @@ Get counterfactual advice for the same student:
 dotnet run --project src/EnrolmentRules.Cli -- --advise examples/student.json
 ```
 
+### Subject criteria (`--criteria`)
+
+Print what one subject requires of *anyone*, in plain English, with no student document involved:
+
+```bash
+dotnet run --project src/EnrolmentRules.Cli -- --criteria music
+```
+
+The output is Markdown: what the three traffic lights mean, the college-wide eligibility gate, the
+subject's green and amber criteria, any prior-qualification equivalents or restudy bars, and the
+cross-subject relationships (prerequisites, timetable clashes, own-time requirements, vetoes) that can
+downgrade it.
+
+Every bullet is **narrated from the loaded rules** — the workflow expressions, `data/catalogue.yaml`
+and `data/thresholds.yaml` — not written alongside them. Retune `standard_entry` and the wording
+follows; there is no second prospectus to keep in step. `ExpressionNarrator` covers the expression
+grammar the workflows use and *throws* on anything else, so a rule it cannot explain fails the test
+suite rather than being silently dropped from what a student reads. Adding a genuinely new expression
+shape to a workflow therefore means teaching the narrator that shape — see
+`ExpressionNarratorTests.every_expression_in_the_shipped_workflows_narrates`, the guard that catches it.
+
+An unknown subject exits `3` and lists the catalogued subjects on stderr.
+
+The same output is available to hosts through `IEnrolmentCriteriaExplainer.Describe(Subject)`, which
+`IEnrolmentEngine` inherits. Neither web front end surfaces it yet.
+
 By default the advisor only proposes raising GCSEs the student already sat. Add `--all-gcses` to run
 the heavier diagnostic search that may also propose sitting a brand-new GCSE — useful for working out
 why a subject is reachable or unreachable. The same default can be flipped persistently via

@@ -144,7 +144,7 @@ public static class WorkflowStore
 	///     <see cref="LoadValidateBuildAndProbe(string, CatalogueData, PolicyThresholds, DfeTransitionMatrix?, QualificationScale?, string?)" />
 	///     overload so the probe and the engine agree on one source.
 	/// </summary>
-	public static IRulesEngine LoadValidateBuildAndProbe(
+	public static (IRulesEngine Engine, IReadOnlyList<Workflow> Workflows) LoadValidateBuildAndProbe(
 		string directory,
 		CatalogueData catalogue,
 		string? schemaPath = null)
@@ -158,7 +158,7 @@ public static class WorkflowStore
 	///     siblings. The matrix only feeds the probe's transition evidence (irrelevant to lambda compilation),
 	///     so it defaults to the shipped extract.
 	/// </summary>
-	public static IRulesEngine LoadValidateBuildAndProbe(
+	public static (IRulesEngine Engine, IReadOnlyList<Workflow> Workflows) LoadValidateBuildAndProbe(
 		string directory,
 		CatalogueData catalogue,
 		PolicyThresholds thresholds,
@@ -171,7 +171,7 @@ public static class WorkflowStore
 		var engine = BuildEngine(workflows);
 		ProbeCompile(engine, workflows,
 			CanonicalProbe(thresholds, catalogue, matrix ?? DfeTransitionMatrix.LoadDefault(), scale ?? QualificationScale.Default));
-		return engine;
+		return new(engine, workflows);
 	}
 
 	/// <summary>
@@ -179,7 +179,7 @@ public static class WorkflowStore
 	///     build the reusable engine, then probe-compile every workflow against a canonical fully-populated input
 	///     built from the supplied policy and scale.
 	/// </summary>
-	public static IRulesEngine LoadValidateBuildAndProbe(
+	public static (IRulesEngine Engine, IReadOnlyList<Workflow> Workflows) LoadValidateBuildAndProbe(
 		IReadOnlyList<WorkflowContent> files,
 		Stream schemaStream,
 		CatalogueData catalogue,
@@ -192,7 +192,7 @@ public static class WorkflowStore
 		var engine = BuildEngine(workflows);
 		ProbeCompile(engine, workflows,
 			CanonicalProbe(thresholds, catalogue, matrix ?? DfeTransitionMatrix.LoadDefault(), scale ?? QualificationScale.Default));
-		return engine;
+		return new(engine, workflows);
 	}
 
 	/// <summary>

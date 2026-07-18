@@ -14,6 +14,8 @@ using RulesEngine.Models;
 ///     <c>--explain-text</c> the same explanation as Markdown prose; <c>--batch</c> a JSONL
 ///     stream evaluated in parallel over one shared, stateless engine. Every mode validates the input
 ///     document first (Phase 8) so a bad grade fails fast instead of becoming a silent red.
+///     <c>--criteria &lt;subject&gt;</c> is the odd one out: it takes no student at all, printing what the
+///     rules require of anyone, narrated from the loaded workflows rather than from a separate prospectus.
 /// </summary>
 public static class CliRunner
 {
@@ -49,6 +51,9 @@ public static class CliRunner
 			["--version"] or ["-v"] => RunVersion(stdout),
 			["--lint-workflows"] => RunLint(null, stdout, stderr),
 			["--lint-workflows", var dir] => RunLint(dir, stdout, stderr),
+			// Ahead of the bare-path arm: otherwise a --criteria with no subject is read as a student file
+			// and reported as an unreadable document rather than a missing argument.
+			["--criteria"] => Usage(stderr),
 			[var path] => RunProfile(path, stdout, stderr, dataDirectory),
 			["--table", var path] => RunEvaluation(path, Output.Table, stdout, stderr, null, workflowsDirectory, dataDirectory),
 			["--json", var path] => RunEvaluation(path, Output.Json, stdout, stderr, null, workflowsDirectory, dataDirectory),
@@ -58,6 +63,7 @@ public static class CliRunner
 			["--advise", "--all-gcses", var path] =>
 				RunEvaluation(path, Output.Advise, stdout, stderr, true, workflowsDirectory, dataDirectory),
 			["--batch", var path] => RunBatch(path, stdout, stderr, workflowsDirectory, dataDirectory),
+			["--criteria", var subject] => RunCriteria(subject, stdout, stderr, workflowsDirectory, dataDirectory),
 			_ => Usage(stderr),
 		};
 
@@ -66,6 +72,7 @@ public static class CliRunner
 		stderr.WriteLine("usage: enrolment [--table|--json|--explain|--explain-text|--advise] <student.json|.yaml>");
 		stderr.WriteLine("       enrolment --advise [--all-gcses] <student.json|.yaml>");
 		stderr.WriteLine("       enrolment --batch <students.jsonl>");
+		stderr.WriteLine("       enrolment --criteria <subject>");
 		stderr.WriteLine("       enrolment --lint-workflows [workflows-dir]");
 		stderr.WriteLine("       enrolment --version|-v");
 		return ExitUsage;
@@ -141,6 +148,32 @@ public static class CliRunner
 			stderr.WriteLine($"error: could not load enrolment rules: {ex.Message}");
 			return ExitInput;
 		}
+	}
+
+	/// <summary>
+	///     Print one subject's criteria in plain English. Takes no student — this is what the rules
+	///     <em>require</em>, narrated from the same workflow graph the engine evaluates, so it stays correct
+	///     as policy is retuned without anyone maintaining a second prospectus.
+	/// </summary>
+	private static int RunCriteria(
+		string subject,
+		TextWriter stdout,
+		TextWriter stderr,
+		Func<string> workflowsDirectory,
+		Func<string> dataDirectory)
+	{
+		if (BuildEngine(stderr, workflowsDirectory, dataDirectory) is not { } engine) {
+			return ExitInput;
+		}
+
+		if (!Subject.TryParse(subject, out var parsed) || !engine.Catalogue.Subjects.Contains(parsed)) {
+			stderr.WriteLine($"error: '{subject}' is not a subject offered by this college.");
+			stderr.WriteLine($"       available: {string.Join(", ", engine.Catalogue.Subjects.Select(EnumNames.NameOf))}");
+			return ExitInput;
+		}
+
+		CriteriaRenderer.Render(engine.Describe(parsed), stdout);
+		return ExitOk;
 	}
 
 	// considerUnsatGcses is null in normal use so --advise honours the loaded thresholds default; the

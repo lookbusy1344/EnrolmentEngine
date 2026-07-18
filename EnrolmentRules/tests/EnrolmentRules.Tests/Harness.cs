@@ -59,8 +59,11 @@ internal static class Harness
 		new(BuildFromShippedWorkflows().Engine, Thresholds, Catalogue, Scale);
 
 	/// <summary>The full <see cref="EnrolmentEngine" /> façade over the shipped workflows (end-to-end tests).</summary>
-	public static EnrolmentEngine ShippedEngine() =>
-		new(BuildFromShippedWorkflows().Engine, Thresholds, Catalogue, AsOf, Scale);
+	public static EnrolmentEngine ShippedEngine()
+	{
+		var (workflows, engine) = BuildFromShippedWorkflows();
+		return new(engine, Thresholds, Catalogue, AsOf, Scale, workflows);
+	}
 
 	/// <summary>
 	///     The canonical probe input — the <em>union</em> of every shipped workflow's bound parameters, so

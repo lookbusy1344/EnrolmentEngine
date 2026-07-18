@@ -107,14 +107,6 @@
       "changes": [],
       "reachable": false,
       "blocked_reason": "Entry requirement unmet or predicted grade below the amber threshold"
-    },
-    {
-      "subject": "physical_education",
-      "current": "red",
-      "target": "amber",
-      "changes": [],
-      "reachable": false,
-      "blocked_reason": "Entry requirement unmet or predicted grade below the amber threshold"
     }
   ],
   "gate": null,
