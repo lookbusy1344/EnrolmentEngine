@@ -83,6 +83,12 @@ main.container {
     color: var(--ink);
 }
 
+/* Removes the ~300ms tap delay and stops the double-tap-to-zoom gesture from
+   firing on interactive elements, now that pinch-zoom is disabled at the viewport. */
+a, button, [role="button"], input, select, .form-control, .form-select, .btn {
+    touch-action: manipulation;
+}
+
 h1, h2, h3, legend, .h5, .h6 {
     font-family: var(--display);
     color: var(--ink);
