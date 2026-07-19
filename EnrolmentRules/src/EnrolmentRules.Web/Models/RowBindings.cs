@@ -20,7 +20,7 @@ public sealed class GcseRowBinding
 	/// </summary>
 	public double? Grade { get; set; }
 
-	public GcseRow ToRow() => new(Subject, Grade is { } grade ? Thresholds.NormalizeGcseGrade(grade) : null);
+	public GcseRow ToRow() => new(Subject, Grade.HasValue ? Thresholds.NormalizeGcseGrade(Grade.Value) : null);
 
 	public static GcseRowBinding FromRow(GcseRow row) => new() { Subject = row.Subject, Grade = row.Grade };
 }

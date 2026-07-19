@@ -217,8 +217,8 @@ public static class CliRunner
 		}
 
 		if (useAdvice) {
-			var outcome = considerUnsatGcses is { } flag
-				? engine.TryAdvise(document.Student, flag)
+			var outcome = considerUnsatGcses.HasValue
+				? engine.TryAdvise(document.Student, considerUnsatGcses.Value)
 				: engine.TryAdvise(document.Student);
 			if (!outcome.Validation.IsValid) {
 				WriteValidationErrors(stderr, outcome.Validation);

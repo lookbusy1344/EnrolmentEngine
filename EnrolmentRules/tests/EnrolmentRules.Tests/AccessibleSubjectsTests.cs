@@ -89,25 +89,22 @@ public sealed class AccessibleSubjectsTests
 	// The scoping guard: lowering the shared humanities_average_entry or standard_entry would turn these
 	// green too, so their staying red is what proves the change was scoped to the three subjects.
 	[Theory]
-	[InlineData("history")]     // shares humanities_average_entry with sociology
-	[InlineData("geography")]   // shares humanities_average_entry and standard_entry
+	[InlineData("history")] // shares humanities_average_entry with sociology
+	[InlineData("geography")] // shares humanities_average_entry and standard_entry
 	[InlineData("law")]
 	[InlineData("politics")]
 	[InlineData("religious_studies")]
-	[InlineData("drama")]       // shares standard_entry with media_studies
+	[InlineData("drama")] // shares standard_entry with media_studies
 	[InlineData("business_studies")]
 	public void other_subjects_stay_red_at_the_borderline_minimum(string subject)
 	{
 		var ratings = Rate(AtPassGrade(["maths", "english_language", "biology", "english_literature", "history"]));
 
-		Of(ratings, new Subject(subject)).Should().Be(Rating.Red);
+		Of(ratings, new(subject)).Should().Be(Rating.Red);
 	}
 
 	[Fact]
-	public void psychology_and_sociology_are_recognised_gcse_subjects()
-	{
-		GcseSubjects.Known.Should().Contain(["psychology", "sociology"]);
-	}
+	public void psychology_and_sociology_are_recognised_gcse_subjects() => GcseSubjects.Known.Should().Contain(["psychology", "sociology"]);
 
 	// Driven through TryEvaluate rather than Evaluate: only the validating path checks GCSE keys against
 	// GcseSubjects.Known, so the unchecked path would pass this even with the vocabulary unchanged.

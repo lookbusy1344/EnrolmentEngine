@@ -1,6 +1,5 @@
 namespace EnrolmentRules.Engine;
 
-using Authoring;
 using Domain;
 using Prediction;
 using RulesEngine.Interfaces;

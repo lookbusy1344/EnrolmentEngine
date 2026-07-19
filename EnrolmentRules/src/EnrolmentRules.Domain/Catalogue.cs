@@ -184,7 +184,7 @@ public sealed class CatalogueData
 				_ = scale.Ordinal(entryEquivalent.Type, entryEquivalent.MinGrade);
 			}
 
-			if (meta.RestudyBar is { } restudyBar) {
+			if (meta.RestudyBar is RestudyBar restudyBar) {
 				if (restudyBar.Types.Count == 0) {
 					throw new InvalidDataException(
 						$"Subject {EnumNames.NameOf(subject)} has a restudy bar with no qualification types.");

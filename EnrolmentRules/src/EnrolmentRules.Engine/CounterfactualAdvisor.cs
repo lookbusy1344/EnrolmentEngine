@@ -382,7 +382,7 @@ internal sealed class PipelineEvaluationBudget(int? limit, Action? onConsume = n
 
 	public bool TryConsume()
 	{
-		if (limit is { } max && count >= max) {
+		if (limit is int max && count >= max) {
 			return false;
 		}
 

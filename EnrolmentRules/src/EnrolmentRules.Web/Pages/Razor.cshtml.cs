@@ -44,12 +44,12 @@ public sealed class RazorModel(IEnrolmentSessionStore sessionStore, IEnrolmentEn
 
 	public IReadOnlyList<Subject> ChosenALevels { get; private set; } = [];
 
+	/// <summary>The choices dropped from the basket on this load because they are no longer available.</summary>
+	public IReadOnlyList<Subject> EjectedALevels { get; private set; } = [];
+
 	/// <summary>Whether another GCSE row (not <paramref name="excludingIndex" />) already names <paramref name="subjectKey" />.</summary>
 	public bool IsGcseSubjectChosenElsewhere(int excludingIndex, string subjectKey) =>
 		Gcses.Where((_, idx) => idx != excludingIndex).Any(g => g.Subject == subjectKey);
-
-	/// <summary>The choices dropped from the basket on this load because they are no longer available.</summary>
-	public IReadOnlyList<Subject> EjectedALevels { get; private set; } = [];
 
 	public async Task OnGetAsync()
 	{

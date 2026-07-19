@@ -57,7 +57,7 @@ public sealed class EnrolmentEngineOptions
 	/// </summary>
 	internal Func<DateOnly> AsOfSource()
 	{
-		if (FixedAsOf is { } fixedAsOf) {
+		if (FixedAsOf is DateOnly fixedAsOf) {
 			return () => fixedAsOf;
 		}
 

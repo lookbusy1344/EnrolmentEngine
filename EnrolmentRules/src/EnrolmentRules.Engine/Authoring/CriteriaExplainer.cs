@@ -17,6 +17,10 @@ public sealed class CriteriaExplainer(
 	PolicyThresholds thresholds,
 	CatalogueData catalogue)
 {
+	// Letters whose *spoken* name opens on a vowel, so an acronym starting with one takes "an" even though
+	// the letter is a consonant: "an NVQ", but "a BTEC".
+	private const string VowelSoundLetters = "AEFHILMNORSX";
+
 	// Acronyms and hyphenation that plain title-casing gets wrong. Cosmetic only: an unlisted type still
 	// produces its bullet, just in the generic form, so a new qualification type cannot drop a criterion.
 	private static readonly FrozenDictionary<QualificationType, string> QualificationNames =
@@ -130,10 +134,6 @@ public sealed class CriteriaExplainer(
 
 	private static string QualificationName(QualificationType type) =>
 		QualificationNames.TryGetValue(type, out var name) ? name : Naming.Display(EnumNames.NameOf(type));
-
-	// Letters whose *spoken* name opens on a vowel, so an acronym starting with one takes "an" even though
-	// the letter is a consonant: "an NVQ", but "a BTEC".
-	private const string VowelSoundLetters = "AEFHILMNORSX";
 
 	private static string WithArticle(string name)
 	{

@@ -17,7 +17,7 @@
 	<link rel="stylesheet" href="~/css/site.css" asp-append-version="true"/>
 </head>
 <body>
-<header class="site-header">
+<header class="site-header flex-wrap flex-sm-nowrap row-gap-2 row-gap-sm-3 column-gap-3">
 	<a class="brand" href="/">
 		<svg class="brand-mark" viewBox="0 0 32 32" aria-hidden="true" focusable="false">
 			<path class="brand-stem" d="M16 30V13" fill="none" stroke-width="2.5" stroke-linecap="round"/>
@@ -35,7 +35,7 @@
 		</svg>
 	</a>
 </header>
-<main class="container">
+<main class="container px-2 px-sm-3">
 	@RenderBody()
 </main>
 <footer class="site-footer">

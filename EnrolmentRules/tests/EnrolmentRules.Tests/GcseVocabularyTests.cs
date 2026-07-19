@@ -55,8 +55,8 @@ public sealed class GcseVocabularyTests
 			}
 
 			var document = LoadStudentDocument(path);
-			if (document is { } loaded) {
-				yield return (path, loaded.Student);
+			if (document is not null) {
+				yield return (path, document.Student);
 			}
 		}
 	}

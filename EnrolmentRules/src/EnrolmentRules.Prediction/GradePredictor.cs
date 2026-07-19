@@ -28,7 +28,7 @@ public static class GradePredictor
 		QualificationScale scale)
 	{
 		var average = AverageGcseScore(gcses);
-		var age = student.DateOfBirth is { } dob ? AgeCalculator.WholeYears(dob, asOf) : 0;
+		var age = student.DateOfBirth.HasValue ? AgeCalculator.WholeYears(student.DateOfBirth.Value, asOf) : 0;
 		var gcseByKey = gcses.ToDictionary(static g => g.Subject, static g => g.Grade, StringComparer.Ordinal);
 
 		return new(

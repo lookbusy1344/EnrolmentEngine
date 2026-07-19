@@ -117,7 +117,6 @@ a:hover {
 .site-header {
     display: flex;
     align-items: baseline;
-    gap: .9rem;
     max-width: 1080px;
     margin-inline: auto;
     padding: 1.3rem 1rem .2rem;
@@ -216,7 +215,15 @@ a:hover {
 .hero {
     position: relative;
     margin-bottom: 2.2rem;
-    padding: 2rem 0 .5rem;
+    padding: 1rem 0 .5rem;
+}
+
+/* padding-top isn't on Bootstrap's spacer scale (2rem), so this stays custom CSS, but the
+   breakpoint matches Bootstrap's own sm (576px) rather than an arbitrary value. */
+@media (min-width: 576px) {
+    .hero {
+        padding-top: 2rem;
+    }
 }
 
 .hero-eyebrow {
@@ -329,12 +336,6 @@ a:hover {
 
 .sprout .soil {
     stroke: var(--line);
-}
-
-@media (max-width: 640px) {
-    .sprout {
-        display: none;
-    }
 }
 
 /* ---------------------------------------------------------------------------
@@ -839,23 +840,5 @@ form[action*="Reset"], .facts-form + form {
 
     section[aria-labelledby="results-heading"] .card {
         animation: leaf-in .4s ease-out both;
-    }
-}
-
-/* ---------------------------------------------------------------------------
-   Responsive
-   --------------------------------------------------------------------------- */
-@media (max-width: 640px) {
-    .site-header {
-        flex-wrap: wrap;
-        gap: .4rem .8rem;
-    }
-
-    .hero {
-        padding-top: 1rem;
-    }
-
-    main.container {
-        padding-inline: 1rem;
     }
 }

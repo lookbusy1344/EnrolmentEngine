@@ -1,8 +1,8 @@
 namespace EnrolmentRules.Tests;
 
 using AwesomeAssertions;
+using Cli;
 using Domain;
-using Engine.Authoring;
 
 /// <summary>
 ///     Criteria-narration tests. The narrator turns the shipped rule expressions into student-facing
@@ -78,9 +78,7 @@ public sealed class ExpressionNarratorTests
 		var bullets = ExpressionNarrator.Narrate(
 			"passCount >= policy.MinPasses",
 			Thresholds,
-			new Dictionary<string, string>(StringComparer.Ordinal) {
-				["passCount"] = "gcses.Count(g => g.Grade >= policy.PassGrade)",
-			});
+			new Dictionary<string, string>(StringComparer.Ordinal) { ["passCount"] = "gcses.Count(g => g.Grade >= policy.PassGrade)" });
 
 		bullets.Should().ContainSingle();
 		bullets[0].Should().Contain("5").And.Contain("grade 4");
@@ -260,7 +258,7 @@ public sealed class CriteriaExplainerTests
 	[Fact]
 	public void describing_a_subject_outside_the_catalogue_is_rejected()
 	{
-		var describe = () => Harness.ShippedEngine().Describe(new Subject("underwater_basket_weaving"));
+		var describe = () => Harness.ShippedEngine().Describe(new("underwater_basket_weaving"));
 
 		describe.Should().Throw<ArgumentOutOfRangeException>();
 	}
@@ -284,7 +282,7 @@ public sealed class CriteriaCliTests
 	{
 		using var stdout = new StringWriter();
 		using var stderr = new StringWriter();
-		var exit = Cli.CliRunner.Run(args, stdout, stderr, () => Harness.WorkflowsDir, () => Harness.DataDir);
+		var exit = CliRunner.Run(args, stdout, stderr, () => Harness.WorkflowsDir, () => Harness.DataDir);
 		return (exit, stdout.ToString(), stderr.ToString());
 	}
 
@@ -293,7 +291,7 @@ public sealed class CriteriaCliTests
 	{
 		var (exit, stdout, _) = Run("--criteria", "music");
 
-		exit.Should().Be(Cli.CliRunner.ExitOk);
+		exit.Should().Be(CliRunner.ExitOk);
 		stdout.Should().Contain("# What you need for A-level Music");
 		stdout.Should().Contain("## What the colours mean");
 		stdout.Should().Contain("## Everyone needs these first");
@@ -329,7 +327,7 @@ public sealed class CriteriaCliTests
 	{
 		var (exit, stdout, stderr) = Run("--criteria", "underwater_basket_weaving");
 
-		exit.Should().Be(Cli.CliRunner.ExitInput);
+		exit.Should().Be(CliRunner.ExitInput);
 		stdout.Should().BeEmpty();
 		stderr.Should().Contain("not a subject offered");
 		stderr.Should().Contain("maths");
@@ -340,7 +338,7 @@ public sealed class CriteriaCliTests
 	{
 		var (exit, _, stderr) = Run("--criteria");
 
-		exit.Should().Be(Cli.CliRunner.ExitUsage);
+		exit.Should().Be(CliRunner.ExitUsage);
 		stderr.Should().Contain("--criteria");
 	}
 

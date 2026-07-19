@@ -110,10 +110,7 @@ public sealed class EnrolmentEvaluateEndpointTests : IClassFixture<WebAppFactory
 	public async Task Re_posting_without_the_ejected_choice_evaluates_cleanly()
 	{
 		using var client = factory.CreateClient();
-		var lowered = KnownRequest() with {
-			Gcses = [.. KnownGcses.Select(static row => row with { Grade = 1 })],
-			ChosenALevels = ["french"],
-		};
+		var lowered = KnownRequest() with { Gcses = [.. KnownGcses.Select(static row => row with { Grade = 1 })], ChosenALevels = ["french"] };
 
 		var rejected = await ReadBodyAsync(await PostAsync(client, lowered));
 		var pruned = lowered with {
