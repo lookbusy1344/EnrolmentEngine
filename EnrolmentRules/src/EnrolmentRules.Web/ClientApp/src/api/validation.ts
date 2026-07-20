@@ -9,6 +9,8 @@ import type {
   EnrolmentOptionsResponse,
   ExplanationResponse,
   OptionItem,
+  QualificationGradeOptions,
+  QualificationSubjectGroup,
 } from './contracts'
 
 export function parseOptionsResponse(value: unknown): EnrolmentOptionsResponse | null {
@@ -18,8 +20,8 @@ export function parseOptionsResponse(value: unknown): EnrolmentOptionsResponse |
 
   const gcseSubjects = parseArray(value.gcseSubjects, parseOptionItem)
   const aLevelSubjects = parseArray(value.aLevelSubjects, parseOptionItem)
-  const priorQualificationSubjects = parseArray(value.priorQualificationSubjects, parseOptionItem)
-  const qualificationTypes = parseArray(value.qualificationTypes, parseOptionItem)
+  const priorQualificationSubjects = parseArray(value.priorQualificationSubjects, parseQualificationSubjectGroup)
+  const qualificationGrades = parseArray(value.qualificationGrades, parseQualificationGradeOptions)
   const hobbies = parseArray(value.hobbies, parseOptionItem)
   if (
     typeof value.defaultDateOfBirth !== 'string' ||
@@ -28,7 +30,7 @@ export function parseOptionsResponse(value: unknown): EnrolmentOptionsResponse |
     gcseSubjects === null ||
     aLevelSubjects === null ||
     priorQualificationSubjects === null ||
-    qualificationTypes === null ||
+    qualificationGrades === null ||
     hobbies === null
   ) {
     return null
@@ -40,7 +42,7 @@ export function parseOptionsResponse(value: unknown): EnrolmentOptionsResponse |
     gcseSubjects,
     aLevelSubjects,
     priorQualificationSubjects,
-    qualificationTypes,
+    qualificationGrades,
     hobbies,
     choiceLimit: value.choiceLimit,
   }
@@ -145,6 +147,24 @@ function parseOptionItem(value: unknown): OptionItem | null {
 
   const { value: itemValue, label } = value
   return typeof itemValue === 'string' && typeof label === 'string' ? { value: itemValue, label } : null
+}
+
+function parseQualificationSubjectGroup(value: unknown): QualificationSubjectGroup | null {
+  if (!isRecord(value) || typeof value.type !== 'string' || typeof value.label !== 'string') {
+    return null
+  }
+
+  const subjects = parseArray(value.subjects, parseOptionItem)
+  return subjects === null ? null : { type: value.type, label: value.label, subjects }
+}
+
+function parseQualificationGradeOptions(value: unknown): QualificationGradeOptions | null {
+  if (!isRecord(value) || typeof value.type !== 'string') {
+    return null
+  }
+
+  const grades = parseArray(value.grades, parseOptionItem)
+  return grades === null ? null : { type: value.type, grades }
 }
 
 function parseStringItem(value: unknown): string | null {

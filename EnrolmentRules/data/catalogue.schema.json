@@ -32,7 +32,6 @@
     "qualification_type": {
       "type": "string",
       "enum": [
-        "gcse",
         "a_level",
         "btec_extended_certificate",
         "btec_diploma",

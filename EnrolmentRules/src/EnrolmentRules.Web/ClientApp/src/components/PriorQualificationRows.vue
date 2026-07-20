@@ -1,12 +1,21 @@
 <script setup lang="ts">
 import { watch } from 'vue'
-import type { OptionItem } from '../api/contracts'
+import type { OptionItem, QualificationGradeOptions, QualificationSubjectGroup } from '../api/contracts'
 import { isEmptyPriorQualificationRow, type PriorQualificationRow } from '../state/enrolmentState'
 
-defineProps<{
-  subjectOptions: readonly OptionItem[]
-  qualificationTypes: readonly OptionItem[]
+const props = defineProps<{
+  subjectGroups: readonly QualificationSubjectGroup[]
+  qualificationGrades: readonly QualificationGradeOptions[]
 }>()
+
+function gradeOptionsFor(type: string): readonly OptionItem[] {
+  return props.qualificationGrades.find((entry) => entry.type === type)?.grades ?? []
+}
+
+/** The exact qualification type whichever group `subjectValue` belongs to represents — inferred rather than picked directly. */
+function typeForSubject(subjectValue: string): string {
+  return props.subjectGroups.find((group) => group.subjects.some((option) => option.value === subjectValue))?.type ?? ''
+}
 
 const rows = defineModel<PriorQualificationRow[]>('rows', { required: true })
 
@@ -25,11 +34,7 @@ function removeRow(index: number): void {
 }
 
 function setSubject(index: number, value: string): void {
-  rows.value[index] = { ...rows.value[index], subject: value }
-}
-
-function setType(index: number, value: string): void {
-  rows.value[index] = { ...rows.value[index], type: value }
+  rows.value[index] = { ...rows.value[index], subject: value, type: typeForSubject(value), grade: '' }
 }
 
 function setGrade(index: number, value: string): void {
@@ -39,9 +44,9 @@ function setGrade(index: number, value: string): void {
 
 <template>
   <fieldset id="qualifications-section" class="border rounded p-3 mb-3">
-    <legend class="h6">Prior qualifications</legend>
+    <legend class="h6">Other qualifications</legend>
     <div v-for="(row, index) in rows" :key="index" class="row g-2 mb-2 align-items-end">
-      <div class="col-sm-4">
+      <div class="col-sm-6">
         <label :for="`prior-subject-${index}`" class="form-label">Subject</label>
         <select
           :id="`prior-subject-${index}`"
@@ -50,34 +55,26 @@ function setGrade(index: number, value: string): void {
           @change="setSubject(index, ($event.target as HTMLSelectElement).value)"
         >
           <option value="">-- select --</option>
-          <option v-for="option in subjectOptions" :key="option.value" :value="option.value">
-            {{ option.label }}
-          </option>
+          <optgroup v-for="group in subjectGroups" :key="group.type" :label="group.label">
+            <option v-for="option in group.subjects" :key="option.value" :value="option.value">
+              {{ option.label }}
+            </option>
+          </optgroup>
         </select>
       </div>
-      <div class="col-sm-3">
-        <label :for="`prior-type-${index}`" class="form-label">Type</label>
+      <div class="col-sm-4">
+        <label :for="`prior-grade-${index}`" class="form-label">Grade</label>
         <select
-          :id="`prior-type-${index}`"
+          :id="`prior-grade-${index}`"
           class="form-select"
-          :value="row.type"
-          @change="setType(index, ($event.target as HTMLSelectElement).value)"
+          :value="row.grade"
+          @change="setGrade(index, ($event.target as HTMLSelectElement).value)"
         >
           <option value="">-- select --</option>
-          <option v-for="option in qualificationTypes" :key="option.value" :value="option.value">
+          <option v-for="option in gradeOptionsFor(row.type)" :key="option.value" :value="option.value">
             {{ option.label }}
           </option>
         </select>
-      </div>
-      <div class="col-sm-3">
-        <label :for="`prior-grade-${index}`" class="form-label">Grade</label>
-        <input
-          :id="`prior-grade-${index}`"
-          type="text"
-          class="form-control"
-          :value="row.grade"
-          @input="setGrade(index, ($event.target as HTMLInputElement).value)"
-        />
       </div>
       <div v-if="!isEmptyPriorQualificationRow(row)" class="col-sm-2">
         <button type="button" class="btn btn-sm btn-outline-danger" @click="removeRow(index)">Remove</button>

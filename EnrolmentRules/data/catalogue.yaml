@@ -14,13 +14,17 @@
 #                          alternative rating green/amber this run OR being a committed A-level; `chosen` —
 #                          only a committed `chosen_a_levels` entry counts). Multiple groups are all
 #                          required (AND).
-#   entry_equivalents    — typed prior qualifications that satisfy or strengthen subject entry.
+#   entry_equivalents    — typed prior qualifications that satisfy or strengthen subject entry. A
+#                          `chosen`-mode prerequisite naming a subject S also accepts a held prior
+#                          qualification matching one of the dependent subject's entry_equivalents for S,
+#                          in addition to a `chosen_a_levels` entry for S this run.
 #   restudy_bar          — a subject-specific bar on re-studying when the student already holds a prior
 #                          qualification of one of the listed types in the same subject.
 #
 # Illustrative sample policy: French ↔ German is a hard clash (red); History ↔ Art is a soft clash
 # (amber). Music carries the only own-time requirement (plays_) and an illustrative veto (a trombone
-# player is barred even though that hobby satisfies the own-time prefix). Further Maths needs Maths.
+# player is barred even though that hobby satisfies the own-time prefix). Further Maths needs Maths,
+# chosen this run or already held as a prior A-level at grade D or above.
 subjects:
   - subject: maths
     priority_weight: 50
@@ -31,6 +35,8 @@ subjects:
     prerequisites:
       - any_of: [ maths ]
         requires: chosen
+    entry_equivalents:
+      - { subject: maths, type: a_level, min_grade: d }
   - subject: physics
     priority_weight: 48
     regression: { slope: 0.90, intercept: -2.20 }

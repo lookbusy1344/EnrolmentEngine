@@ -13,13 +13,13 @@ Rules:
     Expression: >-
       true
   - RuleName: 'further_maths:green'
-    SuccessEvent: 'Entry met; predicted A-level grade at or above the green threshold'
+    SuccessEvent: 'Entry met (GCSE Maths at the top grade, or a matching prior qualification); predicted A-level grade at or above the green threshold'
     Expression: >-
-      facts.Gcse("maths") >= facts.TopEntry && facts.Average >= facts.FurtherMathsAverageEntry && facts.Predicted("further_maths") >= ALevelGrade.D && facts.DfeProbabilityAtOrAbove("further_maths", ALevelGrade.D) >= facts.MinDfeGreenProbabilityAtOrAbove
+      (facts.HasEntryEquivalent("further_maths") || (facts.Gcse("maths") >= facts.TopEntry && facts.Average >= facts.FurtherMathsAverageEntry)) && facts.Predicted("further_maths") >= ALevelGrade.D && facts.DfeProbabilityAtOrAbove("further_maths", ALevelGrade.D) >= facts.MinDfeGreenProbabilityAtOrAbove
   - RuleName: 'further_maths:amber'
-    SuccessEvent: 'Entry met; predicted A-level grade at or above the amber threshold'
+    SuccessEvent: 'Entry met (GCSE Maths at the top grade, or a matching prior qualification); predicted A-level grade at or above the amber threshold'
     Expression: >-
-      facts.Gcse("maths") >= facts.TopEntry && facts.Average >= facts.FurtherMathsAverageEntry && facts.Predicted("further_maths") >= ALevelGrade.E && facts.DfeProbabilityAtOrAbove("further_maths", ALevelGrade.E) >= facts.MinDfeAmberProbabilityAtOrAbove
+      (facts.HasEntryEquivalent("further_maths") || (facts.Gcse("maths") >= facts.TopEntry && facts.Average >= facts.FurtherMathsAverageEntry)) && facts.Predicted("further_maths") >= ALevelGrade.E && facts.DfeProbabilityAtOrAbove("further_maths", ALevelGrade.E) >= facts.MinDfeAmberProbabilityAtOrAbove
   - RuleName: 'further_maths:red'
     SuccessEvent: 'Entry requirement unmet or predicted grade below the amber threshold'
     Expression: >-

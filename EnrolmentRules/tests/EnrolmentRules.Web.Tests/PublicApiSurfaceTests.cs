@@ -1,8 +1,8 @@
 namespace EnrolmentRules.Web.Tests;
 
 using AwesomeAssertions;
-using Domain;
 using Pages;
+using Services;
 
 public sealed class PublicApiSurfaceTests
 {
@@ -20,11 +20,11 @@ public sealed class PublicApiSurfaceTests
 	}
 
 	[Fact]
-	public void Razor_model_exposes_cached_qualification_type_options()
+	public void Razor_model_exposes_type_keyed_prior_qualification_subject_groups()
 	{
-		var property = typeof(RazorModel).GetProperty(nameof(RazorModel.QualificationTypeOptions));
+		var property = typeof(RazorModel).GetProperty(nameof(RazorModel.PriorQualificationSubjectGroups));
 
 		property.Should().NotBeNull();
-		property!.PropertyType.Should().BeAssignableTo<IReadOnlyList<QualificationType>>();
+		property!.PropertyType.Should().BeAssignableTo<IReadOnlyList<SubjectOptionGroup>>();
 	}
 }

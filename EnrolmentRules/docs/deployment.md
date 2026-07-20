@@ -232,7 +232,7 @@ gcloud services enable run.googleapis.com cloudbuild.googleapis.com artifactregi
 
 gcloud run deploy enrolment-web \
   --source . \
-  --region europe-west2 \
+  --region europe-west1 \
   --allow-unauthenticated \
   --max-instances 1 \
   --session-affinity
@@ -278,14 +278,14 @@ and `.gitignore` ignores it.
 > upload set explicit rather than inherited.
 
 To deploy a pre-built image instead: `gcloud run deploy enrolment-web --image ghcr.io/...
---region europe-west2 --allow-unauthenticated` (mirror the image into Artifact Registry first
+--region europe-west1 --allow-unauthenticated` (mirror the image into Artifact Registry first
 if Cloud Run can't pull from GHCR).
 
 Useful follow-ups:
 
 ```bash
-gcloud run services logs read enrolment-web --region europe-west2 --limit 50
-gcloud run services delete enrolment-web --region europe-west2     # tear down
+gcloud run services logs read enrolment-web --region europe-west1 --limit 50
+gcloud run services delete enrolment-web --region europe-west1     # tear down
 ```
 
 Signing up with the free trial credit? Read [Cost after the free trial](#cost-after-the-free-trial)
@@ -319,13 +319,13 @@ The relevant monthly allowances:
 
 Two caveats mean "free" here means *pennies*, not a guaranteed zero:
 
-- **`europe-west2` (London) is a Tier 2 pricing region, and the free tier is "applied as a
-  spending based discount using Tier 1 pricing".** Tier 2 rates are higher, so that fixed
-  discount buys proportionally *less* usage than the headline allowances above. There is still
-  ample headroom for a demo, but the margin is narrower than the table implies. Deploying to
-  **`europe-west1` (Belgium)** — Tier 1, ~20 ms further from UK users — gets the full value of
-  the free tier. `europe-west3` (Frankfurt) and `europe-west6` (Zurich) are also Tier 2;
-  `europe-west4` (Netherlands), `europe-west9` (Paris) and `europe-north1` (Finland) are Tier 1.
+- **Not every European region gets full free-tier value.** The free tier is "applied as a
+  spending based discount using Tier 1 pricing", so a Tier 2 region's higher rates buy
+  proportionally *less* usage than the headline allowances above. The scripted default,
+  **`europe-west1` (Belgium)**, is Tier 1, so this deployment gets the full value of the free
+  tier; `europe-west4` (Netherlands), `europe-west9` (Paris) and `europe-north1` (Finland) are
+  also Tier 1. `europe-west2` (London, ~20 ms closer to UK users), `europe-west3` (Frankfurt)
+  and `europe-west6` (Zurich) are Tier 2 — usable, but with a narrower free-tier margin.
 - **The free egress allowance is "1 GB of outbound data transfer from North America per
   month"** — North America only. Egress from a European region is billed from the first byte
   (order of $0.12/GB). For a small page served to modest traffic this is pennies per month, but

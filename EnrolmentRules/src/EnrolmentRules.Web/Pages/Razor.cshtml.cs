@@ -1,5 +1,7 @@
 namespace EnrolmentRules.Web.Pages;
 
+using System.Text.Json;
+using Api;
 using Domain;
 using Engine;
 using Microsoft.AspNetCore.Mvc;
@@ -30,14 +32,24 @@ public sealed class RazorModel(IEnrolmentSessionStore sessionStore, IEnrolmentEn
 	/// <summary>The recognised GCSE subject keys <see cref="Domain.StudentValidator" /> accepts.</summary>
 	public IReadOnlyList<string> GcseSubjectOptions => options.GcseSubjectOptions;
 
-	public IReadOnlyList<QualificationType> QualificationTypeOptions => options.QualificationTypeOptions;
+	/// <summary>Every grade token defined for each <see cref="QualificationType" />, weakest to strongest — the dependent Grade dropdown's options.</summary>
+	public IReadOnlyDictionary<QualificationType, IReadOnlyList<string>> QualificationGradeOptions => options.QualificationGradeOptions;
 
 	/// <summary>
-	///     Subject names a prior qualification can usefully name: every A-level in the catalogue (restudy
-	///     bars compare a prior qualification's subject against the A-level being considered) plus every
-	///     catalogue <c>entry_equivalents</c> subject (e.g. "applied_science").
+	///     <see cref="QualificationGradeOptions" /> keyed by wire name and serialised for the page's inline
+	///     script, which repopulates the Grade dropdown once Type is inferred from the chosen Subject,
+	///     without a full postback.
 	/// </summary>
-	public IReadOnlyList<string> PriorQualificationSubjectOptions => options.PriorQualificationSubjectOptions;
+	public string QualificationGradeOptionsJson =>
+		JsonSerializer.Serialize(EnrolmentOptionsResponseFactory.Create(options).QualificationGrades, EnrolmentApiJsonContext.Default.Options);
+
+	/// <summary>
+	///     Subject names a prior qualification can usefully name, one group per exact
+	///     <see cref="QualificationType" /> — rendered as <c>&lt;optgroup&gt;</c> sections carrying their
+	///     type in a <c>data-type</c> attribute, so the page's inline script can infer Type from whichever
+	///     group the chosen subject belongs to instead of the student picking it directly.
+	/// </summary>
+	public IReadOnlyList<SubjectOptionGroup> PriorQualificationSubjectGroups => options.PriorQualificationSubjectGroups;
 
 	/// <summary>Every own-time/veto activity tag referenced anywhere in the catalogue, plus a few illustrative examples.</summary>
 	public IReadOnlyList<string> HobbyOptions => options.HobbyOptions;

@@ -11,7 +11,7 @@ EnrolmentRules is a decision-support system for A-Level enrolment. It gives staf
 explainable recommendation for each student and subject while keeping the final decision visible
 and accountable.
 
-### [Green Shoots demo site](https://enrolment-web-716005672573.europe-west2.run.app)
+### [Green Shoots demo site](https://enrolment-web-716005672573.europe-west1.run.app)
 
 **May take a couple of seconds to wake the docker image**, be patient!
 
@@ -98,7 +98,7 @@ running service can also reload an approved policy set without replacing the sof
 The engine is a reusable decision library rather than a fixed application with one user
 interface. An organisation can place the same decision-making capability behind:
 
-- an intranet or website similar to [Green Shoots demo site](https://enrolment-web-716005672573.europe-west2.run.app)
+- an intranet or website similar to [Green Shoots demo site](https://enrolment-web-716005672573.europe-west1.run.app)
 - a student or staff mobile app
 - a desktop enrolment application
 - a command-line or batch-processing tool

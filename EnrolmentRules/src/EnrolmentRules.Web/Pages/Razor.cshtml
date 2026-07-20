@@ -110,32 +110,35 @@
 		</fieldset>
 
 		<fieldset id="qualifications-section" class="border rounded p-3 mb-3">
-			<legend class="h6">Prior qualifications</legend>
+			<legend class="h6">Other qualifications</legend>
 			@for (var i = 0; i < Model.PriorQualifications.Count; i++) {
 				var row = Model.PriorQualifications[i];
 				<div class="row g-2 mb-2 align-items-end">
-					<div class="col-sm-4">
+					<div class="col-sm-6">
 						<label for="PriorQualifications_@(i)__Subject" class="form-label">Subject</label>
-						<select id="PriorQualifications_@(i)__Subject" name="PriorQualifications[@i].Subject" class="form-select">
+						<select id="PriorQualifications_@(i)__Subject" name="PriorQualifications[@i].Subject" class="form-select prior-qualification-subject">
 							<option value="">-- select --</option>
-							@foreach (var subjectKey in Model.PriorQualificationSubjectOptions) {
-								<option value="@subjectKey" selected="@(row.Subject == subjectKey)">@TextFormatting.Prettify(subjectKey)</option>
+							@foreach (var group in Model.PriorQualificationSubjectGroups) {
+								<optgroup label="@group.Label" data-type="@group.Type">
+									@foreach (var subjectKey in group.Subjects) {
+										<option value="@subjectKey" selected="@(row.Subject == subjectKey)">@TextFormatting.Prettify(subjectKey)</option>
+									}
+								</optgroup>
 							}
 						</select>
+						<input type="hidden" id="PriorQualifications_@(i)__Type" name="PriorQualifications[@i].Type" value="@row.Type"
+						       class="prior-qualification-type"/>
 					</div>
-					<div class="col-sm-3">
-						<label for="PriorQualifications_@(i)__Type" class="form-label">Type</label>
-						<select id="PriorQualifications_@(i)__Type" name="PriorQualifications[@i].Type" class="form-select">
-							<option value="">-- select --</option>
-							@foreach (var type in Model.QualificationTypeOptions) {
-								<option value="@type" selected="@(row.Type == type)">@TextFormatting.Label(type)</option>
-							}
-						</select>
-					</div>
-					<div class="col-sm-3">
+					<div class="col-sm-4">
 						<label for="PriorQualifications_@(i)__Grade" class="form-label">Grade</label>
-						<input type="text" id="PriorQualifications_@(i)__Grade" name="PriorQualifications[@i].Grade" class="form-control"
-						       value="@row.Grade"/>
+						<select id="PriorQualifications_@(i)__Grade" name="PriorQualifications[@i].Grade" class="form-select prior-qualification-grade">
+							<option value="">-- select --</option>
+							@if (row.Type is { } selectedType) {
+								@foreach (var grade in Model.QualificationGradeOptions[selectedType]) {
+									<option value="@grade" selected="@(row.Grade == grade)">@TextFormatting.GradeLabel(selectedType, grade)</option>
+								}
+							}
+						</select>
 					</div>
 					@if (!row.ToRow().IsEmpty) {
 						<div class="col-sm-2">
@@ -150,6 +153,48 @@
 			        class="btn btn-sm btn-outline-primary">Add
 			</button>
 		</fieldset>
+
+		<script type="application/json" id="qualification-grade-options">@Html.Raw(Model.QualificationGradeOptionsJson)</script>
+		<script>
+			(function () {
+				var gradeOptionsByType = JSON.parse(document.getElementById("qualification-grade-options").textContent)
+					.reduce(function (byType, entry) {
+						byType[entry.type] = entry.grades;
+						return byType;
+					}, {});
+
+				function populateGradeOptions(gradeSelect, type) {
+					var grades = gradeOptionsByType[type] || [];
+					gradeSelect.replaceChildren();
+					var placeholder = document.createElement("option");
+					placeholder.value = "";
+					placeholder.textContent = "-- select --";
+					gradeSelect.append(placeholder);
+					grades.forEach(function (grade) {
+						var option = document.createElement("option");
+						option.value = grade.value;
+						option.textContent = grade.label;
+						gradeSelect.append(option);
+					});
+				}
+
+				document.getElementById("qualifications-section").addEventListener("change", function (event) {
+					var subjectSelect = event.target;
+					if (!subjectSelect.classList.contains("prior-qualification-subject")) {
+						return;
+					}
+
+					var selectedOption = subjectSelect.options[subjectSelect.selectedIndex];
+					var type = selectedOption && selectedOption.parentElement instanceof HTMLOptGroupElement
+						? selectedOption.parentElement.dataset.type
+						: "";
+
+					var row = subjectSelect.closest(".row");
+					row.querySelector(".prior-qualification-type").value = type;
+					populateGradeOptions(row.querySelector(".prior-qualification-grade"), type);
+				});
+			})();
+		</script>
 
 		<fieldset id="hobbies-section" class="border rounded p-3 mb-3">
 			<legend class="h6">Hobbies</legend>

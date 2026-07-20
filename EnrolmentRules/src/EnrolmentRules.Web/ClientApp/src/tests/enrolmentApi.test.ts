@@ -7,8 +7,22 @@ const sampleOptions: EnrolmentOptionsResponse = {
   defaultAge: 16,
   gcseSubjects: [{ value: 'english_language', label: 'English Language' }],
   aLevelSubjects: [{ value: 'mathematics', label: 'Mathematics' }],
-  priorQualificationSubjects: [{ value: 'applied_science', label: 'Applied Science' }],
-  qualificationTypes: [{ value: 'BtecDiploma', label: 'BTEC Diploma' }],
+  priorQualificationSubjects: [
+    {
+      type: 'BtecDiploma',
+      label: 'BTEC Diploma examples',
+      subjects: [{ value: 'applied_science', label: 'Applied Science' }],
+    },
+  ],
+  qualificationGrades: [
+    {
+      type: 'BtecDiploma',
+      grades: [
+        { value: 'pass', label: 'Pass' },
+        { value: 'merit', label: 'Merit' },
+      ],
+    },
+  ],
   hobbies: [{ value: 'chess_club', label: 'Chess Club' }],
   choiceLimit: 3,
 }

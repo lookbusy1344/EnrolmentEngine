@@ -44,18 +44,6 @@ public sealed class EnrolmentOptionsEndpointTests : IClassFixture<WebAppFactory>
 	}
 
 	[Fact]
-	public async Task Contains_qualification_type_labels()
-	{
-		using var client = factory.CreateClient();
-
-		var body = await client.GetFromJsonAsync("/api/enrolment/options", EnrolmentApiJsonContext.Default.EnrolmentOptionsResponse);
-
-		body.Should().NotBeNull();
-		body!.QualificationTypes.Should().NotBeEmpty();
-		body.QualificationTypes.Should().Contain(item => item.Value == "BtecDiploma" && item.Label == "BTEC Diploma");
-	}
-
-	[Fact]
 	public async Task Contains_prior_qualification_subjects_and_hobbies()
 	{
 		using var client = factory.CreateClient();
@@ -66,5 +54,33 @@ public sealed class EnrolmentOptionsEndpointTests : IClassFixture<WebAppFactory>
 		body!.PriorQualificationSubjects.Should().NotBeEmpty();
 		body.Hobbies.Should().NotBeEmpty();
 		body.ChoiceLimit.Should().BeGreaterThan(0);
+	}
+
+	/// <summary>
+	///     Every prior-qualification subject group is keyed by the exact <c>QualificationType</c> it
+	///     represents — including the two BTEC sub-types, which share a Subject picker section label prefix
+	///     but are distinct qualifications with distinct grade scales — so the front end can infer Type
+	///     from whichever group the student's chosen subject belongs to, instead of asking for it directly.
+	/// </summary>
+	[Fact]
+	public async Task Groups_prior_qualification_subjects_by_exact_qualification_type()
+	{
+		using var client = factory.CreateClient();
+
+		var body = await client.GetFromJsonAsync("/api/enrolment/options", EnrolmentApiJsonContext.Default.EnrolmentOptionsResponse);
+
+		body.Should().NotBeNull();
+		var groups = body!.PriorQualificationSubjects.ToDictionary(group => group.Type, group => group.Subjects.Select(o => o.Value).ToArray());
+
+		groups.Keys.Should().BeEquivalentTo(["ALevel", "BtecExtendedCertificate", "BtecDiploma", "Nvq"]);
+
+		groups["ALevel"].Should().Contain("biology");
+		groups["ALevel"].Should().NotContain("applied_science", "applied_science is a btec_diploma entry equivalent, not an A-level");
+
+		groups["BtecDiploma"].Should().Contain("applied_science", "the only real catalogue entry equivalent is typed btec_diploma");
+
+		groups["BtecExtendedCertificate"].Should().BeEquivalentTo(["business", "health_and_social_care", "information_technology"]);
+
+		groups["Nvq"].Should().BeEquivalentTo(["construction", "business_administration", "hospitality_and_catering"]);
 	}
 }

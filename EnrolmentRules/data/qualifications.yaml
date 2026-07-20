@@ -2,17 +2,6 @@
 # Each entry carries a type, a grade token, an ordinal within that type, and an A-level-points
 # equivalence used for prediction raises and policy thresholds.
 qualifications:
-  - type: gcse
-    grades:
-      - { grade: "1", ordinal: 1, equivalence: 0.0 }
-      - { grade: "2", ordinal: 2, equivalence: 0.5 }
-      - { grade: "3", ordinal: 3, equivalence: 1.0 }
-      - { grade: "4", ordinal: 4, equivalence: 2.0 }
-      - { grade: "5", ordinal: 5, equivalence: 3.0 }
-      - { grade: "6", ordinal: 6, equivalence: 4.0 }
-      - { grade: "7", ordinal: 7, equivalence: 5.0 }
-      - { grade: "8", ordinal: 8, equivalence: 5.5 }
-      - { grade: "9", ordinal: 9, equivalence: 6.0 }
   - type: a_level
     grades:
       - { grade: u, ordinal: 0, equivalence: 0.0 }

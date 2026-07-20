@@ -5,14 +5,26 @@ using Infrastructure;
 /// <summary>A single picker option: the value posted back to <c>/api/enrolment/evaluate</c>, and its display label.</summary>
 public sealed record OptionItem(string Value, string Label);
 
+/// <summary>The Grade dropdown options for one <see cref="Domain.QualificationType" />, keyed by its wire name (e.g. <c>"BtecDiploma"</c>).</summary>
+public sealed record QualificationGradeOptions(string Type, EquatableArray<OptionItem> Grades);
+
+/// <summary>
+///     One labelled section of the prior-qualification Subject dropdown, keyed by the exact
+///     <see cref="Domain.QualificationType" /> it represents (e.g. <c>"BtecDiploma"</c>, label "BTEC
+///     Diploma examples"). The client infers Type from whichever group the chosen subject belongs to,
+///     rather than asking for it directly — the two BTEC sub-types share nothing but a label prefix, so
+///     Type cannot be collapsed into "which of three buckets did they pick".
+/// </summary>
+public sealed record QualificationSubjectGroup(string Type, string Label, EquatableArray<OptionItem> Subjects);
+
 /// <summary>Every option and default the Vue app needs to render a facts form without duplicating catalogue knowledge.</summary>
 public sealed record EnrolmentOptionsResponse(
 	DateOnly DefaultDateOfBirth,
 	int DefaultAge,
 	EquatableArray<OptionItem> GcseSubjects,
 	EquatableArray<OptionItem> ALevelSubjects,
-	EquatableArray<OptionItem> PriorQualificationSubjects,
-	EquatableArray<OptionItem> QualificationTypes,
+	EquatableArray<QualificationSubjectGroup> PriorQualificationSubjects,
+	EquatableArray<QualificationGradeOptions> QualificationGrades,
 	EquatableArray<OptionItem> Hobbies,
 	int ChoiceLimit);
 

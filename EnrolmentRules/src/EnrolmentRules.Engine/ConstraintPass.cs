@@ -39,7 +39,8 @@ internal static class ConstraintPass
 	public static IReadOnlyList<Adjustment> Evaluate(
 		IReadOnlyList<SubjectRating> ratings,
 		StudentProfile profile,
-		CatalogueData catalogue)
+		CatalogueData catalogue,
+		QualificationScale? scale = null)
 	{
 		var baseRating = ratings.ToDictionary(static r => r.Subject, static r => r.Rating);
 
@@ -55,7 +56,7 @@ internal static class ConstraintPass
 		// would need ordered resolution, which the catalogue does not currently exercise.
 		var adjustedRating = Apply(ratings, nonPrerequisite).ToDictionary(static r => r.Subject, static r => r.Rating);
 		return [
-			.. Prerequisites(baseRating, adjustedRating, profile.ChosenALevels, catalogue),
+			.. Prerequisites(baseRating, adjustedRating, profile, catalogue, scale ?? QualificationScale.Default),
 			.. nonPrerequisite,
 		];
 	}
@@ -90,31 +91,54 @@ internal static class ConstraintPass
 		ratings.TryGetValue(subject, out var rating) && rating != Rating.Red;
 
 	// Prerequisite (→ amber or red): for each qualifying subject, every dependency group must be satisfied —
-	// a group is met when any one of its alternatives qualifies in this run or is a committed A-level (a
-	// committed choice is at least as strong as a qualifying rating). Availability reads the phase-one
-	// adjusted ratings, so a dependency vetoed / restudy-barred / excluded to red no longer counts as
-	// qualifying; the dependent selection and the adjustment's From still read the base ratings. Each unmet
-	// group emits a downgrade to its own severity; most-severe-wins composes them in Apply. Driven by the
-	// Catalogue's per-subject Prerequisites table, not hardcoded — editing the table is how policy changes.
+	// a group is met when any one of its alternatives qualifies in this run, is a committed A-level (a
+	// committed choice is at least as strong as a qualifying rating), or is already held as a prior
+	// qualification matching one of the dependent subject's entry_equivalents (e.g. a held A-level Maths at
+	// grade D+ satisfies Further Maths's Maths prerequisite without choosing Maths again this run).
+	// Availability reads the phase-one adjusted ratings, so a dependency vetoed / restudy-barred / excluded
+	// to red no longer counts as qualifying; the dependent selection and the adjustment's From still read
+	// the base ratings. Each unmet group emits a downgrade to its own severity; most-severe-wins composes
+	// them in Apply. Driven by the Catalogue's per-subject Prerequisites/EntryEquivalents tables, not
+	// hardcoded — editing those tables is how policy changes.
 	private static IEnumerable<Adjustment> Prerequisites(
 		Dictionary<Subject, Rating> baseRatings,
 		Dictionary<Subject, Rating> adjustedRatings,
-		IReadOnlyList<Subject> chosenALevels,
-		CatalogueData catalogue)
+		StudentProfile profile,
+		CatalogueData catalogue,
+		QualificationScale scale)
 	{
-		bool Available(Subject required, PrerequisiteSatisfaction requires) =>
-			IsPrerequisiteAvailable(required, requires, r => Qualifies(adjustedRatings, r), chosenALevels);
-
 		foreach (var subject in catalogue.Subjects.Where(subject => catalogue.Meta(subject).Prerequisites.Count > 0)) {
 			if (!Qualifies(baseRatings, subject)) {
 				continue;
 			}
+
+			bool Available(Subject required, PrerequisiteSatisfaction requires) =>
+				IsPrerequisiteAvailable(required, requires, r => Qualifies(adjustedRatings, r), profile.ChosenALevels)
+				|| HasPriorQualificationEquivalent(subject, required, profile.PriorQualifications, catalogue, scale);
 
 			foreach (var adjustment in PrerequisiteAdjustments(
 						 subject, baseRatings[subject], catalogue.Meta(subject).Prerequisites, Available)) {
 				yield return adjustment;
 			}
 		}
+	}
+
+	/// <summary>
+	///     Whether the student already holds a prior qualification satisfying one of <paramref name="subject" />'s
+	///     <see cref="SubjectMeta.EntryEquivalents" /> for the required prerequisite subject — the prior-
+	///     qualification path alongside <see cref="IsPrerequisiteAvailable" />'s chosen/qualifying paths.
+	/// </summary>
+	private static bool HasPriorQualificationEquivalent(
+		Subject subject,
+		Subject required,
+		IReadOnlyList<Qualification> priorQualifications,
+		CatalogueData catalogue,
+		QualificationScale scale)
+	{
+		var requiredName = EnumNames.NameOf(required);
+		return catalogue.Meta(subject).EntryEquivalents
+			.Where(equivalent => string.Equals(equivalent.Subject, requiredName, StringComparison.OrdinalIgnoreCase))
+			.Any(equivalent => priorQualifications.Any(qualification => scale.Satisfies(qualification, equivalent)));
 	}
 
 	/// <summary>

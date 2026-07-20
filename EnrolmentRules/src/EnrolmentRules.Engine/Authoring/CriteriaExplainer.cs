@@ -25,7 +25,6 @@ public sealed class CriteriaExplainer(
 	// produces its bullet, just in the generic form, so a new qualification type cannot drop a criterion.
 	private static readonly FrozenDictionary<QualificationType, string> QualificationNames =
 		new Dictionary<QualificationType, string> {
-			[QualificationType.Gcse] = "GCSE",
 			[QualificationType.ALevel] = "A-level",
 			[QualificationType.BtecExtendedCertificate] = "BTEC Extended Certificate",
 			[QualificationType.BtecDiploma] = "BTEC Diploma",

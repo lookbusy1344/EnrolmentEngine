@@ -66,6 +66,27 @@ public sealed class ConstraintPassIntegrationTests
 	}
 
 	[Fact]
+	public void further_maths_prerequisite_is_met_by_a_prior_maths_a_level_at_grade_d_or_above()
+	{
+		// The catalogue declares an entry_equivalent on further_maths for a prior a_level maths at grade
+		// d or above — a held qualification is at least as strong as choosing to (re-)study Maths this run.
+		var profile = Profile() with { PriorQualifications = [new("maths", QualificationType.ALevel, "d")] };
+		var adjustments = ConstraintPass.Evaluate(Ratings((Subject.FurtherMaths, Rating.Green)), profile, Harness.Catalogue, Harness.Scale);
+
+		adjustments.Should().NotContain(a => a.Subject == Subject.FurtherMaths);
+	}
+
+	[Fact]
+	public void further_maths_prerequisite_is_unmet_by_a_prior_maths_a_level_below_grade_d()
+	{
+		var profile = Profile() with { PriorQualifications = [new("maths", QualificationType.ALevel, "e")] };
+		var adjustments = ConstraintPass.Evaluate(Ratings((Subject.FurtherMaths, Rating.Green)), profile, Harness.Catalogue, Harness.Scale);
+
+		adjustments.Should().ContainSingle(a => a.Subject == Subject.FurtherMaths)
+			.Which.To.Should().Be(Rating.Red);
+	}
+
+	[Fact]
 	public void further_maths_is_forced_red_when_a_different_subject_is_committed()
 	{
 		// A committed A-level that isn't Maths does not satisfy Further Maths's prerequisite.

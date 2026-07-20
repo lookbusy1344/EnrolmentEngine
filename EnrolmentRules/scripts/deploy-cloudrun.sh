@@ -18,7 +18,9 @@ repo="$(cd "$here/.." && pwd)"
 cd "$repo"
 
 service="${SERVICE:-enrolment-web}"
-region="${REGION:-europe-west2}"
+# europe-west1 (Belgium) is a Tier 1 pricing region, so the Always Free allowance goes
+# further than in europe-west2 (London) — see docs/deployment.md "Cost after the free trial".
+region="${REGION:-europe-west1}"
 revision_file="$repo/.sourcerevision"
 
 trap 'rm -f "$revision_file"' EXIT

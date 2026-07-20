@@ -30,7 +30,7 @@ public sealed class EnrolmentSessionStoreTests
 			"student-2",
 			new DateOnly(2009, 3, 14),
 			[new("maths", 8), new("english_language", 6)],
-			[new("Maths", QualificationType.Gcse, "8")],
+			[new("Maths", QualificationType.ALevel, "a")],
 			["chess_club", "coding"],
 			[new("maths"), new("physics")]);
 

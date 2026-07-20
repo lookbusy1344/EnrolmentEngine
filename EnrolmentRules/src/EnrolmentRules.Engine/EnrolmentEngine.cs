@@ -346,7 +346,7 @@ public sealed class EnrolmentEngine : IEnrolmentEngine
 		var (gate, baseRatings) = evaluator.EvaluateWithGate(profile, gcses, lookup, cancellationToken);
 		cancellationToken.ThrowIfCancellationRequested();
 
-		var constraintAdjustments = ConstraintPass.Evaluate(baseRatings, profile, Catalogue);
+		var constraintAdjustments = ConstraintPass.Evaluate(baseRatings, profile, Catalogue, Scale);
 		var afterConstraints = ConstraintPass.Apply(baseRatings, constraintAdjustments);
 		cancellationToken.ThrowIfCancellationRequested();
 

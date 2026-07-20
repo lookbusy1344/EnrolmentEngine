@@ -109,6 +109,33 @@ public sealed class PriorQualificationTests
 		with.Recommendations.Single(r => r.Subject == Subject.Biology).Rating.Should().Be(Rating.Green);
 	}
 
+	/// <summary>
+	///     A modest GCSE profile (5x grade 6, average 6.0) clears neither Further Maths's own Maths-GCSE
+	///     gate (top_entry, 7) nor its average bar (further_maths_average_entry, 7.0) — but a held prior
+	///     A-level in Maths at grade D or above is real evidence the student can do further study in the
+	///     subject, and should open the same entry path <see cref="an_entry_equivalent_opens_the_biology_entry_path_through_the_engine" />
+	///     exercises for Biology's BTEC equivalent.
+	/// </summary>
+	[Fact]
+	public void an_entry_equivalent_opens_the_further_maths_entry_path_through_the_engine()
+	{
+		var engine = Harness.ShippedEngine();
+		var withoutEquivalent = Student(new() {
+			["maths"] = 6,
+			["english_language"] = 6,
+			["english_literature"] = 6,
+			["physics"] = 6,
+			["chemistry"] = 6,
+		});
+		var withEquivalent = withoutEquivalent with { PriorQualifications = [new("maths", QualificationType.ALevel, "d")] };
+
+		var without = engine.Evaluate(withoutEquivalent);
+		var with = engine.Evaluate(withEquivalent);
+
+		without.Recommendations.Single(r => r.Subject == Subject.FurtherMaths).Rating.Should().Be(Rating.Red);
+		with.Recommendations.Single(r => r.Subject == Subject.FurtherMaths).Rating.Should().NotBe(Rating.Red);
+	}
+
 	[Fact]
 	public void the_engine_keeps_its_injected_qualification_scale_after_construction()
 	{
@@ -192,7 +219,6 @@ public sealed class QualificationScaleResolutionTests
 	private static string ScaleSchema => File.ReadAllText(Path.Combine(Harness.DataDir, QualificationScaleStore.SchemaFileName));
 
 	[Theory]
-	[InlineData(QualificationType.Gcse, "\"gcse\"")]
 	[InlineData(QualificationType.ALevel, "\"a_level\"")]
 	[InlineData(QualificationType.BtecExtendedCertificate, "\"btec_extended_certificate\"")]
 	public void qualification_type_serialises_to_snake_case(QualificationType type, string expected) =>
@@ -355,9 +381,6 @@ public sealed class QualificationScaleResolutionTests
 	{
 		const string missingNvq = """
 								  qualifications:
-								    - type: gcse
-								      grades:
-								        - { grade: "1", ordinal: 1, equivalence: 0.0 }
 								    - type: a_level
 								      grades:
 								        - { grade: u, ordinal: 0, equivalence: 0.0 }
@@ -384,12 +407,9 @@ public sealed class QualificationScaleResolutionTests
 	{
 		const string duplicateType = """
 									 qualifications:
-									   - type: gcse
+									   - type: a_level
 									     grades:
-									       - { grade: "1", ordinal: 1, equivalence: 0.0 }
-									   - type: gcse
-									     grades:
-									       - { grade: "1", ordinal: 1, equivalence: 0.0 }
+									       - { grade: u, ordinal: 0, equivalence: 0.0 }
 									   - type: a_level
 									     grades:
 									       - { grade: u, ordinal: 0, equivalence: 0.0 }
@@ -411,7 +431,7 @@ public sealed class QualificationScaleResolutionTests
 
 		act.Should().Throw<QualificationScaleException>()
 			.WithMessage("*duplicate-type.yaml*")
-			.Which.Message.Should().Contain("duplicate entry for gcse grade '1'");
+			.Which.Message.Should().Contain("duplicate entry for a_level grade 'u'");
 	}
 
 	[Fact]

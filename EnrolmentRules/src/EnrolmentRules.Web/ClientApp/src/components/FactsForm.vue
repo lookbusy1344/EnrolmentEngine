@@ -42,8 +42,8 @@ function setDateOfBirth(value: string): void {
     <GcseRows v-model:rows="gcses" :subject-options="options.gcseSubjects" />
     <PriorQualificationRows
       v-model:rows="priorQualifications"
-      :subject-options="options.priorQualificationSubjects"
-      :qualification-types="options.qualificationTypes"
+      :subject-groups="options.priorQualificationSubjects"
+      :qualification-grades="options.qualificationGrades"
     />
     <HobbyRows v-model:rows="hobbies" :hobby-options="options.hobbies" />
   </section>

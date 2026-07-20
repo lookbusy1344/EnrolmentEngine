@@ -11,7 +11,7 @@ public sealed class EnrolmentFormMapperTests
 		"student-1",
 		new DateOnly(2009, 6, 1),
 		[new("maths", 8), new(null, null), new("", null)],
-		[new("Maths", QualificationType.Gcse, "8"), new(null, null, null)],
+		[new("Maths", QualificationType.ALevel, "a"), new(null, null, null)],
 		["chess_club", "", "  ", "coding"],
 		[new("maths"), new("physics")]);
 
@@ -29,7 +29,7 @@ public sealed class EnrolmentFormMapperTests
 	{
 		var student = EnrolmentFormMapper.ToStudentInput(BaseSession);
 
-		student.PriorQualifications.Should().Equal(new Qualification("Maths", QualificationType.Gcse, "8"));
+		student.PriorQualifications.Should().Equal(new Qualification("Maths", QualificationType.ALevel, "a"));
 	}
 
 	[Fact]
@@ -63,7 +63,7 @@ public sealed class EnrolmentFormMapperTests
 		var input = new SaveFactsInput(
 			new DateOnly(2010, 1, 1),
 			[new("physics", 7)],
-			[new("English", QualificationType.Gcse, "7")],
+			[new("English", QualificationType.ALevel, "b")],
 			["swimming"]);
 
 		var updated = EnrolmentFormMapper.Apply(input, current);
@@ -72,7 +72,7 @@ public sealed class EnrolmentFormMapperTests
 		updated.ChosenALevels.Should().Equal(new Subject("biology"));
 		updated.DateOfBirth.Should().Be(new(2010, 1, 1));
 		updated.Gcses.Should().Equal(new GcseRow("physics", 7));
-		updated.PriorQualifications.Should().Equal(new PriorQualificationRow("English", QualificationType.Gcse, "7"));
+		updated.PriorQualifications.Should().Equal(new PriorQualificationRow("English", QualificationType.ALevel, "b"));
 		updated.Hobbies.Should().Equal("swimming");
 	}
 }

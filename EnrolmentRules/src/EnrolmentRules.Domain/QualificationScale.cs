@@ -119,6 +119,15 @@ public sealed class QualificationScale
 
 	internal bool ContainsType(QualificationType type) => byType.ContainsKey(type);
 
+	/// <summary>
+	///     Every grade token defined for <paramref name="type" />, weakest to strongest by
+	///     <see cref="QualificationScaleEntry.Ordinal" /> — the picker options for a dependent Grade dropdown.
+	/// </summary>
+	public IReadOnlyList<string> GradesInOrder(QualificationType type) =>
+		byType.TryGetValue(type, out var grades)
+			? [.. grades.Values.OrderBy(static entry => entry.Ordinal).Select(static entry => entry.Grade)]
+			: [];
+
 	internal static QualificationScale RequireCompleteCoverage(QualificationScale scale)
 	{
 		var missing = AllTypes

@@ -127,7 +127,7 @@ This was downgraded:
 
 ## further\_maths
 Final rating: red. maths prerequisite not met
-The engine rated this **green** because: Entry met; predicted A-level grade at or above the green threshold (predicted A\*, ~6).
+The engine rated this **green** because: Entry met (GCSE Maths at the top grade, or a matching prior qualification); predicted A-level grade at or above the green threshold (predicted A\*, ~6).
 This was downgraded:
 - green → red: maths prerequisite not met
 

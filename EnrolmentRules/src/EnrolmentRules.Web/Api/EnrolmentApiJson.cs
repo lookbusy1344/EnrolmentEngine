@@ -10,6 +10,8 @@ using System.Text.Json.Serialization;
 /// </summary>
 [JsonSourceGenerationOptions(PropertyNamingPolicy = JsonKnownNamingPolicy.CamelCase)]
 [JsonSerializable(typeof(OptionItem))]
+[JsonSerializable(typeof(QualificationGradeOptions))]
+[JsonSerializable(typeof(QualificationSubjectGroup))]
 [JsonSerializable(typeof(EnrolmentOptionsResponse))]
 [JsonSerializable(typeof(EnrolmentEvaluateRequest))]
 [JsonSerializable(typeof(EnrolmentEvaluateResponse))]

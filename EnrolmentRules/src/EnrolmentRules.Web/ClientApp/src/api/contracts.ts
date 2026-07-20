@@ -7,13 +7,29 @@ export interface OptionItem {
   readonly label: string
 }
 
+export interface QualificationGradeOptions {
+  readonly type: string
+  readonly grades: readonly OptionItem[]
+}
+
+/**
+ * One labelled section of the prior-qualification Subject dropdown, keyed by the exact qualification
+ * type it represents (e.g. "BtecDiploma"). The client infers `type` for a row from whichever group the
+ * chosen subject belongs to, rather than asking the student for it directly.
+ */
+export interface QualificationSubjectGroup {
+  readonly type: string
+  readonly label: string
+  readonly subjects: readonly OptionItem[]
+}
+
 export interface EnrolmentOptionsResponse {
   readonly defaultDateOfBirth: string
   readonly defaultAge: number
   readonly gcseSubjects: readonly OptionItem[]
   readonly aLevelSubjects: readonly OptionItem[]
-  readonly priorQualificationSubjects: readonly OptionItem[]
-  readonly qualificationTypes: readonly OptionItem[]
+  readonly priorQualificationSubjects: readonly QualificationSubjectGroup[]
+  readonly qualificationGrades: readonly QualificationGradeOptions[]
   readonly hobbies: readonly OptionItem[]
   readonly choiceLimit: number
 }
