@@ -3,7 +3,8 @@
 ![Green shoots](Green_shoots.jpg)
 
 This is a recreation of a proprietary project I developed a few years ago, to assist in enrolment decision-making and ensure policies were
-consistently followed. The real system was also capable of writing the complete enrolment package into the management information system, and printing forms for signature.
+consistently followed. The real system was also capable of writing the complete enrolment package into the management information system, and printing
+forms for signature.
 
 ## A monotonic, rules-as-data engine for A-Level enrolment decisions
 

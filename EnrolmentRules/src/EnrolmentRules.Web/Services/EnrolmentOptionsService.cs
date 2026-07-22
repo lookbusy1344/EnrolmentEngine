@@ -49,6 +49,13 @@ public sealed class EnrolmentOptionsService(IEnrolmentEngine engine, TimeProvide
 		[QualificationType.Nvq] = ["construction", "business_administration", "hospitality_and_catering"],
 	};
 
+	private static readonly Dictionary<QualificationType, string> SubjectGroupLabels = new() {
+		[QualificationType.ALevel] = "A-Level subjects",
+		[QualificationType.BtecExtendedCertificate] = "BTEC Extended Certificate examples",
+		[QualificationType.BtecDiploma] = "BTEC Diploma examples",
+		[QualificationType.Nvq] = "NVQ examples",
+	};
+
 	private IEnrolmentEvaluator Evaluator => engine;
 
 	/// <summary>The authoritative A-level list, in catalogue order — the web layer keeps no parallel subject list.</summary>
@@ -56,13 +63,6 @@ public sealed class EnrolmentOptionsService(IEnrolmentEngine engine, TimeProvide
 
 	/// <summary>The recognised GCSE subject keys <see cref="Domain.StudentValidator" /> accepts.</summary>
 	public IReadOnlyList<string> GcseSubjectOptions { get; } = [.. GcseSubjects.Known.Order(StringComparer.Ordinal)];
-
-	private static readonly Dictionary<QualificationType, string> SubjectGroupLabels = new() {
-		[QualificationType.ALevel] = "A-Level subjects",
-		[QualificationType.BtecExtendedCertificate] = "BTEC Extended Certificate examples",
-		[QualificationType.BtecDiploma] = "BTEC Diploma examples",
-		[QualificationType.Nvq] = "NVQ examples",
-	};
 
 	public IReadOnlyList<QualificationType> QualificationTypeOptions => CachedQualificationTypeOptions;
 

@@ -116,12 +116,14 @@
 				<div class="row g-2 mb-2 align-items-end">
 					<div class="col-sm-6">
 						<label for="PriorQualifications_@(i)__Subject" class="form-label">Subject</label>
-						<select id="PriorQualifications_@(i)__Subject" name="PriorQualifications[@i].Subject" class="form-select prior-qualification-subject">
+						<select id="PriorQualifications_@(i)__Subject" name="PriorQualifications[@i].Subject"
+						        class="form-select prior-qualification-subject">
 							<option value="">-- select --</option>
 							@foreach (var group in Model.PriorQualificationSubjectGroups) {
 								<optgroup label="@group.Label" data-type="@group.Type">
 									@foreach (var subjectKey in group.Subjects) {
-										<option value="@subjectKey" selected="@(row.Subject == subjectKey)">@TextFormatting.Prettify(subjectKey)</option>
+										<option value="@subjectKey"
+										        selected="@(row.Subject == subjectKey)">@TextFormatting.Prettify(subjectKey)</option>
 									}
 								</optgroup>
 							}
@@ -131,7 +133,8 @@
 					</div>
 					<div class="col-sm-4">
 						<label for="PriorQualifications_@(i)__Grade" class="form-label">Grade</label>
-						<select id="PriorQualifications_@(i)__Grade" name="PriorQualifications[@i].Grade" class="form-select prior-qualification-grade">
+						<select id="PriorQualifications_@(i)__Grade" name="PriorQualifications[@i].Grade"
+						        class="form-select prior-qualification-grade">
 							<option value="">-- select --</option>
 							@if (row.Type is { } selectedType) {
 								@foreach (var grade in Model.QualificationGradeOptions[selectedType]) {

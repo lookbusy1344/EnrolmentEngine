@@ -72,15 +72,15 @@ public sealed class EnrolmentOptionsEndpointTests : IClassFixture<WebAppFactory>
 		body.Should().NotBeNull();
 		var groups = body!.PriorQualificationSubjects.ToDictionary(group => group.Type, group => group.Subjects.Select(o => o.Value).ToArray());
 
-		groups.Keys.Should().BeEquivalentTo(["ALevel", "BtecExtendedCertificate", "BtecDiploma", "Nvq"]);
+		groups.Keys.Should().BeEquivalentTo("ALevel", "BtecExtendedCertificate", "BtecDiploma", "Nvq");
 
 		groups["ALevel"].Should().Contain("biology");
 		groups["ALevel"].Should().NotContain("applied_science", "applied_science is a btec_diploma entry equivalent, not an A-level");
 
 		groups["BtecDiploma"].Should().Contain("applied_science", "the only real catalogue entry equivalent is typed btec_diploma");
 
-		groups["BtecExtendedCertificate"].Should().BeEquivalentTo(["business", "health_and_social_care", "information_technology"]);
+		groups["BtecExtendedCertificate"].Should().BeEquivalentTo("business", "health_and_social_care", "information_technology");
 
-		groups["Nvq"].Should().BeEquivalentTo(["construction", "business_administration", "hospitality_and_catering"]);
+		groups["Nvq"].Should().BeEquivalentTo("construction", "business_administration", "hospitality_and_catering");
 	}
 }

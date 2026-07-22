@@ -16,7 +16,7 @@
         >enrolment engine</a
       >.
     </p>
-    <svg class="sprout" viewBox="0 0 120 140" aria-hidden="true" focusable="false">
+    <svg class="sprout d-none d-sm-block" viewBox="0 0 120 140" aria-hidden="true" focusable="false">
       <path class="soil" d="M18 120h84" fill="none" stroke-width="2.5" stroke-linecap="round" />
       <path class="stem" d="M60 122V54" fill="none" stroke-width="4" stroke-linecap="round" />
       <path class="leaf-a" d="M60 78C60 58 40 46 14 50c0 20 20 34 46 28Z" />
