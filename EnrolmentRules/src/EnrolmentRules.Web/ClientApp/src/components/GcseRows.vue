@@ -1,7 +1,7 @@
-<script setup lang="ts">
+<script lang="ts" setup>
 import { watch } from 'vue'
 import type { OptionItem } from '../api/contracts'
-import { isEmptyGcseRow, isGcseSubjectChosenElsewhere, type GcseRow } from '../state/enrolmentState'
+import { type GcseRow, isEmptyGcseRow, isGcseSubjectChosenElsewhere } from '../state/enrolmentState'
 import { normalizeGcseGrade } from '../state/gcseGrade'
 
 const props = defineProps<{
@@ -55,8 +55,8 @@ function commitGrade(index: number): void {
         <label :for="`gcse-subject-${index}`" class="form-label">Subject</label>
         <select
           :id="`gcse-subject-${index}`"
-          class="form-select"
           :value="row.subject"
+          class="form-select"
           @change="setSubject(index, ($event.target as HTMLSelectElement).value)"
         >
           <option value="">-- select --</option>
@@ -69,19 +69,19 @@ function commitGrade(index: number): void {
         <label :for="`gcse-grade-${index}`" class="form-label">Grade</label>
         <input
           :id="`gcse-grade-${index}`"
-          type="number"
-          class="form-control"
-          min="1"
-          max="9"
-          step="any"
-          placeholder="1-9"
           :value="row.grade ?? ''"
-          @input="setGrade(index, ($event.target as HTMLInputElement).value)"
+          class="form-control"
+          max="9"
+          min="1"
+          placeholder="1-9"
+          step="any"
+          type="number"
           @change="commitGrade(index)"
+          @input="setGrade(index, ($event.target as HTMLInputElement).value)"
         />
       </div>
       <div v-if="!isEmptyGcseRow(row)" class="col-sm-3">
-        <button type="button" class="btn btn-sm btn-outline-danger" @click="removeRow(index)">Remove</button>
+        <button class="btn btn-sm btn-outline-danger" type="button" @click="removeRow(index)">Remove</button>
       </div>
     </div>
   </fieldset>

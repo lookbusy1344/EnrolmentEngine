@@ -1,4 +1,4 @@
-<script setup lang="ts">
+<script lang="ts" setup>
 import type { EnrolmentEvaluateResponse } from '../api/contracts'
 import SubjectCard from './SubjectCard.vue'
 
@@ -62,8 +62,8 @@ function isChosen(subject: string): boolean {
         <SubjectCard
           v-for="explanation in evaluation.result.explanations"
           :key="explanation.subject.value"
-          :explanation="explanation"
           :chosen="isChosen(explanation.subject.value)"
+          :explanation="explanation"
           @choose="emit('choose', $event)"
           @remove="emit('remove', $event)"
         />

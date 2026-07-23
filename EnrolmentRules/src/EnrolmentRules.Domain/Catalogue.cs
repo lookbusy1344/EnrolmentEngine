@@ -272,7 +272,7 @@ public static class Catalogue
 					.. entry.EntryEquivalents.Select(static equivalent =>
 						new EntryEquivalent(equivalent.Subject, equivalent.Type, equivalent.MinGrade)),
 				],
-				RestudyBar = entry.RestudyBar is { } restudyBar
+				RestudyBar = entry.RestudyBar is CatalogueRestudyBar restudyBar
 					? new RestudyBar([.. restudyBar.Types], restudyBar.Severity ?? Rating.Red)
 					: null,
 			};

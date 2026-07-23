@@ -27,6 +27,10 @@ public sealed class AdditionalSubjectsTests
 	// programme to enrol on. Every other added subject stays red there.
 	private static readonly Subject[] Accessible = [Subject.Psychology, Subject.Sociology, Subject.MediaStudies];
 
+	// The humanities average-GCSE entry bar — now a literal in workflows/subject-ratings.yaml rather than a
+	// named policy threshold. Kept here so the geography boundary test documents the value it probes.
+	private const int HumanitiesAverageEntry = 5;
+
 	// A full set of GCSEs at one uniform grade, so the average equals that grade.
 	private static (string, int)[] Uniform(int grade) => [
 		("maths", grade), ("english_language", grade), ("physics", grade),
@@ -93,10 +97,10 @@ public sealed class AdditionalSubjectsTests
 	{
 		// There is no geography GCSE key, so entry is the humanities average plus English. One full set just
 		// below the humanities-average entry fails; lifting the average over the threshold opens entry.
-		var below = Rate(Uniform((int)Harness.Thresholds.HumanitiesAverageEntry - 1));
+		var below = Rate(Uniform(HumanitiesAverageEntry - 1));
 		Of(below, Subject.Geography).Should().Be(Rating.Red);
 
-		var met = Rate(Uniform((int)Harness.Thresholds.HumanitiesAverageEntry + 2));
+		var met = Rate(Uniform(HumanitiesAverageEntry + 2));
 		Of(met, Subject.Geography).Should().NotBe(Rating.Red);
 	}
 

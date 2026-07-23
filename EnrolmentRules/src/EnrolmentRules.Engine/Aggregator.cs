@@ -71,7 +71,7 @@ internal static class Aggregator
 	public static IReadOnlyList<Adjustment> CapGreens(
 		IReadOnlyList<SubjectRating> ratings, CatalogueData catalogue, PolicyThresholds thresholds)
 	{
-		if (thresholds.MaxGreenChoices is not { } cap) {
+		if (thresholds.MaxGreenChoices is not int cap) {
 			return [];
 		}
 

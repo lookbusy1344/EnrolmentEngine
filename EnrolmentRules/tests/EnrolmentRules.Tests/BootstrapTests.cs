@@ -193,8 +193,8 @@ public sealed class BootstrapTests
 		private readonly byte[] thresholds;
 		private readonly byte[] thresholdsSchema;
 		private readonly byte[] transitionMatrix;
-		private readonly IReadOnlyList<(string FileName, byte[] Bytes)> workflows;
 		private readonly byte[] workflowSchema;
+		private readonly IReadOnlyList<(string FileName, byte[] Bytes)> workflows;
 
 		private InMemoryDataSource(
 			IReadOnlyList<(string FileName, byte[] Bytes)> workflows,

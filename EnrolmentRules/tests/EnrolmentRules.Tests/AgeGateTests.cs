@@ -8,16 +8,23 @@ using Domain;
 ///     student fact; the prediction stage derives a whole-years age from it as of the run's reference date
 ///     (<see cref="Harness.AsOf" />) and threads it to <see cref="RatingFacts.Age" />, which a workflow lambda
 ///     consumes — the gate <em>policy</em> is data in <c>subject-ratings.yaml</c>, not host code. Art's entry
-///     threshold is age-conditional: an adult (≥ <see cref="PolicyThresholds.AdultAge" />) must reach
-///     <see cref="PolicyThresholds.TopEntry" /> at GCSE, a younger student only <see cref="PolicyThresholds.StrongEntry" />.
+///     threshold is age-conditional: an adult (≥ 19, a literal in the Art rule) must reach
+///     <see cref="PolicyThresholds.TopEntry" /> at GCSE, a younger student only
+///     <see cref="PolicyThresholds.StandardEntry" />.
 ///     These run <em>through the engine</em>, so a transposed comparison or a dropped <c>facts.Age</c> binding
 ///     in the YAML breaks a test.
 /// </summary>
 public sealed class AgeGateTests
 {
+	// The Art age gate is written with literals in subject-ratings.yaml (facts.Age >= 19). Grade 6 sits
+	// between StandardEntry (5, the sub-adult bar) and TopEntry (7, the adult bar), so a sub-adult clears
+	// entry at 6 while an adult does not — the value that discriminates the two branches.
+	private const int AdultAge = 19;
+	private const int SubAdultClearingGrade = 6;
+
 	// Births that land exactly on Younger/Adult ages on the fixed reference date (birthday on the as-of day).
-	private static readonly DateOnly YoungerDob = Harness.AsOf.AddYears(-(Harness.Thresholds.AdultAge - 1));
-	private static readonly DateOnly AdultDob = Harness.AsOf.AddYears(-Harness.Thresholds.AdultAge);
+	private static readonly DateOnly YoungerDob = Harness.AsOf.AddYears(-(AdultAge - 1));
+	private static readonly DateOnly AdultDob = Harness.AsOf.AddYears(-AdultAge);
 
 	// A strong, eligible student whose art prediction comfortably clears its tiers, so the only swing factor
 	// left for art is the age-conditional GCSE entry threshold. Art GCSE and date of birth are caller-supplied.
@@ -43,11 +50,11 @@ public sealed class AgeGateTests
 	[Fact]
 	public void age_is_derived_from_date_of_birth_as_of_the_reference_date()
 	{
-		AgeCalculator.WholeYears(YoungerDob, Harness.AsOf).Should().Be(Harness.Thresholds.AdultAge - 1);
-		AgeCalculator.WholeYears(AdultDob, Harness.AsOf).Should().Be(Harness.Thresholds.AdultAge);
+		AgeCalculator.WholeYears(YoungerDob, Harness.AsOf).Should().Be(AdultAge - 1);
+		AgeCalculator.WholeYears(AdultDob, Harness.AsOf).Should().Be(AdultAge);
 
 		// The day before the adult's birthday, they are still sub-adult — the gate tracks the reference date.
-		AgeCalculator.WholeYears(AdultDob, Harness.AsOf.AddDays(-1)).Should().Be(Harness.Thresholds.AdultAge - 1);
+		AgeCalculator.WholeYears(AdultDob, Harness.AsOf.AddDays(-1)).Should().Be(AdultAge - 1);
 	}
 
 	[Fact]
@@ -70,14 +77,14 @@ public sealed class AgeGateTests
 	}
 
 	[Fact]
-	public void a_younger_student_clears_art_entry_at_the_strong_threshold() =>
-		// Art GCSE exactly at StrongEntry: a sub-adult meets entry, so the rating is decided by prediction, not the gate.
-		RateArt(YoungerDob, Harness.Thresholds.StrongEntry).Should().NotBe(Rating.Red);
+	public void a_younger_student_clears_art_entry_at_the_sub_adult_threshold() =>
+		// Art GCSE at grade 6 (above StandardEntry 5): a sub-adult meets entry, so the rating is decided by prediction, not the gate.
+		RateArt(YoungerDob, SubAdultClearingGrade).Should().NotBe(Rating.Red);
 
 	[Fact]
-	public void an_adult_fails_art_entry_at_the_strong_threshold() =>
+	public void an_adult_fails_art_entry_at_the_sub_adult_threshold() =>
 		// The same art GCSE that suffices for a younger student is below the adult's TopEntry bar ⇒ entry unmet ⇒ red.
-		RateArt(AdultDob, Harness.Thresholds.StrongEntry).Should().Be(Rating.Red);
+		RateArt(AdultDob, SubAdultClearingGrade).Should().Be(Rating.Red);
 
 	[Fact]
 	public void an_adult_clears_art_entry_at_the_top_threshold() =>

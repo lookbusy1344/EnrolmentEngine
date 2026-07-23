@@ -6,11 +6,9 @@ namespace EnrolmentRules.Domain;
 ///     them as data rather than compile-time constants.
 /// </summary>
 /// <remarks>
-///     <see cref="AccessibleAverageEntry" /> is the average-GCSE bar for the accessible subjects
-///     (sociology). It is deliberately a knob of its own rather than a reuse of
-///     <see cref="HumanitiesAverageEntry" />, which history, geography, politics, religious studies and
-///     law also read: keeping them separate is what lets sociology sit at the eligibility minimum
-///     without dragging the other five humanities down with it.
+///     Only broad-brush, widely-shared bands live here as named knobs. One-off, course-specific
+///     average-GCSE bars (Further Maths, the humanities, the accessible tier) are written as literals
+///     directly in the rule expressions in <c>workflows/subject-ratings.yaml</c>.
 ///     <see cref="MaxChosenALevels" />, <see cref="HighAttainmentMaxChosenALevels" />, and
 ///     <see cref="HighAttainmentAverageGcse" /> drive the selected-programme cap in host code: most
 ///     students may choose up to <see cref="MaxChosenALevels" />, while students at or above
@@ -35,15 +33,10 @@ public sealed record PolicyThresholds(
 	int PassGrade,
 	int MinPasses,
 	int TopEntry,
-	int StrongEntry,
 	int StandardEntry,
 	int ExceptionalEntry,
-	double FurtherMathsAverageEntry,
-	double HumanitiesAverageEntry,
-	double AccessibleAverageEntry,
 	double MinDfeGreenProbabilityAtOrAbove,
 	double MinDfeAmberProbabilityAtOrAbove,
-	int AdultAge,
 	int MaxChosenALevels,
 	int HighAttainmentMaxChosenALevels,
 	double HighAttainmentAverageGcse,

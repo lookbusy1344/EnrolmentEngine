@@ -358,8 +358,8 @@ public sealed class EngineFactoryTests
 		private readonly byte[] shippedThresholds;
 		private readonly byte[] thresholdsSchema;
 		private readonly byte[] transitionMatrix;
-		private readonly IReadOnlyList<(string FileName, byte[] Bytes)> workflows;
 		private readonly byte[] workflowSchema;
+		private readonly IReadOnlyList<(string FileName, byte[] Bytes)> workflows;
 		private int activeReloadBuilds;
 		private int thresholdsOpenCount;
 

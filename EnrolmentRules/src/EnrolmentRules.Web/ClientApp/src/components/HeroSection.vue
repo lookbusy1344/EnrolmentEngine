@@ -1,5 +1,5 @@
 <template>
-  <section class="hero" aria-labelledby="hero-heading">
+  <section aria-labelledby="hero-heading" class="hero">
     <p class="hero-eyebrow">
       GCSEs in → A-Levels out
       <span class="mode-tag">Dynamic</span>
@@ -11,14 +11,14 @@
       can plant the right next step. A demo built on the
       <a
         href="https://github.com/lookbusy1344/EnrolmentEngine/tree/main/EnrolmentRules"
-        target="_blank"
         rel="noopener noreferrer"
+        target="_blank"
         >enrolment engine</a
       >.
     </p>
-    <svg class="sprout d-none d-sm-block" viewBox="0 0 120 140" aria-hidden="true" focusable="false">
-      <path class="soil" d="M18 120h84" fill="none" stroke-width="2.5" stroke-linecap="round" />
-      <path class="stem" d="M60 122V54" fill="none" stroke-width="4" stroke-linecap="round" />
+    <svg aria-hidden="true" class="sprout d-none d-sm-block" focusable="false" viewBox="0 0 120 140">
+      <path class="soil" d="M18 120h84" fill="none" stroke-linecap="round" stroke-width="2.5" />
+      <path class="stem" d="M60 122V54" fill="none" stroke-linecap="round" stroke-width="4" />
       <path class="leaf-a" d="M60 78C60 58 40 46 14 50c0 20 20 34 46 28Z" />
       <path class="leaf-b" d="M60 66C60 42 82 28 108 34c0 22-22 38-48 32Z" />
       <path class="leaf-c" d="M60 54c-6-14 2-30 16-34 6 14-2 30-16 34Z" />

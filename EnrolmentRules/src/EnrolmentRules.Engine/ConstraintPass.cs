@@ -224,7 +224,7 @@ internal static class ConstraintPass
 		CatalogueData catalogue)
 	{
 		foreach (var subject in catalogue.Subjects.Where(subject => catalogue.Meta(subject).BlockingActivities.Count > 0)) {
-			if (VetoingHobby(catalogue, subject, hobbies) is { } hobby) {
+			if (VetoingHobby(catalogue, subject, hobbies) is string hobby) {
 				yield return new(subject, RequireRating(ratings, subject), Rating.Red, AdjustmentKind.Veto, $"{VetoReasonPrefix}{hobby}");
 			}
 		}
@@ -241,7 +241,7 @@ internal static class ConstraintPass
 	{
 		foreach (var subject in catalogue.Subjects) {
 			var restudyBar = catalogue.Meta(subject).RestudyBar;
-			if (restudyBar is not { } bar) {
+			if (restudyBar is not RestudyBar bar) {
 				continue;
 			}
 

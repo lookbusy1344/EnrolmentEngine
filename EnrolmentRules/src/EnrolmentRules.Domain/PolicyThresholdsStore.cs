@@ -79,11 +79,6 @@ public static class PolicyThresholdsStore
 				$"top_entry {thresholds.TopEntry} is out of range ({min}–{max}).");
 		}
 
-		if (thresholds.StrongEntry is < Thresholds.MinGcseGrade or > Thresholds.MaxGcseGrade) {
-			throw new InvalidDataException(
-				$"strong_entry {thresholds.StrongEntry} is out of range ({min}–{max}).");
-		}
-
 		if (thresholds.StandardEntry is < Thresholds.MinGcseGrade or > Thresholds.MaxGcseGrade) {
 			throw new InvalidDataException(
 				$"standard_entry {thresholds.StandardEntry} is out of range ({min}–{max}).");
@@ -94,16 +89,9 @@ public static class PolicyThresholdsStore
 				$"exceptional_entry {thresholds.ExceptionalEntry} is out of range ({min}–{max}).");
 		}
 
-		if (thresholds.StandardEntry > thresholds.StrongEntry || thresholds.StrongEntry > thresholds.TopEntry
-															  || thresholds.TopEntry > thresholds.ExceptionalEntry) {
+		if (thresholds.StandardEntry > thresholds.TopEntry || thresholds.TopEntry > thresholds.ExceptionalEntry) {
 			throw new InvalidDataException(
-				"Entry thresholds must satisfy standard_entry <= strong_entry <= top_entry <= exceptional_entry.");
-		}
-
-		if (thresholds.FurtherMathsAverageEntry is < Thresholds.MinGcseGrade or > Thresholds.MaxGcseGrade
-			|| thresholds.HumanitiesAverageEntry is < Thresholds.MinGcseGrade or > Thresholds.MaxGcseGrade
-			|| thresholds.AccessibleAverageEntry is < Thresholds.MinGcseGrade or > Thresholds.MaxGcseGrade) {
-			throw new InvalidDataException("Average entry thresholds must stay within the GCSE scale.");
+				"Entry thresholds must satisfy standard_entry <= top_entry <= exceptional_entry.");
 		}
 
 		if (thresholds.MinDfeGreenProbabilityAtOrAbove is < 0 or > 1
@@ -114,10 +102,6 @@ public static class PolicyThresholdsStore
 
 		if (thresholds.MinDfeAmberProbabilityAtOrAbove > thresholds.MinDfeGreenProbabilityAtOrAbove) {
 			throw new InvalidDataException("Amber probability must not exceed green probability.");
-		}
-
-		if (thresholds.AdultAge <= 0) {
-			throw new InvalidDataException("adult_age must be positive.");
 		}
 
 		if (thresholds.MaxChosenALevels < 1) {

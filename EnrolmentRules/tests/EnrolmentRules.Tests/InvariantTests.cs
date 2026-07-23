@@ -101,7 +101,7 @@ public sealed partial class InvariantTests
 	}
 
 	[Fact]
-	public void workflow_threshold_comparisons_reference_named_constants_not_bare_numbers()
+	public void workflow_grade_gates_reference_named_bands_but_average_bars_may_be_literals()
 	{
 		var expressions =
 			from file in WorkflowFiles()
@@ -109,9 +109,14 @@ public sealed partial class InvariantTests
 			from expression in ExpressionsIn(WorkflowDocument(file).RootElement)
 			select (File: Path.GetFileName(file), Expression: expression);
 
+		// GCSE-grade and A-level-grade gates must still read a named band (facts.StandardEntry, ALevelGrade.*),
+		// never a bare grade number — those are the broad-brush, shared constants. The exceptions are the
+		// one-off, single-subject bars written as literals directly in the rule: the whole-profile average bar
+		// (facts.Average >= 7.0) and the adult-age gate (facts.Age >= 19). Strip those before checking for any
+		// remaining bare-number grade gate.
 		expressions.Should().OnlyContain(
-			expression => !BareNumericComparison().IsMatch(expression.Expression),
-			"rule thresholds must reference Thresholds/ALevelGrade constants rather than bare numeric literals");
+			expression => !BareNumericComparison().IsMatch(WholeStudentLiteralComparison().Replace(expression.Expression, "")),
+			"GCSE/A-level grade gates must reference named bands; only the whole-profile average and adult-age bars may be literals");
 	}
 
 	[Property(Arbitrary = new[] { typeof(StudentArbitraries) }, MaxTest = 250)]
@@ -172,6 +177,10 @@ public sealed partial class InvariantTests
 	[GeneratedRegex(@">=\s*\d")]
 	private static partial Regex BareNumericComparison();
 
+	// The whole-student bars (average GCSE, adult age) — the only comparisons allowed to read a bare literal.
+	[GeneratedRegex(@"facts\.(Average|Age)\s*(>=|<=|>|<)\s*\d+(\.\d+)?")]
+	private static partial Regex WholeStudentLiteralComparison();
+
 	private static JsonDocument WorkflowDocument(string fileName) =>
 		JsonDocument.Parse(WorkflowStore.NormalizeWorkflowDocument(
 			Path.Combine(Harness.WorkflowsDir, fileName),
@@ -187,7 +196,7 @@ public sealed partial class InvariantTests
 		switch (element.ValueKind) {
 			case JsonValueKind.Object:
 				foreach (var property in element.EnumerateObject()) {
-					if (property.NameEquals("Expression") && property.Value.GetString() is { } expression) {
+					if (property.NameEquals("Expression") && property.Value.GetString() is string expression) {
 						yield return expression;
 					}
 

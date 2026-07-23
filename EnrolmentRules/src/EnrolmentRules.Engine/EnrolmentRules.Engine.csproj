@@ -30,7 +30,7 @@
     </ItemGroup>
 
     <ItemGroup>
-        <PackageReference Include="JsonSchema.Net" Version="9.3.0" />
+        <PackageReference Include="JsonSchema.Net" Version="9.3.0"/>
         <PackageReference Include="RulesEngine" Version="6.0.1"/>
         <PackageReference Include="YamlDotNet" Version="18.1.0"/>
     </ItemGroup>

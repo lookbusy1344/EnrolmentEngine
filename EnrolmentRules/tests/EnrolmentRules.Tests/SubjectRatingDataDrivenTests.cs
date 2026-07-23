@@ -98,11 +98,11 @@ public sealed class SubjectRatingDataDrivenTests
 			    - RuleName: 'philosophy:green'
 			      SuccessEvent: 'Entry met; predicted A-level grade at or above the green threshold'
 			      Expression: >-
-			        facts.Average >= facts.HumanitiesAverageEntry && facts.Predicted("philosophy") >= ALevelGrade.B
+			        facts.Average >= 5.0 && facts.Predicted("philosophy") >= ALevelGrade.B
 			    - RuleName: 'philosophy:amber'
 			      SuccessEvent: 'Entry met; predicted A-level grade at or above the amber threshold'
 			      Expression: >-
-			        facts.Average >= facts.HumanitiesAverageEntry && facts.Predicted("philosophy") >= ALevelGrade.C
+			        facts.Average >= 5.0 && facts.Predicted("philosophy") >= ALevelGrade.C
 			    - RuleName: 'philosophy:red'
 			      SuccessEvent: 'Entry requirement unmet or predicted grade below the amber threshold'
 			      Expression: >-

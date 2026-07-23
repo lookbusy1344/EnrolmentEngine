@@ -134,7 +134,7 @@ public static class CliRunner
 			var loadedDataDirectory = dataDirectory();
 			var scale = QualificationScaleStore.LoadAndValidate(loadedDataDirectory);
 			var catalogue = CatalogueStore.LoadAndValidate(loadedDataDirectory, scale);
-			if (LoadValidStudent(path, stderr, catalogue, scale) is not { } student) {
+			if (LoadValidStudent(path, stderr, catalogue, scale) is not StudentInput student) {
 				return ExitInput;
 			}
 
@@ -162,7 +162,7 @@ public static class CliRunner
 		Func<string> workflowsDirectory,
 		Func<string> dataDirectory)
 	{
-		if (BuildEngine(stderr, workflowsDirectory, dataDirectory) is not { } engine) {
+		if (BuildEngine(stderr, workflowsDirectory, dataDirectory) is not EnrolmentEngine engine) {
 			return ExitInput;
 		}
 
@@ -187,11 +187,11 @@ public static class CliRunner
 		Func<string> workflowsDirectory,
 		Func<string> dataDirectory)
 	{
-		if (BuildEngine(stderr, workflowsDirectory, dataDirectory) is not { } engine) {
+		if (BuildEngine(stderr, workflowsDirectory, dataDirectory) is not EnrolmentEngine engine) {
 			return ExitInput;
 		}
 
-		if (Load(path, stderr) is not { } document) {
+		if (Load(path, stderr) is not StudentDocument document) {
 			return ExitInput;
 		}
 
@@ -271,7 +271,7 @@ public static class CliRunner
 			return ExitInput;
 		}
 
-		if (BuildEngine(stderr, workflowsDirectory, dataDirectory) is not { } engine) {
+		if (BuildEngine(stderr, workflowsDirectory, dataDirectory) is not EnrolmentEngine engine) {
 			return ExitInput;
 		}
 
@@ -346,7 +346,7 @@ public static class CliRunner
 	/// </summary>
 	private static StudentInput? LoadValidStudent(string path, TextWriter stderr, CatalogueData catalogue, QualificationScale scale)
 	{
-		if (Load(path, stderr) is not { } document) {
+		if (Load(path, stderr) is not StudentDocument document) {
 			return null;
 		}
 

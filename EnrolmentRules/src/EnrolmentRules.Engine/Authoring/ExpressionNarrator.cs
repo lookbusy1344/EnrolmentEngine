@@ -196,7 +196,7 @@ public static class ExpressionNarrator
 		};
 
 	private static double Constant(Type owner, string name) =>
-		owner.GetField(name, BindingFlags.Public | BindingFlags.Static)?.GetRawConstantValue() is { } value
+		owner.GetField(name, BindingFlags.Public | BindingFlags.Static)?.GetRawConstantValue() is object value
 			? Convert.ToDouble(value, CultureInfo.InvariantCulture)
 			: throw new CriteriaNarrationException($"'{owner.Name}.{name}' is not a known constant");
 

@@ -111,7 +111,7 @@ public sealed class PriorQualificationTests
 
 	/// <summary>
 	///     A modest GCSE profile (5x grade 6, average 6.0) clears neither Further Maths's own Maths-GCSE
-	///     gate (top_entry, 7) nor its average bar (further_maths_average_entry, 7.0) — but a held prior
+	///     gate (top_entry, 7) nor its average bar (the 7.0 literal in its rule) — but a held prior
 	///     A-level in Maths at grade D or above is real evidence the student can do further study in the
 	///     subject, and should open the same entry path <see cref="an_entry_equivalent_opens_the_biology_entry_path_through_the_engine" />
 	///     exercises for Biology's BTEC equivalent.

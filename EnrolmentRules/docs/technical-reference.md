@@ -298,16 +298,16 @@ The loader supplies `RuleExpressionType = LambdaExpression` automatically for ac
 rules, so the YAML stays focused on the business logic.
 
 Entry thresholds can branch on derived per-student signals. Art's GCSE bar is age-gated entirely
-in the YAML — host code exposes `facts.Age` (derived from `date_of_birth`) and the loaded tuning
-values (`facts.AdultAge`, `facts.TopEntry`, `facts.StandardEntry`); the branching policy lives in the
-rule expression (adults face the higher `facts.TopEntry` bar, under-adults the accessible
+in the YAML — host code exposes `facts.Age` (derived from `date_of_birth`) and the loaded entry bands
+(`facts.TopEntry`, `facts.StandardEntry`); the branching policy lives in the rule expression (adults —
+age `>= 19`, a one-off literal — face the higher `facts.TopEntry` bar, under-adults the accessible
 `facts.StandardEntry`):
 
 ```yaml
   - RuleName: 'art:green'
     SuccessEvent: 'Entry met (age-gated GCSE threshold); predicted A-level grade at or above the green threshold'
     Expression: >-
-      facts.Gcse("art") >= (facts.Age >= facts.AdultAge ? facts.TopEntry : facts.StandardEntry) &&
+      facts.Gcse("art") >= (facts.Age >= 19 ? facts.TopEntry : facts.StandardEntry) &&
       facts.Predicted("art") >= ALevelGrade.D &&
       facts.DfeProbabilityAtOrAbove("art", ALevelGrade.D) >= facts.MinDfeGreenProbabilityAtOrAbove
 ```

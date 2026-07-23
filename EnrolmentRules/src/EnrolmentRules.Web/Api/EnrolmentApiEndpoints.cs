@@ -34,6 +34,12 @@ public static class EnrolmentApiEndpoints
 		}
 
 		var evaluation = engine.TryExplain(input, cancellationToken);
+
+		// On the rejection path TryExplain has already found the stale choices internally but discards them, so
+		// StaleChoices re-runs the pipeline once to recover the subjects to eject. The cost lands only when a
+		// committed choice has gone red (a rare, already-degraded request), so the extra run is a deliberate
+		// simplicity-over-throughput trade — cheaper than widening the IEnrolmentEvaluator surface to return
+		// the ejected set from the failed ValidatedEvaluation. Revisit only if this path is ever shown hot.
 		var ejected = evaluation.Value is null ? engine.StaleChoices(input, cancellationToken) : [];
 		return TypedResults.Ok(EnrolmentEvaluateResponseFactory.Create(evaluation, ejected));
 	}

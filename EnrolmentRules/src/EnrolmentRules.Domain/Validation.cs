@@ -64,8 +64,8 @@ public static class StudentValidator
 
 		return [
 			.. RequiredText(student.Id, "student id"),
-			.. student.Gcses is { } gcses ? gcses.SelectMany(ValidateGcse) : ["gcses is required"],
-			.. student.Hobbies is { } hobbies
+			.. student.Gcses is EquatableDictionary<string, int> gcses ? gcses.SelectMany(ValidateGcse) : ["gcses is required"],
+			.. student.Hobbies is EquatableArray<string> hobbies
 				? hobbies
 					.Index()
 					.Where(static h => string.IsNullOrWhiteSpace(h.Item))

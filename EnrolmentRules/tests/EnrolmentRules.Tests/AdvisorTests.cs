@@ -94,8 +94,8 @@ public sealed class AdvisorTests
 			["chemistry"] = 9,
 			["biology"] = 9,
 			["history"] = 9,
-			["art"] = Harness.Thresholds.StrongEntry,
-		}, []) { DateOfBirth = Harness.AsOf.AddYears(-Harness.Thresholds.AdultAge) };
+			["art"] = 6, // below the adult's TopEntry (7) bar, so the age-gated advice must raise it
+		}, []) { DateOfBirth = Harness.AsOf.AddYears(-19) }; // exactly the adult-age gate written into the Art rule
 
 		var advice = engine.Advise(student);
 		var art = advice.Advice.Single(a => a.Subject == Subject.Art);

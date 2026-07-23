@@ -1,4 +1,4 @@
-<script setup lang="ts">
+<script lang="ts" setup>
 import type { EnrolmentOptionsResponse } from '../api/contracts'
 import type { GcseRow, PriorQualificationRow } from '../state/enrolmentState'
 import GcseRows from './GcseRows.vue'
@@ -26,13 +26,13 @@ function setDateOfBirth(value: string): void {
     <h2 id="facts-heading">About you</h2>
 
     <div class="mb-3 date-field">
-      <label for="date-of-birth" class="form-label">Date of birth</label>
+      <label class="form-label" for="date-of-birth">Date of birth</label>
       <div class="d-flex align-items-center gap-2 flex-nowrap">
         <input
           id="date-of-birth"
-          type="date"
-          class="form-control w-auto flex-shrink-0"
           :value="dateOfBirth ?? ''"
+          class="form-control w-auto flex-shrink-0"
+          type="date"
           @input="setDateOfBirth(($event.target as HTMLInputElement).value)"
         />
         <span v-if="age !== null" class="form-text mb-0 text-nowrap">Age: {{ age }}</span>
@@ -42,8 +42,8 @@ function setDateOfBirth(value: string): void {
     <GcseRows v-model:rows="gcses" :subject-options="options.gcseSubjects" />
     <PriorQualificationRows
       v-model:rows="priorQualifications"
-      :subject-groups="options.priorQualificationSubjects"
       :qualification-grades="options.qualificationGrades"
+      :subject-groups="options.priorQualificationSubjects"
     />
     <HobbyRows v-model:rows="hobbies" :hobby-options="options.hobbies" />
   </section>

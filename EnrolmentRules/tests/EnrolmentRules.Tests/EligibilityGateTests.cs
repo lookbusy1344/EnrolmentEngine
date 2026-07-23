@@ -35,14 +35,10 @@ public sealed class EligibilityGateTests
 		thresholds.PassGrade.Should().Be(4);
 		thresholds.MinPasses.Should().Be(5);
 		thresholds.TopEntry.Should().Be(7);
-		thresholds.StrongEntry.Should().Be(6);
 		thresholds.StandardEntry.Should().Be(5);
 		thresholds.ExceptionalEntry.Should().Be(8);
-		thresholds.FurtherMathsAverageEntry.Should().BeApproximately(7.0, 1e-9);
-		thresholds.HumanitiesAverageEntry.Should().BeApproximately(5.0, 1e-9);
 		thresholds.MinDfeGreenProbabilityAtOrAbove.Should().BeApproximately(0.60, 1e-9);
 		thresholds.MinDfeAmberProbabilityAtOrAbove.Should().BeApproximately(0.50, 1e-9);
-		thresholds.AdultAge.Should().Be(19);
 		thresholds.MaxChosenALevels.Should().Be(3);
 		thresholds.HighAttainmentMaxChosenALevels.Should().Be(4);
 		thresholds.HighAttainmentAverageGcse.Should().BeApproximately(7.5, 1e-9);
@@ -61,15 +57,10 @@ public sealed class EligibilityGateTests
 								   pass_grade: 4
 								   min_passes: 5
 								   top_entry: 7
-								   strong_entry: 6
 								   standard_entry: 5
 								   exceptional_entry: 8
-								   further_maths_average_entry: 7.0
-								   humanities_average_entry: 5.0
-								   accessible_average_entry: 4.0
 								   min_dfe_green_probability_at_or_above: 0.60
 								   min_dfe_amber_probability_at_or_above: 0.50
-								   adult_age: 19
 								   max_chosen_a_levels: 3
 								   high_attainment_max_chosen_a_levels: 4
 								   high_attainment_average_gcse: 7.5
@@ -92,15 +83,10 @@ public sealed class EligibilityGateTests
 							   pass_grade: 4
 							   min_passes: 5
 							   top_entry: 7
-							   strong_entry: 6
 							   standard_entry: 5
 							   exceptional_entry: 8
-							   further_maths_average_entry: 7.0
-							   humanities_average_entry: 5.0
-							   accessible_average_entry: 4.0
 							   min_dfe_green_probability_at_or_above: 0.60
 							   min_dfe_amber_probability_at_or_above: 0.50
-							   adult_age: 19
 							   max_chosen_a_levels: 4
 							   high_attainment_max_chosen_a_levels: 3
 							   high_attainment_average_gcse: 7.5
@@ -333,8 +319,8 @@ public sealed class EligibilityGateTests
 			.OnlyContain(static method => method.GetParameters().Last().ParameterType == typeof(CancellationToken));
 	}
 
-	// Strong all-round student sitting on the Art age gate: Art GCSE at StrongEntry (6) with a high average.
-	// A non-adult clears Art's strong-entry threshold; an adult is held to top-entry (7) and cannot. Born
+	// Strong all-round student sitting on the Art age gate: Art GCSE at grade 6 with a high average.
+	// A non-adult clears Art's standard-entry threshold (5); an adult is held to top-entry (7) and cannot. Born
 	// 2007-09-01, so they are 18 before that date in 2026 and 19 on/after it.
 	private static StudentInput ArtAgeGatedStudent() =>
 		new("S-AGE",

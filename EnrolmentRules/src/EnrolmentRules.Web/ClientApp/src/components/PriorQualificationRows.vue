@@ -1,4 +1,4 @@
-<script setup lang="ts">
+<script lang="ts" setup>
 import { watch } from 'vue'
 import type { OptionItem, QualificationGradeOptions, QualificationSubjectGroup } from '../api/contracts'
 import { isEmptyPriorQualificationRow, type PriorQualificationRow } from '../state/enrolmentState'
@@ -50,8 +50,8 @@ function setGrade(index: number, value: string): void {
         <label :for="`prior-subject-${index}`" class="form-label">Subject</label>
         <select
           :id="`prior-subject-${index}`"
-          class="form-select"
           :value="row.subject"
+          class="form-select"
           @change="setSubject(index, ($event.target as HTMLSelectElement).value)"
         >
           <option value="">-- select --</option>
@@ -66,8 +66,8 @@ function setGrade(index: number, value: string): void {
         <label :for="`prior-grade-${index}`" class="form-label">Grade</label>
         <select
           :id="`prior-grade-${index}`"
-          class="form-select"
           :value="row.grade"
+          class="form-select"
           @change="setGrade(index, ($event.target as HTMLSelectElement).value)"
         >
           <option value="">-- select --</option>
@@ -77,7 +77,7 @@ function setGrade(index: number, value: string): void {
         </select>
       </div>
       <div v-if="!isEmptyPriorQualificationRow(row)" class="col-sm-2">
-        <button type="button" class="btn btn-sm btn-outline-danger" @click="removeRow(index)">Remove</button>
+        <button class="btn btn-sm btn-outline-danger" type="button" @click="removeRow(index)">Remove</button>
       </div>
     </div>
   </fieldset>

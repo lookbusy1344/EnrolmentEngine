@@ -42,7 +42,7 @@ public sealed class WorkflowLinterTests
 				WorkflowName = RatingEvaluator.SubjectRatingsWorkflow,
 				Rules = [
 					new() { RuleName = "maths:green", Expression = "facts.Gcse(\"maths\") >= Thresholds.TopEntry" },
-					new() { RuleName = "maths:amber", Expression = "facts.Gcse(\"maths\") >= Thresholds.StrongEntry" },
+					new() { RuleName = "maths:amber", Expression = "facts.Gcse(\"maths\") >= facts.StandardEntry" },
 					new() { RuleName = "maths:red", Expression = "facts.Predicted(\"maths\") < ALevelGrade.C" },
 				],
 			},
@@ -62,7 +62,7 @@ public sealed class WorkflowLinterTests
 			new() {
 				WorkflowName = RatingEvaluator.SubjectRatingsWorkflow,
 				Rules = [
-					new() { RuleName = "maths:amber", Expression = "facts.Gcse(\"maths\") >= Thresholds.StrongEntry" },
+					new() { RuleName = "maths:amber", Expression = "facts.Gcse(\"maths\") >= facts.StandardEntry" },
 					new() { RuleName = "maths:green", Expression = "facts.Gcse(\"maths\") >= Thresholds.TopEntry" },
 					new() { RuleName = "maths:red", Expression = "true" },
 				],
@@ -105,7 +105,7 @@ public sealed class WorkflowLinterTests
 				WorkflowName = RatingEvaluator.SubjectRatingsWorkflow,
 				Rules = [
 					new() { RuleName = "maths:green", Expression = "facts.Gcse(\"mathz\") >= Thresholds.TopEntry" },
-					new() { RuleName = "maths:amber", Expression = "facts.Gcse(\"maths\") >= Thresholds.StrongEntry" },
+					new() { RuleName = "maths:amber", Expression = "facts.Gcse(\"maths\") >= facts.StandardEntry" },
 					new() { RuleName = "maths:red", Expression = "true" },
 				],
 			},
@@ -156,7 +156,7 @@ public sealed class WorkflowLinterTests
 						RuleName = "maths:green",
 						Expression = "facts.Gcse(\"english_language\") >= Thresholds.TopEntry && facts.Predicted(\"further_maths\") >= ALevelGrade.A",
 					},
-					new() { RuleName = "maths:amber", Expression = "facts.Gcse(\"maths\") >= Thresholds.StrongEntry" },
+					new() { RuleName = "maths:amber", Expression = "facts.Gcse(\"maths\") >= facts.StandardEntry" },
 					new() { RuleName = "maths:red", Expression = "true" },
 				],
 			},
@@ -455,11 +455,11 @@ public sealed class WorkflowLinterTests
 			    - RuleName: 'philosophy:green'
 			      SuccessEvent: 'Entry met; predicted A-level grade at or above the green threshold'
 			      Expression: >-
-			        facts.Average >= facts.HumanitiesAverageEntry && facts.Predicted("philosophy") >= ALevelGrade.B
+			        facts.Average >= 5.0 && facts.Predicted("philosophy") >= ALevelGrade.B
 			    - RuleName: 'philosophy:amber'
 			      SuccessEvent: 'Entry met; predicted A-level grade at or above the amber threshold'
 			      Expression: >-
-			        facts.Average >= facts.HumanitiesAverageEntry && facts.Predicted("philosophy") >= ALevelGrade.C
+			        facts.Average >= 5.0 && facts.Predicted("philosophy") >= ALevelGrade.C
 			    - RuleName: 'philosophy:red'
 			      SuccessEvent: 'Entry requirement unmet or predicted grade below the amber threshold'
 			      Expression: >-

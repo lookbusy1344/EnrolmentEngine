@@ -1,4 +1,4 @@
-<script setup lang="ts">
+<script lang="ts" setup>
 import { watch } from 'vue'
 import type { OptionItem } from '../api/contracts'
 
@@ -35,8 +35,8 @@ function setHobby(index: number, value: string): void {
         <label :for="`hobby-${index}`" class="form-label">Hobby</label>
         <select
           :id="`hobby-${index}`"
-          class="form-select"
           :value="row"
+          class="form-select"
           @change="setHobby(index, ($event.target as HTMLSelectElement).value)"
         >
           <option value="">-- select --</option>
@@ -46,7 +46,7 @@ function setHobby(index: number, value: string): void {
         </select>
       </div>
       <div v-if="row.trim() !== ''" class="col-sm-3">
-        <button type="button" class="btn btn-sm btn-outline-danger" @click="removeRow(index)">Remove</button>
+        <button class="btn btn-sm btn-outline-danger" type="button" @click="removeRow(index)">Remove</button>
       </div>
     </div>
   </fieldset>

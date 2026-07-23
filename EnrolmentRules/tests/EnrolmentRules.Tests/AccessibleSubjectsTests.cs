@@ -8,8 +8,8 @@ using Domain;
 ///     student at the borderline eligibility minimum (five GCSEs at <c>pass_grade</c>) has a green
 ///     programme to enrol on rather than an all-red sheet. Reaching green there needs both halves of the
 ///     rating to clear at a 4.0 average: the entry gate (<c>facts.PassGrade</c> rather than the shared
-///     <c>standard_entry</c>, plus <c>accessible_average_entry</c> for sociology in place of the shared
-///     <c>humanities_average_entry</c>) and the per-subject regression intercept, which must predict at
+///     <c>standard_entry</c>, plus sociology's own <c>4.0</c> average literal in place of the <c>5.0</c>
+///     the humanities subjects use) and the per-subject regression intercept, which must predict at
 ///     least a D. Both are scoped to these three subjects alone; the sibling tests below pin that
 ///     scoping, since the cheapest way to "fix" this student would be to lower a shared threshold and
 ///     silently open every subject with it.
@@ -86,11 +86,12 @@ public sealed class AccessibleSubjectsTests
 			.Should().BeEquivalentTo(Accessible, $"the accessible tier is the whole programme ({description})");
 	}
 
-	// The scoping guard: lowering the shared humanities_average_entry or standard_entry would turn these
-	// green too, so their staying red is what proves the change was scoped to the three subjects.
+	// The scoping guard: these gate on the 5.0 humanities average literal (and standard_entry), above the
+	// accessible tier's 4.0, so their staying red at a 4.0 average proves the tuning was scoped to the three
+	// subjects and did not lower a bar shared with them.
 	[Theory]
-	[InlineData("history")] // shares humanities_average_entry with sociology
-	[InlineData("geography")] // shares humanities_average_entry and standard_entry
+	[InlineData("history")] // gates on the 5.0 humanities average, above the accessible 4.0
+	[InlineData("geography")] // gates on the 5.0 humanities average and standard_entry
 	[InlineData("law")]
 	[InlineData("politics")]
 	[InlineData("religious_studies")]

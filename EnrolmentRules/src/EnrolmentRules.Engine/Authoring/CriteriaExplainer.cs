@@ -122,7 +122,7 @@ public sealed class CriteriaExplainer(
 
 	private static IEnumerable<string> RestudyBar(Subject subject, SubjectMeta meta)
 	{
-		if (meta.RestudyBar is not { } bar) {
+		if (meta.RestudyBar is not RestudyBar bar) {
 			yield break;
 		}
 

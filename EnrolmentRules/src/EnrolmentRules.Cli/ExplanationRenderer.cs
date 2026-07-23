@@ -49,7 +49,7 @@ public static class ExplanationRenderer
 		writer.WriteLine(
 			$"The engine rated this **{Escape(EnumNames.NameOf(explanation.BaseRating))}** because: {Escape(explanation.BaseReason)} (predicted {Escape(predictedGrade.Grade)}, ~{explanation.PredictedPoints.ToString("0.##", CultureInfo.InvariantCulture)}).");
 
-		if (explanation.EntryEquivalentReason is { } entryEquivalentReason) {
+		if (explanation.EntryEquivalentReason is string entryEquivalentReason) {
 			writer.WriteLine(Escape(entryEquivalentReason));
 		}
 

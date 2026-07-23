@@ -64,9 +64,11 @@ public sealed class ExpressionNarratorTests
 	}
 
 	[Fact]
-	public void average_gcse_clause_resolves_its_threshold()
+	public void average_gcse_clause_narrates_a_numeric_bound()
 	{
-		var bullets = ExpressionNarrator.Narrate("facts.Average >= facts.FurtherMathsAverageEntry", Thresholds);
+		// The Further Maths / humanities / accessible tiers gate on a literal average bar written straight
+		// into the rule (facts.Average >= 7.0), so the narrator must render the number itself.
+		var bullets = ExpressionNarrator.Narrate("facts.Average >= 7.0", Thresholds);
 
 		bullets.Should().ContainSingle()
 			.Which.Should().Contain("average").And.Contain("7");
@@ -92,7 +94,7 @@ public sealed class ExpressionNarratorTests
 	public void a_conditional_threshold_spells_out_both_branches()
 	{
 		var bullets = ExpressionNarrator.Narrate(
-			"facts.Gcse(\"art\") >= (facts.Age >= facts.AdultAge ? facts.TopEntry : facts.StandardEntry)", Thresholds);
+			"facts.Gcse(\"art\") >= (facts.Age >= 19 ? facts.TopEntry : facts.StandardEntry)", Thresholds);
 
 		bullets.Should().ContainSingle()
 			.Which.Should().Be("GCSE Art at grade 7 or above if you are 19 or older, or grade 5 or above if not.");

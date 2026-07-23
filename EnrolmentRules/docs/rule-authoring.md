@@ -222,10 +222,8 @@ boilerplate; you write the `Expression`.
 | `facts.HasEntryEquivalent("biology")`           | `bool`   | A prior qualification satisfies entry                 |
 | `facts.Average`                                 | `double` | Mean GCSE score                                       |
 | `facts.Age`                                     | `int`    | Whole years at reference date                         |
-| `facts.TopEntry` / `StrongEntry` / `StandardEntry` / `ExceptionalEntry` | `int` | Entry thresholds (forwarded from policy)  |
-| `facts.FurtherMathsAverageEntry` / `HumanitiesAverageEntry` | `double` | Average-based entry bars                  |
+| `facts.TopEntry` / `StandardEntry` / `ExceptionalEntry` | `int` | Entry thresholds (forwarded from policy)  |
 | `facts.MinDfeGreenProbabilityAtOrAbove` / `…Amber…` | `double` | DfE probability floors                            |
-| `facts.AdultAge`                                | `int`    | Adult-age cutoff for age-gated entry                  |
 
 **`lookup`** and **`policy`** — the eligibility workflow's inputs:
 
@@ -271,9 +269,11 @@ their own cognate GCSE at `facts.StandardEntry`. The amber tier loosens the bars
 
 Other shipped patterns worth copying:
 
-- **Average-based entry** (no single GCSE gate): `facts.Average >= facts.HumanitiesAverageEntry && …`
-  (History).
-- **Age-gated entry** with a ternary: `facts.Gcse("art") >= (facts.Age >= facts.AdultAge ? facts.TopEntry : facts.StandardEntry)` (Art).
+- **Average-based entry** (no single GCSE gate): `facts.Average >= 5.0 && …` (History). The average bar
+  is a one-off, course-specific value, so it is written as a literal in the rule rather than a named
+  `facts.*` threshold — only broad-brush shared bands (`facts.StandardEntry`, `facts.TopEntry`) earn a name.
+- **Age-gated entry** with a ternary: `facts.Gcse("art") >= (facts.Age >= 19 ? facts.TopEntry : facts.StandardEntry)` (Art).
+  The adult-age bound is a one-off, single-subject value, so it is a literal (`19`), not a named `facts.*` threshold.
 - **Entry equivalents** as an OR with the GCSE path:
   `(facts.Gcse("biology") >= facts.StandardEntry || facts.HasEntryEquivalent("biology")) && …`.
 - **A `LocalParams` sub-expression** for a reused value (eligibility's pass count):
@@ -515,13 +515,13 @@ A new subject `geography` needs tiers. Add to `workflows/subject-ratings.yaml`:
   - RuleName: 'geography:green'
     SuccessEvent: 'Entry met; predicted A-level grade at or above the green threshold'
     Expression: >-
-      facts.Average >= facts.HumanitiesAverageEntry
+      facts.Average >= 5.0
       && facts.Predicted("geography") >= ALevelGrade.D
       && facts.DfeProbabilityAtOrAbove("geography", ALevelGrade.D) >= facts.MinDfeGreenProbabilityAtOrAbove
   - RuleName: 'geography:amber'
     SuccessEvent: 'Entry met; predicted A-level grade at or above the amber threshold'
     Expression: >-
-      facts.Average >= facts.HumanitiesAverageEntry
+      facts.Average >= 5.0
       && facts.Predicted("geography") >= ALevelGrade.E
       && facts.DfeProbabilityAtOrAbove("geography", ALevelGrade.E) >= facts.MinDfeAmberProbabilityAtOrAbove
   - RuleName: 'geography:red'
@@ -586,8 +586,9 @@ The mistakes that pass a casual review — worth a deliberate check.
 
 **Rating-rule surface** — `facts.Gcse(k)`, `facts.Predicted(k)`,
 `facts.DfeProbabilityAtOrAbove(k, g)`, `facts.HasEntryEquivalent(k)`, `facts.Average`, `facts.Age`,
-`facts.TopEntry`/`StrongEntry`/`StandardEntry`/`ExceptionalEntry`, `facts.*AverageEntry`, `facts.MinDfe*ProbabilityAtOrAbove`,
-`facts.AdultAge`, `ALevelGrade.*`.
+`facts.TopEntry`/`StandardEntry`/`ExceptionalEntry`, `facts.MinDfe*ProbabilityAtOrAbove`, `ALevelGrade.*`.
+One-off, single-subject bars (the Further Maths / humanities / accessible average bars, Art's adult-age gate) are
+written as literals in the rule, not as named `facts.*` thresholds.
 
 **Eligibility-rule surface** — `lookup.Grade(k)`, `gcses` (array), `policy.PassGrade`,
 `policy.MinPasses`, `policy.*`.

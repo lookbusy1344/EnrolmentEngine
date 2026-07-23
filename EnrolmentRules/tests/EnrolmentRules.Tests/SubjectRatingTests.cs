@@ -164,7 +164,7 @@ public sealed class SubjectRatingTests
 
 		var ratings = evaluator.EvaluateRatings(
 			profile,
-			[new("maths", Harness.Thresholds.ExceptionalEntry), new("physics", Harness.Thresholds.StrongEntry)]);
+			[new("maths", Harness.Thresholds.ExceptionalEntry), new("physics", 6)]);
 
 		// Physics clears entry and the predicted B green tier, but both green and amber are blocked without the DfE row.
 		Of(ratings, Subject.Physics).Should().Be(Rating.Red);

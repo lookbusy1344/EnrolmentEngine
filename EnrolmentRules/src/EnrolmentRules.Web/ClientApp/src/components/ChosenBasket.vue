@@ -1,4 +1,4 @@
-<script setup lang="ts">
+<script lang="ts" setup>
 import { prettify } from '../display/formatting'
 
 defineProps<{
@@ -7,7 +7,7 @@ defineProps<{
 </script>
 
 <template>
-  <section class="chosen-summary sticky-top bg-body border-bottom py-2 mb-4" aria-labelledby="chosen-heading">
+  <section aria-labelledby="chosen-heading" class="chosen-summary sticky-top bg-body border-bottom py-2 mb-4">
     <h2 id="chosen-heading" class="h5">Your basket</h2>
     <p v-if="chosenALevels.length === 0" class="mb-0 text-body-secondary">None chosen yet.</p>
     <ul v-else class="list-inline mb-0">

@@ -1,4 +1,4 @@
-<script setup lang="ts">
+<script lang="ts" setup>
 import { computed, onMounted, reactive, ref, watch } from 'vue'
 import type { EnrolmentEvaluateResponse, EnrolmentOptionsResponse, OptionItem } from './api/contracts'
 import { EnrolmentApiError, EvaluationRequester, fetchOptions } from './api/enrolmentApi'
@@ -8,7 +8,7 @@ import HeroSection from './components/HeroSection.vue'
 import ResultsPanel from './components/ResultsPanel.vue'
 import { wholeYears } from './display/formatting'
 import { debounce } from './state/debounce'
-import { toEvaluateRequest, type GcseRow, type PriorQualificationRow } from './state/enrolmentState'
+import { type GcseRow, type PriorQualificationRow, toEvaluateRequest } from './state/enrolmentState'
 import { clearSnapshot, loadSnapshot, saveSnapshot } from './state/localStorageSnapshot'
 
 const SAVE_DEBOUNCE_MS = 400
@@ -201,22 +201,22 @@ onMounted(() => {
       <FactsForm
         v-model:date-of-birth="snapshot.dateOfBirth"
         v-model:gcses="snapshot.gcses"
-        v-model:prior-qualifications="snapshot.priorQualifications"
         v-model:hobbies="snapshot.hobbies"
-        :options="options"
+        v-model:prior-qualifications="snapshot.priorQualifications"
         :age="age"
+        :options="options"
       />
     </form>
 
-    <button type="button" class="btn btn-outline-secondary mb-4" @click="startOver">Start over</button>
+    <button class="btn btn-outline-secondary mb-4" type="button" @click="startOver">Start over</button>
 
     <div v-if="evaluateError !== null" class="alert alert-danger" role="alert">
       {{ evaluateError }}
     </div>
     <ResultsPanel
       v-else
-      :evaluation="evaluation"
       :chosen-a-levels="snapshot.chosenALevels"
+      :evaluation="evaluation"
       :has-facts="hasFacts"
       @choose="chooseSubject"
       @remove="removeSubject"

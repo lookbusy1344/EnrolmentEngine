@@ -1,4 +1,4 @@
-<script setup lang="ts">
+<script lang="ts" setup>
 import { computed } from 'vue'
 import type { ExplanationResponse } from '../api/contracts'
 
@@ -22,7 +22,7 @@ const reasonId = computed(() => `reason-${props.explanation.subject.value}`)
       <div class="card-body">
         <h3 class="card-title h6 d-flex justify-content-between align-items-center">
           {{ explanation.subject.label }}
-          <span class="badge" :class="explanation.ratingCssClass">
+          <span :class="explanation.ratingCssClass" class="badge">
             <span class="visually-hidden">Rating: </span>{{ explanation.rating }}
           </span>
         </h3>
@@ -56,26 +56,26 @@ const reasonId = computed(() => `reason-${props.explanation.subject.value}`)
         </details>
         <button
           v-if="chosen"
-          type="button"
           class="btn btn-sm btn-outline-danger mt-2"
+          type="button"
           @click="emit('remove', explanation.subject.value)"
         >
           Remove
         </button>
         <button
           v-else-if="canChoose"
-          type="button"
           class="btn btn-sm btn-outline-primary mt-2"
+          type="button"
           @click="emit('choose', explanation.subject.value)"
         >
           Choose
         </button>
         <button
           v-else
-          type="button"
+          :aria-describedby="reasonId"
           class="btn btn-sm btn-outline-secondary mt-2"
           disabled
-          :aria-describedby="reasonId"
+          type="button"
         >
           Unavailable
         </button>

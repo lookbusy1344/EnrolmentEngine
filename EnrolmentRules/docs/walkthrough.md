@@ -411,15 +411,15 @@ Rules:
   - RuleName: 'art:green'
     SuccessEvent: 'Entry met (age-gated GCSE threshold); predicted A-level grade at or above the green threshold'
     Expression: >-
-      facts.Gcse("art") >= (facts.Age >= facts.AdultAge ? facts.TopEntry : facts.StandardEntry) &&
+      facts.Gcse("art") >= (facts.Age >= 19 ? facts.TopEntry : facts.StandardEntry) &&
       facts.Predicted("art") >= ALevelGrade.D &&
       facts.DfeProbabilityAtOrAbove("art", ALevelGrade.D)
         >= facts.MinDfeGreenProbabilityAtOrAbove
 ```
 
-`facts.Age` is the whole-years age derived in step 1. The gate *policy* — adults (≥ `AdultAge`)
-must reach `TopEntry`, younger students only `StandardEntry` — lives entirely in the rule data; host
-code only exposes the value. This is the template for any new per-student attribute: derive it in
+`facts.Age` is the whole-years age derived in step 1. The gate *policy* — adults (≥ `19`, a one-off
+literal since only Art gates on age) must reach `TopEntry`, younger students only `StandardEntry` —
+lives entirely in the rule data; host code only exposes the value. This is the template for any new per-student attribute: derive it in
 prediction, expose it on the internal facts object, and decide with it in the YAML.
 
 The five evaluation stages are fixed, each consuming the previous one's output:

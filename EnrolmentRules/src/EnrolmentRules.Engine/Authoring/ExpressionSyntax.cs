@@ -172,7 +172,7 @@ internal static class Parser
 	private static Node ParseComparison(IReadOnlyList<Token> tokens, ref int position)
 	{
 		var left = ParsePrimary(tokens, ref position);
-		if (Peek(tokens, position) is not { } candidate || !Operators.Contains(candidate, StringComparer.Ordinal)) {
+		if (Peek(tokens, position) is not string candidate || !Operators.Contains(candidate, StringComparer.Ordinal)) {
 			return left;
 		}
 

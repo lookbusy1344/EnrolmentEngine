@@ -78,7 +78,7 @@ public sealed class DfeTransitionMatrix
 		var seen = new HashSet<(Subject Subject, string Band)>();
 		var dataRowCount = 0;
 
-		while (reader.ReadLine() is { } line) {
+		while (reader.ReadLine() is string line) {
 			if (string.IsNullOrWhiteSpace(line)) {
 				continue;
 			}

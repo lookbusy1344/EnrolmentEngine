@@ -39,15 +39,10 @@ Numeric tuning knobs read by the workflow expressions and host-side aggregation/
 | `pass_grade` | integer `1..9` | yes | Inclusive GCSE pass boundary. The eligibility workflow compares English Language, Maths, and the count of all supplied GCSE grades against this value; a grade equal to it passes. It is also exposed to subject-rating expressions as `facts.PassGrade`, which the accessible tier (psychology, sociology, media studies) reads as its entry bar so those subjects open at the eligibility minimum. |
 | `min_passes` | integer `>= 1` | yes | Inclusive number of GCSE entries at or above `pass_grade` required by the `EnoughPasses` eligibility rule. Duplicate subjects cannot inflate the count because GCSE input is a subject-keyed map. |
 | `top_entry` | integer `1..9` | yes | Named high-selectivity GCSE boundary exposed to subject-rating expressions as `facts.TopEntry`. It has no intrinsic ordering relationship with the other entry fields: workflow expressions choose where and how to apply it. |
-| `strong_entry` | integer `1..9` | yes | Named medium-selectivity GCSE boundary exposed as `facts.StrongEntry`. A subject may test one or several GCSEs against it, or ignore it entirely. |
 | `standard_entry` | integer `1..9` | yes | Named baseline GCSE boundary exposed as `facts.StandardEntry`. It does not automatically apply to every subject; only expressions that reference it are affected. Most subjects gate their own cognate GCSE against this. |
-| `exceptional_entry` | integer `1..9` | yes | Named top-grade GCSE boundary exposed as `facts.ExceptionalEntry`, used as a hard gate for the most demanding subjects (Maths and Physics require Maths GCSE at this level). Must satisfy `standard_entry <= strong_entry <= top_entry <= exceptional_entry`. |
-| `further_maths_average_entry` | number `0..9` | yes | Inclusive whole-profile GCSE-average boundary exposed as `facts.FurtherMathsAverageEntry`. Despite the policy-oriented name, it affects whichever workflow expressions reference it. |
-| `humanities_average_entry` | number `0..9` | yes | Inclusive whole-profile GCSE-average boundary exposed as `facts.HumanitiesAverageEntry`, commonly used for subjects whose entry decision is based on overall attainment rather than one GCSE. Read by history, geography, politics, religious studies and law. |
-| `accessible_average_entry` | number `0..9` | yes | Inclusive whole-profile GCSE-average boundary exposed as `facts.AccessibleAverageEntry`, read only by sociology. It exists separately from `humanities_average_entry` so the accessible tier can sit at the eligibility minimum without lowering the bar for the other humanities that share that field. |
+| `exceptional_entry` | integer `1..9` | yes | Named top-grade GCSE boundary exposed as `facts.ExceptionalEntry`, used as a hard gate for the most demanding subjects (Maths and Physics require Maths GCSE at this level). Must satisfy `standard_entry <= top_entry <= exceptional_entry`. |
 | `min_dfe_green_probability_at_or_above` | number `0..1` | yes | Inclusive probability floor exposed as `facts.MinDfeGreenProbabilityAtOrAbove`. A workflow normally compares it with the student's DfE probability of achieving a specified A-level grade or better; it has no effect unless the expression performs that comparison. |
 | `min_dfe_amber_probability_at_or_above` | number `0..1` | yes | Inclusive probability floor for amber expressions, exposed as `facts.MinDfeAmberProbabilityAtOrAbove`. Values are proportions (`0.50` means 50%), not percentages. |
-| `adult_age` | integer `>= 1` | yes | Inclusive whole-years age boundary exposed as `facts.AdultAge`. Age is calculated on the evaluation's as-of date; workflows decide whether being at, above, or below the boundary is acceptable. |
 | `max_green_choices` | integer `>= 1` | no | Maximum number of subjects allowed to remain green after all constraint downgrades. When exceeded, the lowest-`priority_weight` greens are demoted to amber; omit the field to disable this pass. |
 | `amber_score_factor` | number `0..1` | yes | Multiplier applied to each final amber subject's `priority_weight` when calculating `programme_priority_score`. Green contributes full weight and red contributes zero; this field changes only the aggregate score, not a rating. |
 | `advice_considers_unsat_gcses` | boolean | no | Controls the advisor's candidate GCSE set. When `true`, it may propose adding a GCSE absent from the student's input; when `false` or omitted, it may only raise supplied GCSEs. It never changes ordinary evaluation. |
@@ -58,6 +53,9 @@ Numeric tuning knobs read by the workflow expressions and host-side aggregation/
 Notes:
 
 - The entry thresholds are policy values, not hard-coded semantics. Workflow YAML decides which one a subject reads.
+- Only broad-brush, widely-shared bands earn a named threshold here. One-off, course-specific average-GCSE bars
+  (Further Maths, the humanities, the accessible tier) are written as literals directly in the rule expressions in
+  `workflows/subject-ratings.yaml` (e.g. `facts.Average >= 7.0`), not as config keys.
 - `max_green_choices` is intentionally absent in the shipped file. The normal mode is uncapped greens.
 - The `advice_*` values affect only the counterfactual advisor, not ordinary enrolment evaluation.
 
@@ -67,15 +65,10 @@ Example:
 pass_grade: 4
 min_passes: 5
 top_entry: 7
-strong_entry: 6
 standard_entry: 5
 exceptional_entry: 8
-further_maths_average_entry: 7.0
-humanities_average_entry: 5.0
-accessible_average_entry: 4.0
 min_dfe_green_probability_at_or_above: 0.60
 min_dfe_amber_probability_at_or_above: 0.50
-adult_age: 19
 amber_score_factor: 0.5
 ```
 
@@ -376,10 +369,8 @@ Common expression inputs in this workflow:
 | `facts.HasEntryEquivalent("subject")` | Returns `true` when at least one prior qualification matches one of that catalogue subject's entry-equivalent routes by subject, type, and inclusive minimum ordinal. |
 | `facts.Average` | Arithmetic mean of all supplied GCSE grades. Missing subjects are not zero-filled; an empty GCSE map produces `0.0`. |
 | `facts.Age` | Student's age in completed years on the evaluation as-of date. A missing date of birth produces `0`, although normal document validation requires the field. |
-| `facts.TopEntry`, `facts.StrongEntry`, `facts.StandardEntry`, `facts.ExceptionalEntry` | Direct projections of the four named GCSE boundaries in `data/thresholds.yaml`; they acquire meaning only through the comparisons written in a rule. |
-| `facts.FurtherMathsAverageEntry`, `facts.HumanitiesAverageEntry` | Direct projections of the named GCSE-average boundaries. Their names are policy conventions, not restrictions on which subject rules can reference them. |
+| `facts.TopEntry`, `facts.StandardEntry`, `facts.ExceptionalEntry` | Direct projections of the three named GCSE boundaries in `data/thresholds.yaml`; they acquire meaning only through the comparisons written in a rule. One-off, single-subject bars (Further Maths's `7.0` average, Art's `19` adult-age gate) are written as literals in the rule instead of projected here. |
 | `facts.MinDfeGreenProbabilityAtOrAbove`, `facts.MinDfeAmberProbabilityAtOrAbove` | Direct projections of the configured `0..1` DfE probability floors for green and amber expressions. |
-| `facts.AdultAge` | Direct projection of the configured whole-years adult-age boundary; the expression supplies the comparison operator. |
 
 Notes:
 
@@ -525,11 +516,11 @@ Example:
   - RuleName: 'drama:green'
     SuccessEvent: 'Entry met; predicted A-level grade at or above the green threshold'
     Expression: >-
-      facts.Average >= facts.HumanitiesAverageEntry && facts.Predicted("drama") >= ALevelGrade.D
+      facts.Average >= 5.0 && facts.Predicted("drama") >= ALevelGrade.D
   - RuleName: 'drama:amber'
     SuccessEvent: 'Entry met; predicted A-level grade at or above the amber threshold'
     Expression: >-
-      facts.Average >= facts.HumanitiesAverageEntry && facts.Predicted("drama") >= ALevelGrade.E
+      facts.Average >= 5.0 && facts.Predicted("drama") >= ALevelGrade.E
   - RuleName: 'drama:red'
     SuccessEvent: 'Entry requirement unmet or predicted grade below the amber threshold'
     Expression: >-

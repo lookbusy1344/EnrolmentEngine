@@ -1,11 +1,11 @@
   - RuleName: 'drama:green'
     SuccessEvent: 'Entry met; predicted A-level grade at or above the green threshold'
     Expression: >-
-      facts.Average >= facts.HumanitiesAverageEntry && facts.Predicted("drama") >= ALevelGrade.B
+      facts.Average >= 5.0 && facts.Predicted("drama") >= ALevelGrade.B
   - RuleName: 'drama:amber'
     SuccessEvent: 'Entry met; predicted A-level grade at or above the amber threshold'
     Expression: >-
-      facts.Average >= facts.HumanitiesAverageEntry && facts.Predicted("drama") >= ALevelGrade.C
+      facts.Average >= 5.0 && facts.Predicted("drama") >= ALevelGrade.C
   - RuleName: 'drama:red'
     SuccessEvent: 'Entry requirement unmet or predicted grade below the amber threshold'
     Expression: >-

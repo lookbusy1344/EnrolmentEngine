@@ -305,23 +305,13 @@ internal sealed class RatingFacts(
 	/// </summary>
 	public int PassGrade => policy.PassGrade;
 
-	public int StrongEntry => policy.StrongEntry;
-
 	public int StandardEntry => policy.StandardEntry;
 
 	public int ExceptionalEntry => policy.ExceptionalEntry;
 
-	public double FurtherMathsAverageEntry => policy.FurtherMathsAverageEntry;
-
-	public double HumanitiesAverageEntry => policy.HumanitiesAverageEntry;
-
-	public double AccessibleAverageEntry => policy.AccessibleAverageEntry;
-
 	public double MinDfeGreenProbabilityAtOrAbove => policy.MinDfeGreenProbabilityAtOrAbove;
 
 	public double MinDfeAmberProbabilityAtOrAbove => policy.MinDfeAmberProbabilityAtOrAbove;
-
-	public int AdultAge => policy.AdultAge;
 
 	/// <summary>The student's GCSE grade in <paramref name="subject" /> (0 if not taken).</summary>
 	public int Gcse(string subject) => gcses.Grade(subject);

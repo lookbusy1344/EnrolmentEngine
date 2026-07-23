@@ -136,7 +136,7 @@
 						<select id="PriorQualifications_@(i)__Grade" name="PriorQualifications[@i].Grade"
 						        class="form-select prior-qualification-grade">
 							<option value="">-- select --</option>
-							@if (row.Type is { } selectedType) {
+							@if (row.Type is QualificationType selectedType) {
 								@foreach (var grade in Model.QualificationGradeOptions[selectedType]) {
 									<option value="@grade" selected="@(row.Grade == grade)">@TextFormatting.GradeLabel(selectedType, grade)</option>
 								}
@@ -236,7 +236,7 @@
 <section aria-labelledby="results-heading">
 	<span class="section-eyebrow">Step 2</span>
 	<h2 id="results-heading">What's open to you</h2>
-	@if (Model.Results is not { } results) {
+	@if (Model.Results is not EnrolmentResultsViewModel results) {
 		<p>Add a GCSE, a prior qualification or your date of birth, then save — your options sprout up here.</p>
 	} else if (!results.IsValid) {
 		<div class="alert alert-danger" role="alert">
@@ -289,7 +289,7 @@
 									<dd>@explanation.Rule</dd>
 									<dt>Predicted points</dt>
 									<dd>@explanation.PredictedPoints.ToString("0.00")</dd>
-									@if (explanation.EntryEquivalentReason is { } entryReason) {
+									@if (explanation.EntryEquivalentReason is string entryReason) {
 										<dt>Entry equivalence</dt>
 										<dd>@entryReason</dd>
 									}

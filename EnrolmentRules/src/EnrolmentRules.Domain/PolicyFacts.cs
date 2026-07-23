@@ -16,8 +16,6 @@ public sealed class PolicyFacts(PolicyThresholds thresholds)
 
 	public int TopEntry { get; } = thresholds.TopEntry;
 
-	public int StrongEntry { get; } = thresholds.StrongEntry;
-
 	public int StandardEntry { get; } = thresholds.StandardEntry;
 
 	/// <summary>
@@ -26,20 +24,7 @@ public sealed class PolicyFacts(PolicyThresholds thresholds)
 	/// </summary>
 	public int ExceptionalEntry { get; } = thresholds.ExceptionalEntry;
 
-	public double FurtherMathsAverageEntry { get; } = thresholds.FurtherMathsAverageEntry;
-
-	public double HumanitiesAverageEntry { get; } = thresholds.HumanitiesAverageEntry;
-
-	/// <summary>
-	///     The average-GCSE bar for the accessible subjects (sociology). Separate from
-	///     <see cref="HumanitiesAverageEntry" /> so the accessible tier can sit at the eligibility minimum
-	///     without opening the other humanities that share that bar.
-	/// </summary>
-	public double AccessibleAverageEntry { get; } = thresholds.AccessibleAverageEntry;
-
 	public double MinDfeGreenProbabilityAtOrAbove { get; } = thresholds.MinDfeGreenProbabilityAtOrAbove;
 
 	public double MinDfeAmberProbabilityAtOrAbove { get; } = thresholds.MinDfeAmberProbabilityAtOrAbove;
-
-	public int AdultAge { get; } = thresholds.AdultAge;
 }

@@ -3,21 +3,18 @@
 pass_grade: 4
 min_passes: 5
 top_entry: 7
-strong_entry: 6
 standard_entry: 5
 # exceptional_entry is a hard GCSE gate (a top grade) for the most demanding subjects: Maths and
 # Physics require Maths GCSE at this level, ANDed with the regression-based rating tiers.
 exceptional_entry: 8
-further_maths_average_entry: 7.0
-humanities_average_entry: 5.0
-# accessible_average_entry is the average-GCSE bar for the accessible tier (sociology). It is a knob of
-# its own rather than a reuse of humanities_average_entry — which history, geography, politics, religious
-# studies and law also read — so that seating sociology at the eligibility minimum cannot drag the other
-# five humanities down with it.
-accessible_average_entry: 4.0
+# The Further Maths (7.0), humanities (5.0) and accessible-tier (4.0) average-GCSE entry bars are not
+# knobs here: they are one-off, course-specific values written directly into the rule expressions in
+# workflows/subject-ratings.yaml. Only broad-brush, widely-shared bands (the entry grades above) earn a
+# named threshold.
 min_dfe_green_probability_at_or_above: 0.60
 min_dfe_amber_probability_at_or_above: 0.50
-adult_age: 19
+# The adult-age gate (19) is a one-off, single-subject bar: only Art's age-conditional entry reads it,
+# so it is written as a literal in that rule (facts.Age >= 19), not a named threshold.
 max_chosen_a_levels: 3
 high_attainment_max_chosen_a_levels: 4
 high_attainment_average_gcse: 7.5

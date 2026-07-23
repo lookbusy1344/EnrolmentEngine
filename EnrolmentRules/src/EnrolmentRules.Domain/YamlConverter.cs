@@ -50,7 +50,7 @@ public static class YamlConverter
 	{
 		var json = new JsonObject();
 		foreach (var (keyNode, valueNode) in mapping.Children) {
-			if (keyNode is not YamlScalarNode { Value: { } key } || string.IsNullOrWhiteSpace(key)) {
+			if (keyNode is not YamlScalarNode { Value: string key } || string.IsNullOrWhiteSpace(key)) {
 				throw new FormatException("YAML mapping keys must be non-empty scalars");
 			}
 

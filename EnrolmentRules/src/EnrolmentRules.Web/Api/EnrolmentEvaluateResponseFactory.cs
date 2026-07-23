@@ -13,7 +13,7 @@ public static class EnrolmentEvaluateResponseFactory
 		ArgumentNullException.ThrowIfNull(evaluation);
 		ArgumentNullException.ThrowIfNull(ejectedChoices);
 
-		if (!evaluation.Validation.IsValid || evaluation.Value is not { } result) {
+		if (!evaluation.Validation.IsValid || evaluation.Value is not ExplainedResult result) {
 			return new(
 				[.. evaluation.Validation.Errors],
 				[.. ejectedChoices.Select(static subject => new OptionItem(subject.Value, TextFormatting.Prettify(subject.Value)))],
