@@ -2,7 +2,6 @@ namespace EnrolmentRules.Tests;
 
 using System.Text.RegularExpressions;
 using AwesomeAssertions;
-using Microsoft.CodeAnalysis;
 using Microsoft.CodeAnalysis.CSharp;
 using Microsoft.CodeAnalysis.CSharp.Syntax;
 
@@ -37,10 +36,10 @@ public sealed class EmptyBracesPatternTests
 	}
 
 	[Theory]
-	[InlineData("if (x is string y) { }")]                 // named type pattern — allowed
-	[InlineData("if (x is not string y) { }")]             // negated named type pattern — allowed
-	[InlineData("if (x is not null) { }")]                 // plain null guard — no binding
-	[InlineData("if (x is { Length: 0 } y) { }")]          // non-empty property pattern — real matching
+	[InlineData("if (x is string y) { }")] // named type pattern — allowed
+	[InlineData("if (x is not string y) { }")] // negated named type pattern — allowed
+	[InlineData("if (x is not null) { }")] // plain null guard — no binding
+	[InlineData("if (x is { Length: 0 } y) { }")] // non-empty property pattern — real matching
 	[InlineData("if (x is (var a, var b)) { _ = a; _ = b; }")] // positional pattern — allowed
 	public void allowed_patterns_are_not_violations(string statement)
 	{
@@ -62,8 +61,8 @@ public sealed class EmptyBracesPatternTests
 		foreach (var top in (string[])["src", "tests"]) {
 			var directory = Path.Combine(Harness.RepoRoot, top);
 			foreach (var file in Directory.EnumerateFiles(directory, "*.cs", SearchOption.AllDirectories)
-				.Concat(Directory.EnumerateFiles(directory, "*.cshtml", SearchOption.AllDirectories))
-				.Where(static file => !IsGeneratedOutput(file))) {
+						 .Concat(Directory.EnumerateFiles(directory, "*.cshtml", SearchOption.AllDirectories))
+						 .Where(static file => !IsGeneratedOutput(file))) {
 				yield return file;
 			}
 		}

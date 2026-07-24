@@ -173,8 +173,8 @@ public static partial class WorkflowLinter
 		// The predicted-grade tier boundary: green must demand at least as high a predicted grade as amber.
 		// Equal grades are allowed (a subject may legitimately separate the tiers on DfE confidence alone), so
 		// only a green tier that is strictly weaker than its amber tier is a defect.
-		if (PredictedThreshold(green.Expression) is (var greenToken, var greenValue)
-			&& PredictedThreshold(amber.Expression) is (var amberToken, var amberValue)
+		if (PredictedThreshold(green.Expression) is var (greenToken, greenValue)
+			&& PredictedThreshold(amber.Expression) is var (amberToken, amberValue)
 			&& greenValue < amberValue) {
 			yield return new(
 				workflowName,

@@ -17,6 +17,10 @@ using Domain;
 /// </summary>
 public sealed class AdditionalSubjectsTests
 {
+	// The humanities average-GCSE entry bar — now a literal in workflows/subject-ratings.yaml rather than a
+	// named policy threshold. Kept here so the geography boundary test documents the value it probes.
+	private const int HumanitiesAverageEntry = 5;
+
 	private static readonly Subject[] Added = [
 		Subject.Economics, Subject.Geography, Subject.Psychology, Subject.Sociology,
 		Subject.BusinessStudies, Subject.Politics, Subject.ReligiousStudies, Subject.Drama,
@@ -26,10 +30,6 @@ public sealed class AdditionalSubjectsTests
 	// The accessible tier, deliberately rated green at a 4.0 average so a borderline-eligible student has a
 	// programme to enrol on. Every other added subject stays red there.
 	private static readonly Subject[] Accessible = [Subject.Psychology, Subject.Sociology, Subject.MediaStudies];
-
-	// The humanities average-GCSE entry bar — now a literal in workflows/subject-ratings.yaml rather than a
-	// named policy threshold. Kept here so the geography boundary test documents the value it probes.
-	private const int HumanitiesAverageEntry = 5;
 
 	// A full set of GCSEs at one uniform grade, so the average equals that grade.
 	private static (string, int)[] Uniform(int grade) => [

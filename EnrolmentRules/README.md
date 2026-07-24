@@ -78,17 +78,14 @@ Most changes do not require the application itself to be redesigned. Entry thres
 exclusions and other routine policy settings are held as configuration. This makes policy easier to review, version, test and deploy through a
 controlled process.
 
-To make that concrete, here is the complete policy for one course, **A-Level Further Maths**, exactly as it ships. The traffic-light rating rules live in
+To make that concrete, here is the complete policy for one course, **A-Level Further Maths**, exactly as it ships. The traffic-light rating rules live
+in
 `workflows/subject-ratings.yaml` as logical expressions the engine evaluates per student:
 
 ```yaml
 # workflows/subject-ratings.yaml — the green / amber / red tiers for Further Maths.
 # Entry is met by a top-grade GCSE Maths (facts.TopEntry) with an overall GCSE average of 7.0+, OR
-# an equivalent prior qualification; the tier then turns on the predicted A-level grade and published
-# DfE progression evidence. Widely-shared bars are named policy knobs (facts.TopEntry, from
-# data/thresholds.yaml); a one-off, course-specific bar like the 7.0 average is just a literal in the
-# rule. The first rule that matches wins; red is the catch-all.
-# (Each rule also carries a SuccessEvent — the plain-English reason shown to staff — elided here.)
+# an equivalent prior qualification
 - RuleName: 'further_maths:green'
   Expression: >-
     (facts.HasEntryEquivalent("further_maths") || (facts.Gcse("maths") >= facts.TopEntry && facts.Average >= 7.0))
