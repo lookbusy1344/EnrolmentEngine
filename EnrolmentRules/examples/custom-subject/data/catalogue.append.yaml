@@ -1,0 +1,4 @@
+  - subject: philosophy
+    priority_weight: 60
+    regression: { slope: 0.90, intercept: -1.00 }
+    dfe_evidence: false

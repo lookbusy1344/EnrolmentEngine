@@ -1,0 +1,18 @@
+WorkflowName: 'eligibility'
+Rules:
+  - RuleName: 'EnglishLanguagePass'
+    SuccessEvent: 'GCSE English Language at pass grade or above'
+    Expression: >-
+      lookup.Grade("english_language") >= policy.PassGrade
+  - RuleName: 'MathsPass'
+    SuccessEvent: 'GCSE Maths at pass grade or above'
+    Expression: >-
+      lookup.Grade("maths") >= policy.PassGrade
+  - RuleName: 'EnoughPasses'
+    SuccessEvent: 'Enough GCSE passes for eligibility'
+    LocalParams:
+      - Name: 'passCount'
+        Expression: >-
+          gcses.Count(g => g.Grade >= policy.PassGrade)
+    Expression: >-
+      passCount >= policy.MinPasses

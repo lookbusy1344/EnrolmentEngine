@@ -1,0 +1,95 @@
+<Project>
+
+    <PropertyGroup>
+        <TargetFramework>net10.0</TargetFramework>
+        <LangVersion>latest</LangVersion>
+        <Nullable>enable</Nullable>
+        <ImplicitUsings>enable</ImplicitUsings>
+        <TreatWarningsAsErrors>true</TreatWarningsAsErrors>
+        <EnableNETAnalyzers>true</EnableNETAnalyzers>
+        <AnalysisLevel>latest-recommended</AnalysisLevel>
+        <EnforceCodeStyleInBuild>true</EnforceCodeStyleInBuild>
+        <GenerateDocumentationFile>true</GenerateDocumentationFile>
+        <Version>0.1.0</Version>
+        <Authors>lookbusy1344</Authors>
+        <PackageLicenseFile>LICENSE</PackageLicenseFile>
+        <RepositoryUrl>https://github.com/lookbusy1344/EnrolmentEngine.git</RepositoryUrl>
+        <PackageProjectUrl>https://github.com/lookbusy1344/EnrolmentEngine/tree/main/EnrolmentRules</PackageProjectUrl>
+        <PackageReadmeFile>README.md</PackageReadmeFile>
+        <PackageTags>enrolment;rulesengine;dotnet;education</PackageTags>
+        <!-- Strict analysis for a contestable-decision system. Globalization and Naming are
+             deliberately left at the recommended level (Globalization=All re-enables CA1303
+             localization noise; Naming=All fights the snake_case test convention). -->
+        <AnalysisModeDesign>All</AnalysisModeDesign>
+        <AnalysisModeSecurity>All</AnalysisModeSecurity>
+        <AnalysisModePerformance>All</AnalysisModePerformance>
+        <AnalysisModeReliability>All</AnalysisModeReliability>
+        <AnalysisModeUsage>All</AnalysisModeUsage>
+    </PropertyGroup>
+
+    <ItemGroup>
+        <PackageReference Include="Roslynator.Analyzers" Version="4.15.0">
+            <PrivateAssets>all</PrivateAssets>
+            <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
+        </PackageReference>
+        <PackageReference Include="Microsoft.VisualStudio.Threading.Analyzers" Version="18.7.23">
+            <PrivateAssets>all</PrivateAssets>
+            <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
+        </PackageReference>
+        <PackageReference Include="lookbusy1344.RecordValueAnalyser" Version="1.3.1">
+            <PrivateAssets>all</PrivateAssets>
+            <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
+        </PackageReference>
+    </ItemGroup>
+
+    <!-- The commit hash a build came from, written to .sourcerevision by scripts/deploy-cloudrun.sh
+         for builds that cannot reach git. See StampGitCommit below. -->
+    <PropertyGroup>
+        <SourceRevisionFile>$(MSBuildThisFileDirectory).sourcerevision</SourceRevisionFile>
+    </PropertyGroup>
+
+    <!-- Stamp the git commit into InformationalVersion (the SDK appends "+$(SourceRevisionId)"), so a
+         running CLI or web instance can name the build it came from. Three sources, in precedence order;
+         the first that yields a value wins, and BuildInfo degrades to "unknown" rather than failing when
+         none do:
+
+           1. An explicit SourceRevisionId (-p:SourceRevisionId=..., e.g. the Dockerfile's
+              SOURCE_REVISION_ID build arg) — the Condition on this target.
+           2. git, when the build can see a checkout. Authoritative for ordinary local/CI builds.
+           3. The .sourcerevision file. This exists because the container build genuinely cannot use
+              git: the git root is the *parent* monorepo directory, while the Docker build context is
+              this folder, so no .git is ever inside the context — nothing .dockerignore can change.
+              A source-deploy to Cloud Run gives Cloud Build a bare source tree and offers no way to
+              pass a Docker build arg, so a file carried in the context is the only channel.
+
+         git beats the file deliberately: a stale .sourcerevision must never outrank a real checkout. -->
+    <Target Name="StampGitCommit" BeforeTargets="GetAssemblyVersion" Condition="'$(SourceRevisionId)' == ''">
+        <Exec Command="git rev-parse --short=10 HEAD" ConsoleToMSBuild="true" StandardOutputImportance="low"
+              ContinueOnError="true" IgnoreExitCode="true" EchoOff="true">
+            <Output TaskParameter="ConsoleOutput" PropertyName="GitCommitHash"/>
+            <Output TaskParameter="ExitCode" PropertyName="GitCommitExitCode"/>
+        </Exec>
+        <Exec Command="git status --porcelain --untracked-files=no" ConsoleToMSBuild="true" StandardOutputImportance="low"
+              ContinueOnError="true" IgnoreExitCode="true" EchoOff="true" Condition="'$(GitCommitExitCode)' == '0'">
+            <Output TaskParameter="ConsoleOutput" PropertyName="GitWorkingTreeStatus"/>
+        </Exec>
+        <PropertyGroup Condition="'$(GitCommitExitCode)' == '0' AND '$(GitCommitHash)' != ''">
+            <SourceRevisionId>$(GitCommitHash)</SourceRevisionId>
+            <SourceRevisionId Condition="'$(GitWorkingTreeStatus)' != ''">$(SourceRevisionId)-dirty</SourceRevisionId>
+        </PropertyGroup>
+
+        <ReadLinesFromFile File="$(SourceRevisionFile)"
+                           Condition="'$(SourceRevisionId)' == '' AND Exists('$(SourceRevisionFile)')">
+            <Output TaskParameter="Lines" ItemName="SourceRevisionLine"/>
+        </ReadLinesFromFile>
+        <PropertyGroup Condition="'$(SourceRevisionId)' == '' AND '@(SourceRevisionLine)' != ''">
+            <SourceRevisionId>%(SourceRevisionLine.Identity)</SourceRevisionId>
+        </PropertyGroup>
+    </Target>
+
+    <ItemGroup Condition="'$(IsPackable)' != 'false'">
+        <None Include="$(MSBuildThisFileDirectory)README.md" Pack="true" PackagePath="\" Visible="false"/>
+        <None Include="$(MSBuildThisFileDirectory)LICENSE" Pack="true" PackagePath="\" Visible="false"/>
+    </ItemGroup>
+
+</Project>

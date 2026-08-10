@@ -1,0 +1,679 @@
+namespace EnrolmentRules.Tests;
+
+using System.Globalization;
+using System.Text.Json;
+using AwesomeAssertions;
+using Cli;
+using Domain;
+
+/// <summary>
+///     Phase 8 — CLI polish, input validation, and parallel batch evaluation. Input validation is the
+///     boundary guard RulesEngine does not give the input <em>document</em> (a bad grade must fail fast,
+///     not become a silent red). <c>--batch</c> is the explicit demonstration that stateless evaluation
+///     parallelises for free over one shared engine: one well-formed line per student, input order
+///     preserved, no cross-student leakage. The ineligible exit code (4) is asserted for the
+///     single-student evaluation modes.
+/// </summary>
+public sealed class CliTests
+{
+	// A valid date of birth so its presence never confounds the other validation assertions.
+	private const string DobText = "2009-09-01";
+	private static readonly DateOnly ValidDob = new(2009, 9, 1);
+
+	// A minimal eligible student: English + Maths passes and exactly MinPasses GCSEs at grade >= 4.
+	private static string EligibleLine(string id) =>
+		StudentLine(id, """{"english_language":6,"maths":6,"physics":6,"chemistry":6,"biology":6}""");
+
+	private static string StudentLine(string id, string gcsesJson, string hobbiesJson = "[]") =>
+		"{\"student\":{\"id\":\"" + id + "\",\"gcses\":" + gcsesJson + ",\"hobbies\":" + hobbiesJson + ",\"date_of_birth\":\"" + DobText + "\"}}";
+
+	private static string WriteTemp(string contents, string extension)
+	{
+		var path = Path.Combine(Path.GetTempPath(), "enrolmentrules-tests", Guid.NewGuid().ToString("N") + extension);
+		Directory.CreateDirectory(Path.GetDirectoryName(path)!);
+		File.WriteAllText(path, contents);
+		return path;
+	}
+
+	// ---- input validation (pure) -------------------------------------------------------------
+
+	[Fact]
+	public void a_well_formed_student_has_no_validation_errors()
+	{
+		var student = new StudentInput(
+			"S-OK",
+			new Dictionary<string, int> { ["maths"] = 6, ["english_language"] = 5 },
+			["plays_piano"]) { DateOfBirth = ValidDob };
+
+		StudentValidator.Validate(student, Harness.Catalogue, Harness.Scale).Should().BeEmpty();
+	}
+
+	[Theory]
+	[InlineData(0)]
+	[InlineData(10)]
+	[InlineData(-3)]
+	public void a_grade_outside_the_one_to_nine_scale_is_rejected(int grade)
+	{
+		var student = new StudentInput("S-BAD", new Dictionary<string, int> { ["maths"] = grade }, []) { DateOfBirth = ValidDob };
+
+		StudentValidator.Validate(student, Harness.Catalogue, Harness.Scale)
+			.Should().ContainSingle()
+			.Which.Should().Contain("maths").And.Contain("out of range");
+	}
+
+	[Fact]
+	public void grades_at_the_scale_boundaries_are_accepted()
+	{
+		var student = new StudentInput(
+			"S-EDGE",
+			new Dictionary<string, int> { ["maths"] = Thresholds.MinGcseGrade, ["art"] = Thresholds.MaxGcseGrade },
+			[]) { DateOfBirth = ValidDob };
+
+		StudentValidator.Validate(student, Harness.Catalogue, Harness.Scale).Should().BeEmpty();
+	}
+
+	[Fact]
+	public void an_unknown_gcse_subject_is_rejected()
+	{
+		var student = new StudentInput("S-BAD", new Dictionary<string, int> { ["underwater_basketweaving"] = 6 }, []) { DateOfBirth = ValidDob };
+
+		StudentValidator.Validate(student, Harness.Catalogue, Harness.Scale)
+			.Should().ContainSingle()
+			.Which.Should().Contain("underwater_basketweaving");
+	}
+
+	[Fact]
+	public void a_blank_hobby_tag_is_rejected()
+	{
+		var student = new StudentInput("S-BAD", new Dictionary<string, int> { ["maths"] = 6 }, ["plays_piano", "   "]) { DateOfBirth = ValidDob };
+
+		StudentValidator.Validate(student, Harness.Catalogue, Harness.Scale)
+			.Should().ContainSingle()
+			.Which.Should().Contain("hobby");
+	}
+
+	[Fact]
+	public void duplicate_chosen_a_levels_are_rejected()
+	{
+		var student = new StudentInput("S-BAD", new Dictionary<string, int> { ["maths"] = 6 }, []) {
+			ChosenALevels = [Subject.French, Subject.German, Subject.French],
+			DateOfBirth = ValidDob,
+		};
+
+		StudentValidator.Validate(student, Harness.Catalogue, Harness.Scale)
+			.Should().ContainSingle()
+			.Which.Should().Contain("chosen_a_levels").And.Contain("duplicate");
+	}
+
+	[Fact]
+	public void an_unknown_chosen_a_level_value_is_rejected()
+	{
+		var student = new StudentInput("S-BAD", new Dictionary<string, int> { ["maths"] = 6 }, []) {
+			ChosenALevels = [new("philosophy")],
+			DateOfBirth = ValidDob,
+		};
+
+		StudentValidator.Validate(student, Harness.Catalogue, Harness.Scale)
+			.Should().ContainSingle()
+			.Which.Should().Contain("chosen_a_levels").And.Contain("philosophy");
+	}
+
+	[Fact]
+	public void a_missing_date_of_birth_is_rejected()
+	{
+		var student = new StudentInput("S-BAD", new Dictionary<string, int> { ["maths"] = 6 }, ["plays_piano"]);
+
+		StudentValidator.Validate(student, Harness.Catalogue, Harness.Scale)
+			.Should().ContainSingle()
+			.Which.Should().Contain("date_of_birth").And.Contain("required");
+	}
+
+	// ---- CLI validation gating ---------------------------------------------------------------
+
+	[Fact]
+	public void cli_rejects_an_out_of_range_grade_with_an_input_error_not_a_silent_rating()
+	{
+		var path = WriteTemp(StudentLine("S-BAD", """{"maths":10}"""), ".json");
+		using var stdout = new StringWriter();
+		using var stderr = new StringWriter();
+
+		var exit = CliRunner.Run(["--json", path], stdout, stderr);
+
+		exit.Should().Be(CliRunner.ExitInput);
+		stdout.ToString().Should().BeEmpty();
+		stderr.ToString().Should().Contain("out of range");
+	}
+
+	[Fact]
+	public void cli_rejects_an_unknown_subject_with_an_input_error()
+	{
+		var path = WriteTemp(StudentLine("S-BAD", """{"quidditch":6}"""), ".json");
+		using var stdout = new StringWriter();
+		using var stderr = new StringWriter();
+
+		var exit = CliRunner.Run(["--table", path], stdout, stderr);
+
+		exit.Should().Be(CliRunner.ExitInput);
+		stderr.ToString().Should().Contain("quidditch");
+	}
+
+	[Fact]
+	public void cli_rejects_missing_required_student_members_with_an_input_error()
+	{
+		var path = WriteTemp("""{"student":{"id":"S-BAD","gcses":{"maths":6}}}""", ".json");
+		using var stdout = new StringWriter();
+		using var stderr = new StringWriter();
+
+		var exit = CliRunner.Run(["--json", path], stdout, stderr);
+
+		exit.Should().Be(CliRunner.ExitInput);
+		stdout.ToString().Should().BeEmpty();
+		stderr.ToString().Should().Contain("hobbies");
+	}
+
+	[Fact]
+	public void cli_rejects_an_unknown_chosen_a_level_value_with_an_input_error()
+	{
+		var path = WriteTemp("""{"student":{"id":"S-BAD","gcses":{"maths":6},"hobbies":[],"chosen_a_levels":["philosophy"]}}""", ".json");
+		using var stdout = new StringWriter();
+		using var stderr = new StringWriter();
+
+		var exit = CliRunner.Run(["--json", path], stdout, stderr);
+
+		exit.Should().Be(CliRunner.ExitInput);
+		stdout.ToString().Should().BeEmpty();
+		stderr.ToString().Should().Contain("chosen_a_levels").And.Contain("philosophy");
+	}
+
+	// ---- ineligible exit code (single-student modes) -----------------------------------------
+
+	[Fact]
+	public void cli_json_on_an_ineligible_student_exits_ineligible_but_still_emits_the_result()
+	{
+		// Only Maths present ⇒ no English pass and too few passes ⇒ ineligible.
+		var path = WriteTemp(StudentLine("S-INELIGIBLE", """{"maths":6}"""), ".json");
+		using var stdout = new StringWriter();
+		using var stderr = new StringWriter();
+
+		var exit = CliRunner.Run(["--json", path], stdout, stderr);
+
+		exit.Should().Be(CliRunner.ExitIneligible);
+		var result = JsonSerializer.Deserialize(stdout.ToString(), EnrolmentJsonContext.Default.EnrolmentResult);
+		result.Should().NotBeNull();
+		result!.Eligible.Should().BeFalse();
+	}
+
+	[Fact]
+	public void cli_json_on_an_eligible_student_exits_ok()
+	{
+		var path = WriteTemp(EligibleLine("S-OK"), ".json");
+		using var stdout = new StringWriter();
+		using var stderr = new StringWriter();
+
+		CliRunner.Run(["--json", path], stdout, stderr).Should().Be(CliRunner.ExitOk);
+	}
+
+	// ---- coloured table ----------------------------------------------------------------------
+
+	[Fact]
+	public void cli_table_renders_every_subject_with_its_rating()
+	{
+		var path = Path.Combine(Harness.RepoRoot, "examples", "student.json");
+		using var stdout = new StringWriter();
+		using var stderr = new StringWriter();
+
+		var exit = CliRunner.Run(["--table", path], stdout, stderr);
+
+		exit.Should().Be(CliRunner.ExitOk);
+		var output = stdout.ToString();
+		var lines = output.Split('\n', StringSplitOptions.RemoveEmptyEntries);
+
+		// Each subject appears as its own row in the table; the rating is in the second
+		// pipe-delimited column of that same line, so a regression that drops the rating
+		// column fails every subject's line check. The cell may contain Spectre.Console
+		// ANSI escape codes (preserved when captured via StringWriter), so check by
+		// substring rather than exact match.
+		foreach (var subject in Catalogue.Subjects) {
+			var name = EnumNames.NameOf(subject);
+			lines.Should().Contain(l => l.Contains(name));
+			var subjectLine = lines.First(l => l.Contains(name));
+			var ratingCell = subjectLine.Split('│')[2];
+			ratingCell.Should().ContainAny("green", "amber", "red");
+		}
+	}
+
+	// ---- batch -------------------------------------------------------------------------------
+
+	[Fact]
+	public void cli_batch_emits_one_well_formed_result_per_line_in_input_order()
+	{
+		var ids = new[] { "S-A", "S-B", "S-C" };
+		var jsonl = string.Join('\n', ids.Select(EligibleLine));
+		var path = WriteTemp(jsonl, ".jsonl");
+		using var stdout = new StringWriter();
+		using var stderr = new StringWriter();
+
+		var exit = CliRunner.Run(["--batch", path], stdout, stderr);
+
+		exit.Should().Be(CliRunner.ExitOk);
+		var outcomes = ParseOutcomes(stdout.ToString());
+
+		// One line per student, input order preserved.
+		outcomes.Select(o => o.Id).Should().Equal(ids);
+		// Each is a well-formed result (no cross-student leakage: every line carries its own verdict).
+		outcomes.Should().OnlyContain(o => o.Error == null);
+		outcomes.Should().OnlyContain(o => o.Result!.Recommendations.Count == Catalogue.Subjects.Count);
+		outcomes.Should().OnlyContain(o => o.Result!.Eligible);
+	}
+
+	[Fact]
+	public void cli_batch_isolates_a_bad_line_without_aborting_the_run()
+	{
+		// A valid student, then one with an out-of-range grade, then another valid student.
+		var jsonl = string.Join('\n',
+			EligibleLine("S-A"),
+			StudentLine("S-BAD", """{"maths":99}"""),
+			EligibleLine("S-C"));
+		var path = WriteTemp(jsonl, ".jsonl");
+		using var stdout = new StringWriter();
+		using var stderr = new StringWriter();
+
+		var exit = CliRunner.Run(["--batch", path], stdout, stderr);
+
+		exit.Should().Be(CliRunner.ExitOk);
+		var outcomes = ParseOutcomes(stdout.ToString());
+
+		outcomes.Select(o => o.Id).Should().Equal("S-A", "S-BAD", "S-C");
+		outcomes[0].Error.Should().BeNull();
+		outcomes[1].Result.Should().BeNull();
+		outcomes[1].Error.Should().Contain("out of range");
+		outcomes[2].Error.Should().BeNull();
+	}
+
+	[Fact]
+	public void cli_batch_isolates_a_line_with_missing_required_members()
+	{
+		var jsonl = string.Join('\n',
+			EligibleLine("S-A"),
+			"""{"student":{"id":"S-BAD","gcses":{"maths":6}}}""",
+			EligibleLine("S-C"));
+		var path = WriteTemp(jsonl, ".jsonl");
+		using var stdout = new StringWriter();
+		using var stderr = new StringWriter();
+
+		var exit = CliRunner.Run(["--batch", path], stdout, stderr);
+
+		exit.Should().Be(CliRunner.ExitOk);
+		var outcomes = ParseOutcomes(stdout.ToString());
+
+		outcomes.Select(o => o.Id).Should().Equal("S-A", "S-BAD", "S-C");
+		outcomes[1].Result.Should().BeNull();
+		outcomes[1].Error.Should().Contain("hobbies");
+		outcomes[2].Error.Should().BeNull();
+	}
+
+	[Fact]
+	public void cli_batch_isolates_a_line_with_an_unknown_chosen_a_level_value()
+	{
+		var jsonl = string.Join('\n',
+			EligibleLine("S-A"),
+			"""{"student":{"id":"S-BAD","gcses":{"maths":6},"hobbies":[],"chosen_a_levels":["philosophy"]}}""",
+			EligibleLine("S-C"));
+		var path = WriteTemp(jsonl, ".jsonl");
+		using var stdout = new StringWriter();
+		using var stderr = new StringWriter();
+
+		var exit = CliRunner.Run(["--batch", path], stdout, stderr);
+
+		exit.Should().Be(CliRunner.ExitOk);
+		var outcomes = ParseOutcomes(stdout.ToString());
+
+		outcomes.Select(o => o.Id).Should().Equal("S-A", "S-BAD", "S-C");
+		outcomes[0].Error.Should().BeNull();
+		outcomes[1].Result.Should().BeNull();
+		outcomes[1].Error.Should().Contain("chosen_a_levels").And.Contain("philosophy");
+		outcomes[2].Error.Should().BeNull();
+	}
+
+	[Fact]
+	public void cli_batch_on_a_missing_file_is_an_input_error()
+	{
+		var missing = Path.Combine(Path.GetTempPath(), "no-such-batch-" + Guid.NewGuid().ToString("N") + ".jsonl");
+		using var stdout = new StringWriter();
+		using var stderr = new StringWriter();
+
+		CliRunner.Run(["--batch", missing], stdout, stderr).Should().Be(CliRunner.ExitInput);
+	}
+
+	[Fact]
+	public void evaluate_batch_writes_earlier_outcomes_before_the_input_stream_is_exhausted()
+	{
+		// A reader/writer seam directly on the streaming core (not the file-path --batch entry point):
+		// the third line is withheld until released, proving the first two outcomes are written while
+		// the input stream is still open rather than only after EOF (the old ReadAllLines/write-after-
+		// everything-completes behaviour). A plain Thread, not Task — the test suite's synchronous
+		// execution boundary (SynchronousTestSuiteTests) forbids Task/async in test sources outside
+		// approved infrastructure.
+		using var reader = new BlockingLineReader([EligibleLine("S-A"), EligibleLine("S-B"), EligibleLine("S-C")], 2);
+		using var stdout = new StringWriter();
+		var worker = new Thread(() => CliRunner.EvaluateBatch(reader, stdout, Harness.ShippedEngine()));
+
+		worker.Start();
+		SpinWait.SpinUntil(() => ParseOutcomes(stdout.ToString()).Count >= 2, TimeSpan.FromSeconds(5))
+			.Should().BeTrue("the first two outcomes must be written while the third line is still withheld");
+		reader.Release();
+		worker.Join(TimeSpan.FromSeconds(5)).Should().BeTrue();
+
+		ParseOutcomes(stdout.ToString()).Select(o => o.Id).Should().Equal("S-A", "S-B", "S-C");
+	}
+
+	[Fact]
+	public void evaluate_batch_bounds_read_ahead_while_an_earlier_outcome_is_pending()
+	{
+		const int maxConcurrency = 2;
+		const int lineCount = 20;
+		using var firstOutcomeGate = new ManualResetEventSlim(false);
+		using var firstEvaluationStarted = new ManualResetEventSlim(false);
+		using var reader = new CountingLineReader(
+			[.. Enumerable.Range(0, lineCount).Select(static index => index.ToString(CultureInfo.InvariantCulture))]);
+		using var stdout = new StringWriter();
+		var worker = new Thread(() => CliRunner.EvaluateBatch(
+			reader,
+			stdout,
+			line => {
+				if (line == "0") {
+					firstEvaluationStarted.Set();
+					firstOutcomeGate.Wait();
+				}
+
+				return new(line, null, null);
+			},
+			maxConcurrency));
+
+		worker.Start();
+		try {
+			firstEvaluationStarted.Wait(TimeSpan.FromSeconds(5))
+				.Should().BeTrue("the first record must be in flight before read-ahead is measured");
+			SpinWait.SpinUntil(() => reader.ReadCount >= maxConcurrency, TimeSpan.FromSeconds(5))
+				.Should().BeTrue("the evaluation window should be filled");
+			SpinWait.SpinUntil(() => reader.ReadCount > maxConcurrency, TimeSpan.FromMilliseconds(250))
+				.Should().BeFalse("input must not advance beyond the bounded window while sequence zero is pending");
+		}
+		finally {
+			firstOutcomeGate.Set();
+		}
+
+		worker.Join(TimeSpan.FromSeconds(5)).Should().BeTrue();
+		ParseOutcomes(stdout.ToString()).Select(outcome => outcome.Id)
+			.Should().Equal(Enumerable.Range(0, lineCount).Select(static index => index.ToString(CultureInfo.InvariantCulture)));
+	}
+
+	// ---- YAML input (single-student modes) ---------------------------------------------------
+
+	// The same eligible student as EligibleLine, authored as YAML rather than JSON.
+	private static string EligibleYaml(string id) => $"""
+													  student:
+													    id: {id}
+													    gcses:
+													      english_language: 6
+													      maths: 6
+													      physics: 6
+													      chemistry: 6
+													      biology: 6
+													    hobbies: []
+													    date_of_birth: "{DobText}"
+													  """;
+
+	[Fact]
+	public void cli_json_accepts_a_yaml_student_document()
+	{
+		var path = WriteTemp(EligibleYaml("S-YAML"), ".yaml");
+		using var stdout = new StringWriter();
+		using var stderr = new StringWriter();
+
+		var exit = CliRunner.Run(["--json", path], stdout, stderr);
+
+		exit.Should().Be(CliRunner.ExitOk);
+		var result = JsonSerializer.Deserialize(stdout.ToString(), EnrolmentJsonContext.Default.EnrolmentResult);
+		result.Should().NotBeNull();
+		result!.Eligible.Should().BeTrue();
+	}
+
+	[Fact]
+	public void cli_json_on_equivalent_yaml_and_json_documents_produces_identical_output()
+	{
+		var jsonOut = CaptureJson(Path.Combine(Harness.RepoRoot, "examples", "student.json"));
+		var yamlOut = CaptureJson(Path.Combine(Harness.RepoRoot, "examples", "student.yaml"));
+
+		yamlOut.Should().Be(jsonOut);
+	}
+
+	[Fact]
+	public void cli_applies_input_validation_to_yaml_documents_too()
+	{
+		const string yaml = """
+							student:
+							  id: S-BAD
+							  gcses:
+							    maths: 10
+							  hobbies: []
+							""";
+		var path = WriteTemp(yaml, ".yml");
+		using var stdout = new StringWriter();
+		using var stderr = new StringWriter();
+
+		var exit = CliRunner.Run(["--table", path], stdout, stderr);
+
+		exit.Should().Be(CliRunner.ExitInput);
+		stderr.ToString().Should().Contain("out of range");
+	}
+
+	[Fact]
+	public void cli_rejects_malformed_yaml_with_an_input_error()
+	{
+		// Unbalanced flow mapping ⇒ a YAML parse error, surfaced as an input error rather than a crash.
+		var path = WriteTemp("student: {id: S-BAD", ".yaml");
+		using var stdout = new StringWriter();
+		using var stderr = new StringWriter();
+
+		var exit = CliRunner.Run(["--json", path], stdout, stderr);
+
+		exit.Should().Be(CliRunner.ExitInput);
+		stdout.ToString().Should().BeEmpty();
+	}
+
+	[Fact]
+	public void cli_reports_malformed_catalogue_yaml_as_an_input_error_for_evaluation_modes()
+	{
+		var fixture = WriteMalformedDataFixture();
+		try {
+			var path = WriteTemp(EligibleLine("S-OK"), ".json");
+			using var stdout = new StringWriter();
+			using var stderr = new StringWriter();
+
+			var exit = CliRunner.Run(["--json", path], stdout, stderr, () => Harness.WorkflowsDir, () => fixture.Item2);
+
+			exit.Should().Be(CliRunner.ExitInput);
+			stdout.ToString().Should().BeEmpty();
+			stderr.ToString().Should().Contain("could not load enrolment rules").And.Contain("catalogue.yaml");
+		}
+		finally {
+			Directory.Delete(fixture.Item1, true);
+		}
+	}
+
+	[Theory]
+	[InlineData("--version")]
+	[InlineData("-v")]
+	public void cli_version_prints_the_build_stamp_to_stdout(string flag)
+	{
+		using var stdout = new StringWriter();
+		using var stderr = new StringWriter();
+
+		var exit = CliRunner.Run([flag], stdout, stderr);
+
+		exit.Should().Be(CliRunner.ExitOk);
+		stdout.ToString().Should().Contain(BuildInfo.VersionWithCommit);
+		stderr.ToString().Should().BeEmpty();
+	}
+
+	[Fact]
+	public void cli_usage_advertises_the_version_flag()
+	{
+		using var stdout = new StringWriter();
+		using var stderr = new StringWriter();
+
+		CliRunner.Run([], stdout, stderr).Should().Be(CliRunner.ExitUsage);
+
+		stderr.ToString().Should().Contain("--version");
+	}
+
+	[Fact]
+	public void cli_lint_workflows_uses_the_sibling_qualification_scale_for_catalogue_validation()
+	{
+		var fixture = WriteScaleAlignedLintFixture();
+		try {
+			using var stdout = new StringWriter();
+			using var stderr = new StringWriter();
+
+			var engine = EnrolmentEngine.Create(fixture.WorkflowsDir, fixture.DataDir, Harness.AsOf);
+			engine.Should().NotBeNull();
+
+			var exit = CliRunner.Run(["--lint-workflows", fixture.WorkflowsDir], stdout, stderr);
+
+			exit.Should().Be(CliRunner.ExitOk);
+			stdout.ToString().Should().BeEmpty();
+			stderr.ToString().Should().BeEmpty();
+		}
+		finally {
+			Directory.Delete(fixture.Root, true);
+		}
+	}
+
+	[Fact]
+	public void cli_reports_malformed_catalogue_yaml_as_an_input_error_for_lint_workflows()
+	{
+		var fixture = WriteMalformedDataFixture();
+		try {
+			using var stdout = new StringWriter();
+			using var stderr = new StringWriter();
+
+			var exit = CliRunner.Run(["--lint-workflows", fixture.Item3], stdout, stderr);
+
+			exit.Should().Be(CliRunner.ExitInput);
+			stdout.ToString().Should().BeEmpty();
+			stderr.ToString().Should().Contain("could not load enrolment workflows").And.Contain("catalogue.yaml");
+		}
+		finally {
+			Directory.Delete(fixture.Item1, true);
+		}
+	}
+
+	private static string CaptureJson(string path)
+	{
+		using var stdout = new StringWriter();
+		using var stderr = new StringWriter();
+		CliRunner.Run(["--json", path], stdout, stderr).Should().Be(CliRunner.ExitOk);
+		return stdout.ToString();
+	}
+
+	private static IReadOnlyList<BatchOutcome> ParseOutcomes(string stdout) => [
+		.. stdout.Split('\n', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries)
+			.Select(static line => JsonSerializer.Deserialize(line, BatchJsonContext.Default.BatchOutcome)!),
+	];
+
+	private static (string Root, string DataDir, string WorkflowsDir) WriteMalformedDataFixture()
+	{
+		var dir = Path.Combine(Path.GetTempPath(), "enrolmentrules-tests", Guid.NewGuid().ToString("N"));
+		var dataDir = Path.Combine(dir, "data");
+		var workflowsDir = Path.Combine(dir, "workflows");
+
+		CopyTree(Harness.DataDir, dataDir);
+		CopyTree(Harness.WorkflowsDir, workflowsDir);
+
+		File.WriteAllText(Path.Combine(dataDir, CatalogueStore.CatalogueFileName), "subjects: [");
+
+		return (dir, dataDir, workflowsDir);
+	}
+
+	private static (string Root, string DataDir, string WorkflowsDir) WriteScaleAlignedLintFixture()
+	{
+		var dir = Path.Combine(Path.GetTempPath(), "enrolmentrules-tests", Guid.NewGuid().ToString("N"));
+		var dataDir = Path.Combine(dir, "data");
+		var workflowsDir = Path.Combine(dir, "workflows");
+
+		CopyTree(Harness.DataDir, dataDir);
+		CopyTree(Harness.WorkflowsDir, workflowsDir);
+
+		File.WriteAllText(
+			Path.Combine(dataDir, QualificationScaleStore.QualificationsFileName),
+			File.ReadAllText(Path.Combine(Harness.DataDir, QualificationScaleStore.QualificationsFileName))
+				.Replace(
+					"      - { grade: distinction_star, ordinal: 3, equivalence: 6.0 }",
+					"      - { grade: distinction_star, ordinal: 3, equivalence: 6.0 }\n      - { grade: platinum, ordinal: 4, equivalence: 6.0 }",
+					StringComparison.Ordinal));
+
+		File.WriteAllText(
+			Path.Combine(dataDir, CatalogueStore.CatalogueFileName),
+			File.ReadAllText(Path.Combine(Harness.DataDir, CatalogueStore.CatalogueFileName))
+				.Replace("min_grade: distinction", "min_grade: platinum", StringComparison.Ordinal));
+
+		return (dir, dataDir, workflowsDir);
+	}
+
+	private static void CopyTree(string source, string destination)
+	{
+		Directory.CreateDirectory(destination);
+		foreach (var file in Directory.EnumerateFiles(source, "*", SearchOption.AllDirectories)) {
+			var relative = Path.GetRelativePath(source, file);
+			var target = Path.Combine(destination, relative);
+			Directory.CreateDirectory(Path.GetDirectoryName(target)!);
+			File.Copy(file, target, true);
+		}
+	}
+
+	/// <summary>A <see cref="TextReader" /> that blocks before yielding the line at <c>blockBeforeIndex</c> until <see cref="Release" />.</summary>
+	private sealed class BlockingLineReader(IReadOnlyList<string> lines, int blockBeforeIndex) : TextReader
+	{
+		private readonly ManualResetEventSlim gate = new(false);
+		private int index;
+
+		public void Release() => gate.Set();
+
+		public override string? ReadLine()
+		{
+			if (index == blockBeforeIndex) {
+				gate.Wait();
+			}
+
+			return index < lines.Count ? lines[index++] : null;
+		}
+
+		protected override void Dispose(bool disposing)
+		{
+			if (disposing) {
+				gate.Dispose();
+			}
+
+			base.Dispose(disposing);
+		}
+	}
+
+	private sealed class CountingLineReader(IReadOnlyList<string> lines) : TextReader
+	{
+		private int index;
+
+		public int ReadCount => Volatile.Read(ref index);
+
+		public override string? ReadLine()
+		{
+			var current = index;
+			if (current >= lines.Count) {
+				return null;
+			}
+
+			Volatile.Write(ref index, current + 1);
+			return lines[current];
+		}
+	}
+}

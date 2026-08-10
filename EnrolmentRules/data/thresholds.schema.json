@@ -1,0 +1,102 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://enrolmentrules/thresholds.schema.json",
+  "title": "Policy thresholds",
+  "description": "Runtime policy knobs for eligibility and subject entry thresholds.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "pass_grade",
+    "min_passes",
+    "top_entry",
+    "standard_entry",
+    "exceptional_entry",
+    "min_dfe_green_probability_at_or_above",
+    "min_dfe_amber_probability_at_or_above",
+    "max_chosen_a_levels",
+    "high_attainment_max_chosen_a_levels",
+    "high_attainment_average_gcse",
+    "amber_score_factor"
+  ],
+  "properties": {
+    "pass_grade": {
+      "type": "integer",
+      "minimum": 1,
+      "maximum": 9
+    },
+    "min_passes": {
+      "type": "integer",
+      "minimum": 1
+    },
+    "top_entry": {
+      "type": "integer",
+      "minimum": 1,
+      "maximum": 9
+    },
+    "standard_entry": {
+      "type": "integer",
+      "minimum": 1,
+      "maximum": 9
+    },
+    "exceptional_entry": {
+      "type": "integer",
+      "minimum": 1,
+      "maximum": 9
+    },
+    "min_dfe_green_probability_at_or_above": {
+      "type": "number",
+      "minimum": 0,
+      "maximum": 1
+    },
+    "min_dfe_amber_probability_at_or_above": {
+      "type": "number",
+      "minimum": 0,
+      "maximum": 1
+    },
+    "max_chosen_a_levels": {
+      "description": "Normal maximum number of committed A-level choices for one student.",
+      "type": "integer",
+      "minimum": 1
+    },
+    "high_attainment_max_chosen_a_levels": {
+      "description": "Maximum committed A-level choices for a student whose average GCSE score meets the high-attainment threshold.",
+      "type": "integer",
+      "minimum": 1
+    },
+    "high_attainment_average_gcse": {
+      "description": "Average GCSE score at or above which the high-attainment choice cap applies.",
+      "type": "number",
+      "minimum": 0,
+      "maximum": 9
+    },
+    "max_green_choices": {
+      "description": "Optional, normally omitted. When set, caps the number of auto-enrol greens and demotes the lowest-weight surplus to amber. Omit to disable the cap so every green stays green.",
+      "type": "integer",
+      "minimum": 1
+    },
+    "amber_score_factor": {
+      "type": "number",
+      "minimum": 0,
+      "maximum": 1
+    },
+    "advice_considers_unsat_gcses": {
+      "description": "Optional, off by default. When true the counterfactual advisor reverts to the old, heavier search that may propose sitting a brand-new GCSE; a diagnostic knob, not for normal operation.",
+      "type": "boolean"
+    },
+    "advice_max_grade_cost": {
+      "description": "Maximum total GCSE grade increments the counterfactual advisor may propose per subject search.",
+      "type": "integer",
+      "minimum": 1
+    },
+    "advice_max_subjects_changed": {
+      "description": "Maximum distinct GCSE subjects the counterfactual advisor may change in one proposal bundle.",
+      "type": "integer",
+      "minimum": 1
+    },
+    "advice_max_pipeline_evaluations": {
+      "description": "Optional hard cap on full pipeline evaluations across one advise call; omit for unlimited.",
+      "type": "integer",
+      "minimum": 1
+    }
+  }
+}

@@ -1,0 +1,114 @@
+{
+  "eligible": true,
+  "eligibility_reasons": [],
+  "advice": [
+    {
+      "subject": "economics",
+      "current": "amber",
+      "target": "green",
+      "changes": [
+        {
+          "gcse_subject": "maths",
+          "from": 5,
+          "to": 8
+        }
+      ],
+      "reachable": true,
+      "blocked_reason": null
+    },
+    {
+      "subject": "further_maths",
+      "current": "red",
+      "target": "amber",
+      "changes": [],
+      "reachable": false,
+      "blocked_reason": "maths prerequisite not met"
+    },
+    {
+      "subject": "design_technology",
+      "current": "red",
+      "target": "amber",
+      "changes": [],
+      "reachable": false,
+      "blocked_reason": "Entry requirement unmet or predicted grade below the amber threshold"
+    },
+    {
+      "subject": "spanish",
+      "current": "red",
+      "target": "amber",
+      "changes": [],
+      "reachable": false,
+      "blocked_reason": "Entry requirement unmet or predicted grade below the amber threshold"
+    },
+    {
+      "subject": "maths",
+      "current": "red",
+      "target": "amber",
+      "changes": [
+        {
+          "gcse_subject": "maths",
+          "from": 5,
+          "to": 8
+        }
+      ],
+      "reachable": true,
+      "blocked_reason": null
+    },
+    {
+      "subject": "physics",
+      "current": "red",
+      "target": "amber",
+      "changes": [
+        {
+          "gcse_subject": "maths",
+          "from": 5,
+          "to": 8
+        }
+      ],
+      "reachable": true,
+      "blocked_reason": null
+    },
+    {
+      "subject": "computer_studies",
+      "current": "red",
+      "target": "amber",
+      "changes": [],
+      "reachable": false,
+      "blocked_reason": "Entry requirement unmet or predicted grade below the amber threshold"
+    },
+    {
+      "subject": "french",
+      "current": "red",
+      "target": "amber",
+      "changes": [],
+      "reachable": false,
+      "blocked_reason": "Entry requirement unmet or predicted grade below the amber threshold"
+    },
+    {
+      "subject": "art",
+      "current": "red",
+      "target": "amber",
+      "changes": [],
+      "reachable": false,
+      "blocked_reason": "Entry requirement unmet or predicted grade below the amber threshold"
+    },
+    {
+      "subject": "german",
+      "current": "red",
+      "target": "amber",
+      "changes": [],
+      "reachable": false,
+      "blocked_reason": "Entry requirement unmet or predicted grade below the amber threshold"
+    },
+    {
+      "subject": "music",
+      "current": "red",
+      "target": "amber",
+      "changes": [],
+      "reachable": false,
+      "blocked_reason": "Entry requirement unmet or predicted grade below the amber threshold"
+    }
+  ],
+  "gate": null,
+  "truncation_reason": null
+}

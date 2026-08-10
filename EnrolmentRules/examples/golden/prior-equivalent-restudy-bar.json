@@ -1,0 +1,34 @@
+{
+  "student": {
+    "id": "S-PRIOR-RESTUDY",
+    "gcses": {
+      "maths": 8,
+      "english_language": 8,
+      "english_literature": 8,
+      "physics": 8,
+      "chemistry": 8,
+      "biology": 1,
+      "french": 8,
+      "german": 8,
+      "physical_education": 8,
+      "computer_studies": 8,
+      "history": 8,
+      "music": 8,
+      "art": 8
+    },
+    "hobbies": [],
+    "date_of_birth": "2009-09-01",
+    "prior_qualifications": [
+      {
+        "subject": "applied_science",
+        "type": "btec_diploma",
+        "grade": "distinction"
+      },
+      {
+        "subject": "biology",
+        "type": "a_level",
+        "grade": "e"
+      }
+    ]
+  }
+}

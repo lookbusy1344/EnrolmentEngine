@@ -1,0 +1,34 @@
+# Runtime policy thresholds for eligibility and subject rating. The shipped values mirror the
+# historical constants so first release behavior is unchanged; admins may retune this file at startup.
+pass_grade: 4
+min_passes: 5
+top_entry: 7
+standard_entry: 5
+# exceptional_entry is a hard GCSE gate (a top grade) for the most demanding subjects: Maths and
+# Physics require Maths GCSE at this level, ANDed with the regression-based rating tiers.
+exceptional_entry: 8
+# The Further Maths (7.0), humanities (5.0) and accessible-tier (4.0) average-GCSE entry bars are not
+# knobs here: they are one-off, course-specific values written directly into the rule expressions in
+# workflows/subject-ratings.yaml. Only broad-brush, widely-shared bands (the entry grades above) earn a
+# named threshold.
+min_dfe_green_probability_at_or_above: 0.60
+min_dfe_amber_probability_at_or_above: 0.50
+# The adult-age gate (19) is a one-off, single-subject bar: only Art's age-conditional entry reads it,
+# so it is written as a literal in that rule (facts.Age >= 19), not a named threshold.
+max_chosen_a_levels: 3
+high_attainment_max_chosen_a_levels: 4
+high_attainment_average_gcse: 7.5
+# max_green_choices is an optional, normally-unused feature: when omitted (as here) the green cap is
+# disabled and every subject rated green stays green — the engine reports what a student is allowed to
+# study, it does not force an "optimal" shortlist. Set it to a positive integer only if policy demands
+# an auto-enrol ceiling, in which case the lowest-priority-weight surplus greens are demoted to amber.
+# max_green_choices: 4
+amber_score_factor: 0.5
+# advice_considers_unsat_gcses is a diagnostic knob, off by default. When false the counterfactual
+# advisor (--advise) only proposes raising GCSEs the student already sat — actionable advice, and a far
+# cheaper search. Set it to true to revert to the old behaviour, which may also propose sitting a brand
+# new GCSE; useful for diagnosing why a subject is reachable or unreachable, not for normal operation.
+advice_considers_unsat_gcses: false
+advice_max_grade_cost: 12
+advice_max_subjects_changed: 3
+# advice_max_pipeline_evaluations:  # optional hard cap on full pipeline runs per advise call; omit for unlimited

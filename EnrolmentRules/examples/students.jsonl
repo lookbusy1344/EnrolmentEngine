@@ -1,0 +1,3 @@
+{"student":{"id":"S-2001","gcses":{"maths":9,"english_language":7,"english_literature":7,"physics":7,"chemistry":6,"biology":6,"history":5,"music":6,"art":8},"hobbies":["plays_piano","chess_club"],"date_of_birth":"2009-09-01"}}
+{"student":{"id":"S-2002","gcses":{"maths":5,"english_language":5,"physics":5,"chemistry":5,"biology":5},"hobbies":[],"date_of_birth":"2009-09-01"}}
+{"student":{"id":"S-2003","gcses":{"maths":4},"hobbies":["plays_guitar"],"date_of_birth":"2009-09-01"}}

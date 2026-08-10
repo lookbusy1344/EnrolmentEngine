@@ -1,0 +1,10 @@
+bin/
+obj/
+.vs/
+.idea/
+*.csproj.user
+*.DotSettings.user
+.DS_Store
+copilotDiffState.xml
+copilot.data.*.xml
+*.bak

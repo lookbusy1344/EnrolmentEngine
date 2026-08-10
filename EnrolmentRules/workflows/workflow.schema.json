@@ -1,0 +1,128 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://enrolmentrules/workflow.schema.json",
+  "title": "RulesEngine workflow",
+  "description": "Structural validation for a RulesEngine workflow file. Catches structural defects only; lambda-expression semantics are guarded by startup probe-evaluation and per-rule tests (Reservation 1).",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "WorkflowName",
+    "Rules"
+  ],
+  "properties": {
+    "WorkflowName": {
+      "type": "string",
+      "minLength": 1
+    },
+    "WorkflowsToInject": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      }
+    },
+    "GlobalParams": {
+      "type": "array",
+      "items": {
+        "$ref": "#/$defs/scopedParam"
+      }
+    },
+    "Rules": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "$ref": "#/$defs/rule"
+      }
+    }
+  },
+  "$defs": {
+    "rule": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "RuleName"
+      ],
+      "properties": {
+        "RuleName": {
+          "type": "string",
+          "minLength": 1
+        },
+        "Enabled": {
+          "type": "boolean"
+        },
+        "ErrorMessage": {
+          "type": "string"
+        },
+        "SuccessEvent": {
+          "type": "string"
+        },
+        "Operator": {
+          "type": "string"
+        },
+        "RuleExpressionType": {
+          "type": "string",
+          "enum": [
+            "LambdaExpression"
+          ]
+        },
+        "Expression": {
+          "type": "string",
+          "minLength": 1
+        },
+        "WorkflowsToInject": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "LocalParams": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/scopedParam"
+          }
+        },
+        "Rules": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/rule"
+          }
+        },
+        "Actions": {
+          "type": "object"
+        },
+        "Properties": {
+          "type": "object"
+        }
+      },
+      "anyOf": [
+        {
+          "required": [
+            "Expression"
+          ]
+        },
+        {
+          "required": [
+            "Rules"
+          ]
+        }
+      ]
+    },
+    "scopedParam": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "Name",
+        "Expression"
+      ],
+      "properties": {
+        "Name": {
+          "type": "string",
+          "minLength": 1
+        },
+        "Expression": {
+          "type": "string",
+          "minLength": 1
+        }
+      }
+    }
+  }
+}

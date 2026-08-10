@@ -1,0 +1,137 @@
+# Subject catalogue — the single source of truth for the cross-subject constraint pass and aggregation
+# (§1.5–1.6). Host code loads and schema-validates this file at startup (see CatalogueStore); editing it,
+# not the constraint-pass code, is how cross-subject policy changes. Per subject:
+#   priority_weight       — policy priority used by the programme priority score, same-rating ordering, mutual-
+#                           exclusion resolution, and the optional green cap. It is not a UCAS tariff.
+#                           Exclusion pairs require distinct weights so their loser is unambiguous.
+#   exclusions           — symmetric timetable-clash edges to other subjects, each with a downgrade
+#                          severity (amber or red). Must be declared on both sides.
+#   required_activities  — own-time activity-tag prefixes the subject requires (absence ⇒ amber).
+#   blocking_activities  — activity-tag prefixes that bar the subject outright (presence ⇒ red veto).
+#   prerequisites        — dependency groups; each group lists alternatives under `any_of` and an optional
+#                          `severity` (defaults to red — a hard requirement; amber is advisory) and an
+#                          optional `requires` (how a group is satisfied: `qualifying` (default) — any
+#                          alternative rating green/amber this run OR being a committed A-level; `chosen` —
+#                          only a committed `chosen_a_levels` entry counts). Multiple groups are all
+#                          required (AND).
+#   entry_equivalents    — typed prior qualifications that satisfy or strengthen subject entry. A
+#                          `chosen`-mode prerequisite naming a subject S also accepts a held prior
+#                          qualification matching one of the dependent subject's entry_equivalents for S,
+#                          in addition to a `chosen_a_levels` entry for S this run.
+#   restudy_bar          — a subject-specific bar on re-studying when the student already holds a prior
+#                          qualification of one of the listed types in the same subject.
+#
+# Illustrative sample policy: French ↔ German is a hard clash (red); History ↔ Art is a soft clash
+# (amber). Music carries the only own-time requirement (plays_) and an illustrative veto (a trombone
+# player is barred even though that hobby satisfies the own-time prefix). Further Maths needs Maths,
+# chosen this run or already held as a prior A-level at grade D or above.
+subjects:
+  - subject: maths
+    priority_weight: 50
+    regression: { slope: 0.80, intercept: -1.00 }
+  - subject: further_maths
+    priority_weight: 56
+    regression: { slope: 1.00, intercept: -2.00 }
+    prerequisites:
+      - any_of: [ maths ]
+        requires: chosen
+    entry_equivalents:
+      - { subject: maths, type: a_level, min_grade: d }
+  - subject: physics
+    priority_weight: 48
+    regression: { slope: 0.90, intercept: -2.20 }
+  - subject: chemistry
+    priority_weight: 46
+    regression: { slope: 0.90, intercept: -2.30 }
+  - subject: biology
+    priority_weight: 44
+    regression: { slope: 0.90, intercept: -2.30 }
+    entry_equivalents:
+      - { subject: applied_science, type: btec_diploma, min_grade: distinction }
+    restudy_bar:
+      types: [ a_level ]
+      severity: red
+  - subject: english_language
+    priority_weight: 41
+    regression: { slope: 0.85, intercept: -1.75 }
+  - subject: english_literature
+    priority_weight: 42
+    regression: { slope: 0.85, intercept: -1.80 }
+  - subject: french
+    priority_weight: 39
+    regression: { slope: 0.85, intercept: -1.85 }
+    exclusions:
+      - { other: german, severity: red }
+  - subject: german
+    priority_weight: 37
+    regression: { slope: 0.85, intercept: -1.85 }
+    exclusions:
+      - { other: french, severity: red }
+  - subject: physical_education
+    priority_weight: 35
+    regression: { slope: 0.80, intercept: -1.45 }
+  - subject: computer_studies
+    priority_weight: 43
+    regression: { slope: 0.90, intercept: -2.10 }
+  - subject: history
+    priority_weight: 40
+    regression: { slope: 0.85, intercept: -1.90 }
+    exclusions:
+      - { other: art, severity: amber }
+  - subject: music
+    priority_weight: 36
+    regression: { slope: 0.85, intercept: -1.70 }
+    required_activities: [ plays_ ]
+    blocking_activities: [ plays_trombone ]
+  - subject: art
+    priority_weight: 38
+    regression: { slope: 0.80, intercept: -1.40 }
+    exclusions:
+      - { other: history, severity: amber }
+  - subject: economics
+    priority_weight: 45
+    regression: { slope: 0.90, intercept: -2.10 }
+    prerequisites:
+      - any_of: [ maths ]
+        severity: amber
+    exclusions:
+      - { other: business_studies, severity: amber }
+  - subject: geography
+    priority_weight: 49
+    regression: { slope: 0.85, intercept: -1.85 }
+  # Psychology, sociology and media studies form the accessible tier: their intercepts are set so a
+  # student on the eligibility minimum (a 4.0 average) is predicted a D and rates green, giving them a
+  # programme rather than an all-red sheet. `regression` is per-subject, so these only move their own
+  # subject's prediction — no other subject's tier shifts with them.
+  - subject: psychology
+    priority_weight: 47
+    regression: { slope: 0.85, intercept: -1.35 }
+  - subject: sociology
+    priority_weight: 33
+    regression: { slope: 0.82, intercept: -1.25 }
+  - subject: business_studies
+    priority_weight: 34
+    regression: { slope: 0.83, intercept: -1.65 }
+    exclusions:
+      - { other: economics, severity: amber }
+  - subject: politics
+    priority_weight: 51
+    regression: { slope: 0.85, intercept: -1.90 }
+  - subject: religious_studies
+    priority_weight: 52
+    regression: { slope: 0.85, intercept: -1.80 }
+  - subject: drama
+    priority_weight: 30
+    regression: { slope: 0.80, intercept: -1.40 }
+  - subject: media_studies
+    priority_weight: 31
+    regression: { slope: 0.80, intercept: -1.15 }
+  - subject: law
+    priority_weight: 53
+    regression: { slope: 0.86, intercept: -1.95 }
+  - subject: spanish
+    priority_weight: 54
+    regression: { slope: 0.85, intercept: -1.80 }
+  - subject: design_technology
+    priority_weight: 55
+    regression: { slope: 0.82, intercept: -1.55 }

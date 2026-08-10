@@ -1,0 +1,4 @@
+[*.{cs,vb,cshtml,razor}]
+
+dotnet_diagnostic.VSTHRD111.severity = silent # no need for ConfigureAwait()
+dotnet_diagnostic.IDE1006.severity = none # Test names use snake_case

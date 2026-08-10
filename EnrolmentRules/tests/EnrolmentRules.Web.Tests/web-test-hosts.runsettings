@@ -1,0 +1,21 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  WebAppFactory pins ContentRoot to the repo root (so workflows/ and data/ resolve without a
+  build-output copy step), which means the Web project's own appsettings.json, copied into this
+  project's bin/ output rather than the repo root, never gets picked up by configuration during
+  these tests. An appsettings.json Logging section is therefore silently ignored here, so quieting
+  the framework's own Information noise (Microsoft.AspNetCore, Microsoft.Hosting.Lifetime,
+  DataProtection's XmlKeyManager) has to go through an environment variable instead, which
+  configuration always picks up regardless of content root.
+
+  Without this, dotnet test with detailed console logger verbosity (the form you reach for to see
+  why a test failed) is buried under a thousand-plus framework Information lines.
+-->
+<RunSettings>
+  <RunConfiguration>
+    <EnvironmentVariables>
+      <Logging__LogLevel__Microsoft.AspNetCore>Warning</Logging__LogLevel__Microsoft.AspNetCore>
+      <Logging__LogLevel__Microsoft.Hosting.Lifetime>Warning</Logging__LogLevel__Microsoft.Hosting.Lifetime>
+    </EnvironmentVariables>
+  </RunConfiguration>
+</RunSettings>

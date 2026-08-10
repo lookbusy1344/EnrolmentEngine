@@ -1,0 +1,14 @@
+{
+  "student": {
+    "id": "S-BUDGET",
+    "gcses": {
+      "english_language": 7,
+      "maths": 5,
+      "physics": 5,
+      "chemistry": 5,
+      "biology": 5
+    },
+    "hobbies": [],
+    "date_of_birth": "2009-09-01"
+  }
+}

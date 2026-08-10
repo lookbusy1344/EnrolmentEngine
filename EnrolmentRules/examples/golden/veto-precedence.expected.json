@@ -1,0 +1,155 @@
+{
+  "eligible": true,
+  "eligibility_reasons": [],
+  "recommendations": [
+    {
+      "subject": "design_technology",
+      "rating": "green",
+      "reason": "Entry met (Maths and Art at standard entry); predicted A-level grade at or above the green threshold"
+    },
+    {
+      "subject": "spanish",
+      "rating": "green",
+      "reason": "Entry met (a modern language GCSE at standard entry); predicted A-level grade at or above the green threshold"
+    },
+    {
+      "subject": "law",
+      "rating": "green",
+      "reason": "Entry met (English at standard entry and humanities average); predicted A-level grade at or above the green threshold"
+    },
+    {
+      "subject": "religious_studies",
+      "rating": "green",
+      "reason": "Entry met (English at standard entry and humanities average); predicted A-level grade at or above the green threshold"
+    },
+    {
+      "subject": "politics",
+      "rating": "green",
+      "reason": "Entry met (English at standard entry and humanities average); predicted A-level grade at or above the green threshold"
+    },
+    {
+      "subject": "maths",
+      "rating": "green",
+      "reason": "Entry met (Maths GCSE at the exceptional grade); predicted A-level grade at or above the green threshold"
+    },
+    {
+      "subject": "geography",
+      "rating": "green",
+      "reason": "Entry met (humanities average and English at standard entry); predicted A-level grade at or above the green threshold"
+    },
+    {
+      "subject": "physics",
+      "rating": "green",
+      "reason": "Entry met (Physics at standard entry and Maths GCSE at the exceptional grade); predicted A-level grade at or above the green threshold"
+    },
+    {
+      "subject": "psychology",
+      "rating": "green",
+      "reason": "Entry met (Maths and English at pass grade); predicted A-level grade at or above the green threshold"
+    },
+    {
+      "subject": "chemistry",
+      "rating": "green",
+      "reason": "Entry met (Chemistry at standard entry); predicted A-level grade at or above the green threshold"
+    },
+    {
+      "subject": "economics",
+      "rating": "green",
+      "reason": "Entry met (Maths and English at standard entry); predicted A-level grade at or above the green threshold"
+    },
+    {
+      "subject": "biology",
+      "rating": "green",
+      "reason": "Entry met (Biology at standard entry or a prior-qualification equivalent); predicted A-level grade at or above the green threshold"
+    },
+    {
+      "subject": "computer_studies",
+      "rating": "green",
+      "reason": "Entry met (Computer Studies at standard entry); predicted A-level grade at or above the green threshold"
+    },
+    {
+      "subject": "english_literature",
+      "rating": "green",
+      "reason": "Entry met (an English GCSE at standard entry); predicted A-level grade at or above the green threshold"
+    },
+    {
+      "subject": "english_language",
+      "rating": "green",
+      "reason": "Entry met (English Language at standard entry); predicted A-level grade at or above the green threshold"
+    },
+    {
+      "subject": "history",
+      "rating": "green",
+      "reason": "Entry met (humanities average); predicted A-level grade at or above the green threshold"
+    },
+    {
+      "subject": "french",
+      "rating": "green",
+      "reason": "Entry met (French at standard entry); predicted A-level grade at or above the green threshold"
+    },
+    {
+      "subject": "art",
+      "rating": "green",
+      "reason": "Entry met (age-gated GCSE threshold); predicted A-level grade at or above the green threshold"
+    },
+    {
+      "subject": "german",
+      "rating": "green",
+      "reason": "Entry met (German at standard entry); predicted A-level grade at or above the green threshold"
+    },
+    {
+      "subject": "physical_education",
+      "rating": "green",
+      "reason": "Entry met (Biology, Psychology or Physical Education GCSE at pass grade); predicted A-level grade at or above the green threshold"
+    },
+    {
+      "subject": "business_studies",
+      "rating": "green",
+      "reason": "Entry met (Maths and English at standard entry); predicted A-level grade at or above the green threshold"
+    },
+    {
+      "subject": "sociology",
+      "rating": "green",
+      "reason": "Entry met (accessible average and English at pass grade); predicted A-level grade at or above the green threshold"
+    },
+    {
+      "subject": "media_studies",
+      "rating": "green",
+      "reason": "Entry met (English at pass grade); predicted A-level grade at or above the green threshold"
+    },
+    {
+      "subject": "drama",
+      "rating": "green",
+      "reason": "Entry met (English at standard entry); predicted A-level grade at or above the green threshold"
+    },
+    {
+      "subject": "further_maths",
+      "rating": "red",
+      "reason": "maths prerequisite not met"
+    },
+    {
+      "subject": "music",
+      "rating": "red",
+      "reason": "Barred \u2014 incompatible activity: plays_trombone"
+    }
+  ],
+  "summary": {
+    "green_count": 24,
+    "amber_count": 0,
+    "programme_priority_score": 1037
+  },
+  "adjustments": [
+    {
+      "subject": "further_maths",
+      "from": "green",
+      "to": "red",
+      "reason": "maths prerequisite not met"
+    },
+    {
+      "subject": "music",
+      "from": "green",
+      "to": "red",
+      "reason": "Barred \u2014 incompatible activity: plays_trombone"
+    }
+  ]
+}
