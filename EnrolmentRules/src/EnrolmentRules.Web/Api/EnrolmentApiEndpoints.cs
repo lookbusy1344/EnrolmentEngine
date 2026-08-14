@@ -69,9 +69,9 @@ public static class EnrolmentApiEndpoints
 				"Could not map the posted snapshot: an unrecognised prior-qualification type or chosen A-level subject value.");
 		}
 
-		var evaluation = engine.TryExplain(input, cancellationToken);
+		var evaluation = engine.ExplainValidated(input, cancellationToken);
 
-		// On the rejection path TryExplain has already found the stale choices internally but discards them, so
+		// On the rejection path ExplainValidated has already found the stale choices internally but discards them, so
 		// StaleChoices re-runs the pipeline once to recover the subjects to eject. The cost lands only when a
 		// committed choice has gone red (a rare, already-degraded request), so the extra run is a deliberate
 		// simplicity-over-throughput trade — cheaper than widening the IEnrolmentEvaluator surface to return

@@ -79,17 +79,17 @@ public sealed class ProductionExceptionHandlingTests
 		public ExplainedResult Explain(StudentInput student, DateOnly asOf, CancellationToken cancellationToken = default) =>
 			throw Failure();
 
-		public ValidatedEvaluation<EnrolmentResult> TryEvaluate(StudentInput student, CancellationToken cancellationToken = default) =>
+		public ValidatedEvaluation<EnrolmentResult> EvaluateValidated(StudentInput student, CancellationToken cancellationToken = default) =>
 			throw Failure();
 
-		public ValidatedEvaluation<EnrolmentResult> TryEvaluate(
+		public ValidatedEvaluation<EnrolmentResult> EvaluateValidated(
 			StudentInput student, DateOnly asOf, CancellationToken cancellationToken = default) =>
 			throw Failure();
 
-		public ValidatedEvaluation<ExplainedResult> TryExplain(StudentInput student, CancellationToken cancellationToken = default) =>
+		public ValidatedEvaluation<ExplainedResult> ExplainValidated(StudentInput student, CancellationToken cancellationToken = default) =>
 			throw Failure();
 
-		public ValidatedEvaluation<ExplainedResult> TryExplain(
+		public ValidatedEvaluation<ExplainedResult> ExplainValidated(
 			StudentInput student, DateOnly asOf, CancellationToken cancellationToken = default) =>
 			throw Failure();
 
@@ -101,26 +101,26 @@ public sealed class ProductionExceptionHandlingTests
 		public AdviceResult Advise(StudentInput student, DateOnly asOf, CancellationToken cancellationToken = default) =>
 			throw Failure();
 
-		public AdviceResult Advise(StudentInput student, bool considerUnsatGcses, CancellationToken cancellationToken = default) =>
+		public AdviceResult Advise(StudentInput student, UnsatGcseAdvice unsatGcses, CancellationToken cancellationToken = default) =>
 			throw Failure();
 
 		public AdviceResult Advise(
-			StudentInput student, DateOnly asOf, bool considerUnsatGcses, CancellationToken cancellationToken = default) =>
+			StudentInput student, DateOnly asOf, UnsatGcseAdvice unsatGcses, CancellationToken cancellationToken = default) =>
 			throw Failure();
 
-		public ValidatedEvaluation<AdviceResult> TryAdvise(StudentInput student, CancellationToken cancellationToken = default) =>
+		public ValidatedEvaluation<AdviceResult> AdviseValidated(StudentInput student, CancellationToken cancellationToken = default) =>
 			throw Failure();
 
-		public ValidatedEvaluation<AdviceResult> TryAdvise(
+		public ValidatedEvaluation<AdviceResult> AdviseValidated(
 			StudentInput student, DateOnly asOf, CancellationToken cancellationToken = default) =>
 			throw Failure();
 
-		public ValidatedEvaluation<AdviceResult> TryAdvise(
-			StudentInput student, bool considerUnsatGcses, CancellationToken cancellationToken = default) =>
+		public ValidatedEvaluation<AdviceResult> AdviseValidated(
+			StudentInput student, UnsatGcseAdvice unsatGcses, CancellationToken cancellationToken = default) =>
 			throw Failure();
 
-		public ValidatedEvaluation<AdviceResult> TryAdvise(
-			StudentInput student, DateOnly asOf, bool considerUnsatGcses, CancellationToken cancellationToken = default) =>
+		public ValidatedEvaluation<AdviceResult> AdviseValidated(
+			StudentInput student, DateOnly asOf, UnsatGcseAdvice unsatGcses, CancellationToken cancellationToken = default) =>
 			throw Failure();
 
 		public SubjectCriteria Describe(Subject subject) => throw Failure();

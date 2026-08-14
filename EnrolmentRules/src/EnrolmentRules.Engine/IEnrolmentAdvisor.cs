@@ -13,20 +13,28 @@ public interface IEnrolmentAdvisor
 
 	AdviceResult Advise(StudentInput student, DateOnly asOf, CancellationToken cancellationToken = default);
 
-	AdviceResult Advise(StudentInput student, bool considerUnsatGcses, CancellationToken cancellationToken = default);
+	/// <summary>Produces counterfactual guidance with an explicit unsat GCSE advice scope.</summary>
+	/// <exception cref="ArgumentOutOfRangeException"><paramref name="unsatGcses" /> is not a supported advice scope.</exception>
+	AdviceResult Advise(StudentInput student, UnsatGcseAdvice unsatGcses, CancellationToken cancellationToken = default);
 
-	AdviceResult Advise(StudentInput student, DateOnly asOf, bool considerUnsatGcses, CancellationToken cancellationToken = default);
+	/// <summary>Produces counterfactual guidance with an explicit reference date and unsat GCSE advice scope.</summary>
+	/// <exception cref="ArgumentOutOfRangeException"><paramref name="unsatGcses" /> is not a supported advice scope.</exception>
+	AdviceResult Advise(StudentInput student, DateOnly asOf, UnsatGcseAdvice unsatGcses, CancellationToken cancellationToken = default);
 
-	ValidatedEvaluation<AdviceResult> TryAdvise(StudentInput student, CancellationToken cancellationToken = default);
+	ValidatedEvaluation<AdviceResult> AdviseValidated(StudentInput student, CancellationToken cancellationToken = default);
 
-	ValidatedEvaluation<AdviceResult> TryAdvise(StudentInput student, DateOnly asOf, CancellationToken cancellationToken = default);
+	ValidatedEvaluation<AdviceResult> AdviseValidated(StudentInput student, DateOnly asOf, CancellationToken cancellationToken = default);
 
-	ValidatedEvaluation<AdviceResult> TryAdvise(StudentInput student, bool considerUnsatGcses,
+	/// <summary>Validates the input and produces counterfactual guidance with an explicit unsat GCSE advice scope.</summary>
+	/// <exception cref="ArgumentOutOfRangeException"><paramref name="unsatGcses" /> is not a supported advice scope.</exception>
+	ValidatedEvaluation<AdviceResult> AdviseValidated(StudentInput student, UnsatGcseAdvice unsatGcses,
 		CancellationToken cancellationToken = default);
 
-	ValidatedEvaluation<AdviceResult> TryAdvise(
+	/// <summary>Validates the input and produces counterfactual guidance with an explicit reference date and advice scope.</summary>
+	/// <exception cref="ArgumentOutOfRangeException"><paramref name="unsatGcses" /> is not a supported advice scope.</exception>
+	ValidatedEvaluation<AdviceResult> AdviseValidated(
 		StudentInput student,
 		DateOnly asOf,
-		bool considerUnsatGcses,
+		UnsatGcseAdvice unsatGcses,
 		CancellationToken cancellationToken = default);
 }

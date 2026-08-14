@@ -8,7 +8,7 @@ test infrastructure; it does not justify incidental `async` in engine, domain, g
 unit tests.
 
 The engine's public API is now synchronous end to end — `Evaluate`, `Explain`, `Advise`,
-`TryEvaluate`, and their overloads return concrete values. This document records why the earlier async surface was a
+`EvaluateValidated`, and their overloads return concrete values. This document records why the earlier async surface was a
 mismatch for the workload, and why the per-student evaluation path belongs in synchronous code.
 
 The short version: **the evaluation path is CPU-bound from top to bottom and never performs I/O.**
@@ -212,7 +212,7 @@ public sealed class AdvisorController(IEnrolmentAdvisor advisor) : ControllerBas
 This is not "making the engine async" — `Advise` itself is still the honest synchronous call
 described above. `Task.Run` is the caller's choice to spend a thread-pool thread now in exchange
 for freeing the request thread during the computation. **Do not apply the same wrapper to
-`Evaluate`/`Explain`/`TryEvaluate`/`TryExplain`:** those return in microseconds, so the `Task.Run`
+`Evaluate`/`Explain`/`EvaluateValidated`/`ExplainValidated`:** those return in microseconds, so the `Task.Run`
 scheduling overhead would exceed the work being offloaded, and the request thread was never tied
 up long enough to matter — call them inline in the action body instead. Reach for lever 1
 (caching) before reaching for `Task.Run` at all; a memoized `Advise` result needs no thread

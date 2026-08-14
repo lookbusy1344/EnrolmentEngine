@@ -4,12 +4,13 @@ using AwesomeAssertions;
 using Domain;
 
 /// <summary>
-///     Pre-v1 integration hardening — <c>Try*</c> evaluation validates at the engine boundary before
+///     Pre-v1 integration hardening — validated evaluation validates at the engine boundary before
 ///     entering the pipeline.
 /// </summary>
 public sealed class ValidatedEvaluationTests
 {
 	private static readonly DateOnly ValidDob = new(2009, 9, 1);
+	private const UnsatGcseAdvice UndefinedUnsatGcseAdvice = (UnsatGcseAdvice)int.MaxValue;
 
 	private readonly EnrolmentEngine engine = Harness.ShippedEngine();
 
@@ -61,6 +62,9 @@ public sealed class ValidatedEvaluationTests
 	private static void ShouldRejectNull(Action action) =>
 		action.Should().Throw<ArgumentNullException>().WithParameterName("student");
 
+	private static void ShouldRejectUndefinedUnsatGcseAdvice(Action action) =>
+		action.Should().Throw<ArgumentOutOfRangeException>().WithParameterName("unsatGcses");
+
 	[Fact]
 	public void evaluate_does_not_validate_out_of_range_grades()
 	{
@@ -97,11 +101,11 @@ public sealed class ValidatedEvaluationTests
 	}
 
 	[Fact]
-	public void try_evaluate_rejects_out_of_range_grades_without_running_the_pipeline()
+	public void validated_evaluation_rejects_out_of_range_grades_without_running_the_pipeline()
 	{
 		var student = StudentWithMathsGrade(99);
 
-		var outcome = engine.TryEvaluate(student);
+		var outcome = engine.EvaluateValidated(student);
 
 		outcome.Validation.IsValid.Should().BeFalse();
 		outcome.Value.Should().BeNull();
@@ -110,12 +114,12 @@ public sealed class ValidatedEvaluationTests
 	}
 
 	[Fact]
-	public void try_evaluate_rejects_null_input_as_structured_validation()
+	public void validated_evaluation_rejects_null_input_as_structured_validation()
 	{
 		StudentInput? student = null;
 
-		var outcome = engine.TryEvaluate(student!);
-		var datedOutcome = engine.TryEvaluate(student!, Harness.AsOf);
+		var outcome = engine.EvaluateValidated(student!);
+		var datedOutcome = engine.EvaluateValidated(student!, Harness.AsOf);
 
 		outcome.Validation.IsValid.Should().BeFalse();
 		outcome.Value.Should().BeNull();
@@ -126,11 +130,11 @@ public sealed class ValidatedEvaluationTests
 	}
 
 	[Fact]
-	public void try_evaluate_rejects_a_missing_date_of_birth()
+	public void validated_evaluation_rejects_a_missing_date_of_birth()
 	{
 		var student = new StudentInput("S-BAD", new Dictionary<string, int> { ["maths"] = 6 }, []);
 
-		var outcome = engine.TryEvaluate(student);
+		var outcome = engine.EvaluateValidated(student);
 
 		outcome.Validation.IsValid.Should().BeFalse();
 		outcome.Value.Should().BeNull();
@@ -139,27 +143,27 @@ public sealed class ValidatedEvaluationTests
 	}
 
 	[Fact]
-	public void try_evaluate_matches_evaluate_for_a_valid_student()
+	public void validated_evaluation_matches_evaluate_for_a_valid_student()
 	{
 		var student = EligibleStudent();
 
-		var tryOutcome = engine.TryEvaluate(student);
+		var validated = engine.EvaluateValidated(student);
 		var direct = engine.Evaluate(student);
 
-		tryOutcome.Validation.IsValid.Should().BeTrue();
-		tryOutcome.Value.Should().BeEquivalentTo(direct);
+		validated.Validation.IsValid.Should().BeTrue();
+		validated.Value.Should().BeEquivalentTo(direct);
 	}
 
 	// ---- stale committed choices (a choice that was green when made, and has since gone red) --------
 
 	[Fact]
-	public void try_evaluate_rejects_a_chosen_a_level_the_pipeline_now_rates_red()
+	public void validated_evaluation_rejects_a_chosen_a_level_the_pipeline_now_rates_red()
 	{
 		// Further Maths requires Maths as a committed choice; choosing it alone leaves the prerequisite
 		// unmet, so it rates red — the shape of a choice whose facts moved under it after it was made.
 		var student = EligibleStudent() with { ChosenALevels = [Subject.FurtherMaths] };
 
-		var outcome = engine.TryEvaluate(student);
+		var outcome = engine.EvaluateValidated(student);
 
 		outcome.Validation.IsValid.Should().BeFalse();
 		outcome.Value.Should().BeNull();
@@ -172,18 +176,18 @@ public sealed class ValidatedEvaluationTests
 	{
 		var student = StrongStudent() with { ChosenALevels = [Subject.FurtherMaths] };
 
-		var outcome = engine.TryExplain(student);
+		var outcome = engine.ExplainValidated(student);
 
 		outcome.Validation.Errors.Should().ContainSingle()
 			.Which.Should().Contain(ConstraintPass.MathsPrerequisiteReason);
 	}
 
 	[Fact]
-	public void try_explain_rejects_a_chosen_a_level_the_pipeline_now_rates_red()
+	public void validated_explanation_rejects_a_chosen_a_level_the_pipeline_now_rates_red()
 	{
 		var student = EligibleStudent() with { ChosenALevels = [Subject.FurtherMaths] };
 
-		var outcome = engine.TryExplain(student);
+		var outcome = engine.ExplainValidated(student);
 
 		outcome.Validation.IsValid.Should().BeFalse();
 		outcome.Value.Should().BeNull();
@@ -198,7 +202,7 @@ public sealed class ValidatedEvaluationTests
 			ChosenALevels = [Subject.Maths, Subject.Physics],
 		};
 
-		var outcome = engine.TryEvaluate(student);
+		var outcome = engine.EvaluateValidated(student);
 
 		outcome.Validation.IsValid.Should().BeFalse();
 		outcome.Value.Should().BeNull();
@@ -212,31 +216,31 @@ public sealed class ValidatedEvaluationTests
 		// "plays_" hobby, and an amber choice remains a choice the student may hold.
 		var student = StrongStudent() with { ChosenALevels = [Subject.Music] };
 
-		var outcome = engine.TryExplain(student);
+		var outcome = engine.ExplainValidated(student);
 
 		outcome.Validation.IsValid.Should().BeTrue();
 		outcome.Value!.Explanations.Single(e => e.Subject == Subject.Music).Rating.Should().Be(Rating.Amber);
 	}
 
 	[Fact]
-	public void try_advise_still_advises_a_student_holding_a_now_red_choice()
+	public void validated_advice_still_advises_a_student_holding_a_now_red_choice()
 	{
 		// The deliberate exemption: advice exists to say what would have to change, so a red committed
-		// choice is the case that most needs an answer rather than a refusal. TryEvaluate/TryExplain
+		// choice is the case that most needs an answer rather than a refusal. EvaluateValidated/ExplainValidated
 		// refuse the same document — nothing is accepted by advising on it.
 		var student = EligibleStudent() with { ChosenALevels = [Subject.FurtherMaths] };
 
-		var outcome = engine.TryAdvise(student);
+		var outcome = engine.AdviseValidated(student);
 
 		outcome.Validation.IsValid.Should().BeTrue();
 		outcome.Value.Should().NotBeNull();
-		engine.TryExplain(student).Value.Should().BeNull();
+		engine.ExplainValidated(student).Value.Should().BeNull();
 	}
 
 	[Fact]
 	public void explain_still_reports_a_red_chosen_a_level_without_validating_it()
 	{
-		// The unchecked path is unchanged: rejection is a Try* boundary concern, not a pipeline one.
+		// The unchecked path is unchanged: rejection is a validated-boundary concern, not a pipeline one.
 		var student = EligibleStudent() with { ChosenALevels = [Subject.FurtherMaths] };
 
 		var result = engine.Explain(student);
@@ -245,11 +249,11 @@ public sealed class ValidatedEvaluationTests
 	}
 
 	[Fact]
-	public void try_explain_rejects_invalid_input()
+	public void validated_explanation_rejects_invalid_input()
 	{
 		var student = StudentWithMathsGrade(99);
 
-		var outcome = engine.TryExplain(student);
+		var outcome = engine.ExplainValidated(student);
 
 		outcome.Validation.IsValid.Should().BeFalse();
 		outcome.Value.Should().BeNull();
@@ -265,12 +269,12 @@ public sealed class ValidatedEvaluationTests
 	}
 
 	[Fact]
-	public void try_explain_rejects_null_input_as_structured_validation()
+	public void validated_explanation_rejects_null_input_as_structured_validation()
 	{
 		StudentInput? student = null;
 
-		var outcome = engine.TryExplain(student!);
-		var datedOutcome = engine.TryExplain(student!, Harness.AsOf);
+		var outcome = engine.ExplainValidated(student!);
+		var datedOutcome = engine.ExplainValidated(student!, Harness.AsOf);
 
 		outcome.Validation.IsValid.Should().BeFalse();
 		outcome.Value.Should().BeNull();
@@ -281,23 +285,23 @@ public sealed class ValidatedEvaluationTests
 	}
 
 	[Fact]
-	public void try_explain_matches_explain_for_a_valid_student()
+	public void validated_explanation_matches_explain_for_a_valid_student()
 	{
 		var student = EligibleStudent();
 
-		var tryOutcome = engine.TryExplain(student);
+		var validated = engine.ExplainValidated(student);
 		var direct = engine.Explain(student);
 
-		tryOutcome.Validation.IsValid.Should().BeTrue();
-		tryOutcome.Value.Should().BeEquivalentTo(direct);
+		validated.Validation.IsValid.Should().BeTrue();
+		validated.Value.Should().BeEquivalentTo(direct);
 	}
 
 	[Fact]
-	public void try_advise_rejects_invalid_input()
+	public void validated_advice_rejects_invalid_input()
 	{
 		var student = StudentWithMathsGrade(99);
 
-		var outcome = engine.TryAdvise(student);
+		var outcome = engine.AdviseValidated(student);
 
 		outcome.Validation.IsValid.Should().BeFalse();
 		outcome.Value.Should().BeNull();
@@ -314,19 +318,34 @@ public sealed class ValidatedEvaluationTests
 
 		ShouldRejectNull(() => engine.Advise(student!));
 		ShouldRejectNull(() => engine.Advise(student!, Harness.AsOf));
-		ShouldRejectNull(() => throwingClockEngine.Advise(student!, true));
-		ShouldRejectNull(() => engine.Advise(student!, Harness.AsOf, true));
+		ShouldRejectNull(() => throwingClockEngine.Advise(student!, UnsatGcseAdvice.IncludeUnsat));
+		ShouldRejectNull(() => engine.Advise(student!, Harness.AsOf, UnsatGcseAdvice.IncludeUnsat));
 	}
 
 	[Fact]
-	public void try_advise_rejects_null_input_as_structured_validation()
+	public void advice_overloads_reject_an_undefined_unsat_gcse_scope_before_resolving_the_clock()
+	{
+		var student = EligibleStudent();
+		var throwingClockEngine = new EnrolmentEngine(
+			Harness.ShippedEvaluator(),
+			Harness.Catalogue,
+			static () => throw new InvalidOperationException("The clock must not be resolved for invalid input."));
+
+		ShouldRejectUndefinedUnsatGcseAdvice(() => throwingClockEngine.Advise(student, UndefinedUnsatGcseAdvice));
+		ShouldRejectUndefinedUnsatGcseAdvice(() => engine.Advise(student, Harness.AsOf, UndefinedUnsatGcseAdvice));
+		ShouldRejectUndefinedUnsatGcseAdvice(() => throwingClockEngine.AdviseValidated(student, UndefinedUnsatGcseAdvice));
+		ShouldRejectUndefinedUnsatGcseAdvice(() => engine.AdviseValidated(student, Harness.AsOf, UndefinedUnsatGcseAdvice));
+	}
+
+	[Fact]
+	public void validated_advice_rejects_null_input_as_structured_validation()
 	{
 		StudentInput? student = null;
 
-		var outcome = engine.TryAdvise(student!);
-		var datedOutcome = engine.TryAdvise(student!, Harness.AsOf);
-		var toggledOutcome = engine.TryAdvise(student!, true);
-		var datedToggledOutcome = engine.TryAdvise(student!, Harness.AsOf, true);
+		var outcome = engine.AdviseValidated(student!);
+		var datedOutcome = engine.AdviseValidated(student!, Harness.AsOf);
+		var toggledOutcome = engine.AdviseValidated(student!, UnsatGcseAdvice.IncludeUnsat);
+		var datedToggledOutcome = engine.AdviseValidated(student!, Harness.AsOf, UnsatGcseAdvice.IncludeUnsat);
 
 		outcome.Validation.IsValid.Should().BeFalse();
 		outcome.Value.Should().BeNull();
@@ -343,14 +362,14 @@ public sealed class ValidatedEvaluationTests
 	}
 
 	[Fact]
-	public void try_advise_matches_advise_for_a_valid_student()
+	public void validated_advice_matches_advise_for_a_valid_student()
 	{
 		var student = EligibleStudent();
 
-		var tryOutcome = engine.TryAdvise(student);
+		var validated = engine.AdviseValidated(student);
 		var direct = engine.Advise(student);
 
-		tryOutcome.Validation.IsValid.Should().BeTrue();
-		tryOutcome.Value.Should().BeEquivalentTo(direct);
+		validated.Validation.IsValid.Should().BeTrue();
+		validated.Value.Should().BeEquivalentTo(direct);
 	}
 }

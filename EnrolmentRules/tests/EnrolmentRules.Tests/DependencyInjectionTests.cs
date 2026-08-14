@@ -219,12 +219,12 @@ public sealed class DependencyInjectionTests
 			var factory = provider.GetRequiredService<IEnrolmentEngineFactory>();
 			var student = ReloadEligibleStudent();
 
-			engine.TryEvaluate(student).Value!.Eligible.Should().BeTrue();
+			engine.EvaluateValidated(student).Value!.Eligible.Should().BeTrue();
 
 			RaisePassGrade(Path.Combine(fixture, "data", "thresholds.yaml"), 7);
 			factory.Reload();
 
-			engine.TryEvaluate(student).Value!.Eligible.Should().BeFalse();
+			engine.EvaluateValidated(student).Value!.Eligible.Should().BeFalse();
 		}
 		finally {
 			Directory.Delete(fixture, true);
@@ -252,7 +252,7 @@ public sealed class DependencyInjectionTests
 	}
 
 	[Fact]
-	public void resolved_engine_try_evaluate_rejects_invalid_input()
+	public void resolved_engine_validated_evaluation_rejects_invalid_input()
 	{
 		var services = new ServiceCollection();
 		_ = services.AddEnrolmentEngine(options => {
@@ -265,7 +265,7 @@ public sealed class DependencyInjectionTests
 		var engine = provider.GetRequiredService<IEnrolmentEngine>();
 		var student = new StudentInput("S-BAD", new Dictionary<string, int> { ["maths"] = 99 }, []) { DateOfBirth = new(2009, 9, 1) };
 
-		var outcome = engine.TryEvaluate(student);
+		var outcome = engine.EvaluateValidated(student);
 
 		outcome.Validation.IsValid.Should().BeFalse();
 		outcome.Value.Should().BeNull();
@@ -292,8 +292,8 @@ public sealed class DependencyInjectionTests
 		var datedEvaluate = () => engine.Evaluate(student!, Harness.AsOf);
 		datedEvaluate.Should().Throw<ArgumentNullException>().WithParameterName("student");
 
-		var outcome = engine.TryEvaluate(student!);
-		var datedOutcome = engine.TryEvaluate(student!, Harness.AsOf);
+		var outcome = engine.EvaluateValidated(student!);
+		var datedOutcome = engine.EvaluateValidated(student!, Harness.AsOf);
 		outcome.Validation.IsValid.Should().BeFalse();
 		outcome.Value.Should().BeNull();
 		outcome.Validation.Errors.Should().ContainSingle().Which.Should().Be("student is required");
@@ -386,42 +386,42 @@ public sealed class DependencyInjectionTests
 		public AdviceResult Advise(StudentInput student, DateOnly asOf, CancellationToken cancellationToken = default) =>
 			new(false, [], [], null);
 
-		public AdviceResult Advise(StudentInput student, bool considerUnsatGcses, CancellationToken cancellationToken = default) =>
+		public AdviceResult Advise(StudentInput student, UnsatGcseAdvice unsatGcses, CancellationToken cancellationToken = default) =>
 			Advise(student, default(DateOnly), CancellationToken.None);
 
-		public AdviceResult Advise(StudentInput student, DateOnly asOf, bool considerUnsatGcses,
+		public AdviceResult Advise(StudentInput student, DateOnly asOf, UnsatGcseAdvice unsatGcses,
 			CancellationToken cancellationToken = default) =>
 			Advise(student, asOf, CancellationToken.None);
 
-		public ValidatedEvaluation<EnrolmentResult> TryEvaluate(StudentInput student, CancellationToken cancellationToken = default) =>
-			TryEvaluate(student, default, cancellationToken);
+		public ValidatedEvaluation<EnrolmentResult> EvaluateValidated(StudentInput student, CancellationToken cancellationToken = default) =>
+			EvaluateValidated(student, default, cancellationToken);
 
-		public ValidatedEvaluation<EnrolmentResult> TryEvaluate(StudentInput student, DateOnly asOf,
+		public ValidatedEvaluation<EnrolmentResult> EvaluateValidated(StudentInput student, DateOnly asOf,
 			CancellationToken cancellationToken = default) =>
 			new(ValidationOutcome.Valid, null);
 
-		public ValidatedEvaluation<ExplainedResult> TryExplain(StudentInput student, CancellationToken cancellationToken = default) =>
-			TryExplain(student, default, cancellationToken);
+		public ValidatedEvaluation<ExplainedResult> ExplainValidated(StudentInput student, CancellationToken cancellationToken = default) =>
+			ExplainValidated(student, default, cancellationToken);
 
-		public ValidatedEvaluation<ExplainedResult> TryExplain(StudentInput student, DateOnly asOf,
+		public ValidatedEvaluation<ExplainedResult> ExplainValidated(StudentInput student, DateOnly asOf,
 			CancellationToken cancellationToken = default) =>
 			new(ValidationOutcome.Valid, null);
 
-		public ValidatedEvaluation<AdviceResult> TryAdvise(StudentInput student, CancellationToken cancellationToken = default) =>
-			TryAdvise(student, default(DateOnly), cancellationToken);
+		public ValidatedEvaluation<AdviceResult> AdviseValidated(StudentInput student, CancellationToken cancellationToken = default) =>
+			AdviseValidated(student, default(DateOnly), cancellationToken);
 
-		public ValidatedEvaluation<AdviceResult> TryAdvise(StudentInput student, DateOnly asOf,
+		public ValidatedEvaluation<AdviceResult> AdviseValidated(StudentInput student, DateOnly asOf,
 			CancellationToken cancellationToken = default) =>
-			TryAdvise(student, asOf, false, cancellationToken);
+			AdviseValidated(student, asOf, UnsatGcseAdvice.HeldOnly, cancellationToken);
 
-		public ValidatedEvaluation<AdviceResult> TryAdvise(StudentInput student, bool considerUnsatGcses,
+		public ValidatedEvaluation<AdviceResult> AdviseValidated(StudentInput student, UnsatGcseAdvice unsatGcses,
 			CancellationToken cancellationToken = default) =>
-			TryAdvise(student, default, considerUnsatGcses, cancellationToken);
+			AdviseValidated(student, default, unsatGcses, cancellationToken);
 
-		public ValidatedEvaluation<AdviceResult> TryAdvise(
+		public ValidatedEvaluation<AdviceResult> AdviseValidated(
 			StudentInput student,
 			DateOnly asOf,
-			bool considerUnsatGcses,
+			UnsatGcseAdvice unsatGcses,
 			CancellationToken cancellationToken = default) =>
 			new(ValidationOutcome.Valid, null);
 	}

@@ -149,7 +149,7 @@ public sealed class AdvisorTests
 			["biology"] = 5,
 		}, []) { ChosenALevels = [Subject.Maths] };
 
-		var advice = engine.Advise(student, true);
+		var advice = engine.Advise(student, UnsatGcseAdvice.IncludeUnsat);
 
 		// Diagnostic mode reverts to the old, heavier behaviour: Spanish, gated on a French or German GCSE
 		// the student never sat, becomes reachable by proposing those brand-new GCSEs.
@@ -514,7 +514,7 @@ public sealed class AdvisorTests
 
 		// An already-cancelled token is observed at the first ThrowIfCancellationRequested in the advisor
 		// entry guard, before any search state is allocated.
-		var act = () => engine.Advise(student, true, cts.Token);
+		var act = () => engine.Advise(student, UnsatGcseAdvice.IncludeUnsat, cts.Token);
 		act.Should().Throw<OperationCanceledException>();
 	}
 

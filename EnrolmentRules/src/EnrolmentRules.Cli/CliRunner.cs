@@ -200,7 +200,7 @@ public static class CliRunner
 		var useExplanation = output is Output.Explain or Output.ExplainText;
 		var useAdvice = output == Output.Advise;
 		if (useExplanation) {
-			var outcome = engine.TryExplain(document.Student);
+			var outcome = engine.ExplainValidated(document.Student);
 			if (!outcome.Validation.IsValid) {
 				WriteValidationErrors(stderr, outcome.Validation);
 				return ExitInput;
@@ -220,8 +220,10 @@ public static class CliRunner
 
 		if (useAdvice) {
 			var outcome = considerUnsatGcses.HasValue
-				? engine.TryAdvise(document.Student, considerUnsatGcses.Value)
-				: engine.TryAdvise(document.Student);
+				? engine.AdviseValidated(
+					document.Student,
+					considerUnsatGcses.Value ? UnsatGcseAdvice.IncludeUnsat : UnsatGcseAdvice.HeldOnly)
+				: engine.AdviseValidated(document.Student);
 			if (!outcome.Validation.IsValid) {
 				WriteValidationErrors(stderr, outcome.Validation);
 				return ExitInput;
@@ -231,7 +233,7 @@ public static class CliRunner
 			return outcome.Value!.Eligible ? ExitOk : ExitIneligible;
 		}
 
-		var evaluation = engine.TryEvaluate(document.Student);
+		var evaluation = engine.EvaluateValidated(document.Student);
 		if (!evaluation.Validation.IsValid) {
 			WriteValidationErrors(stderr, evaluation.Validation);
 			return ExitInput;
@@ -405,7 +407,7 @@ public static class CliRunner
 			return new("?", null, "student document was empty or null");
 		}
 
-		var outcome = engine.TryEvaluate(document.Student);
+		var outcome = engine.EvaluateValidated(document.Student);
 		if (!outcome.Validation.IsValid) {
 			return new(document.Student?.Id ?? "?", null, string.Join("; ", outcome.Validation.Errors));
 		}

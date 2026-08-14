@@ -156,10 +156,10 @@ pass; it does not change prediction, base rating, or ranking.
 amber, so a red one means the document is self-inconsistent: the facts moved underneath the choice
 after it was made — typically the GCSE grades were lowered, but a new blocking hobby, a prior
 qualification, or a sibling choice that excludes it will do the same. There is no defensible verdict
-to return for such a document, so `TryEvaluate` and `TryExplain` **reject it outright** —
+to return for such a document, so `EvaluateValidated` and `ExplainValidated` **reject it outright** —
 `Validation.Errors` names each offending entry with the reason it went red, and `Value` is null. Amber
 choices are unaffected: only red is rejected, which matches the rule the front ends apply when
-offering a Choose button. `TryAdvise` is deliberately exempt: it answers "what would have to change",
+offering a Choose button. `AdviseValidated` is deliberately exempt: it answers "what would have to change",
 which is exactly what a student holding a red choice needs, and advising returns counterfactuals
 rather than accepting anything.
 The check is not part of `StudentValidator` because a rating exists only *after* prediction,
@@ -167,13 +167,13 @@ the engine and the constraint pass have run, and the constraint pass reads `chos
 input; it is a post-run check reported as input validation.
 
 A caller holding a mutable basket does not surface that rejection to the student — it prunes and
-re-evaluates. `IEnrolmentEvaluator.StaleChoices(student)` returns exactly the subjects a `Try*` call
-would reject, which is what both web front ends drop before evaluating (`/api/enrolment/evaluate`
-mirrors it as `ejectedChoices`). One pass always suffices: dropping choices only ever removes
-downgrades, so nothing left in the basket can newly turn red.
+re-evaluates. `IEnrolmentEvaluator.StaleChoices(student)` returns exactly the subjects an
+`EvaluateValidated` or `ExplainValidated` call would reject, which is what both web front ends drop
+before evaluating (`/api/enrolment/evaluate` mirrors it as `ejectedChoices`). One pass always
+suffices: dropping choices only ever removes downgrades, so nothing left in the basket can newly turn red.
 
 The unchecked `Evaluate`/`Explain` paths are unaffected — they still rate a red chosen subject red
-and return a result. Rejection is a `Try*` boundary concern, not a pipeline one.
+and return a result. Rejection is a validated-boundary concern, not a pipeline one.
 `prior_qualifications` carries typed prior study separately from GCSEs. Each entry is validated
 against `data/qualifications.yaml`, which defines the grade ordering and A-level-points
 equivalence for each qualification type/grade pair. The list is used upstream to open
@@ -466,7 +466,7 @@ project:
   anonymous facts in ASP.NET Core session, keyed by a browser cookie. The Vue workflow calls a
   stateless JSON API and posts the full editable snapshot on every evaluation; browser
   `localStorage` is used only as a refresh convenience.
-- Razor GETs re-run `IEnrolmentEngine.TryExplain` against the session snapshot, so the rendered
+- Razor GETs re-run `IEnrolmentEngine.ExplainValidated` against the session snapshot, so the rendered
   page is always a fresh evaluation, never a cached one. Vue evaluations do the same through
   `POST /api/enrolment/evaluate`.
 - Red unchosen subjects are rendered as unavailable and the `ChooseSubject` POST handler rechecks
@@ -585,20 +585,19 @@ ExplainedResult explained = enrolment.Explain(student);
 AdviceResult    advice    = enrolment.Advise(student);
 ```
 
-For HTTP or other request boundaries, prefer **`TryEvaluate`** (and the matching `TryExplain`
-/ `TryAdvise` overloads): invalid student documents return a structured `ValidationOutcome` instead
-of throwing, so the host can map problems to 400 responses without a catch block. This covers invalid
-*content* only — a null `StudentInput` is a programming error, so every evaluation entry point
-(including the `Try*` overloads) throws `ArgumentNullException` at the boundary rather than returning
-a validation failure.
+For HTTP or other request boundaries, prefer **`EvaluateValidated`** (and the matching `ExplainValidated`
+/ `AdviseValidated` overloads): invalid student documents return a structured `ValidationOutcome` instead
+of throwing, so the host can map problems to 400 responses without a catch block. This includes a null
+`StudentInput`, reported as `student is required`; the unchecked `Evaluate`/`Explain`/`Advise`
+overloads instead throw `ArgumentNullException` for null at their public boundary.
 
-`TryEvaluate` and `TryExplain` also reject a document naming a `chosen_a_levels` entry the pipeline
-now rates red (see [Student Input](#student-input)); `TryAdvise` does not. A host with an editable
+`EvaluateValidated` and `ExplainValidated` also reject a document naming a `chosen_a_levels` entry the pipeline
+now rates red (see [Student Input](#student-input)); `AdviseValidated` does not. A host with an editable
 basket should call `StaleChoices` first and drop what it returns, rather than presenting the
 rejection to the user.
 
 ```csharp
-ValidatedEvaluation<EnrolmentResult> validated = enrolment.TryEvaluate(student);
+ValidatedEvaluation<EnrolmentResult> validated = enrolment.EvaluateValidated(student);
 if (!validated.Validation.IsValid)
 {
     return Results.ValidationProblem(validated.Validation.Errors);

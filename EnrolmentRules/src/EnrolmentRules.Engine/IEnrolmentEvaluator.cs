@@ -19,13 +19,13 @@ public interface IEnrolmentEvaluator
 
 	ExplainedResult Explain(StudentInput student, DateOnly asOf, CancellationToken cancellationToken = default);
 
-	ValidatedEvaluation<EnrolmentResult> TryEvaluate(StudentInput student, CancellationToken cancellationToken = default);
+	ValidatedEvaluation<EnrolmentResult> EvaluateValidated(StudentInput student, CancellationToken cancellationToken = default);
 
-	ValidatedEvaluation<EnrolmentResult> TryEvaluate(StudentInput student, DateOnly asOf, CancellationToken cancellationToken = default);
+	ValidatedEvaluation<EnrolmentResult> EvaluateValidated(StudentInput student, DateOnly asOf, CancellationToken cancellationToken = default);
 
-	ValidatedEvaluation<ExplainedResult> TryExplain(StudentInput student, CancellationToken cancellationToken = default);
+	ValidatedEvaluation<ExplainedResult> ExplainValidated(StudentInput student, CancellationToken cancellationToken = default);
 
-	ValidatedEvaluation<ExplainedResult> TryExplain(StudentInput student, DateOnly asOf, CancellationToken cancellationToken = default);
+	ValidatedEvaluation<ExplainedResult> ExplainValidated(StudentInput student, DateOnly asOf, CancellationToken cancellationToken = default);
 
 	/// <inheritdoc cref="EnrolmentEngine.StaleChoices" />
 	IReadOnlyList<Subject> StaleChoices(StudentInput student, CancellationToken cancellationToken = default);

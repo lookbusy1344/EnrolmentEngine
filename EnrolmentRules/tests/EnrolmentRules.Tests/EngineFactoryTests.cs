@@ -39,12 +39,12 @@ public sealed class EngineFactoryTests
 				Harness.AsOf);
 			var student = EligibleStudent();
 
-			factory.Current.TryEvaluate(student).Value!.Eligible.Should().BeTrue();
+			factory.Current.EvaluateValidated(student).Value!.Eligible.Should().BeTrue();
 
 			RaisePassGrade(Path.Combine(fixture, "data", "thresholds.yaml"), 7);
 			factory.Reload();
 
-			var afterPassGradeReload = factory.Current.TryEvaluate(student).Value!;
+			var afterPassGradeReload = factory.Current.EvaluateValidated(student).Value!;
 			afterPassGradeReload.Eligible.Should().BeFalse();
 			afterPassGradeReload.EligibilityReasons.Should().Equal(
 				"GCSE English Language below the pass grade (7)",
@@ -54,7 +54,7 @@ public sealed class EngineFactoryTests
 			RaiseMinPasses(Path.Combine(fixture, "data", "thresholds.yaml"), 6);
 			factory.Reload();
 
-			var afterMinPassesReload = factory.Current.TryEvaluate(StudentForPassGradeBoundary()).Value!;
+			var afterMinPassesReload = factory.Current.EvaluateValidated(StudentForPassGradeBoundary()).Value!;
 			afterMinPassesReload.Eligible.Should().BeFalse();
 			afterMinPassesReload.EligibilityReasons.Should().ContainSingle()
 				.Which.Should().Be("Fewer than the required number of GCSE passes (6 at grade 7 or above)");
@@ -115,7 +115,7 @@ public sealed class EngineFactoryTests
 				try {
 					WaitForSignal(startGate, "evaluation start gate");
 					source.WaitForFirstReloadBlocked();
-					validationResults.Enqueue(factory.Current.TryEvaluate(student).Validation.IsValid);
+					validationResults.Enqueue(factory.Current.EvaluateValidated(student).Validation.IsValid);
 				}
 				catch (Exception exception) {
 					errors.Enqueue(exception);
@@ -193,7 +193,7 @@ public sealed class EngineFactoryTests
 
 		errors.Should().BeEmpty();
 		source.MaxConcurrentReloadBuilds.Should().Be(1);
-		factory.Current.TryEvaluate(student).Value!.Eligible.Should().BeFalse();
+		factory.Current.EvaluateValidated(student).Value!.Eligible.Should().BeFalse();
 	}
 
 	[Fact]
@@ -237,12 +237,12 @@ public sealed class EngineFactoryTests
 		var act = () => factory.Reload();
 		act.Should().Throw<PolicyThresholdsException>();
 		factory.Current.Should().BeSameAs(before);
-		factory.Current.TryEvaluate(student).Value!.Eligible.Should().BeTrue();
+		factory.Current.EvaluateValidated(student).Value!.Eligible.Should().BeTrue();
 
 		factory.Reload();
 
 		factory.Current.Should().NotBeSameAs(before);
-		factory.Current.TryEvaluate(student).Value!.Eligible.Should().BeTrue();
+		factory.Current.EvaluateValidated(student).Value!.Eligible.Should().BeTrue();
 		source.MaxConcurrentReloadBuilds.Should().Be(1);
 	}
 

@@ -142,42 +142,47 @@ public sealed class EnrolmentEngine : IEnrolmentEngine
 	public AdviceResult Advise(StudentInput student, DateOnly asOf, CancellationToken cancellationToken = default)
 	{
 		ArgumentNullException.ThrowIfNull(student);
-		return Advise(student, asOf, evaluator.Thresholds.AdviceConsidersUnsatGcses, cancellationToken);
+		return Advise(student, asOf, DefaultUnsatGcseAdvice, cancellationToken);
 	}
 
 	/// <summary>
-	///     Counterfactual guidance with an explicit <paramref name="considerUnsatGcses" /> override of the
-	///     loaded <see cref="PolicyThresholds.AdviceConsidersUnsatGcses" /> default — the diagnostic mode that
-	///     lets the search also propose sitting GCSEs the student never took. As of the bound reference date.
+	///     Counterfactual guidance with an explicit <paramref name="unsatGcses" /> override of the loaded
+	///     <see cref="PolicyThresholds.AdviceConsidersUnsatGcses" /> default — the diagnostic mode that lets the
+	///     search also propose sitting GCSEs the student never took. As of the bound reference date.
 	/// </summary>
-	public AdviceResult Advise(StudentInput student, bool considerUnsatGcses, CancellationToken cancellationToken = default)
+	/// <exception cref="ArgumentOutOfRangeException"><paramref name="unsatGcses" /> is not a supported advice scope.</exception>
+	public AdviceResult Advise(StudentInput student, UnsatGcseAdvice unsatGcses, CancellationToken cancellationToken = default)
 	{
 		ArgumentNullException.ThrowIfNull(student);
-		return Advise(student, asOf(), considerUnsatGcses, cancellationToken);
+		ValidateUnsatGcseAdvice(unsatGcses);
+		return Advise(student, asOf(), unsatGcses, cancellationToken);
 	}
 
 	/// <summary>Counterfactual guidance with an explicit diagnostic override, as of an explicit reference date.</summary>
+	/// <exception cref="ArgumentOutOfRangeException"><paramref name="unsatGcses" /> is not a supported advice scope.</exception>
 	public AdviceResult Advise(
 		StudentInput student,
 		DateOnly asOf,
-		bool considerUnsatGcses,
+		UnsatGcseAdvice unsatGcses,
 		CancellationToken cancellationToken = default)
 	{
 		ArgumentNullException.ThrowIfNull(student);
-		return CounterfactualAdvisor.Advise(this, student, evaluator.Thresholds, asOf, considerUnsatGcses, cancellationToken: cancellationToken);
+		ValidateUnsatGcseAdvice(unsatGcses);
+		return CounterfactualAdvisor.Advise(
+			this, student, evaluator.Thresholds, asOf, unsatGcses is UnsatGcseAdvice.IncludeUnsat, cancellationToken: cancellationToken);
 	}
 
 	/// <summary>
 	///     The committed choices the student may no longer hold: every <c>chosen_a_levels</c> entry the
 	///     pipeline now rates red. A choice is only ever made against a green or amber subject, so a red one
-	///     means the facts moved underneath it after it was committed — the <c>Try*</c> calls refuse any
+	///     means the facts moved underneath it after it was committed — the <c>*Validated</c> calls refuse any
 	///     document that still names one, and a caller holding a mutable basket (both web front ends) prunes
 	///     against this list and re-evaluates rather than presenting the refusal to the student.
 	/// </summary>
 	/// <remarks>
 	///     Returns empty for a student with no choices, and for one whose facts do not validate — there is no
 	///     trustworthy rating to prune against, and the caller will surface the facts' own validation errors
-	///     from a <c>Try*</c> call anyway. One pass suffices: dropping choices only removes downgrades, so no
+	///     from a <c>*Validated</c> call anyway. One pass suffices: dropping choices only removes downgrades, so no
 	///     surviving choice can newly turn red.
 	/// </remarks>
 	public IReadOnlyList<Subject> StaleChoices(StudentInput student, CancellationToken cancellationToken = default)
@@ -188,64 +193,80 @@ public sealed class EnrolmentEngine : IEnrolmentEngine
 			: [.. StaleChoiceRatings(Run(student, asOf(), cancellationToken)).Select(static rating => rating.Subject)];
 	}
 
-	/// <inheritdoc cref="IEnrolmentEvaluator.TryEvaluate(StudentInput, CancellationToken)" />
-	public ValidatedEvaluation<EnrolmentResult> TryEvaluate(StudentInput student, CancellationToken cancellationToken = default) =>
-		TryRun(student, asOf(), ToResult, cancellationToken);
+	/// <inheritdoc cref="IEnrolmentEvaluator.EvaluateValidated(StudentInput, CancellationToken)" />
+	public ValidatedEvaluation<EnrolmentResult> EvaluateValidated(StudentInput student, CancellationToken cancellationToken = default) =>
+		RunValidated(student, asOf(), ToResult, cancellationToken);
 
-	/// <inheritdoc cref="IEnrolmentEvaluator.TryEvaluate(StudentInput, DateOnly, CancellationToken)" />
-	public ValidatedEvaluation<EnrolmentResult> TryEvaluate(
+	/// <inheritdoc cref="IEnrolmentEvaluator.EvaluateValidated(StudentInput, DateOnly, CancellationToken)" />
+	public ValidatedEvaluation<EnrolmentResult> EvaluateValidated(
 		StudentInput student,
 		DateOnly asOf,
 		CancellationToken cancellationToken = default) =>
-		TryRun(student, asOf, ToResult, cancellationToken);
+		RunValidated(student, asOf, ToResult, cancellationToken);
 
-	/// <inheritdoc cref="IEnrolmentEvaluator.TryExplain(StudentInput, CancellationToken)" />
-	public ValidatedEvaluation<ExplainedResult> TryExplain(StudentInput student, CancellationToken cancellationToken = default) =>
-		TryRun(student, asOf(), ToExplained, cancellationToken);
+	/// <inheritdoc cref="IEnrolmentEvaluator.ExplainValidated(StudentInput, CancellationToken)" />
+	public ValidatedEvaluation<ExplainedResult> ExplainValidated(StudentInput student, CancellationToken cancellationToken = default) =>
+		RunValidated(student, asOf(), ToExplained, cancellationToken);
 
-	/// <inheritdoc cref="IEnrolmentEvaluator.TryExplain(StudentInput, DateOnly, CancellationToken)" />
-	public ValidatedEvaluation<ExplainedResult> TryExplain(
+	/// <inheritdoc cref="IEnrolmentEvaluator.ExplainValidated(StudentInput, DateOnly, CancellationToken)" />
+	public ValidatedEvaluation<ExplainedResult> ExplainValidated(
 		StudentInput student,
 		DateOnly asOf,
 		CancellationToken cancellationToken = default) =>
-		TryRun(student, asOf, ToExplained, cancellationToken);
+		RunValidated(student, asOf, ToExplained, cancellationToken);
 
-	/// <inheritdoc cref="IEnrolmentAdvisor.TryAdvise(StudentInput, CancellationToken)" />
-	public ValidatedEvaluation<AdviceResult> TryAdvise(StudentInput student, CancellationToken cancellationToken = default) =>
-		TryAdvise(student, asOf(), evaluator.Thresholds.AdviceConsidersUnsatGcses, cancellationToken);
+	/// <inheritdoc cref="IEnrolmentAdvisor.AdviseValidated(StudentInput, CancellationToken)" />
+	public ValidatedEvaluation<AdviceResult> AdviseValidated(StudentInput student, CancellationToken cancellationToken = default) =>
+		AdviseValidated(student, asOf(), DefaultUnsatGcseAdvice, cancellationToken);
 
-	/// <inheritdoc cref="IEnrolmentAdvisor.TryAdvise(StudentInput, DateOnly, CancellationToken)" />
-	public ValidatedEvaluation<AdviceResult> TryAdvise(
+	/// <inheritdoc cref="IEnrolmentAdvisor.AdviseValidated(StudentInput, DateOnly, CancellationToken)" />
+	public ValidatedEvaluation<AdviceResult> AdviseValidated(
 		StudentInput student,
 		DateOnly asOf,
 		CancellationToken cancellationToken = default) =>
-		TryAdvise(student, asOf, evaluator.Thresholds.AdviceConsidersUnsatGcses, cancellationToken);
+		AdviseValidated(student, asOf, DefaultUnsatGcseAdvice, cancellationToken);
 
-	/// <inheritdoc cref="IEnrolmentAdvisor.TryAdvise(StudentInput, bool, CancellationToken)" />
-	public ValidatedEvaluation<AdviceResult> TryAdvise(
+	/// <inheritdoc cref="IEnrolmentAdvisor.AdviseValidated(StudentInput, UnsatGcseAdvice, CancellationToken)" />
+	public ValidatedEvaluation<AdviceResult> AdviseValidated(
 		StudentInput student,
-		bool considerUnsatGcses,
-		CancellationToken cancellationToken = default) =>
-		TryAdvise(student, asOf(), considerUnsatGcses, cancellationToken);
+		UnsatGcseAdvice unsatGcses,
+		CancellationToken cancellationToken = default)
+	{
+		ValidateUnsatGcseAdvice(unsatGcses);
+		return AdviseValidated(student, asOf(), unsatGcses, cancellationToken);
+	}
 
-	/// <inheritdoc cref="IEnrolmentAdvisor.TryAdvise(StudentInput, DateOnly, bool, CancellationToken)" />
+	/// <inheritdoc cref="IEnrolmentAdvisor.AdviseValidated(StudentInput, DateOnly, UnsatGcseAdvice, CancellationToken)" />
 	/// <remarks>
-	///     Deliberately exempt from the stale-choice guard the other <c>Try*</c> entry points apply. Those
+	///     Deliberately exempt from the stale-choice guard the other <c>*Validated</c> entry points apply. Those
 	///     answer "what is this student's verdict", and a red committed choice has no defensible answer. This
 	///     one answers "what would have to change", which is precisely the question a student with a red
 	///     choice needs answered — refusing the document would withhold the advice from the only people who
 	///     need it. Nothing is accepted by advising: it returns counterfactuals, never an enrolment.
 	/// </remarks>
-	public ValidatedEvaluation<AdviceResult> TryAdvise(
+	public ValidatedEvaluation<AdviceResult> AdviseValidated(
 		StudentInput student,
 		DateOnly asOf,
-		bool considerUnsatGcses,
+		UnsatGcseAdvice unsatGcses,
 		CancellationToken cancellationToken = default)
 	{
+		ValidateUnsatGcseAdvice(unsatGcses);
 		var validation = ValidateInput(student);
 		return validation.IsValid
-			? new(validation, Advise(student, asOf, considerUnsatGcses, cancellationToken))
+			? new(validation, Advise(student, asOf, unsatGcses, cancellationToken))
 			: new(validation, null);
+	}
+
+	/// <summary>The per-call default: the loaded <see cref="PolicyThresholds.AdviceConsidersUnsatGcses" /> knob, as a scope.</summary>
+	private UnsatGcseAdvice DefaultUnsatGcseAdvice =>
+		evaluator.Thresholds.AdviceConsidersUnsatGcses ? UnsatGcseAdvice.IncludeUnsat : UnsatGcseAdvice.HeldOnly;
+
+	private static void ValidateUnsatGcseAdvice(UnsatGcseAdvice unsatGcses)
+	{
+		if (unsatGcses is not (UnsatGcseAdvice.HeldOnly or UnsatGcseAdvice.IncludeUnsat)) {
+			throw new ArgumentOutOfRangeException(
+				nameof(unsatGcses), unsatGcses, "Value must identify a supported unsat GCSE advice scope.");
+		}
 	}
 
 	/// <summary>
@@ -363,12 +384,12 @@ public sealed class EnrolmentEngine : IEnrolmentEngine
 	}
 
 	/// <summary>
-	///     The shared <c>Try*</c> boundary: validate the document, run the pipeline once, refuse it if any
+	///     The shared validated boundary: validate the document, run the pipeline once, refuse it if any
 	///     committed choice has gone red, and only then project the run. The pipeline runs at most once —
 	///     <paramref name="project" /> is a pure projection of the same <see cref="Evaluation" /> the
 	///     stale-choice guard inspected, so the verdict and the guard can never disagree.
 	/// </summary>
-	private ValidatedEvaluation<T> TryRun<T>(
+	private ValidatedEvaluation<T> RunValidated<T>(
 		StudentInput student,
 		DateOnly asOf,
 		Func<Evaluation, T> project,

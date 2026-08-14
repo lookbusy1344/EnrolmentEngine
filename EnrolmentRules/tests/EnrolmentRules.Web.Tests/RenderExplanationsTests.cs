@@ -41,7 +41,7 @@ public sealed class RenderExplanationsTests : IClassFixture<WebAppFactory>
 		html.Should().Contain("physics").And.Contain("Green");
 		html.Should().Contain("art").And.Contain("Amber");
 		html.Should().Contain("further_maths").And.Contain("Red");
-		html.Should().Contain("Entry met"); // a deciding reason from TryExplain
+		html.Should().Contain("Entry met"); // a deciding reason from ExplainValidated
 	}
 
 	private static async Task<string> ExtractAntiForgeryTokenAsync(HttpResponseMessage response)

@@ -38,24 +38,24 @@ internal sealed class ReloadingEnrolmentEngineProxy(IEnrolmentEngineFactory fact
 	public AdviceResult Advise(StudentInput student, DateOnly asOf, CancellationToken cancellationToken = default) =>
 		Advisor.Advise(student, asOf, cancellationToken);
 
-	public AdviceResult Advise(StudentInput student, bool considerUnsatGcses, CancellationToken cancellationToken = default) =>
-		Advisor.Advise(student, considerUnsatGcses, cancellationToken);
+	public AdviceResult Advise(StudentInput student, UnsatGcseAdvice unsatGcses, CancellationToken cancellationToken = default) =>
+		Advisor.Advise(student, unsatGcses, cancellationToken);
 
 	public AdviceResult Advise(
 		StudentInput student,
 		DateOnly asOf,
-		bool considerUnsatGcses,
+		UnsatGcseAdvice unsatGcses,
 		CancellationToken cancellationToken = default) =>
-		Advisor.Advise(student, asOf, considerUnsatGcses, cancellationToken);
+		Advisor.Advise(student, asOf, unsatGcses, cancellationToken);
 
-	public ValidatedEvaluation<EnrolmentResult> TryEvaluate(StudentInput student, CancellationToken cancellationToken = default) =>
-		Evaluator.TryEvaluate(student, cancellationToken);
+	public ValidatedEvaluation<EnrolmentResult> EvaluateValidated(StudentInput student, CancellationToken cancellationToken = default) =>
+		Evaluator.EvaluateValidated(student, cancellationToken);
 
-	public ValidatedEvaluation<EnrolmentResult> TryEvaluate(
+	public ValidatedEvaluation<EnrolmentResult> EvaluateValidated(
 		StudentInput student,
 		DateOnly asOf,
 		CancellationToken cancellationToken = default) =>
-		Evaluator.TryEvaluate(student, asOf, cancellationToken);
+		Evaluator.EvaluateValidated(student, asOf, cancellationToken);
 
 	public IReadOnlyList<Subject> StaleChoices(StudentInput student, CancellationToken cancellationToken = default) =>
 		Evaluator.StaleChoices(student, cancellationToken);
@@ -66,34 +66,34 @@ internal sealed class ReloadingEnrolmentEngineProxy(IEnrolmentEngineFactory fact
 	/// </summary>
 	public SubjectCriteria Describe(Subject subject) => Explainer.Describe(subject);
 
-	public ValidatedEvaluation<ExplainedResult> TryExplain(StudentInput student, CancellationToken cancellationToken = default) =>
-		Evaluator.TryExplain(student, cancellationToken);
+	public ValidatedEvaluation<ExplainedResult> ExplainValidated(StudentInput student, CancellationToken cancellationToken = default) =>
+		Evaluator.ExplainValidated(student, cancellationToken);
 
-	public ValidatedEvaluation<ExplainedResult> TryExplain(
+	public ValidatedEvaluation<ExplainedResult> ExplainValidated(
 		StudentInput student,
 		DateOnly asOf,
 		CancellationToken cancellationToken = default) =>
-		Evaluator.TryExplain(student, asOf, cancellationToken);
+		Evaluator.ExplainValidated(student, asOf, cancellationToken);
 
-	public ValidatedEvaluation<AdviceResult> TryAdvise(StudentInput student, CancellationToken cancellationToken = default) =>
-		Advisor.TryAdvise(student, cancellationToken);
+	public ValidatedEvaluation<AdviceResult> AdviseValidated(StudentInput student, CancellationToken cancellationToken = default) =>
+		Advisor.AdviseValidated(student, cancellationToken);
 
-	public ValidatedEvaluation<AdviceResult> TryAdvise(
+	public ValidatedEvaluation<AdviceResult> AdviseValidated(
 		StudentInput student,
 		DateOnly asOf,
 		CancellationToken cancellationToken = default) =>
-		Advisor.TryAdvise(student, asOf, cancellationToken);
+		Advisor.AdviseValidated(student, asOf, cancellationToken);
 
-	public ValidatedEvaluation<AdviceResult> TryAdvise(
+	public ValidatedEvaluation<AdviceResult> AdviseValidated(
 		StudentInput student,
-		bool considerUnsatGcses,
+		UnsatGcseAdvice unsatGcses,
 		CancellationToken cancellationToken = default) =>
-		Advisor.TryAdvise(student, considerUnsatGcses, cancellationToken);
+		Advisor.AdviseValidated(student, unsatGcses, cancellationToken);
 
-	public ValidatedEvaluation<AdviceResult> TryAdvise(
+	public ValidatedEvaluation<AdviceResult> AdviseValidated(
 		StudentInput student,
 		DateOnly asOf,
-		bool considerUnsatGcses,
+		UnsatGcseAdvice unsatGcses,
 		CancellationToken cancellationToken = default) =>
-		Advisor.TryAdvise(student, asOf, considerUnsatGcses, cancellationToken);
+		Advisor.AdviseValidated(student, asOf, unsatGcses, cancellationToken);
 }

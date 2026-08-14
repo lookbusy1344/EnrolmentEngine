@@ -51,6 +51,7 @@ public sealed class PublicApiSurfaceTests
 					"EnrolmentRules.Domain.StudentProfile", "EnrolmentRules.Domain.StudentValidator", "EnrolmentRules.Domain.Subject",
 					"EnrolmentRules.Domain.SubjectAdvice", "EnrolmentRules.Domain.SubjectExclusion", "EnrolmentRules.Domain.SubjectJsonConverter",
 					"EnrolmentRules.Domain.SubjectMeta", "EnrolmentRules.Domain.Thresholds", "EnrolmentRules.Domain.TransitionEvidence",
+					"EnrolmentRules.Domain.UnsatGcseAdvice",
 					"EnrolmentRules.Domain.ValidationOutcome", "EnrolmentRules.Domain.ValidatedEvaluation`1", "EnrolmentRules.Domain.YamlConverter",
 				}),
 			(typeof(GradePredictor).Assembly,

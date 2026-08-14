@@ -107,7 +107,7 @@ public sealed class AccessibleSubjectsTests
 	[Fact]
 	public void psychology_and_sociology_are_recognised_gcse_subjects() => GcseSubjects.Known.Should().Contain(["psychology", "sociology"]);
 
-	// Driven through TryEvaluate rather than Evaluate: only the validating path checks GCSE keys against
+	// Driven through EvaluateValidated rather than Evaluate: only the validating path checks GCSE keys against
 	// GcseSubjects.Known, so the unchecked path would pass this even with the vocabulary unchanged.
 	[Fact]
 	public void psychology_and_sociology_gcses_are_accepted_by_the_input_validator()
@@ -123,7 +123,7 @@ public sealed class AccessibleSubjectsTests
 			},
 			[]) { DateOfBirth = new(2009, 9, 1) };
 
-		var evaluation = Harness.ShippedEngine().TryEvaluate(student, Harness.AsOf);
+		var evaluation = Harness.ShippedEngine().EvaluateValidated(student, Harness.AsOf);
 
 		evaluation.Validation.Errors.Should().BeEmpty();
 		evaluation.Value!.Eligible.Should().BeTrue();

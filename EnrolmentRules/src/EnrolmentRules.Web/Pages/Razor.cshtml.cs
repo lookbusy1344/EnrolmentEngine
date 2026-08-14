@@ -77,7 +77,7 @@ public sealed class RazorModel(IEnrolmentSessionStore sessionStore, IEnrolmentEn
 	{
 		var session = await PruneStaleChoicesAsync(await sessionStore.LoadAsync(HttpContext.Session, HttpContext.RequestAborted));
 		Bind(session);
-		var evaluation = engine.TryExplain(EnrolmentFormMapper.ToStudentInput(session), HttpContext.RequestAborted);
+		var evaluation = engine.ExplainValidated(EnrolmentFormMapper.ToStudentInput(session), HttpContext.RequestAborted);
 		Results = EnrolmentResultsViewModel.From(evaluation);
 		Basket = BasketEntry.From(ChosenALevels, Results);
 	}
@@ -134,7 +134,7 @@ public sealed class RazorModel(IEnrolmentSessionStore sessionStore, IEnrolmentEn
 
 	private bool CanChoose(Subject subject, EnrolmentSession session)
 	{
-		var evaluation = engine.TryExplain(EnrolmentFormMapper.ToStudentInput(session), HttpContext.RequestAborted);
+		var evaluation = engine.ExplainValidated(EnrolmentFormMapper.ToStudentInput(session), HttpContext.RequestAborted);
 		if (!evaluation.Validation.IsValid || evaluation.Value is not { Eligible: true } result) {
 			return false;
 		}
