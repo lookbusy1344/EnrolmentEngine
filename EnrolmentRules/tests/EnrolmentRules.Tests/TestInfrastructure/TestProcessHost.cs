@@ -6,7 +6,9 @@ internal static class TestProcessHost
 
 	public static Task<ProcessResult> RunAsync(string mode, string? argument = null, TimeSpan? timeout = null)
 	{
-		var arguments = new List<string> { AssemblyPath(), mode };
+		var arguments = new List<string> {
+			AssemblyPath(), mode,
+		};
 		if (argument is not null) {
 			arguments.Add(argument);
 		}

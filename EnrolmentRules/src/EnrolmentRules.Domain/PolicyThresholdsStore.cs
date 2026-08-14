@@ -45,7 +45,9 @@ public static class PolicyThresholdsStore
 				_ => new(() => JsonSchema.FromText(schemaText))).Value;
 
 			using var doc = JsonDocument.Parse(node.ToJsonString());
-			var results = schema.Evaluate(doc.RootElement, new() { OutputFormat = OutputFormat.List });
+			var results = schema.Evaluate(doc.RootElement, new() {
+				OutputFormat = OutputFormat.List,
+			});
 			if (!results.IsValid) {
 				throw new PolicyThresholdsException(
 					$"Thresholds file '{thresholdsPath ?? ThresholdsFileName}' failed schema validation: {DescribeErrors(results)}");
@@ -138,13 +140,66 @@ public static class PolicyThresholdsStore
 		if (thresholds.AdviceMaxPipelineEvaluations is < 1) {
 			throw new InvalidDataException("advice_max_pipeline_evaluations, when set, must be at least 1.");
 		}
+
+		ValidateTopNGcseKnobs(thresholds);
+
+		if (thresholds.MinChosenALevels is < 0) {
+			throw new InvalidDataException("min_chosen_a_levels must not be negative.");
+		}
+
+		if (thresholds.MinChosenALevels > thresholds.HighAttainmentMaxChosenALevels) {
+			throw new InvalidDataException(
+				"min_chosen_a_levels must not exceed high_attainment_max_chosen_a_levels.");
+		}
+	}
+
+	private static void ValidateTopNGcseKnobs(PolicyThresholds thresholds)
+	{
+		var set = new[] {
+			thresholds.BestGcseCount is not null, thresholds.MinBestGcsePoints is not null, thresholds.TopGcseAverageCount is not null, thresholds.MinTopGcseAverage is not null,
+		};
+		if (set.Any(static s => s) && !set.All(static s => s)) {
+			throw new InvalidDataException(
+				"best_gcse_count, min_best_gcse_points, top_gcse_average_count and min_top_gcse_average must be set all four together or not at all.");
+		}
+
+		if (thresholds.BestGcseCount is not int bestGcseCount) {
+			return;
+		}
+
+		var minBestGcsePoints = thresholds.MinBestGcsePoints!.Value;
+		var topGcseAverageCount = thresholds.TopGcseAverageCount!.Value;
+		var minTopGcseAverage = thresholds.MinTopGcseAverage!.Value;
+
+		if (bestGcseCount < 1) {
+			throw new InvalidDataException("best_gcse_count must be at least 1.");
+		}
+
+		if (topGcseAverageCount < 1) {
+			throw new InvalidDataException("top_gcse_average_count must be at least 1.");
+		}
+
+		if (topGcseAverageCount > bestGcseCount) {
+			throw new InvalidDataException("top_gcse_average_count must not exceed best_gcse_count.");
+		}
+
+		if (minTopGcseAverage is < Thresholds.MinGcseGrade or > Thresholds.MaxGcseGrade) {
+			throw new InvalidDataException(
+				$"min_top_gcse_average must stay within the GCSE scale ({Thresholds.MinGcseGrade}–{Thresholds.MaxGcseGrade}).");
+		}
+
+		var reachableMaximum = bestGcseCount * Thresholds.MaxGcseGrade;
+		if (minBestGcsePoints < 1 || minBestGcsePoints > reachableMaximum) {
+			throw new InvalidDataException(
+				$"min_best_gcse_points {minBestGcsePoints} must be a reachable total for best_gcse_count {bestGcseCount} GCSEs (1–{reachableMaximum}).");
+		}
 	}
 
 	private static string DescribeErrors(EvaluationResults results)
 	{
 		var messages = (results.Details ?? [])
-			.Where(d => d.Errors is { Count: > 0 })
-			.SelectMany(d => d.Errors!.Select(e => $"{d.InstanceLocation}: {e.Value}"));
+					   .Where(d => d.Errors is { Count: > 0 })
+					   .SelectMany(d => d.Errors!.Select(e => $"{d.InstanceLocation}: {e.Value}"));
 		var joined = string.Join("; ", messages);
 		return joined.Length > 0 ? joined : "schema validation failed (no detailed errors reported)";
 	}

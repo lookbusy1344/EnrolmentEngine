@@ -37,6 +37,7 @@ Recommended reading order:
 6. [Worked examples](#6-worked-examples)
 7. [Common pitfalls](#7-common-pitfalls)
 8. [Quick reference](#8-quick-reference)
+9. [Authoring an auxiliary policy](#9-authoring-an-auxiliary-policy)
 - [Appendix: How the engine applies your rules](#appendix-how-the-engine-applies-your-rules-background)
 
 ---
@@ -189,12 +190,14 @@ a floor. A subject with no matrix row returns `0.0`, so it can never clear a pro
 | DfE probability at-or-above    | `facts.DfeProbabilityAtOrAbove(key, grade)` | — | via base rating |
 | Age                            | `facts.Age`       | —                    | yes     |
 | Entry equivalent (prior qual)  | `facts.HasEntryEquivalent(key)` | —      | yes     |
-| All GCSEs (for pass-count)     | —                 | `gcses` array        | —       |
+| Number of GCSEs submitted      | —                 | `lookup.Count`       | —       |
+| Total of the best *n* GCSEs    | —                 | `lookup.BestTotal(n)` | —      |
+| Average of the best *n* GCSEs  | —                 | `lookup.BestAverage(n)` | —    |
 | Sibling subjects' ratings      | **never**         | **never**            | yes     |
 | Hobbies / chosen / prior quals | —                 | —                    | yes     |
 
-Rating rules read everything off `facts`; eligibility rules read `lookup` (single-subject grades),
-`gcses` (the array, for counts), and `policy`.
+Rating rules read everything off `facts`; eligibility rules read `lookup` (single-subject grades
+and the top-*n* aggregates above) and `policy`.
 
 ---
 
@@ -205,8 +208,16 @@ boilerplate; you write the `Expression`.
 
 ### 3.1 The two workflows
 
-- **`workflows/eligibility.yaml`** — the whole-student gate. Exactly three rules, in order:
-  `EnglishLanguagePass`, `MathsPass`, `EnoughPasses`. The linter enforces that set and order.
+- **`workflows/eligibility.yaml`** — the whole-student gate: one or more independent rules, each
+  either a *specialised* rule the engine recognises by name (`EnglishLanguagePass`, `MathsPass`,
+  `EnoughPasses` — the shape Standard uses) or a *generic* rule identified purely by carrying a
+  `SuccessEvent`. The linter only requires the rule list be non-empty with unique names and every
+  rule be one or the other — it no longer pins an exact three-rule set or order, so a policy can add,
+  drop, or reshape gate rules entirely (Elite, for example, replaces the pass-count rule with the
+  count/total/average rules under [§9](#9-authoring-an-auxiliary-policy)). The three specialised
+  names are reserved: because their failure text is projected from thresholds, the linter pins each
+  to its canonical expression (and `EnoughPasses` local parameter) so wording and behavior cannot
+  diverge.
 - **`workflows/subject-ratings.yaml`** — three rules per subject, named `<subject>:<rating>`, in
   severity order **green → amber → red**, where `red` is the unconditional `true` catch-all.
 
@@ -227,20 +238,29 @@ boilerplate; you write the `Expression`.
 
 **`lookup`** and **`policy`** — the eligibility workflow's inputs:
 
-| Member                  | Returns | Meaning                                  |
-|-------------------------|---------|------------------------------------------|
-| `lookup.Grade("maths")` | `int`   | GCSE grade (0 if not taken)              |
-| `gcses`                 | array   | All GCSEs — iterate with LINQ for counts |
-| `policy.PassGrade`      | `int`   | Pass grade (4)                           |
-| `policy.MinPasses`      | `int`   | Minimum passes for eligibility           |
-| `policy.*`              | —       | Same threshold surface as `facts.*`      |
+| Member                     | Returns  | Meaning                                       |
+|-----------------------------|----------|------------------------------------------------|
+| `lookup.Grade("maths")`     | `int`    | GCSE grade (0 if not taken)                    |
+| `lookup.Count`              | `int`    | Number of GCSEs submitted                      |
+| `lookup.BestTotal(n)`       | `int`    | Total of the best *n* GCSE grades              |
+| `lookup.BestAverage(n)`     | `double` | Average of the best *n* GCSE grades            |
+| `gcses`                     | array    | All GCSEs — iterate with LINQ for anything else |
+| `policy.PassGrade`          | `int`    | Pass grade                                     |
+| `policy.MinPasses`          | `int`    | Minimum passes for eligibility (Standard-shaped policies) |
+| `policy.BestGcseCount` / `MinBestGcsePoints` / `TopGcseAverageCount` / `MinTopGcseAverage` | `int?`/`double?` | Optional top-*n* count/total/average knobs — all four or none must be set |
+| `policy.MinChosenALevels`   | `int`    | Floor on the final programme size, loaded from optional `min_chosen_a_levels` (default `0`) |
+| `policy.*`                  | —        | Same threshold surface as `facts.*`            |
+
+The GCSE lookup sorts and materialises the distinct submitted grades once per evaluation, then
+reuses that descending projection for every `lookup.BestTotal`/`BestAverage` call.
 
 **`ALevelGrade`** — the grade constants for the predicted/probability bars: `ALevelGrade.AStar`, `.A`,
 `.B`, `.C`, `.D`, `.E`, `.U` (and `.Min` / `.Max`).
 
-> **Do not put bare numbers in a rule.** Thresholds come from `policy.*` / `facts.*` (sourced from
-> `thresholds.yaml`); grade bars come from `ALevelGrade.*`. A literal `4` or `5.0` in an expression
-> is a magic number and will not survive review.
+> **Use shared names for shared policy; literals for genuinely local policy.** Broad entry bands and
+> reusable DfE floors come from `policy.*` / `facts.*`; A-level grade bars use `ALevelGrade.*`.
+> A one-off course-specific bar such as Further Maths's `facts.Average >= 7.0` belongs directly in
+> that rule rather than gaining a misleading global threshold.
 
 ### 3.3 Rule patterns
 
@@ -324,6 +344,7 @@ min_dfe_green_probability_at_or_above: 0.60
 max_chosen_a_levels: 3
 high_attainment_max_chosen_a_levels: 4
 high_attainment_average_gcse: 7.5
+min_chosen_a_levels: 0
 amber_score_factor: 0.5
 # max_green_choices: 4   # optional, normally omitted — see the green-cap note below
 ```
@@ -331,7 +352,8 @@ amber_score_factor: 0.5
 `max_chosen_a_levels`, `high_attainment_max_chosen_a_levels`, and
 `high_attainment_average_gcse` drive the whole-student selection cap in host code: most students may
 choose up to the normal cap, while students whose average GCSE score meets the threshold may choose
-up to the higher cap.
+up to the higher cap. Optional `min_chosen_a_levels` defaults to zero and sets the lower bound checked
+by final-programme validation; Elite raises it to three.
 
 `max_green_choices` is the **optional green cap** and is normally omitted (as in the shipped file): with
 it absent the cap is disabled and every green stays green. Add it — a positive integer — only when policy
@@ -431,7 +453,8 @@ It checks:
   transposed (green reads `MinDfeGreenProbabilityAtOrAbove`, amber reads
   `MinDfeAmberProbabilityAtOrAbove`). Catches a green rule left comparing against the amber threshold
   after a copy-paste, which would silently promote amber-level students to green.
-- **Eligibility shape** — exactly `EnglishLanguagePass`, `MathsPass`, `EnoughPasses`, in order.
+- **Eligibility shape** — a non-empty, uniquely named rule set; generic rules require a
+  `SuccessEvent`, while the three reserved Standard names must retain their canonical expressions.
 
 Exit code `5` on any error finding, `0` when clean.
 
@@ -557,8 +580,9 @@ The mistakes that pass a casual review — worth a deliberate check.
   rate the student incorrectly, but the linter flags it as off-vocabulary — and that lint now runs
   inside `Create`, so such a workflow fails startup rather than shipping. `--lint-workflows` is
   the cheaper pre-check that surfaces the same finding without booting an engine, so never skip it.
-- **Magic numbers.** A literal `4` or `5.0` or `0.6` in a rule will not survive review — pull it
-  from `policy.*` / `facts.*` (sourced from `thresholds.yaml`) or `ALevelGrade.*`.
+- **Threshold scope.** Pull broad, reused policy from `policy.*` / `facts.*` and grade constants
+  from `ALevelGrade.*`. Keep a genuinely one-off, course-specific boundary as a literal in that
+  rule; do not promote it into a global knob merely to avoid a number.
 - **Scale confusion.** GCSE grades are `1–9`; predicted points are `ALevelGrade` (`A*=6 … U=0`).
   Comparing a predicted value against a GCSE threshold (or vice versa) is nonsense.
 - **Exclusion symmetry.** A clash declared on one subject only fails startup validation. Always edit
@@ -567,8 +591,9 @@ The mistakes that pass a casual review — worth a deliberate check.
   `true`. Author each tier as a *loosening* of the one above, or "first-hit-wins" gives green to a
   student who should be amber. The linter enforces the shape but not the *semantics* of the loosening —
   check that with `--explain-text`.
-- **Reason strings are user-facing.** The `SuccessEvent` text surfaces verbatim in `--explain-text`.
-  Write it as you'd want an admin to read it.
+- **Reason strings are user-facing.** A winning subject rule's `SuccessEvent` surfaces verbatim in
+  `--explain-text`; a failed generic eligibility rule appears as `Not met: <SuccessEvent>`. Write it
+  as a positive condition an admin can understand in either context.
 - **Don't reach across rules in YAML.** If a rating rule seems to need another subject's outcome, it
   is handled by the engine's constraint pass, not a YAML rule. There is no `facts.RatingOf(...)`.
 
@@ -590,11 +615,14 @@ The mistakes that pass a casual review — worth a deliberate check.
 One-off, single-subject bars (the Further Maths / humanities / accessible average bars, Art's adult-age gate) are
 written as literals in the rule, not as named `facts.*` thresholds.
 
-**Eligibility-rule surface** — `lookup.Grade(k)`, `gcses` (array), `policy.PassGrade`,
-`policy.MinPasses`, `policy.*`.
+**Eligibility-rule surface** — `lookup.Grade(k)`, `lookup.Count`, `lookup.BestTotal(n)`,
+`lookup.BestAverage(n)`, `gcses` (array), `policy.PassGrade`, `policy.MinPasses`,
+`policy.BestGcseCount`/`MinBestGcsePoints`/`TopGcseAverageCount`/`MinTopGcseAverage`,
+`policy.MinChosenALevels`, `policy.*`.
 
 **Scales** — GCSE input is **1–9**; predicted A-level points are **`ALevelGrade` A\*=6 … U=0**. Never
-conflate them. No bare numbers — use named thresholds and `ALevelGrade.*`.
+conflate them. Use named thresholds for shared bands, `ALevelGrade.*` for grade bars, and literals
+only for one-off course-specific policy.
 
 **Invariants** — tiers ordered green → amber → red; red is `true`; exclusions symmetric; every
 adjustment downgrades only.
@@ -605,6 +633,75 @@ adjustment downgrades only.
 dotnet run --project src/EnrolmentRules.Cli -- --lint-workflows                 # validate the rules
 dotnet run --project src/EnrolmentRules.Cli -- --explain-text examples/student.json   # see the effect
 ```
+
+---
+
+## 9. Authoring an auxiliary policy
+
+An auxiliary policy is a second, independent `workflows/`/`data/` tree — its own eligibility gate
+and subject-rating tiers, its own catalogue and thresholds — registered alongside the default under
+a distinct id (see [Policy registry](technical-reference.md#policy-registry)). `policies/elite/`
+ships as the worked example; use it as a template.
+
+**What an auxiliary policy owns, and what it shares.** `OverlayEnrolmentDataSource` reads
+`workflows/`, `catalogue.yaml`, and `thresholds.yaml` from the policy's own directory, but falls
+through to the base `data/` tree for the JSON schemas, `qualifications.yaml`, and the DfE transition
+matrix. In practice that means:
+
+- `policies/<id>/workflows/eligibility.yaml`, `subject-ratings.yaml` — write these exactly as
+  described in [§1](#1-where-a-rule-belongs)–[§3](#3-writing-engine-rules-yaml) above; nothing about
+  rule-writing changes for an auxiliary policy.
+- `policies/<id>/data/catalogue.yaml`, `thresholds.yaml` — the policy's own subject relationships
+  and tuning knobs, validated against the shared `data/catalogue.schema.json` /
+  `data/thresholds.schema.json`.
+- Everything else (`data/qualifications.yaml`, the DfE matrix, every JSON schema) comes from the
+  base policy's `data/` tree — do not duplicate it under `policies/<id>/data/`.
+
+**Decisions to pin before writing any YAML** (get these wrong and every rule built on top of them
+needs rewriting):
+
+1. **Which subjects does it offer?** The policy's catalogue is the *only* thing that determines
+   this — `data/catalogue.yaml`'s `GcseSubjects.Known` vocabulary is shared and does not itself
+   imply an A-level is offered. A subject absent from the auxiliary catalogue is `NotOffered` under
+   [`Compare`](technical-reference.md#non-destructive-comparison), not an error.
+2. **What is the eligibility gate?** A Standard-shaped policy keeps `EnglishLanguagePass` +
+   `MathsPass` + `EnoughPasses`. A policy with a different published gate (a minimum GCSE count, a
+   best-*n*-total, a top-*n*-average) writes generic rules instead — any rule carrying a
+   `SuccessEvent` satisfies the linter (see the updated [§3.1](#3-writing-engine-rules-yaml) above).
+   Elite's `eligibility.yaml` is the reference: `AtLeastEightGcses`, `BestEightTotal`,
+   `TopSevenAverage`, reading `lookup.Count`/`lookup.BestTotal`/`lookup.BestAverage` against the new
+   `policy.BestGcseCount`/`MinBestGcsePoints`/`TopGcseAverageCount`/`MinTopGcseAverage` knobs (all
+   four or none — `PolicyThresholdsStore` rejects a partial set).
+3. **Does entry read a subject's own GCSE, or a related one?** Prefer a subject's own GCSE
+   (`facts.Gcse("geography") >= facts.StandardEntry`) when one exists in the shared vocabulary. Where
+   none does and the published entry criterion names a *different* discipline (Economics reading GCSE
+   Maths in Standard; Religious Studies reading GCSE History in Elite, standing in for a
+   Philosophy & Theology GCSE nobody sits), say so in a rule comment — the narrator
+   (`ExpressionNarrator`, [§3.5](#3-writing-engine-rules-yaml)) reads the expression, not the
+   comment, so the criteria page still states the true gate; the comment is only for the next author.
+4. **Is the chosen-programme size floor different from Standard's?** `min_chosen_a_levels` in
+   `thresholds.yaml` remains the shared knob; `policy.MinChosenALevels` (default `0`) is an
+   independent floor a stricter policy can raise without touching Standard's.
+5. **Does advice need wider search budgets?** A gate built on eight-plus GCSEs (rather than two)
+   widens the counterfactual search space `Advise` explores. Raise `advice_max_grade_cost` /
+   `advice_max_subjects_changed` / `advice_max_pipeline_evaluations` in the auxiliary policy's own
+   `thresholds.yaml` rather than the shared defaults, and say in a comment why — this is a known,
+   accepted scaling trade-off ([Hosting Advise](technical-reference.md#hosting-advise)), not a bug to
+   chase down.
+
+**Validating it.** Everything in [§5](#5-validating-your-changes) applies to an auxiliary policy's
+tree exactly as it does to the default one — point `--lint-workflows` at the candidate directory
+before wiring it into the registry:
+
+```bash
+dotnet run --project src/EnrolmentRules.Cli -- --lint-workflows policies/elite/workflows
+dotnet run --project src/EnrolmentRules.Cli -- --policy elite --criteria physics
+```
+
+Trust a new auxiliary policy only once its own published boundaries are proven through the real
+engine — one test file per policy, driven through `EnrolmentEngine.Create` against its own directory
+(`tests/EnrolmentRules.Tests/Elite*.cs` is the reference shape: eligibility boundaries, per-subject
+rating tiers, final-programme selection, and gate-clearing advice, each a separate file).
 
 ---
 

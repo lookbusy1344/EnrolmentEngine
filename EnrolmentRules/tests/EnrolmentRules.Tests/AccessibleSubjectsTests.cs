@@ -25,10 +25,15 @@ public sealed class AccessibleSubjectsTests
 	// establish that: it only shows the tier opens for whichever GCSEs that fixture happens to name, and an
 	// entry term naming a subject outside it (biology, once) stays invisible.
 	public static TheoryData<string, string[]> BorderlineMinimumSets() => new() {
-		{ "with biology and humanities", ["maths", "english_language", "biology", "english_literature", "history"] },
-		{ "no biology", ["english_language", "maths", "french", "physics", "psychology"] },
-		{ "no science at all", ["english_language", "maths", "art", "music", "physical_education"] },
-		{ "sciences only", ["english_language", "maths", "physics", "chemistry", "computer_studies"] },
+		{
+			"with biology and humanities", ["maths", "english_language", "biology", "english_literature", "history"]
+		}, {
+			"no biology", ["english_language", "maths", "french", "physics", "psychology"]
+		}, {
+			"no science at all", ["english_language", "maths", "art", "music", "physical_education"]
+		}, {
+			"sciences only", ["english_language", "maths", "physics", "chemistry", "computer_studies"]
+		},
 	};
 
 	private static (string, int)[] AtPassGrade(string[] subjects) =>
@@ -66,7 +71,7 @@ public sealed class AccessibleSubjectsTests
 
 		foreach (var subject in Accessible) {
 			Of(ratings, subject).Should()
-				.Be(Rating.Green, $"{subject} must be enrollable on any five passes at pass_grade ({description})");
+								.Be(Rating.Green, $"{subject} must be enrollable on any five passes at pass_grade ({description})");
 		}
 	}
 
@@ -83,7 +88,7 @@ public sealed class AccessibleSubjectsTests
 		var result = Harness.ShippedEngine().Evaluate(student, Harness.AsOf);
 
 		result.Recommendations.Where(r => r.Rating == Rating.Green).Select(r => r.Subject)
-			.Should().BeEquivalentTo(Accessible, $"the accessible tier is the whole programme ({description})");
+			  .Should().BeEquivalentTo(Accessible, $"the accessible tier is the whole programme ({description})");
 	}
 
 	// The scoping guard: these gate on the 5.0 humanities average literal (and standard_entry), above the
@@ -91,7 +96,7 @@ public sealed class AccessibleSubjectsTests
 	// subjects and did not lower a bar shared with them.
 	[Theory]
 	[InlineData("history")] // gates on the 5.0 humanities average, above the accessible 4.0
-	[InlineData("geography")] // gates on the 5.0 humanities average and standard_entry
+	[InlineData("geography")] // gates on its own GCSE at standard_entry, not submitted here
 	[InlineData("law")]
 	[InlineData("politics")]
 	[InlineData("religious_studies")]
@@ -121,7 +126,9 @@ public sealed class AccessibleSubjectsTests
 				["psychology"] = 4,
 				["sociology"] = 4,
 			},
-			[]) { DateOfBirth = new(2009, 9, 1) };
+			[]) {
+			DateOfBirth = new(2009, 9, 1),
+		};
 
 		var evaluation = Harness.ShippedEngine().EvaluateValidated(student, Harness.AsOf);
 

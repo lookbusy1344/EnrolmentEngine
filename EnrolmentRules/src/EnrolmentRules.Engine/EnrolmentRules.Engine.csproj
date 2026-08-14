@@ -21,6 +21,9 @@
         <None Include="..\..\workflows\**\*" Pack="true" PackagePath="contentFiles/any/any/enrolment-reference/workflows/%(RecursiveDir)%(Filename)%(Extension)"/>
         <None Include="..\..\data\catalogue.yaml;..\..\data\catalogue.schema.json;..\..\data\qualifications.yaml;..\..\data\qualifications.schema.json;..\..\data\thresholds.yaml;..\..\data\thresholds.schema.json" Pack="true" PackagePath="contentFiles/any/any/enrolment-reference/data/%(Filename)%(Extension)"/>
         <None Include="..\..\data\dfe-transition-matrices\**\*" Pack="true" PackagePath="contentFiles/any/any/enrolment-reference/data/dfe-transition-matrices/%(RecursiveDir)%(Filename)%(Extension)"/>
+        <!-- The Elite auxiliary policy: only its own workflows/catalogue/thresholds, mirroring the CLI/Web
+             publish layout above — schemas, qualifications and the matrix stay single-copy. -->
+        <None Include="..\..\policies\elite\**\*" Pack="true" PackagePath="contentFiles/any/any/enrolment-reference/policies/elite/%(RecursiveDir)%(Filename)%(Extension)"/>
     </ItemGroup>
 
     <ItemGroup>

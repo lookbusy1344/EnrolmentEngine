@@ -62,7 +62,7 @@ public sealed class CatalogueTests
 		File.Copy(Path.Combine(DataDir, CatalogueStore.SchemaFileName), Path.Combine(dir, CatalogueStore.SchemaFileName));
 
 		var catalogue = File.ReadAllText(Path.Combine(DataDir, CatalogueStore.CatalogueFileName))
-			.Replace("  - subject: german\n    priority_weight: 37", "  - subject: german\n    priority_weight: 39", StringComparison.Ordinal);
+							.Replace("  - subject: german\n    priority_weight: 37", "  - subject: german\n    priority_weight: 39", StringComparison.Ordinal);
 		File.WriteAllText(Path.Combine(dir, CatalogueStore.CatalogueFileName), catalogue);
 
 		try {
@@ -86,15 +86,15 @@ public sealed class CatalogueTests
 			"malformed-catalogue.yaml");
 
 		act.Should().Throw<CatalogueException>()
-			.WithMessage("*malformed-catalogue.yaml*")
-			.Which.InnerException.Should().BeOfType<FormatException>();
+		   .WithMessage("*malformed-catalogue.yaml*")
+		   .Which.InnerException.Should().BeOfType<FormatException>();
 	}
 
 	[Fact]
 	public void exclusion_pairs_use_a_named_public_type()
 	{
 		typeof(CatalogueData).GetProperty(nameof(CatalogueData.ExclusionPairs))!.PropertyType.GetGenericArguments()[0]
-			.Should().Be<ExclusionPair>();
+							 .Should().Be<ExclusionPair>();
 	}
 
 	[Fact]
@@ -212,25 +212,31 @@ public sealed class CatalogueTests
 	public void catalogue_construction_rejects_a_subjects_list_that_omits_a_referenced_entry()
 	{
 		var entries = new Dictionary<Subject, SubjectMeta> {
-			[Subject.Maths] = Harness.Catalogue.Meta(Subject.Maths) with { Exclusions = [new(Subject.Physics, Rating.Red)] },
-			[Subject.Physics] = Harness.Catalogue.Meta(Subject.Physics) with { Exclusions = [new(Subject.Maths, Rating.Red)] },
+			[Subject.Maths] = Harness.Catalogue.Meta(Subject.Maths) with {
+				Exclusions = [new(Subject.Physics, Rating.Red)],
+			},
+			[Subject.Physics] = Harness.Catalogue.Meta(Subject.Physics) with {
+				Exclusions = [new(Subject.Maths, Rating.Red)],
+			},
 		};
 
 		var act = () => new CatalogueData(entries, [Subject.Maths]);
 
 		act.Should().Throw<InvalidDataException>()
-			.WithMessage("*subjects list omits declared subject*physics*");
+		   .WithMessage("*subjects list omits declared subject*physics*");
 	}
 
 	[Fact]
 	public void catalogue_construction_rejects_a_subjects_list_entry_without_metadata()
 	{
-		var entries = new Dictionary<Subject, SubjectMeta> { [Subject.Maths] = Harness.Catalogue.Meta(Subject.Maths) };
+		var entries = new Dictionary<Subject, SubjectMeta> {
+			[Subject.Maths] = Harness.Catalogue.Meta(Subject.Maths),
+		};
 
 		var act = () => new CatalogueData(entries, [Subject.Maths, Subject.Physics]);
 
 		act.Should().Throw<InvalidDataException>()
-			.WithMessage("*subjects list declares subject*physics*without metadata*");
+		   .WithMessage("*subjects list declares subject*physics*without metadata*");
 	}
 
 	[Fact]
@@ -359,7 +365,7 @@ public sealed class CatalogueTests
 		var act = () => new CatalogueData(entries);
 
 		act.Should().Throw<InvalidDataException>()
-			.WithMessage("*cycle*maths*physics*chemistry*maths*");
+		   .WithMessage("*cycle*maths*physics*chemistry*maths*");
 	}
 
 	[Fact]
@@ -456,9 +462,9 @@ public sealed class CatalogueTests
 	internal static string AllSubjects(string extraFor, string? omit)
 	{
 		var lines = Catalogue.Subjects
-			.Where(subject => !string.Equals(EnumNames.NameOf(subject), omit, StringComparison.Ordinal))
-			.Select(static (subject, index) =>
-				$"  - subject: {EnumNames.NameOf(subject)}\n    priority_weight: {index + 30}\n    regression: {{ slope: 0.80, intercept: -1.00 }}");
+							 .Where(subject => !string.Equals(EnumNames.NameOf(subject), omit, StringComparison.Ordinal))
+							 .Select(static (subject, index) =>
+								 $"  - subject: {EnumNames.NameOf(subject)}\n    priority_weight: {index + 30}\n    regression: {{ slope: 0.80, intercept: -1.00 }}");
 		return "subjects:\n" + string.Join('\n', lines) + '\n' + extraFor;
 	}
 
@@ -474,13 +480,15 @@ public sealed class CatalogueTests
 	[Fact]
 	public void validation_rejects_unknown_chosen_subjects_against_the_bound_catalogue()
 	{
-		var student = new StudentInput("S", new Dictionary<string, int> { ["maths"] = 6 }, []) {
+		var student = new StudentInput("S", new Dictionary<string, int> {
+			["maths"] = 6,
+		}, []) {
 			ChosenALevels = [new("philosophy")],
 			DateOfBirth = new(2009, 9, 1),
 		};
 
 		StudentValidator.Validate(student, Harness.Catalogue, Harness.Scale)
-			.Should().ContainSingle()
-			.Which.Should().Contain("philosophy");
+						.Should().ContainSingle()
+						.Which.Should().Contain("philosophy");
 	}
 }

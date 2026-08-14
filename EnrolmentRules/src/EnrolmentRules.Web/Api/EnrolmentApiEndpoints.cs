@@ -52,31 +52,47 @@ public static class EnrolmentApiEndpoints
 		return endpoints;
 	}
 
-	private static Ok<EnrolmentOptionsResponse> GetOptions(EnrolmentOptionsService options) =>
-		TypedResults.Ok(EnrolmentOptionsResponseFactory.Create(options));
-
-	private static Results<Ok<EnrolmentEvaluateResponse>, BadRequest<string>> Evaluate(
-		EnrolmentEvaluateRequest request, IEnrolmentEngine engine, CancellationToken cancellationToken)
+	private static Results<Ok<EnrolmentOptionsResponse>, ProblemHttpResult> GetOptions(
+		string? policy, IEnrolmentPolicyRegistry registry, TimeProvider timeProvider)
 	{
-		var boundaryErrors = EnrolmentApiBoundaryValidator.Validate(request, ((IEnrolmentEvaluator)engine).Catalogue);
+		if (!EnrolmentPolicySelector.TryResolve(registry, policy, out var selected)) {
+			return UnknownPolicyProblem(policy, registry);
+		}
+
+		var options = new EnrolmentOptionsService(selected, timeProvider);
+		return TypedResults.Ok(EnrolmentOptionsResponseFactory.Create(options, registry.Descriptors));
+	}
+
+	private static Results<Ok<EnrolmentEvaluateResponse>, ProblemHttpResult> Evaluate(
+		EnrolmentEvaluateRequest request, string? policy, IEnrolmentPolicyRegistry registry, CancellationToken cancellationToken)
+	{
+		if (!EnrolmentPolicySelector.TryResolve(registry, policy, out var selected)) {
+			return UnknownPolicyProblem(policy, registry);
+		}
+
+		var boundaryErrors = EnrolmentApiBoundaryValidator.Validate(request, ((IEnrolmentEvaluator)selected.Engine).Catalogue);
 		if (boundaryErrors.Count > 0) {
-			var rejected = new ValidatedEvaluation<ExplainedResult>(new([.. boundaryErrors]), null);
-			return TypedResults.Ok(EnrolmentEvaluateResponseFactory.Create(rejected, []));
+			var rejected = new ValidatedEvaluation<PolicyComparisonResult>(new([.. boundaryErrors]), null);
+			return TypedResults.Ok(EnrolmentEvaluateResponseFactory.Create(rejected));
 		}
 
 		if (!EnrolmentApiMapper.TryToStudentInput(request, out var input)) {
-			return TypedResults.BadRequest(
-				"Could not map the posted snapshot: an unrecognised prior-qualification type or chosen A-level subject value.");
+			return TypedResults.Problem(
+				statusCode: StatusCodes.Status400BadRequest,
+				title: "Invalid enrolment snapshot.",
+				detail: "Could not map the posted snapshot: an unrecognised prior-qualification type or chosen A-level subject value.");
 		}
 
-		var evaluation = engine.ExplainValidated(input, cancellationToken);
-
-		// On the rejection path ExplainValidated has already found the stale choices internally but discards them, so
-		// StaleChoices re-runs the pipeline once to recover the subjects to eject. The cost lands only when a
-		// committed choice has gone red (a rare, already-degraded request), so the extra run is a deliberate
-		// simplicity-over-throughput trade — cheaper than widening the IEnrolmentEvaluator surface to return
-		// the ejected set from the failed ValidatedEvaluation. Revisit only if this path is ever shown hot.
-		var ejected = evaluation.Value is null ? engine.StaleChoices(input, cancellationToken) : [];
-		return TypedResults.Ok(EnrolmentEvaluateResponseFactory.Create(evaluation, ejected));
+		var comparison = registry.Compare(selected.Descriptor.Id, input, cancellationToken);
+		return TypedResults.Ok(EnrolmentEvaluateResponseFactory.Create(comparison));
 	}
+
+	private static string UnknownPolicyMessage(string? policy, IEnrolmentPolicyRegistry registry) =>
+		$"Unknown policy '{policy}'. Available: {string.Join(", ", registry.Descriptors.Select(static d => d.Id.Value))}.";
+
+	private static ProblemHttpResult UnknownPolicyProblem(string? policy, IEnrolmentPolicyRegistry registry) =>
+		TypedResults.Problem(
+			statusCode: StatusCodes.Status400BadRequest,
+			title: "Unknown enrolment policy.",
+			detail: UnknownPolicyMessage(policy, registry));
 }

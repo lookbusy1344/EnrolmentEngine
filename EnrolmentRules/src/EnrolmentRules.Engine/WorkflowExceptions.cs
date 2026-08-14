@@ -22,9 +22,7 @@ public sealed class WorkflowSchemaException : WorkflowException
 	public WorkflowSchemaException(string message, Exception innerException) : base(message, innerException) { }
 
 	public WorkflowSchemaException(string file, string errors)
-		: base($"Workflow file '{file}' failed schema validation: {errors}")
-	{
-	}
+		: base($"Workflow file '{file}' failed schema validation: {errors}") { }
 }
 
 /// <summary>
@@ -40,14 +38,10 @@ public sealed class WorkflowProbeException : WorkflowException
 	public WorkflowProbeException(string message, Exception innerException) : base(message, innerException) { }
 
 	public WorkflowProbeException(string workflowName, string errors)
-		: base($"Workflow '{workflowName}' failed probe-evaluation at startup: {errors}")
-	{
-	}
+		: base($"Workflow '{workflowName}' failed probe-evaluation at startup: {errors}") { }
 
 	public WorkflowProbeException(string workflowName, string errors, Exception innerException)
-		: base($"Workflow '{workflowName}' failed probe-evaluation at startup: {errors}", innerException)
-	{
-	}
+		: base($"Workflow '{workflowName}' failed probe-evaluation at startup: {errors}", innerException) { }
 }
 
 /// <summary>

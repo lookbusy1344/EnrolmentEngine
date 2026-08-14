@@ -46,6 +46,13 @@
             <CopyToPublishDirectory>PreserveNewest</CopyToPublishDirectory>
             <TargetPath>data\%(Filename)%(Extension)</TargetPath>
         </Content>
+        <!-- The Elite auxiliary policy: only its own workflows/catalogue/thresholds — schemas, qualifications
+             and the transition matrix stay single-copy above, loaded via OverlayEnrolmentDataSource. -->
+        <Content Include="..\..\policies\elite\**\*">
+            <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+            <CopyToPublishDirectory>PreserveNewest</CopyToPublishDirectory>
+            <TargetPath>policies\elite\%(RecursiveDir)%(Filename)%(Extension)</TargetPath>
+        </Content>
         <!-- Web SDK already globs wwwroot/**/* as Content (CopyToPublishDirectory); Update (not
              Include) adds CopyToOutputDirectory without duplicating the item. Without this, launching
              the built executable straight from bin/ (see CLAUDE.md's "Running the web interface

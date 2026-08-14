@@ -32,6 +32,14 @@ public static class CliRunner
 	/// <summary>At least one <see cref="LintSeverity.Error" /> finding from <c>--lint-workflows</c>.</summary>
 	public const int ExitLint = 5;
 
+	/// <summary>The registered policy identifiers and display labels this CLI selects between via <c>--policy</c>.</summary>
+	private static readonly (EnrolmentPolicyId Id, string DisplayName)[] KnownPolicies = [
+		(new("standard"), "Standard"),
+		(new("elite"), "Elite"),
+	];
+
+	private static readonly EnrolmentPolicyId DefaultPolicyId = KnownPolicies[0].Id;
+
 	/// <summary>
 	///     The reference ("as-of") date age-gated rules derive each student's age against. The CLI uses the
 	///     current local date — the deterministic core takes this explicitly, so the wall clock is read only
@@ -47,35 +55,91 @@ public static class CliRunner
 		TextWriter stdout,
 		TextWriter stderr,
 		Func<string> workflowsDirectory,
-		Func<string> dataDirectory) =>
-		args switch {
+		Func<string> dataDirectory)
+	{
+		var (remaining, policyId, policyError) = ExtractPolicyOption(args);
+		if (policyError is not null) {
+			stderr.WriteLine(policyError);
+			return ExitUsage;
+		}
+
+		return remaining switch {
 			["--version"] or ["-v"] => RunVersion(stdout),
-			["--lint-workflows"] => RunLint(null, stdout, stderr),
-			["--lint-workflows", var dir] => RunLint(dir, stdout, stderr),
+			["--lint-workflows"] => RunLint(null, policyId, stdout, stderr, workflowsDirectory, dataDirectory),
+			["--lint-workflows", var dir] => RunLint(dir, policyId, stdout, stderr, workflowsDirectory, dataDirectory),
 			// Ahead of the bare-path arm: otherwise a --criteria with no subject is read as a student file
 			// and reported as an unreadable document rather than a missing argument.
 			["--criteria"] => Usage(stderr),
-			[var path] => RunProfile(path, stdout, stderr, dataDirectory),
-			["--table", var path] => RunEvaluation(path, Output.Table, stdout, stderr, null, workflowsDirectory, dataDirectory),
-			["--json", var path] => RunEvaluation(path, Output.Json, stdout, stderr, null, workflowsDirectory, dataDirectory),
-			["--explain", var path] => RunEvaluation(path, Output.Explain, stdout, stderr, null, workflowsDirectory, dataDirectory),
-			["--explain-text", var path] => RunEvaluation(path, Output.ExplainText, stdout, stderr, null, workflowsDirectory, dataDirectory),
-			["--advise", var path] => RunEvaluation(path, Output.Advise, stdout, stderr, null, workflowsDirectory, dataDirectory),
+			[var path] => RunProfile(path, stdout, stderr, policyId, workflowsDirectory, dataDirectory),
+			["--table", var path] =>
+				RunEvaluation(path, Output.Table, stdout, stderr, null, policyId, workflowsDirectory, dataDirectory),
+			["--json", var path] =>
+				RunEvaluation(path, Output.Json, stdout, stderr, null, policyId, workflowsDirectory, dataDirectory),
+			["--explain", var path] =>
+				RunEvaluation(path, Output.Explain, stdout, stderr, null, policyId, workflowsDirectory, dataDirectory),
+			["--explain-text", var path] =>
+				RunEvaluation(path, Output.ExplainText, stdout, stderr, null, policyId, workflowsDirectory, dataDirectory),
+			["--advise", var path] =>
+				RunEvaluation(path, Output.Advise, stdout, stderr, null, policyId, workflowsDirectory, dataDirectory),
 			["--advise", "--all-gcses", var path] =>
-				RunEvaluation(path, Output.Advise, stdout, stderr, true, workflowsDirectory, dataDirectory),
-			["--batch", var path] => RunBatch(path, stdout, stderr, workflowsDirectory, dataDirectory),
-			["--criteria", var subject] => RunCriteria(subject, stdout, stderr, workflowsDirectory, dataDirectory),
+				RunEvaluation(path, Output.Advise, stdout, stderr, true, policyId, workflowsDirectory, dataDirectory),
+			["--batch", var path] => RunBatch(path, stdout, stderr, policyId, workflowsDirectory, dataDirectory),
+			["--criteria", var subject] => RunCriteria(subject, stdout, stderr, policyId, workflowsDirectory, dataDirectory),
 			_ => Usage(stderr),
 		};
+	}
+
+	/// <summary>
+	///     Pull <c>--policy &lt;id&gt;</c> out of <paramref name="args" /> from wherever it appears, so it
+	///     reads as a global option accepted before every mode without multiplying the dispatch arms above
+	///     for every possible ordering. Returns the remaining args (policy option removed), the resolved
+	///     identifier (the registry default when omitted), and a usage-error message when the option is
+	///     malformed, repeated, or names an identifier <see cref="KnownPolicies" /> does not carry.
+	/// </summary>
+	private static (IReadOnlyList<string> Remaining, EnrolmentPolicyId PolicyId, string? Error) ExtractPolicyOption(
+		IReadOnlyList<string> args)
+	{
+		string? requested = null;
+		var remaining = new List<string>(args.Count);
+		for (var i = 0; i < args.Count; ++i) {
+			if (args[i] != "--policy") {
+				remaining.Add(args[i]);
+				continue;
+			}
+
+			if (i + 1 >= args.Count) {
+				return (remaining, DefaultPolicyId, "error: --policy requires a value");
+			}
+
+			if (requested is not null) {
+				return (remaining, DefaultPolicyId, "error: --policy may only be specified once");
+			}
+
+			requested = args[++i];
+		}
+
+		if (requested is null) {
+			return (remaining, DefaultPolicyId, null);
+		}
+
+		if (!EnrolmentPolicyId.TryParse(requested, out var parsed)
+			|| !KnownPolicies.Any(policy => policy.Id == parsed)) {
+			var available = string.Join(", ", KnownPolicies.Select(static policy => policy.Id.Value));
+			return (remaining, DefaultPolicyId, $"error: unknown policy '{requested}'. available: {available}");
+		}
+
+		return (remaining, parsed, null);
+	}
 
 	private static int Usage(TextWriter stderr)
 	{
-		stderr.WriteLine("usage: enrolment [--table|--json|--explain|--explain-text|--advise] <student.json|.yaml>");
-		stderr.WriteLine("       enrolment --advise [--all-gcses] <student.json|.yaml>");
-		stderr.WriteLine("       enrolment --batch <students.jsonl>");
-		stderr.WriteLine("       enrolment --criteria <subject>");
-		stderr.WriteLine("       enrolment --lint-workflows [workflows-dir]");
+		stderr.WriteLine("usage: enrolment [--policy <id>] [--table|--json|--explain|--explain-text|--advise] <student.json|.yaml>");
+		stderr.WriteLine("       enrolment [--policy <id>] --advise [--all-gcses] <student.json|.yaml>");
+		stderr.WriteLine("       enrolment [--policy <id>] --batch <students.jsonl>");
+		stderr.WriteLine("       enrolment [--policy <id>] --criteria <subject>");
+		stderr.WriteLine("       enrolment [--policy <id>] --lint-workflows [workflows-dir]");
 		stderr.WriteLine("       enrolment --version|-v");
+		stderr.WriteLine($"       <id> is one of: {string.Join(", ", KnownPolicies.Select(static policy => policy.Id.Value))} (default: {DefaultPolicyId})");
 		return ExitUsage;
 	}
 
@@ -87,22 +151,33 @@ public static class CliRunner
 	}
 
 	/// <summary>
-	///     Static structural lint of a workflow directory (§ Reservation 1) — the shipped one by default, or
-	///     <paramref name="directory" /> when given (used to lint a candidate set before shipping). Loads and
-	///     schema-validates the workflows, then reports every <see cref="WorkflowLinter" /> finding one per
-	///     line. Exit <see cref="ExitOk" /> when clean, <see cref="ExitLint" /> on any
-	///     <see cref="LintSeverity.Error" />.
+	///     Static structural lint (§ Reservation 1) of either an explicit <paramref name="directory" />
+	///     (used to lint a candidate set before shipping — never policy-aware, since it names its own data
+	///     directory too) or the <em>complete</em> selected policy — its own workflows/catalogue overlaid
+	///     on the shared schemas/qualifications, exactly as the engine would load it, not just the
+	///     directory with a Standard catalogue fallback. Loads and schema-validates the workflows, then
+	///     reports every <see cref="WorkflowLinter" /> finding one per line. Exit <see cref="ExitOk" /> when
+	///     clean, <see cref="ExitLint" /> on any <see cref="LintSeverity.Error" />.
 	/// </summary>
-	private static int RunLint(string? directory, TextWriter stdout, TextWriter stderr)
+	private static int RunLint(
+		string? directory,
+		EnrolmentPolicyId policyId,
+		TextWriter stdout,
+		TextWriter stderr,
+		Func<string> workflowsDirectory,
+		Func<string> dataDirectory)
 	{
 		IReadOnlyList<Workflow> workflows;
 		CatalogueData catalogue;
 		try {
-			var workflowsDirectory = directory ?? WorkflowsDirectory();
-			var loadedDataDirectory = CatalogueDirectoryForLint(workflowsDirectory);
-			var scale = QualificationScaleStore.LoadAndValidate(QualificationScaleDirectoryForLint(loadedDataDirectory));
-			workflows = WorkflowStore.LoadAndValidate(workflowsDirectory);
-			catalogue = CatalogueStore.LoadAndValidate(loadedDataDirectory, scale);
+			if (directory is not null) {
+				var loadedDataDirectory = CatalogueDirectoryForLint(directory);
+				var scale = QualificationScaleStore.LoadAndValidate(QualificationScaleDirectoryForLint(loadedDataDirectory));
+				workflows = WorkflowStore.LoadAndValidate(directory);
+				catalogue = CatalogueStore.LoadAndValidate(loadedDataDirectory, scale);
+			} else {
+				(workflows, catalogue) = LoadForLint(ResolveSource(policyId, workflowsDirectory, dataDirectory));
+			}
 		}
 		catch (Exception ex) when (ex is WorkflowException or CatalogueException or QualificationScaleException
 									   or DirectoryNotFoundException or FileNotFoundException) {
@@ -129,17 +204,73 @@ public static class CliRunner
 			? catalogueDirectory
 			: DataDirectory();
 
-	private static int RunProfile(string path, TextWriter stdout, TextWriter stderr, Func<string> dataDirectory)
+	/// <summary>Load a selected policy's workflows/catalogue through its complete <see cref="IEnrolmentDataSource" />, for lint.</summary>
+	private static (IReadOnlyList<Workflow> Workflows, CatalogueData Catalogue) LoadForLint(IEnrolmentDataSource source)
+	{
+		using var qualifications = source.OpenQualifications();
+		using var qualificationsSchema = source.OpenQualificationsSchema();
+		var scale = QualificationScaleStore.LoadAndValidate(qualifications, qualificationsSchema);
+
+		using var catalogueStream = source.OpenCatalogue();
+		using var catalogueSchemaStream = source.OpenCatalogueSchema();
+		var catalogue = CatalogueStore.LoadAndValidate(catalogueStream, catalogueSchemaStream, scale);
+
+		var workflowFiles = source.OpenWorkflows();
+		try {
+			using var workflowSchemaStream = source.OpenWorkflowSchema();
+			return (WorkflowStore.LoadAndValidate(workflowFiles, workflowSchemaStream), catalogue);
+		}
+		finally {
+			foreach (var workflow in workflowFiles) {
+				workflow.Dispose();
+			}
+		}
+	}
+
+	/// <summary>
+	///     The stream-backed data source for <paramref name="policyId" />: the shipped Standard directories
+	///     directly, or an Elite-style auxiliary policy's own <c>policies/&lt;id&gt;/</c> workflows/catalogue/
+	///     thresholds layered over the shared Standard schemas/qualifications/matrix via
+	///     <see cref="OverlayEnrolmentDataSource" />.
+	/// </summary>
+	private static IEnrolmentDataSource ResolveSource(EnrolmentPolicyId policyId, Func<string> workflowsDirectory, Func<string> dataDirectory)
+	{
+		var standard = new DirectoryDataSource(workflowsDirectory(), dataDirectory());
+		if (policyId == DefaultPolicyId) {
+			return standard;
+		}
+
+		var policyRoot = Path.Combine(PoliciesDirectory(), policyId.Value);
+		return new OverlayEnrolmentDataSource(
+			new DirectoryDataSource(Path.Combine(policyRoot, "workflows"), Path.Combine(policyRoot, "data")),
+			standard);
+	}
+
+	private static int RunProfile(
+		string path,
+		TextWriter stdout,
+		TextWriter stderr,
+		EnrolmentPolicyId policyId,
+		Func<string> workflowsDirectory,
+		Func<string> dataDirectory)
 	{
 		try {
-			var loadedDataDirectory = dataDirectory();
-			var scale = QualificationScaleStore.LoadAndValidate(loadedDataDirectory);
-			var catalogue = CatalogueStore.LoadAndValidate(loadedDataDirectory, scale);
+			var source = ResolveSource(policyId, workflowsDirectory, dataDirectory);
+
+			using var qualifications = source.OpenQualifications();
+			using var qualificationsSchema = source.OpenQualificationsSchema();
+			var scale = QualificationScaleStore.LoadAndValidate(qualifications, qualificationsSchema);
+
+			using var catalogueStream = source.OpenCatalogue();
+			using var catalogueSchemaStream = source.OpenCatalogueSchema();
+			var catalogue = CatalogueStore.LoadAndValidate(catalogueStream, catalogueSchemaStream, scale);
+
 			if (LoadValidStudent(path, stderr, catalogue, scale) is not StudentInput student) {
 				return ExitInput;
 			}
 
-			var matrix = DfeTransitionMatrix.LoadFromDataDirectory(loadedDataDirectory);
+			using var matrixStream = source.OpenTransitionMatrix();
+			var matrix = DfeTransitionMatrix.Load(matrixStream);
 			matrix.ValidateCoverage(catalogue);
 			var profile = GradePredictor.Predict(student, student.ToGcseResults(), Today, catalogue, matrix, scale);
 			stdout.WriteLine(JsonSerializer.Serialize(profile, EnrolmentJsonContext.Default.StudentProfile));
@@ -161,10 +292,11 @@ public static class CliRunner
 		string subject,
 		TextWriter stdout,
 		TextWriter stderr,
+		EnrolmentPolicyId policyId,
 		Func<string> workflowsDirectory,
 		Func<string> dataDirectory)
 	{
-		if (BuildEngine(stderr, workflowsDirectory, dataDirectory) is not EnrolmentEngine engine) {
+		if (BuildEngine(stderr, policyId, workflowsDirectory, dataDirectory) is not EnrolmentEngine engine) {
 			return ExitInput;
 		}
 
@@ -186,10 +318,11 @@ public static class CliRunner
 		TextWriter stdout,
 		TextWriter stderr,
 		bool? considerUnsatGcses,
+		EnrolmentPolicyId policyId,
 		Func<string> workflowsDirectory,
 		Func<string> dataDirectory)
 	{
-		if (BuildEngine(stderr, workflowsDirectory, dataDirectory) is not EnrolmentEngine engine) {
+		if (BuildEngine(stderr, policyId, workflowsDirectory, dataDirectory) is not EnrolmentEngine engine) {
 			return ExitInput;
 		}
 
@@ -219,11 +352,11 @@ public static class CliRunner
 		}
 
 		if (useAdvice) {
-			var outcome = considerUnsatGcses.HasValue
-				? engine.AdviseValidated(
-					document.Student,
-					considerUnsatGcses.Value ? UnsatGcseAdvice.IncludeUnsat : UnsatGcseAdvice.HeldOnly)
-				: engine.AdviseValidated(document.Student);
+			var outcome = considerUnsatGcses switch {
+				true => engine.AdviseValidated(document.Student, UnsatGcseAdvice.IncludeUnsat),
+				false => engine.AdviseValidated(document.Student, UnsatGcseAdvice.HeldOnly),
+				null => engine.AdviseValidated(document.Student),
+			};
 			if (!outcome.Validation.IsValid) {
 				WriteValidationErrors(stderr, outcome.Validation);
 				return ExitInput;
@@ -263,13 +396,14 @@ public static class CliRunner
 		string path,
 		TextWriter stdout,
 		TextWriter stderr,
+		EnrolmentPolicyId policyId,
 		Func<string> workflowsDirectory,
 		Func<string> dataDirectory)
 	{
 		StreamReader? reader = null;
 		try {
 			reader = new(path);
-			if (BuildEngine(stderr, workflowsDirectory, dataDirectory) is not EnrolmentEngine engine) {
+			if (BuildEngine(stderr, policyId, workflowsDirectory, dataDirectory) is not EnrolmentEngine engine) {
 				return ExitInput;
 			}
 
@@ -390,7 +524,9 @@ public static class CliRunner
 		var workers = new Action[maxConcurrency + producerCount];
 		workers[0] = Produce;
 		Array.Fill(workers, Consume, producerCount, maxConcurrency);
-		Parallel.Invoke(new() { MaxDegreeOfParallelism = workers.Length }, workers);
+		Parallel.Invoke(new() {
+			MaxDegreeOfParallelism = workers.Length,
+		}, workers);
 	}
 
 	private static BatchOutcome EvaluateLine(string line, EnrolmentEngine engine)
@@ -415,14 +551,15 @@ public static class CliRunner
 		return new(document.Student.Id, outcome.Value, null);
 	}
 
-	/// <summary>Build the façade over the shipped workflows, reporting a load failure as an input error.</summary>
+	/// <summary>Build the façade over the selected policy's workflows, reporting a load failure as an input error.</summary>
 	private static EnrolmentEngine? BuildEngine(
 		TextWriter stderr,
+		EnrolmentPolicyId policyId,
 		Func<string> workflowsDirectory,
 		Func<string> dataDirectory)
 	{
 		try {
-			return EnrolmentEngine.Create(workflowsDirectory(), dataDirectory(), Today);
+			return EnrolmentEngine.Create(ResolveSource(policyId, workflowsDirectory, dataDirectory), Today);
 		}
 		catch (Exception ex) when (ex is WorkflowException or CatalogueException or QualificationScaleException
 									   or PolicyThresholdsException or TransitionMatrixException
@@ -529,6 +666,31 @@ public static class CliRunner
 		}
 
 		throw new DirectoryNotFoundException("Could not locate the 'data' directory from " + AppContext.BaseDirectory + ".");
+	}
+
+	/// <summary>
+	///     Locate the shipped <c>policies/</c> directory (carrying every auxiliary policy's own
+	///     workflows/catalogue/thresholds) the same way as <see cref="WorkflowsDirectory" /> and
+	///     <see cref="DataDirectory" />: prefer the copy beside the executable, else walk up to the root.
+	/// </summary>
+	private static string PoliciesDirectory()
+	{
+		var bundled = Path.Combine(AppContext.BaseDirectory, "policies");
+		if (Directory.Exists(bundled)) {
+			return bundled;
+		}
+
+		var dir = new DirectoryInfo(AppContext.BaseDirectory);
+		while (dir is not null) {
+			var candidate = Path.Combine(dir.FullName, "policies");
+			if (File.Exists(Path.Combine(dir.FullName, "EnrolmentRules.slnx")) && Directory.Exists(candidate)) {
+				return candidate;
+			}
+
+			dir = dir.Parent;
+		}
+
+		throw new DirectoryNotFoundException("Could not locate the 'policies' directory from " + AppContext.BaseDirectory + ".");
 	}
 
 	private enum Output

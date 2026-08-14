@@ -45,7 +45,11 @@ public static class GradePredictor
 								BestEntryEquivalentPoints(student.PriorQualifications, subject, catalogue, scale))))),
 			],
 			[.. matrix.EvidenceFor(average, catalogue)],
-			student.Hobbies ?? []) { ChosenALevels = student.ChosenALevels, PriorQualifications = student.PriorQualifications, Age = age };
+			student.Hobbies ?? []) {
+			ChosenALevels = student.ChosenALevels,
+			PriorQualifications = student.PriorQualifications,
+			Age = age,
+		};
 	}
 
 	/// <summary>

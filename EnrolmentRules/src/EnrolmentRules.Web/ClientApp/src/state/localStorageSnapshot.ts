@@ -1,51 +1,75 @@
 import { emptySnapshot, type EnrolmentSnapshot, type GcseRow, type PriorQualificationRow } from './enrolmentState'
 
 const STORAGE_KEY = 'enrolmentRules.vue.snapshot.v1'
-const SCHEMA_VERSION = 1
+const SCHEMA_VERSION = 2
 
-/** The only thing persisted: the editable input snapshot. Never engine results — those are recomputed from the API after restore. */
+/** The only thing persisted: the editable input snapshot plus the last-viewed policy id. Never engine results — those are recomputed from the API after restore. */
 export interface StoredEnrolmentSnapshot {
   readonly schemaVersion: typeof SCHEMA_VERSION
   readonly savedAt: string
+  readonly selectedPolicyId: string | null
   readonly snapshot: EnrolmentSnapshot
 }
 
-export function saveSnapshot(snapshot: EnrolmentSnapshot, storage: Storage): void {
-  const stored: StoredEnrolmentSnapshot = { schemaVersion: SCHEMA_VERSION, savedAt: new Date().toISOString(), snapshot }
+export interface LoadedSnapshot {
+  readonly snapshot: EnrolmentSnapshot
+  readonly selectedPolicyId: string | null
+}
+
+const emptyLoadedSnapshot: LoadedSnapshot = { snapshot: emptySnapshot, selectedPolicyId: null }
+
+export function saveSnapshot(snapshot: EnrolmentSnapshot, selectedPolicyId: string | null, storage: Storage): void {
+  const stored: StoredEnrolmentSnapshot = {
+    schemaVersion: SCHEMA_VERSION,
+    savedAt: new Date().toISOString(),
+    selectedPolicyId,
+    snapshot,
+  }
   storage.setItem(STORAGE_KEY, JSON.stringify(stored))
 }
 
-/** Missing, malformed, wrong-version, or structurally invalid stored data all resolve to `emptySnapshot`, never a thrown error. */
-export function loadSnapshot(storage: Storage): EnrolmentSnapshot {
+/** Missing, malformed, wrong-version, or structurally invalid stored data all resolve to an empty snapshot with no stored policy id, never a thrown error. */
+export function loadSnapshot(storage: Storage): LoadedSnapshot {
   const raw = storage.getItem(STORAGE_KEY)
   if (raw === null) {
-    return emptySnapshot
+    return emptyLoadedSnapshot
   }
 
   let parsed: unknown
   try {
     parsed = JSON.parse(raw)
   } catch {
-    return emptySnapshot
+    return emptyLoadedSnapshot
   }
 
-  return parseStoredSnapshot(parsed) ?? emptySnapshot
+  return parseStoredSnapshot(parsed) ?? emptyLoadedSnapshot
 }
 
-export function clearSnapshot(storage: Storage): void {
-  storage.removeItem(STORAGE_KEY)
+/** Start over: clears the facts and basket but keeps the policy currently being viewed. */
+export function clearSnapshot(selectedPolicyId: string | null, storage: Storage): void {
+  saveSnapshot(emptySnapshot, selectedPolicyId, storage)
 }
 
-function parseStoredSnapshot(value: unknown): EnrolmentSnapshot | null {
+function parseStoredSnapshot(value: unknown): LoadedSnapshot | null {
   if (!isRecord(value)) {
     return null
   }
 
-  if (value.schemaVersion !== SCHEMA_VERSION || typeof value.savedAt !== 'string') {
+  if (value.schemaVersion === 1 && typeof value.savedAt === 'string') {
+    const snapshot = parseSnapshot(value.snapshot)
+    return snapshot === null ? null : { snapshot, selectedPolicyId: null }
+  }
+
+  if (
+    value.schemaVersion !== SCHEMA_VERSION ||
+    typeof value.savedAt !== 'string' ||
+    (value.selectedPolicyId !== null && typeof value.selectedPolicyId !== 'string')
+  ) {
     return null
   }
 
-  return parseSnapshot(value.snapshot)
+  const snapshot = parseSnapshot(value.snapshot)
+  return snapshot === null ? null : { snapshot, selectedPolicyId: value.selectedPolicyId }
 }
 
 function parseSnapshot(value: unknown): EnrolmentSnapshot | null {

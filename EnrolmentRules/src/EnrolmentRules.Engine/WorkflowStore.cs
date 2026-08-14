@@ -25,7 +25,9 @@ public static class WorkflowStore
 
 	private static readonly JsonSerializerOptions WorkflowSerializerOptions = new() {
 		PropertyNameCaseInsensitive = true,
-		Converters = { new JsonStringEnumConverter() },
+		Converters = {
+			new JsonStringEnumConverter(),
+		},
 	};
 
 	// JsonSchema.FromFile registers the schema's $id in a process-global registry; loading the same
@@ -47,9 +49,9 @@ public static class WorkflowStore
 		schemaPath ??= Path.Combine(directory, SchemaFileName);
 
 		var files = Directory.EnumerateFiles(directory)
-			.Where(IsWorkflowFile)
-			.OrderBy(f => f, StringComparer.Ordinal)
-			.ToList();
+							 .Where(IsWorkflowFile)
+							 .OrderBy(f => f, StringComparer.Ordinal)
+							 .ToList();
 
 		using var schemaReader = File.OpenText(schemaPath);
 		var readers = new List<(string FileName, TextReader Content)>(files.Count);
@@ -84,7 +86,9 @@ public static class WorkflowStore
 			var json = NormalizeWorkflowDocument(file, content.ReadToEnd());
 			using var doc = JsonDocument.Parse(json);
 
-			var results = schema.Evaluate(doc.RootElement, new() { OutputFormat = OutputFormat.List });
+			var results = schema.Evaluate(doc.RootElement, new() {
+				OutputFormat = OutputFormat.List,
+			});
 			if (!results.IsValid) {
 				throw new WorkflowSchemaException(file, DescribeErrors(results));
 			}
@@ -106,8 +110,8 @@ public static class WorkflowStore
 	{
 		using var schemaReader = new StreamReader(schemaStream, Encoding.UTF8, true, 1024, true);
 		var readers = files
-			.Select(file => (file.FileName, (TextReader)new StreamReader(file.Content, Encoding.UTF8, true, 1024, true)))
-			.ToList();
+					  .Select(file => (file.FileName, (TextReader)new StreamReader(file.Content, Encoding.UTF8, true, 1024, true)))
+					  .ToList();
 		try {
 			return LoadAndValidate(readers, schemaReader);
 		}
@@ -216,10 +220,10 @@ public static class WorkflowStore
 			}
 
 			var failures = results
-				.SelectMany(Flatten)
-				.Where(r => !string.IsNullOrWhiteSpace(r.ExceptionMessage))
-				.Select(r => $"{r.Rule.RuleName}: {r.ExceptionMessage}")
-				.ToList();
+						   .SelectMany(Flatten)
+						   .Where(r => !string.IsNullOrWhiteSpace(r.ExceptionMessage))
+						   .Select(r => $"{r.Rule.RuleName}: {r.ExceptionMessage}")
+						   .ToList();
 
 			if (failures.Count > 0) {
 				throw new WorkflowProbeException(workflow.WorkflowName, string.Join("; ", failures));
@@ -259,8 +263,8 @@ public static class WorkflowStore
 	private static void ThrowOnLintErrors(IReadOnlyList<Workflow> workflows, CatalogueData catalogue)
 	{
 		var findings = WorkflowLinter.Lint(workflows, catalogue)
-			.Where(static finding => finding.Severity == LintSeverity.Error)
-			.ToArray();
+									 .Where(static finding => finding.Severity == LintSeverity.Error)
+									 .ToArray();
 		if (findings.Length > 0) {
 			throw new WorkflowLintException(findings);
 		}
@@ -316,8 +320,8 @@ public static class WorkflowStore
 	private static string DescribeErrors(EvaluationResults results)
 	{
 		var messages = (results.Details ?? [])
-			.Where(d => d.Errors is { Count: > 0 })
-			.SelectMany(d => d.Errors!.Select(e => $"{d.InstanceLocation}: {e.Value}"));
+					   .Where(d => d.Errors is { Count: > 0 })
+					   .SelectMany(d => d.Errors!.Select(e => $"{d.InstanceLocation}: {e.Value}"));
 		var joined = string.Join("; ", messages);
 		return joined.Length > 0 ? joined : "schema validation failed (no detailed errors reported)";
 	}

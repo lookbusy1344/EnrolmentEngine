@@ -16,7 +16,9 @@ public sealed class DefaultExperienceRoutingTests
 		using var baseFactory = new WebAppFactory();
 		using var factory = baseFactory.WithWebHostBuilder(builder =>
 			builder.ConfigureAppConfiguration((_, config) => config.AddInMemoryCollection([new("EnrolmentWeb:DefaultExperience", "Vue")])));
-		using var client = factory.CreateClient(new() { AllowAutoRedirect = false });
+		using var client = factory.CreateClient(new() {
+			AllowAutoRedirect = false,
+		});
 
 		using var response = await client.GetAsync(new Uri("/", UriKind.Relative));
 

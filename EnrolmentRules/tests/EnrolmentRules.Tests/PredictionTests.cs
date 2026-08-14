@@ -37,13 +37,16 @@ public sealed class PredictionTests
 
 	private static CatalogueData FurtherMathsPrerequisiteCatalogue(bool requiresMaths)
 	{
+		EquatableArray<Prerequisite> prerequisites = requiresMaths ? [new([Subject.Maths], Rating.Red, PrerequisiteSatisfaction.Chosen)] : [];
 		var shipped = ShippedCatalogue;
 		var entries = shipped.Subjects.ToDictionary(
 			static subject => subject,
 			subject => {
 				var meta = shipped.Meta(subject);
 				return subject == Subject.FurtherMaths
-					? meta with { Prerequisites = requiresMaths ? [new([Subject.Maths], Rating.Red, PrerequisiteSatisfaction.Chosen)] : [] }
+					? meta with {
+						Prerequisites = prerequisites,
+					}
 					: meta;
 			});
 
@@ -67,7 +70,11 @@ public sealed class PredictionTests
 	public void average_is_the_exact_mean_over_present_gcses()
 	{
 		// Absent subjects simply are not in the map, so they cannot affect the mean.
-		var gcses = new Dictionary<string, int> { ["maths"] = 9, ["physics"] = 6, ["history"] = 3 };
+		var gcses = new Dictionary<string, int> {
+			["maths"] = 9,
+			["physics"] = 6,
+			["history"] = 3,
+		};
 
 		var profile = Predict(Student(gcses));
 
@@ -79,7 +86,10 @@ public sealed class PredictionTests
 	{
 		// Two present subjects average 6.0. If an absent subject were treated as a 0 grade the
 		// mean would collapse toward zero — assert it does not.
-		var profile = Predict(Student(new() { ["maths"] = 8, ["art"] = 4 }));
+		var profile = Predict(Student(new() {
+			["maths"] = 8,
+			["art"] = 4,
+		}));
 
 		profile.AverageGcseScore.Should().BeApproximately(6.0, Tolerance);
 	}
@@ -89,7 +99,11 @@ public sealed class PredictionTests
 	public void predicted_grade_matches_independent_recomputation_from_named_coefficients(string subjectName)
 	{
 		Subject.TryParse(subjectName, out var subject).Should().BeTrue();
-		var gcses = new Dictionary<string, int> { ["maths"] = 7, ["physics"] = 6, ["english_language"] = 5 };
+		var gcses = new Dictionary<string, int> {
+			["maths"] = 7,
+			["physics"] = 6,
+			["english_language"] = 5,
+		};
 		const double average = (7 + 6 + 5) / 3.0;
 
 		var profile = Predict(Student(gcses));
@@ -110,7 +124,11 @@ public sealed class PredictionTests
 	[Fact]
 	public void tweaked_catalogue_regression_changes_the_prediction()
 	{
-		var student = Student(new() { ["maths"] = 7, ["physics"] = 6, ["english_language"] = 5 });
+		var student = Student(new() {
+			["maths"] = 7,
+			["physics"] = 6,
+			["english_language"] = 5,
+		});
 		var gcses = student.ToGcseResults();
 		const double average = (7 + 6 + 5) / 3.0;
 
@@ -119,7 +137,9 @@ public sealed class PredictionTests
 			Catalogue.Subjects.ToDictionary(
 				static subject => subject,
 				subject => subject == Subject.Maths
-					? shipped.Meta(subject) with { Regression = new(0.50, 0.25) }
+					? shipped.Meta(subject) with {
+						Regression = new(0.50, 0.25),
+					}
 					: shipped.Meta(subject)));
 
 		var profile = GradePredictor.Predict(student, gcses, Harness.AsOf, tweaked, Harness.Scale);
@@ -152,7 +172,9 @@ public sealed class PredictionTests
 			["music"] = 9,
 			["art"] = 9,
 		});
-		student = student with { ChosenALevels = [Subject.FurtherMaths] };
+		student = student with {
+			ChosenALevels = [Subject.FurtherMaths],
+		};
 
 		var (workflows, rulesEngine) = Harness.BuildFromShippedWorkflows();
 		_ = workflows;
@@ -170,21 +192,28 @@ public sealed class PredictionTests
 	[Fact]
 	public void validator_uses_the_catalogue_passed_to_it()
 	{
-		var student = Student(new() { ["maths"] = 6 }, "plays_piano") with { ChosenALevels = [Subject.Physics], DateOfBirth = new(2009, 9, 1) };
+		var student = Student(new() {
+			["maths"] = 6,
+		}, "plays_piano") with {
+			ChosenALevels = [Subject.Physics],
+			DateOfBirth = new(2009, 9, 1),
+		};
 
 		StudentValidator.Validate(student, LimitedCatalogue(), Harness.Scale)
-			.Should()
-			.ContainSingle()
-			.Which.Should().Contain("physics");
+						.Should()
+						.ContainSingle()
+						.Which.Should().Contain("physics");
 	}
 
 	[Fact]
 	public void every_subject_receives_exactly_one_prediction()
 	{
-		var profile = Predict(Student(new() { ["maths"] = 6 }));
+		var profile = Predict(Student(new() {
+			["maths"] = 6,
+		}));
 
 		profile.PredictedGrades.Select(p => p.Subject)
-			.Should().BeEquivalentTo(Catalogue.Subjects);
+			   .Should().BeEquivalentTo(Catalogue.Subjects);
 	}
 
 	[Fact]
@@ -192,30 +221,33 @@ public sealed class PredictionTests
 	{
 		var csv = Path.Combine(Harness.RepoRoot, "data", DfeTransitionMatrix.DataDirectoryRelativePath);
 		var row = File.ReadLines(csv)
-			.Skip(1)
-			.Select(static line => line.Split(','))
-			.First(static fields => fields[0] == "maths" && fields[4] == "7 to < 8");
+					  .Skip(1)
+					  .Select(static line => line.Split(','))
+					  .First(static fields => fields[0] == "maths" && fields[4] == "7 to < 8");
 		// Independent derivation: at-or-above-A = prob_a + prob_a_star from the raw CSV row.
 		var probA = double.Parse(row[10], CultureInfo.InvariantCulture);
 		var probAStar = double.Parse(row[11], CultureInfo.InvariantCulture);
 		var expectedAOrAbove = probA + probAStar;
 
 		var evidence = DfeTransitionMatrix.LoadDefault()
-			.EvidenceFor(7.2, Harness.Catalogue)
-			.Single(e => e.Subject == Subject.Maths);
+										  .EvidenceFor(7.2, Harness.Catalogue)
+										  .Single(e => e.Subject == Subject.Maths);
 
 		evidence.PriorAttainmentBand.Should().Be("7 to < 8");
 		evidence.ProbabilityAtOrAbove(ALevelGrade.A)
-			.Should().BeApproximately(expectedAOrAbove, Tolerance);
+				.Should().BeApproximately(expectedAOrAbove, Tolerance);
 	}
 
 	[Fact]
 	public void predicted_profile_carries_dfe_transition_evidence_for_every_subject()
 	{
-		var profile = Predict(Student(new() { ["maths"] = 7, ["art"] = 8 }));
+		var profile = Predict(Student(new() {
+			["maths"] = 7,
+			["art"] = 8,
+		}));
 
 		profile.TransitionEvidence.Select(e => e.Subject)
-			.Should().BeEquivalentTo(Catalogue.Subjects);
+			   .Should().BeEquivalentTo(Catalogue.Subjects);
 		profile.TransitionEvidence.Should().OnlyContain(e => e.Source == DfeTransitionMatrix.Source);
 	}
 
@@ -224,9 +256,9 @@ public sealed class PredictionTests
 	{
 		var csv = Path.Combine(Harness.RepoRoot, "data", DfeTransitionMatrix.DataDirectoryRelativePath);
 		var row = File.ReadLines(csv)
-			.Skip(1)
-			.Select(static line => line.Split(','))
-			.First(static fields => fields[0] == "art" && fields[4] == "8 to < 9");
+					  .Skip(1)
+					  .Select(static line => line.Split(','))
+					  .First(static fields => fields[0] == "art" && fields[4] == "8 to < 9");
 		// Independent derivation: at-or-above-B = prob_b + prob_a + prob_a_star from the raw CSV row.
 		var probB = double.Parse(row[9], CultureInfo.InvariantCulture);
 		var probA = double.Parse(row[10], CultureInfo.InvariantCulture);
@@ -234,12 +266,12 @@ public sealed class PredictionTests
 		var expectedBOrAbove = probB + probA + probAStar;
 
 		var evidence = DfeTransitionMatrix.LoadDefault()
-			.EvidenceFor(9.0, Harness.Catalogue)
-			.Single(e => e.Subject == Subject.Art);
+										  .EvidenceFor(9.0, Harness.Catalogue)
+										  .Single(e => e.Subject == Subject.Art);
 
 		evidence.PriorAttainmentBand.Should().Be("8 to < 9");
 		evidence.ProbabilityAtOrAbove(ALevelGrade.B)
-			.Should().BeApproximately(expectedBOrAbove, Tolerance);
+				.Should().BeApproximately(expectedBOrAbove, Tolerance);
 	}
 
 	[Theory]
@@ -248,7 +280,10 @@ public sealed class PredictionTests
 	[InlineData(4)] // a pass-boundary average
 	public void predictions_stay_within_the_grade_range(int uniformGrade)
 	{
-		var gcses = new Dictionary<string, int> { ["maths"] = uniformGrade, ["physics"] = uniformGrade };
+		var gcses = new Dictionary<string, int> {
+			["maths"] = uniformGrade,
+			["physics"] = uniformGrade,
+		};
 
 		var profile = Predict(Student(gcses));
 
@@ -259,26 +294,32 @@ public sealed class PredictionTests
 	public void all_nines_clamps_maths_to_the_top_of_the_scale()
 	{
 		// Maths at avg 9: 0.80*9 - 1.00 = 6.2, must clamp down to A* (6.0).
-		var profile = Predict(Student(new() { ["maths"] = 9 }));
+		var profile = Predict(Student(new() {
+			["maths"] = 9,
+		}));
 
 		profile.PredictedGrades.Single(p => p.Subject == Subject.Maths)
-			.PredictedPoints.Should().Be(ALevelGrade.Max);
+			   .PredictedPoints.Should().Be(ALevelGrade.Max);
 	}
 
 	[Fact]
 	public void all_ones_clamps_predictions_to_the_bottom_of_the_scale()
 	{
-		var profile = Predict(Student(new() { ["maths"] = 1 }));
+		var profile = Predict(Student(new() {
+			["maths"] = 1,
+		}));
 
 		// Maths at avg 1: 0.80*1 - 1.00 = -0.2, must clamp up to U (0.0).
 		profile.PredictedGrades.Single(p => p.Subject == Subject.Maths)
-			.PredictedPoints.Should().Be(ALevelGrade.Min);
+			   .PredictedPoints.Should().Be(ALevelGrade.Min);
 	}
 
 	[Fact]
 	public void single_gcse_does_not_throw_and_stays_in_range()
 	{
-		var act = () => Predict(Student(new() { ["maths"] = 5 }));
+		var act = () => Predict(Student(new() {
+			["maths"] = 5,
+		}));
 
 		act.Should().NotThrow();
 		act().AverageGcseScore.Should().Be(5.0);
@@ -296,7 +337,9 @@ public sealed class PredictionTests
 	[Fact]
 	public void hobbies_are_carried_through_unchanged()
 	{
-		var profile = Predict(Student(new() { ["maths"] = 6 }, "plays_piano", "chess_club"));
+		var profile = Predict(Student(new() {
+			["maths"] = 6,
+		}, "plays_piano", "chess_club"));
 
 		profile.PredictedGrades.Should().NotBeEmpty();
 		profile.Hobbies.Should().Equal("plays_piano", "chess_club");
@@ -305,8 +348,12 @@ public sealed class PredictionTests
 	[Fact]
 	public void chosen_a_levels_are_carried_through_unchanged()
 	{
-		var student = Student(new() { ["maths"] = 6 });
-		student = student with { ChosenALevels = [Subject.French, Subject.German] };
+		var student = Student(new() {
+			["maths"] = 6,
+		});
+		student = student with {
+			ChosenALevels = [Subject.French, Subject.German],
+		};
 
 		var profile = Predict(student);
 

@@ -1,8 +1,19 @@
 import { afterEach, describe, expect, it, vi } from 'vitest'
 import type { EnrolmentEvaluateRequest, EnrolmentEvaluateResponse, EnrolmentOptionsResponse } from '../api/contracts'
-import { EnrolmentApiError, evaluateEnrolment, EvaluationRequester, fetchOptions } from '../api/enrolmentApi'
+import {
+  EnrolmentApiError,
+  evaluateEnrolment,
+  EvaluationRequester,
+  fetchOptions,
+  OptionsRequester,
+} from '../api/enrolmentApi'
 
 const sampleOptions: EnrolmentOptionsResponse = {
+  selectedPolicy: { id: 'standard', displayName: 'Standard' },
+  availablePolicies: [
+    { id: 'standard', displayName: 'Standard' },
+    { id: 'elite', displayName: 'Elite' },
+  ],
   defaultDateOfBirth: '2010-09-01',
   defaultAge: 16,
   gcseSubjects: [{ value: 'english_language', label: 'English Language' }],
@@ -24,6 +35,7 @@ const sampleOptions: EnrolmentOptionsResponse = {
     },
   ],
   hobbies: [{ value: 'chess_club', label: 'Chess Club' }],
+  minChoices: 0,
   choiceLimit: 3,
 }
 
@@ -37,8 +49,8 @@ const sampleRequest: EnrolmentEvaluateRequest = {
 
 const sampleEvaluateResponse: EnrolmentEvaluateResponse = {
   validationErrors: [],
-  ejectedChoices: [],
   result: {
+    policy: { id: 'standard', displayName: 'Standard' },
     eligible: true,
     eligibilityReasons: [],
     choiceLimitReason: null,
@@ -56,6 +68,9 @@ const sampleEvaluateResponse: EnrolmentEvaluateResponse = {
         overrides: [],
       },
     ],
+    choiceStatuses: [{ subject: { value: 'physics', label: 'Physics' }, status: 'Available', reason: null }],
+    minChoices: 0,
+    maxChoices: 3,
   },
 }
 
@@ -87,6 +102,54 @@ describe('fetchOptions', () => {
 
     await expect(fetchOptions()).rejects.toBeInstanceOf(EnrolmentApiError)
   })
+
+  it('appends the given policy id as a query parameter', async () => {
+    const fetchMock = vi.fn((_url: string) => Promise.resolve(jsonResponse(sampleOptions)))
+    vi.stubGlobal('fetch', fetchMock)
+
+    await fetchOptions('elite')
+
+    expect(fetchMock.mock.calls[0][0]).toBe('/api/enrolment/options?policy=elite')
+  })
+
+  it.each([
+    [
+      'duplicate policy ids',
+      {
+        ...sampleOptions,
+        availablePolicies: [
+          { id: 'standard', displayName: 'Standard' },
+          { id: 'standard', displayName: 'Elite' },
+        ],
+      },
+    ],
+    [
+      'duplicate policy display names',
+      {
+        ...sampleOptions,
+        availablePolicies: [
+          { id: 'standard', displayName: 'Standard' },
+          { id: 'elite', displayName: 'Standard' },
+        ],
+      },
+    ],
+    ['an empty policy id', { ...sampleOptions, selectedPolicy: { id: '', displayName: 'Standard' } }],
+    [
+      'a selected policy absent from the available policies',
+      { ...sampleOptions, selectedPolicy: { id: 'other', displayName: 'Other' } },
+    ],
+    [
+      'a selected policy whose display name disagrees with the registry',
+      { ...sampleOptions, selectedPolicy: { id: 'standard', displayName: 'Different' } },
+    ],
+  ])('rejects %s', async (_description, body) => {
+    vi.stubGlobal(
+      'fetch',
+      vi.fn(() => Promise.resolve(jsonResponse(body))),
+    )
+
+    await expect(fetchOptions()).rejects.toBeInstanceOf(EnrolmentApiError)
+  })
 })
 
 describe('evaluateEnrolment', () => {
@@ -113,6 +176,17 @@ describe('evaluateEnrolment', () => {
     )
 
     await expect(evaluateEnrolment(sampleRequest)).rejects.toBeInstanceOf(EnrolmentApiError)
+  })
+
+  it('appends the given policy id as a query parameter', async () => {
+    const fetchMock = vi.fn((_url: string, _init?: RequestInit) =>
+      Promise.resolve(jsonResponse(sampleEvaluateResponse)),
+    )
+    vi.stubGlobal('fetch', fetchMock)
+
+    await evaluateEnrolment(sampleRequest, 'elite')
+
+    expect(fetchMock.mock.calls[0][0]).toBe('/api/enrolment/evaluate?policy=elite')
   })
 })
 
@@ -143,5 +217,33 @@ describe('EvaluationRequester', () => {
 
     expect(firstResult).toBeNull()
     expect(secondResult).toEqual(sampleEvaluateResponse)
+  })
+})
+
+describe('OptionsRequester', () => {
+  it('supersedes an older in-flight options call: the newer call wins, the older resolves to null', async () => {
+    let call = 0
+    const fetchMock = vi.fn((_url: string, init?: RequestInit) => {
+      call += 1
+      if (call === 1) {
+        return new Promise<Response>((_resolve, reject) => {
+          init?.signal?.addEventListener('abort', () => {
+            reject(new DOMException('Aborted', 'AbortError'))
+          })
+        })
+      }
+
+      return Promise.resolve(jsonResponse({ ...sampleOptions, selectedPolicy: { id: 'elite', displayName: 'Elite' } }))
+    })
+    vi.stubGlobal('fetch', fetchMock)
+
+    const requester = new OptionsRequester()
+    const firstResultPromise = requester.fetch('standard')
+    const secondResultPromise = requester.fetch('elite')
+
+    const [firstResult, secondResult] = await Promise.all([firstResultPromise, secondResultPromise])
+
+    expect(firstResult).toBeNull()
+    expect(secondResult?.selectedPolicy.id).toBe('elite')
   })
 })

@@ -24,8 +24,7 @@ public sealed record StudentInput(
 			id,
 			gcses is null ? null : EquatableDictionaryFactory.CopyOf(gcses),
 			hobbies is null ? null : EquatableArray.CopyOf(hobbies))
-	{
-	}
+	{ }
 
 	/// <summary>The A-level subjects the student has already chosen. These are constraint triggers, not filters.</summary>
 	public EquatableArray<Subject> ChosenALevels { get; init; } = [];
@@ -82,8 +81,7 @@ public sealed record StudentProfile(
 			EquatableArray.CopyOf(predictedGrades),
 			EquatableArray.CopyOf(transitionEvidence),
 			EquatableArray.CopyOf(hobbies))
-	{
-	}
+	{ }
 
 	/// <summary>The A-level subjects already chosen by the student, carried through for host-code constraints.</summary>
 	public EquatableArray<Subject> ChosenALevels { get; init; } = [];

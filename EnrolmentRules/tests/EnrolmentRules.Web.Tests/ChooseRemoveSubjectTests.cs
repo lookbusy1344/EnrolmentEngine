@@ -12,7 +12,9 @@ public sealed class ChooseRemoveSubjectTests : IClassFixture<WebAppFactory>
 	[Fact]
 	public async Task Choosing_german_excludes_french_and_removing_it_restores_the_prior_rating()
 	{
-		using var client = factory.CreateClient(new() { AllowAutoRedirect = false });
+		using var client = factory.CreateClient(new() {
+			AllowAutoRedirect = false,
+		});
 
 		using var getResponse = await client.GetAsync(new Uri("/razor", UriKind.Relative));
 		var token = await ExtractAntiForgeryTokenAsync(getResponse);
@@ -51,7 +53,9 @@ public sealed class ChooseRemoveSubjectTests : IClassFixture<WebAppFactory>
 	[Fact]
 	public async Task Red_unchosen_subjects_are_not_selectable_by_markup_or_forged_post()
 	{
-		using var client = factory.CreateClient(new() { AllowAutoRedirect = false });
+		using var client = factory.CreateClient(new() {
+			AllowAutoRedirect = false,
+		});
 
 		using var getResponse = await client.GetAsync(new Uri("/razor", UriKind.Relative));
 		var token = await ExtractAntiForgeryTokenAsync(getResponse);
@@ -77,9 +81,11 @@ public sealed class ChooseRemoveSubjectTests : IClassFixture<WebAppFactory>
 	}
 
 	[Fact]
-	public async Task Lowering_gcses_ejects_a_chosen_subject_that_is_no_longer_green()
+	public async Task Lowering_gcses_keeps_a_chosen_subject_in_the_basket_marked_unavailable()
 	{
-		using var client = factory.CreateClient(new() { AllowAutoRedirect = false });
+		using var client = factory.CreateClient(new() {
+			AllowAutoRedirect = false,
+		});
 
 		using var getResponse = await client.GetAsync(new Uri("/razor", UriKind.Relative));
 		var token = await ExtractAntiForgeryTokenAsync(getResponse);
@@ -98,7 +104,8 @@ public sealed class ChooseRemoveSubjectTests : IClassFixture<WebAppFactory>
 		var htmlAfterChoose = await afterChoose.Content.ReadAsStringAsync();
 		htmlAfterChoose.Should().Contain("list-inline-item badge text-bg-primary rounded-pill\">French");
 
-		// Now collapse every grade to a 1: the student fails the eligibility gate, so French goes red.
+		// Now collapse every grade to a 1: the student fails the eligibility gate, so French goes red —
+		// non-destructive: the choice stays in the basket, annotated Unavailable, never ejected.
 		var lowerToken = await ExtractAntiForgeryTokenAsync(afterChoose);
 		using var lowerContent = new FormUrlEncodedContent(LoweredStudentForm(lowerToken));
 		using var lowerResponse = await client.PostAsync(new Uri("/razor?handler=SaveFacts", UriKind.Relative), lowerContent);
@@ -106,23 +113,26 @@ public sealed class ChooseRemoveSubjectTests : IClassFixture<WebAppFactory>
 		var htmlAfterLower = await afterLower.Content.ReadAsStringAsync();
 
 		htmlAfterLower.Should().NotContain("list-inline-item badge text-bg-primary rounded-pill\">French");
-		htmlAfterLower.Should().Contain("None chosen yet.");
-		htmlAfterLower.Should().Contain("no longer available with your current grades");
-		// The page still renders a verdict rather than the engine's refusal: the basket was pruned first.
-		htmlAfterLower.Should().NotContain("chosen_a_levels");
+		htmlAfterLower.Should().NotContain("None chosen yet.");
+		htmlAfterLower.Should().Contain("list-inline-item badge text-bg-danger rounded-pill\">French");
+		htmlAfterLower.Should().Contain("basket-status-tag\"> - Unavailable");
 	}
 
 	[Fact]
 	public async Task Normal_attainment_student_cannot_forge_a_fourth_choice_once_three_are_chosen()
 	{
-		using var client = factory.CreateClient(new() { AllowAutoRedirect = false });
+		using var client = factory.CreateClient(new() {
+			AllowAutoRedirect = false,
+		});
 
 		using var getResponse = await client.GetAsync(new Uri("/razor", UriKind.Relative));
 		var token = await ExtractAntiForgeryTokenAsync(getResponse);
 		using var saveContent = new FormUrlEncodedContent(NormalAttainmentStudentForm(token));
 		using var saveResponse = await client.PostAsync(new Uri("/razor?handler=SaveFacts", UriKind.Relative), saveContent);
 		var currentLocation = saveResponse.Headers.Location;
-		foreach (var subject in new[] { "chemistry", "biology", "history" }) {
+		foreach (var subject in new[] {
+					 "chemistry", "biology", "history",
+				 }) {
 			using var currentPage = await client.GetAsync(currentLocation);
 			var chooseToken = await ExtractAntiForgeryTokenAsync(currentPage);
 			using var chooseContent = new FormUrlEncodedContent(new Dictionary<string, string> {
@@ -159,9 +169,56 @@ public sealed class ChooseRemoveSubjectTests : IClassFixture<WebAppFactory>
 	}
 
 	[Fact]
+	public async Task Lowering_the_effective_limit_marks_an_existing_overfilled_basket()
+	{
+		using var client = factory.CreateClient(new() {
+			AllowAutoRedirect = false,
+		});
+
+		using var getResponse = await client.GetAsync(new Uri("/razor", UriKind.Relative));
+		var token = await ExtractAntiForgeryTokenAsync(getResponse);
+		using var saveContent = new FormUrlEncodedContent(EligibleStudentForm(token));
+		using var saveResponse = await client.PostAsync(new Uri("/razor?handler=SaveFacts", UriKind.Relative), saveContent);
+		var currentLocation = saveResponse.Headers.Location;
+
+		// The all-8 profile receives Standard's high-attainment limit of four, so all four choices can
+		// be committed through the normal UI boundary.
+		foreach (var subject in new[] {
+					 "chemistry", "biology", "history", "english_literature",
+				 }) {
+			using var currentPage = await client.GetAsync(currentLocation);
+			var chooseToken = await ExtractAntiForgeryTokenAsync(currentPage);
+			using var chooseContent = new FormUrlEncodedContent(new Dictionary<string, string> {
+				["__RequestVerificationToken"] = chooseToken,
+				["subject"] = subject,
+			});
+			using var chooseResponse = await client.PostAsync(new Uri("/razor?handler=ChooseSubject", UriKind.Relative), chooseContent);
+			currentLocation = chooseResponse.Headers.Location;
+		}
+
+		using var afterFour = await client.GetAsync(currentLocation);
+		var lowerToken = await ExtractAntiForgeryTokenAsync(afterFour);
+		var lowered = EligibleStudentForm(lowerToken);
+		foreach (var key in lowered.Keys.Where(static key => key.EndsWith(".Grade", StringComparison.Ordinal)).ToList()) {
+			lowered[key] = "7";
+		}
+
+		using var lowerContent = new FormUrlEncodedContent(lowered);
+		using var lowerResponse = await client.PostAsync(new Uri("/razor?handler=SaveFacts", UriKind.Relative), lowerContent);
+		using var afterLower = await client.GetAsync(lowerResponse.Headers.Location);
+		var html = await afterLower.Content.ReadAsStringAsync();
+
+		html.Should().Contain("chosen-summary sticky-top bg-body border-bottom py-2 mb-4 bg-danger-subtle");
+		html.Should().Contain("basket-choice-limit-error");
+		html.Should().Contain("this policy allows at most 3, but your basket contains 4");
+	}
+
+	[Fact]
 	public async Task An_amber_choice_is_flagged_borderline_in_the_basket_and_a_green_one_is_not()
 	{
-		using var client = factory.CreateClient(new() { AllowAutoRedirect = false });
+		using var client = factory.CreateClient(new() {
+			AllowAutoRedirect = false,
+		});
 
 		using var getResponse = await client.GetAsync(new Uri("/razor", UriKind.Relative));
 		var token = await ExtractAntiForgeryTokenAsync(getResponse);
@@ -170,7 +227,9 @@ public sealed class ChooseRemoveSubjectTests : IClassFixture<WebAppFactory>
 		var currentLocation = saveResponse.Headers.Location;
 
 		// On these grades music is amber (it wants own-time practice the student has not listed) and history is green.
-		foreach (var subject in new[] { "music", "history" }) {
+		foreach (var subject in new[] {
+					 "music", "history",
+				 }) {
 			using var currentPage = await client.GetAsync(currentLocation);
 			var chooseToken = await ExtractAntiForgeryTokenAsync(currentPage);
 			using var chooseContent = new FormUrlEncodedContent(new Dictionary<string, string> {
@@ -194,7 +253,9 @@ public sealed class ChooseRemoveSubjectTests : IClassFixture<WebAppFactory>
 	[Fact]
 	public async Task A_basket_of_only_green_choices_shows_no_borderline_notice()
 	{
-		using var client = factory.CreateClient(new() { AllowAutoRedirect = false });
+		using var client = factory.CreateClient(new() {
+			AllowAutoRedirect = false,
+		});
 
 		using var getResponse = await client.GetAsync(new Uri("/razor", UriKind.Relative));
 		var token = await ExtractAntiForgeryTokenAsync(getResponse);
@@ -235,8 +296,7 @@ public sealed class ChooseRemoveSubjectTests : IClassFixture<WebAppFactory>
 			["Hobbies[0]"] = "chess_club",
 		};
 		var gcses = new (string Subject, int Grade)[] {
-			("maths", 8), ("english_language", 8), ("english_literature", 8), ("physics", 8), ("chemistry", 8), ("biology", 8), ("french", 8),
-			("german", 8), ("physical_education", 8), ("computer_studies", 8), ("history", 8), ("music", 8), ("art", 8),
+			("maths", 8), ("english_language", 8), ("english_literature", 8), ("physics", 8), ("chemistry", 8), ("biology", 8), ("french", 8), ("german", 8), ("physical_education", 8), ("computer_studies", 8), ("history", 8), ("music", 8), ("art", 8),
 		};
 		for (var i = 0; i < gcses.Length; ++i) {
 			form[$"Gcses[{i}].Subject"] = gcses[i].Subject;
@@ -254,8 +314,7 @@ public sealed class ChooseRemoveSubjectTests : IClassFixture<WebAppFactory>
 			["Hobbies[0]"] = "chess_club",
 		};
 		var gcses = new (string Subject, int Grade)[] {
-			("maths", 6), ("english_language", 6), ("english_literature", 6), ("physics", 6), ("chemistry", 6), ("biology", 6), ("french", 6),
-			("german", 6), ("physical_education", 6), ("computer_studies", 6), ("history", 6), ("music", 6), ("art", 6),
+			("maths", 6), ("english_language", 6), ("english_literature", 6), ("physics", 6), ("chemistry", 6), ("biology", 6), ("french", 6), ("german", 6), ("physical_education", 6), ("computer_studies", 6), ("history", 6), ("music", 6), ("art", 6),
 		};
 		for (var i = 0; i < gcses.Length; ++i) {
 			form[$"Gcses[{i}].Subject"] = gcses[i].Subject;

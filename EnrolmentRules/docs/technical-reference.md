@@ -82,10 +82,10 @@ since they define the grade scale rather than policy.
 
 | If you are changing...                                                                           | Edit                       |
 |--------------------------------------------------------------------------------------------------|----------------------------|
-| Whole-student eligibility or a subject's green/amber/red base tier                               | `workflows/*.yaml`         |
-| Numeric thresholds read by workflows or host code                                                | `data/thresholds.yaml`     |
+| Whole-student eligibility or a subject's green/amber/red base tier                               | Standard: `workflows/*.yaml`; auxiliary: `policies/<id>/workflows/*.yaml` |
+| Numeric thresholds read by workflows or host code                                                | Standard: `data/thresholds.yaml`; auxiliary: `policies/<id>/data/thresholds.yaml` |
 | Qualification grade ordering and A-level-points equivalence                                      | `data/qualifications.yaml` |
-| Subject relationships, priority weights, regression coefficients, entry equivalents, or restudy bars | `data/catalogue.yaml`      |
+| Subject relationships, priority weights, regression coefficients, entry equivalents, or restudy bars | Standard: `data/catalogue.yaml`; auxiliary: `policies/<id>/data/catalogue.yaml` |
 | A new relationship *type* or scale invariant                                                     | compiled C# in `src/`      |
 
 Routine policy changes are YAML changes. C# changes are reserved for new evaluator shapes, such as
@@ -104,14 +104,15 @@ Start with the [guided walk-through](walkthrough.md).
 | `src/EnrolmentRules.Domain`                         | Immutable domain inputs, outputs, subject/rating vocabulary, thresholds, the `Catalogue` (loads/validates `data/catalogue.yaml`), and JSON source generation.                           |
 | `src/EnrolmentRules.Prediction`                     | GCSE averaging and linear prediction from raw student facts to `StudentProfile`.                                                                                                        |
 | `src/EnrolmentRules.Engine`                         | The `EnrolmentEngine` facade and the mainline evaluation contracts (`IEnrolmentEngine`, `IEnrolmentEvaluator`, `IEnrolmentAdvisor`). Supporting bootstrap and authoring APIs live in explicit `Hosting` / `Authoring` namespaces. |
-| `src/EnrolmentRules.Extensions.DependencyInjection` | `AddEnrolmentEngineFactory` / `AddEnrolmentEngine` registration helpers for `Microsoft.Extensions.DependencyInjection` hosts.                                                           |
+| `src/EnrolmentRules.Extensions.DependencyInjection` | `AddEnrolmentEngineFactory` / `AddEnrolmentEngine` / `AddEnrolmentPolicies` registration helpers for `Microsoft.Extensions.DependencyInjection` hosts.                                |
 | `src/EnrolmentRules.Cli`                            | `enrolment` executable and table/JSON/batch command line modes.                                                                                                                         |
 | `src/EnrolmentRules.Web`                            | Razor Pages reference web front-end: session-backed anonymous facts editing, live re-explanation, no database. See [Web Interface](#web-interface) below.                              |
 | `src/EnrolmentRules.Benchmarks`                     | BenchmarkDotNet harness for engine throughput.                                                                                                                                          |
 | `tests/EnrolmentRules.Tests`                        | xUnit and Awesome Assertions coverage, including engine-driven rule tests, invariants, and golden files.                                                                                |
 | `tests/EnrolmentRules.TestProcessHost`              | Out-of-process fixture exercised by the CLI/process tests.                                                                                                                              |
 | `tests/EnrolmentRules.Web.Tests`                    | `WebApplicationFactory`-driven integration tests for the web front-end (session round-trip, form posts, rendered explanations).                                                        |
-| `workflows`                                         | Hot-swappable RulesEngine workflow YAML and its schema.                                                                                                                                 |
+| `workflows`                                         | Standard policy's RulesEngine workflow YAML and its schema.                                                                                                                             |
+| `policies/<id>/workflows`, `policies/<id>/data`     | An auxiliary policy's own workflows/catalogue/thresholds, layered over the shared `data/` schemas and qualification scale by `OverlayEnrolmentDataSource`. `policies/elite/` ships as the worked example — see [Policy registry](#policy-registry). |
 | `examples`                                          | Single-student JSON, JSONL batch input, and golden-file fixtures.                                                                                                                       |
 | `docs/*.md`                                         | Reference docs for the pipeline, configuration surfaces, rule authoring, and engine-choice rationale.                                                                                   |
 | `docs/plans`                                        | Design and implementation planning notes.                                                                                                                                               |
@@ -166,11 +167,12 @@ The check is not part of `StudentValidator` because a rating exists only *after*
 the engine and the constraint pass have run, and the constraint pass reads `chosen_a_levels` as an
 input; it is a post-run check reported as input validation.
 
-A caller holding a mutable basket does not surface that rejection to the student — it prunes and
-re-evaluates. `IEnrolmentEvaluator.StaleChoices(student)` returns exactly the subjects an
-`EvaluateValidated` or `ExplainValidated` call would reject, which is what both web front ends drop
-before evaluating (`/api/enrolment/evaluate` mirrors it as `ejectedChoices`). One pass always
-suffices: dropping choices only ever removes downgrades, so nothing left in the basket can newly turn red.
+A single-policy caller holding a mutable basket can avoid surfacing that rejection to the student by
+calling `IEnrolmentEvaluator.StaleChoices(student)`, dropping exactly those subjects, and
+re-evaluating. One pass always suffices: dropping choices only ever removes downgrades, so nothing
+left in the basket can newly turn red. The shipped web front ends instead preserve one basket across
+multiple policies and call `IEnrolmentPolicyRegistry.Compare`; a red or not-offered choice remains
+visible with an `Unavailable` or `NotOffered` status.
 
 The unchecked `Evaluate`/`Explain` paths are unaffected — they still rate a red chosen subject red
 and return a result. Rejection is a validated-boundary concern, not a pipeline one.
@@ -373,6 +375,16 @@ Get counterfactual advice for the same student:
 dotnet run --project src/EnrolmentRules.Cli -- --advise examples/student.json
 ```
 
+Select a non-default policy with the global `--policy` option — accepted anywhere in the argument
+list, alongside any of the modes above:
+
+```bash
+dotnet run --project src/EnrolmentRules.Cli -- --policy elite --table examples/student.json
+```
+
+Omitting `--policy` runs against `standard`. An unrecognised id is a usage error (exit `2`); see
+[Policy registry](#policy-registry) for the full set of registered ids and how a host adds its own.
+
 ### Subject criteria (`--criteria`)
 
 Print what one subject requires of *anyone*, in plain English, with no student document involved:
@@ -465,9 +477,11 @@ project:
 - **No accounts, no database, no durable persistence.** The Razor workflow stores the current
   anonymous facts in ASP.NET Core session, keyed by a browser cookie. The Vue workflow calls a
   stateless JSON API and posts the full editable snapshot on every evaluation; browser
-  `localStorage` is used only as a refresh convenience.
-- Razor GETs re-run `IEnrolmentEngine.ExplainValidated` against the session snapshot, so the rendered
-  page is always a fresh evaluation, never a cached one. Vue evaluations do the same through
+  `localStorage` is used only as a refresh convenience. Its versioned snapshot preserves facts and
+  choices when migrating the pre-policy v1 format, then resolves the saved policy against the
+  server-provided registry rather than trusting stale client data.
+- Razor GETs re-run `IEnrolmentPolicyRegistry.Compare` against the session snapshot, so the rendered
+  page is always a fresh comparison, never a cached one. Vue evaluations do the same through
   `POST /api/enrolment/evaluate`.
 - Red unchosen subjects are rendered as unavailable and the `ChooseSubject` POST handler rechecks
   the current final rating before mutating the session. A chosen subject still renders `Remove`, even
@@ -475,6 +489,10 @@ project:
 - Client-side vocabulary (GCSE subject keys, prior-qualification subjects/types, hobby tags) comes
   from the same catalogue/scale the engine is bound to (`GcseSubjects.Known`,
   `IEnrolmentEngine.Catalogue`) — the web layer holds no parallel copy of policy data.
+- Both routes accept `?policy=<id>` (see [Policy registry](#policy-registry)) — `standard` and
+  `elite` are registered in `Program.cs`. A chosen subject the selected policy now rates red, or
+  does not offer at all, is never dropped from the basket; it is flagged `Unavailable`/`Not offered`
+  instead, and switching policy re-evaluates the same facts and basket rather than resetting them.
 - Static assets (Bootstrap 5) are restored via [libman](https://github.com/aspnet/LibraryManager)
   on every `dotnet build` (`Microsoft.Web.LibraryManager.Build`, driven by `libman.json`) into
   `wwwroot/lib/`, which is gitignored — nothing vendored is committed.
@@ -510,7 +528,8 @@ dotnet run --project src/EnrolmentRules.Web
 
 works, and opens the Vue front-end at <http://localhost:5299/app>. ASP.NET Core would otherwise
 resolve the content root to the **project source directory**, where the relative `workflows/` and
-`data/` paths the app needs don't exist (they're only in the build output, copied in by the same
+`data/` paths and the `policies/` overlays the app needs don't exist (they're only in the build
+output, copied in by the same
 `<Content Include>` pattern the CLI project uses). The `EnrolmentRules.Web` profile in
 `Properties/launchSettings.json` fixes that with `ASPNETCORE_CONTENTROOT="."`: a *relative* content
 root is resolved against the app's base directory — i.e. the build output — so it holds for
@@ -530,8 +549,10 @@ For a watching dev loop instead, build and run the executable from its output di
 ./scripts/run-web.sh
 ```
 
-which runs two watchers side by side: `dotnet watch run` for the C#/Razor side, and Vite's own watch
-build (`pnpm build:watch`) for the Vue side. `ASPNETCORE_WEBROOT` points at the source `wwwroot` so
+The script runs two watchers side by side: `dotnet watch run` for the C#/Razor side, and Vite's own
+watch build (`pnpm build:watch`) for the Vue side. It polls `http://localhost:5299/app` and opens the
+page once the server answers; `dotnet watch`'s own browser launcher is suppressed so a future logging
+change cannot open a duplicate tab. `ASPNETCORE_WEBROOT` points at the source `wwwroot` so
 Vite's output is served the moment it lands, and `ViteManifestReader` re-reads `manifest.json` per
 request — so a Vue edit needs no dotnet restart, just a browser refresh (F5). There is no HMR; that
 is the cost of serving the real ASP.NET host rather than the Vite dev server.
@@ -563,7 +584,7 @@ ship from this solution:
 | `EnrolmentRules.Domain`                         | Immutable inputs/results, validation, catalogue and qualification-scale domain types.                               |
 | `EnrolmentRules.Prediction`                     | GCSE averaging, DfE transition evidence, and A-level prediction.                                                    |
 | `EnrolmentRules.Engine`                         | The pipeline façade, workflow bootstrap, constraints, aggregation, explanation, and advice.                         |
-| `EnrolmentRules.Extensions.DependencyInjection` | `AddEnrolmentEngineFactory` / `AddEnrolmentEngine` registration for `Microsoft.Extensions.DependencyInjection` hosts. |
+| `EnrolmentRules.Extensions.DependencyInjection` | `AddEnrolmentEngineFactory` / `AddEnrolmentEngine` / `AddEnrolmentPolicies` registration for `Microsoft.Extensions.DependencyInjection` hosts. |
 
 Build the engine **once** — `Create` runs the full startup recipe (schema-validating thresholds,
 the qualification scale, catalogue, and workflows; loading and validating the DfE transition matrix
@@ -594,7 +615,10 @@ overloads instead throw `ArgumentNullException` for null at their public boundar
 `EvaluateValidated` and `ExplainValidated` also reject a document naming a `chosen_a_levels` entry the pipeline
 now rates red (see [Student Input](#student-input)); `AdviseValidated` does not. A host with an editable
 basket should call `StaleChoices` first and drop what it returns, rather than presenting the
-rejection to the user.
+rejection to the user. A host juggling one basket across several policies (see
+[Policy registry](#policy-registry)) should call `IEnrolmentPolicyRegistry.Compare` instead — it
+never rejects on a red or unrecognised choice, it classifies it, so a basket that is valid under one
+policy is never simply refused when viewed under a stricter one.
 
 ```csharp
 ValidatedEvaluation<EnrolmentResult> validated = enrolment.EvaluateValidated(student);
@@ -678,6 +702,99 @@ var factory = provider.GetRequiredService<IEnrolmentEngineFactory>();
 factory.Reload(); // re-runs the full startup recipe; leaves Current unchanged on failure
 ```
 
+## Policy registry
+
+Everything above bootstraps **one** engine bound to one policy's `workflows/`/`data/` tree. A host
+that must offer more than one policy at once — e.g. a stricter, smaller-cohort programme alongside
+the standard one — registers an immutable **`IEnrolmentPolicyRegistry`** instead of a single engine.
+There is no mutable "current policy": every call names the policy id it wants, and the registry
+resolves it to the matching pre-built `IEnrolmentEngine`.
+
+```csharp
+using EnrolmentRules.Extensions.DependencyInjection;
+
+services.AddEnrolmentPolicies(options => {
+    var baseSource = new DirectoryDataSource("workflows/", "data/");
+    options.UseDefault("standard", "Standard", baseSource);
+    options.Add("elite", "Elite",
+        new OverlayEnrolmentDataSource(new DirectoryDataSource("policies/elite/workflows", "policies/elite/data"), baseSource));
+    options.UseTimeProvider();
+});
+```
+
+Each `Add`/`UseDefault` call builds and startup-validates its own engine eagerly — a broken
+auxiliary policy fails the host at startup, the same guarantee `EnrolmentEngine.Create` gives a
+single policy. `EnrolmentPolicyId` is a validated lowercase-slug value type (`[a-z][a-z0-9-]*`);
+`Descriptors` exposes an immutable snapshot of every registered `{Id, DisplayName}` pair for a
+client to render a picker from, and `DefaultPolicyId` is the id `UseDefault` registered.
+`GetPolicy`/`TryGetPolicy` resolve an
+id to its `EnrolmentPolicy` (`{Descriptor, Engine}`); an unknown id throws
+`UnknownEnrolmentPolicyException` (`GetPolicy`) or returns `false` (`TryGetPolicy`) rather than
+falling back silently.
+
+`OverlayEnrolmentDataSource` is the layering an auxiliary policy typically wants: it reads
+`workflows/`, `catalogue.yaml`, and `thresholds.yaml` from the auxiliary policy's own directory, but
+falls through to the base source for everything else (schemas, `data/qualifications.yaml`, the DfE
+transition matrix) — an auxiliary policy overrides its rules and thresholds without duplicating the
+machinery every policy shares. A policy that needs nothing shared can just point two independent
+`DirectoryDataSource`s at two independent trees instead.
+
+### Non-destructive comparison
+
+Every strict API on `IEnrolmentEvaluator` (`EvaluateValidated`, `ExplainValidated`,
+`ValidateFinalProgramme`) still rejects a `chosen_a_levels` entry the pipeline now rates red — that
+invariant is unweakened for any individual policy. But a host juggling **one shared basket across
+several policies** cannot apply that rule directly: switching from a lenient policy to a stricter
+one would otherwise reject the student's own facts outright. `IEnrolmentPolicyRegistry.Compare`
+exists for exactly that case — it evaluates the same document against a named policy and classifies
+every chosen subject instead of rejecting the call:
+
+```csharp
+ValidatedEvaluation<PolicyComparisonResult> comparison =
+    registry.Compare(new EnrolmentPolicyId("elite"), student, cancellationToken);
+// comparison.Value?.ChoiceStatuses: one ChosenSubjectStatus per chosen_a_levels entry —
+//   Available   — offered by this policy and currently green or amber
+//   Unavailable — offered by this policy, but currently red
+//   NotOffered  — absent from this policy's catalogue entirely
+```
+
+`Compare` never mutates the input and never drops a choice — a red or not-offered subject stays
+represented, annotated with why, so a caller with an editable basket (both web front ends) can show
+the student exactly what changed rather than silently losing their selection. `PolicyComparisonResult`
+also carries the resolved `Descriptor`, the full `Explanation` (`ExplainedResult`), and the policy's
+effective `MinChosenALevels`/`MaxChosenALevels` for that student. The strict, single-policy APIs are
+what a final "commit this enrolment" action should call; `Compare` is for the browsing/comparison
+experience that leads up to it.
+
+### CLI, Razor and Vue selection
+
+All three shipped hosts resolve a policy id the same way — a query/argument the caller supplies,
+falling back to the registry's own default, never a silent substitution on an *invalid* id:
+
+- **CLI**: the global `--policy <id>` option (see [Command Line Examples](#command-line-examples));
+  an unknown id is a usage error, exit code `2`.
+- **Web API**: `GET /api/enrolment/options?policy=<id>` and
+  `POST /api/enrolment/evaluate?policy=<id>`; omitted defaults to the registry default, an unknown id
+  is `400 Bad Request` with an `application/problem+json` Problem Details body. The options
+  response's `selectedPolicy`/`availablePolicies` fields are the client's own source of truth for
+  which ids exist — never hard-code them. The client rejects malformed or contradictory registry
+  metadata rather than guessing a policy.
+- **Razor** (`/razor?policy=<id>`): `RazorModel.ResolvePolicy` tries the URL value, then the
+  session's last-viewed policy, then the registry default; an invalid *URL* value redirects to the
+  canonical policy-stripped URL rather than rendering with a silent fallback. The page shows the
+  current policy's display name and a "Switch to *Other*" link next to the hero, and switching
+  re-runs `Compare` against the same session facts and basket — nothing is cleared.
+- **Vue** (`/app?policy=<id>`): the same precedence (URL, then the policy id last saved to
+  `localStorage`, then the server default), resolved client-side by retrying
+  `GET /api/enrolment/options` down that candidate list until one is accepted — a `400` for a bad id
+  just advances to the next candidate rather than needing a dedicated pre-flight request. `App.vue`
+  mirrors Razor's switch link and basket annotation (`ChoiceStatus` rendered on `ChosenBasket.vue`
+  instead of an "ejected" notice).
+
+Building a second worked example of an auxiliary policy from scratch — the workflow/catalogue/data
+shape an overlay needs, and the boundary decisions to pin before writing it — is covered in
+[Authoring an auxiliary policy](rule-authoring.md#9-authoring-an-auxiliary-policy).
+
 #### Hosting Advise
 
 `Advise` runs many full pipeline evaluations per subject (grade-cost search × counterfactual
@@ -714,7 +831,8 @@ engine once at startup, then reuse a single instance across requests — includi
 warm single-student evaluation costs roughly **13 µs / 59 KB** (all Gen0), and batch evaluation
 scales linearly over the shared engine with no reuse overhead. The one exception is `Advise`
 (counterfactual advice), which is orders of magnitude heavier and should be treated as an isolated,
-rate-limited operation rather than a hot-path call.
+rate-limited operation rather than a hot-path call. The focused Elite near-miss benchmark is much
+narrower at roughly **2.3 ms / 5.77 MB**, but it does not replace the worst-case advice measurement.
 
 The numbers, methodology, and hosting guidance are in the
 [performance & benchmarks note](benchmarks.md). Run the suite directly:

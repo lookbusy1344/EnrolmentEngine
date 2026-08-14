@@ -32,8 +32,8 @@ public static class EnrolmentFormMapper
 		}
 
 		var priorQualifications = session.PriorQualifications
-			.Where(static row => !row.IsEmpty)
-			.Select(static row => new Qualification(row.Subject ?? string.Empty, row.Type ?? default, row.Grade ?? string.Empty));
+										 .Where(static row => !row.IsEmpty)
+										 .Select(static row => new Qualification(row.Subject ?? string.Empty, row.Type ?? default, row.Grade ?? string.Empty));
 
 		var hobbies = session.Hobbies.Where(static hobby => !string.IsNullOrWhiteSpace(hobby));
 

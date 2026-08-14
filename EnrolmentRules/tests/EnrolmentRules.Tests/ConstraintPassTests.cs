@@ -15,14 +15,16 @@ public sealed class ConstraintPassTests
 	[Fact]
 	public void evaluate_throws_a_clear_error_when_a_required_subject_rating_is_missing()
 	{
-		var ratings = new[] { new SubjectRating(Subject.French, Rating.Green, "base reason") };
+		var ratings = new[] {
+			new SubjectRating(Subject.French, Rating.Green, "base reason"),
+		};
 		var profile = new StudentProfile("S", 7.0, [], [], ["plays_trombone"]);
 
 		var act = () => ConstraintPass.Evaluate(ratings, profile, Harness.Catalogue);
 
 		act.Should()
-			.Throw<InvalidDataException>()
-			.WithMessage("*base rating for subject 'music'*");
+		   .Throw<InvalidDataException>()
+		   .WithMessage("*base rating for subject 'music'*");
 	}
 
 	[Fact]
@@ -108,11 +110,15 @@ public sealed class ConstraintPassTests
 			7.5,
 			[],
 			[],
-			[]) { PriorQualifications = [new(Subject.Biology.Value, QualificationType.ALevel, "e")] };
+			[]) {
+			PriorQualifications = [new(Subject.Biology.Value, QualificationType.ALevel, "e")],
+		};
 		var catalogue =
 			new CatalogueData(
 				new Dictionary<Subject, SubjectMeta> {
-					[Subject.Biology] = Harness.Catalogue.Meta(Subject.Biology) with { RestudyBar = new([QualificationType.ALevel], Rating.Amber) },
+					[Subject.Biology] = Harness.Catalogue.Meta(Subject.Biology) with {
+						RestudyBar = new([QualificationType.ALevel], Rating.Amber),
+					},
 				}, [Subject.Biology]);
 		SubjectRating[] ratings = [new(Subject.Biology, Rating.Red, "failed entry requirement")];
 
@@ -121,7 +127,7 @@ public sealed class ConstraintPassTests
 
 		adjustments.Should().BeEmpty();
 		applied.Should().ContainSingle().Which.Should()
-			.Be(new SubjectRating(Subject.Biology, Rating.Red, "failed entry requirement"));
+			   .Be(new SubjectRating(Subject.Biology, Rating.Red, "failed entry requirement"));
 	}
 
 	[Fact]
@@ -152,10 +158,17 @@ public sealed class ConstraintPassTests
 		// blocking hobby vetoes it to red. The prerequisite must observe the vetoed rating and downgrade
 		// Economics — not read Maths's stale green base and leave Economics green, recommending a subject
 		// on a prerequisite the student can no longer take.
-		var maths = Harness.Catalogue.Meta(Subject.Maths) with { BlockingActivities = ["hates_maths"] };
-		var economics = Harness.Catalogue.Meta(Subject.Economics) with { Exclusions = [] };
+		var maths = Harness.Catalogue.Meta(Subject.Maths) with {
+			BlockingActivities = ["hates_maths"],
+		};
+		var economics = Harness.Catalogue.Meta(Subject.Economics) with {
+			Exclusions = [],
+		};
 		var catalogue = new CatalogueData(
-			new Dictionary<Subject, SubjectMeta> { [Subject.Maths] = maths, [Subject.Economics] = economics }, [Subject.Maths, Subject.Economics]);
+			new Dictionary<Subject, SubjectMeta> {
+				[Subject.Maths] = maths,
+				[Subject.Economics] = economics,
+			}, [Subject.Maths, Subject.Economics]);
 		var profile = new StudentProfile("S-PREREQ-VETO", 7.0, [], [], ["hates_maths"]);
 		SubjectRating[] ratings = [
 			new(Subject.Maths, Rating.Green, "maths base"),
@@ -176,9 +189,14 @@ public sealed class ConstraintPassTests
 		// The mirror of the veto case: with no constraint knocking Maths out, its green base still satisfies
 		// Economics's qualifying prerequisite, so Economics is untouched. Guards against the phased evaluation
 		// over-firing prerequisites.
-		var economics = Harness.Catalogue.Meta(Subject.Economics) with { Exclusions = [] };
+		var economics = Harness.Catalogue.Meta(Subject.Economics) with {
+			Exclusions = [],
+		};
 		var catalogue = new CatalogueData(
-			new Dictionary<Subject, SubjectMeta> { [Subject.Maths] = Harness.Catalogue.Meta(Subject.Maths), [Subject.Economics] = economics },
+			new Dictionary<Subject, SubjectMeta> {
+				[Subject.Maths] = Harness.Catalogue.Meta(Subject.Maths),
+				[Subject.Economics] = economics,
+			},
 			[Subject.Maths, Subject.Economics]);
 		var profile = new StudentProfile("S-PREREQ-MET", 7.0, [], [], []);
 		SubjectRating[] ratings = [
@@ -198,11 +216,23 @@ public sealed class ConstraintPassTests
 		// must drive Physics's unmet-prerequisite downgrade to red, and that downgrade must in turn drive
 		// Chemistry's own unmet-prerequisite downgrade to red — not just the subject directly above the
 		// vetoed leaf, which is what the old single-pass evaluation stopped at.
-		var maths = Harness.Catalogue.Meta(Subject.Maths) with { BlockingActivities = ["hates_maths"] };
-		var physics = Harness.Catalogue.Meta(Subject.Physics) with { Exclusions = [], Prerequisites = [new([Subject.Maths], Rating.Red)] };
-		var chemistry = Harness.Catalogue.Meta(Subject.Chemistry) with { Exclusions = [], Prerequisites = [new([Subject.Physics], Rating.Red)] };
+		var maths = Harness.Catalogue.Meta(Subject.Maths) with {
+			BlockingActivities = ["hates_maths"],
+		};
+		var physics = Harness.Catalogue.Meta(Subject.Physics) with {
+			Exclusions = [],
+			Prerequisites = [new([Subject.Maths], Rating.Red)],
+		};
+		var chemistry = Harness.Catalogue.Meta(Subject.Chemistry) with {
+			Exclusions = [],
+			Prerequisites = [new([Subject.Physics], Rating.Red)],
+		};
 		var catalogue = new CatalogueData(
-			new Dictionary<Subject, SubjectMeta> { [Subject.Maths] = maths, [Subject.Physics] = physics, [Subject.Chemistry] = chemistry },
+			new Dictionary<Subject, SubjectMeta> {
+				[Subject.Maths] = maths,
+				[Subject.Physics] = physics,
+				[Subject.Chemistry] = chemistry,
+			},
 			[Subject.Maths, Subject.Physics, Subject.Chemistry]);
 		var profile = new StudentProfile("S-CHAIN", 7.0, [], [], ["hates_maths"]);
 		SubjectRating[] ratings = [
@@ -226,14 +256,22 @@ public sealed class ConstraintPassTests
 		// Economics requires Maths or Physics (either alternative). A vetoed Maths must not sink Economics
 		// when Physics still qualifies — the dependency-order chain walk must resolve "any one of", not
 		// collapse a branching DAG into requiring every alternative.
-		var maths = Harness.Catalogue.Meta(Subject.Maths) with { BlockingActivities = ["hates_maths"] };
-		var physics = Harness.Catalogue.Meta(Subject.Physics) with { Exclusions = [] };
+		var maths = Harness.Catalogue.Meta(Subject.Maths) with {
+			BlockingActivities = ["hates_maths"],
+		};
+		var physics = Harness.Catalogue.Meta(Subject.Physics) with {
+			Exclusions = [],
+		};
 		var economics = Harness.Catalogue.Meta(Subject.Economics) with {
 			Exclusions = [],
 			Prerequisites = [new([Subject.Maths, Subject.Physics], Rating.Red)],
 		};
 		var catalogue = new CatalogueData(
-			new Dictionary<Subject, SubjectMeta> { [Subject.Maths] = maths, [Subject.Physics] = physics, [Subject.Economics] = economics },
+			new Dictionary<Subject, SubjectMeta> {
+				[Subject.Maths] = maths,
+				[Subject.Physics] = physics,
+				[Subject.Economics] = economics,
+			},
 			[Subject.Maths, Subject.Physics, Subject.Economics]);
 		var profile = new StudentProfile("S-BRANCH", 7.0, [], [], ["hates_maths"]);
 		SubjectRating[] ratings = [
@@ -271,7 +309,9 @@ public sealed class ConstraintPassScenarioTests
 			["history"] = 8,
 			["music"] = 8,
 			["art"] = 8,
-		}, []) { DateOfBirth = new(2009, 9, 1) };
+		}, []) {
+			DateOfBirth = new(2009, 9, 1),
+		};
 
 	[Fact]
 	public void further_maths_without_chosen_maths_is_red_from_prerequisite_constraint()

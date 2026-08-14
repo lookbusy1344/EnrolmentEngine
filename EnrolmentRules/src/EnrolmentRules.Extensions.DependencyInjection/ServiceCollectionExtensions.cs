@@ -74,4 +74,29 @@ public static class ServiceCollectionExtensions
 			factory?.Dispose();
 		}
 	}
+
+	/// <summary>
+	///     Bootstrap and register a singleton multi-policy <see cref="EnrolmentPolicyRegistry" />. Every
+	///     configured policy builds eagerly (a broken auxiliary policy fails startup). Consumers resolve
+	///     <see cref="IEnrolmentPolicyRegistry" /> and select a policy explicitly per call — this path never
+	///     also registers an ambiguous container-wide <see cref="IEnrolmentEngine" />, unlike
+	///     <see cref="AddEnrolmentEngine(IServiceCollection, IEnrolmentEngine)" />.
+	/// </summary>
+	public static IServiceCollection AddEnrolmentPolicies(
+		this IServiceCollection services,
+		Action<EnrolmentPolicyOptions> configure,
+		CancellationToken cancellationToken = default)
+	{
+		ArgumentNullException.ThrowIfNull(services);
+		ArgumentNullException.ThrowIfNull(configure);
+
+		var options = new EnrolmentPolicyOptions();
+		configure(options);
+		var registry = options.CreateRegistry(cancellationToken);
+
+		_ = services.AddSingleton(registry);
+		_ = services.AddSingleton<IEnrolmentPolicyRegistry>(registry);
+
+		return services;
+	}
 }

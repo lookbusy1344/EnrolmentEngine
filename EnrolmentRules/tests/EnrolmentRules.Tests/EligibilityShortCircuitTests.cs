@@ -33,6 +33,8 @@ public sealed class EligibilityShortCircuitTests
 			["history"] = 9,
 			["music"] = 9,
 			["art"] = 9,
+			["geography"] = 9,
+			["politics"] = 9,
 		}, []);
 
 	private static StudentProfile ProfileFor(IReadOnlyList<GcseResult> gcses) =>

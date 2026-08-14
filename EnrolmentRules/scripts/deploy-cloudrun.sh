@@ -84,3 +84,16 @@ done < <(gcloud run revisions list \
 	--service="$service" --project="$project" --region="$region" \
 	--sort-by='~metadata.creationTimestamp' --format='value(metadata.name)' |
 	tail -n "+$((revision_keep_count + 1))")
+
+# --source deploys push a new image to this Artifact Registry repo on every run; it is
+# shared with jobtrack-web (see the persistent_project guard above), so scope pruning to
+# this service's own image only -- never touch jobtrack-web's.
+image="$region-docker.pkg.dev/$project/cloud-run-source-deploy/$service"
+echo "==> pruning old $service images, keeping the $revision_keep_count most recent"
+while read -r stale_digest; do
+	[[ -n $stale_digest ]] || continue
+	gcloud artifacts docker images delete "$image@$stale_digest" \
+		--project="$project" --quiet >/dev/null 2>&1 || true
+done < <(gcloud artifacts docker images list "$image" \
+	--project="$project" --format='value(version)' --sort-by='~CREATE_TIME' |
+	tail -n "+$((revision_keep_count + 1))")

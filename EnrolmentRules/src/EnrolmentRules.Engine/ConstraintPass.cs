@@ -75,13 +75,15 @@ internal static class ConstraintPass
 		// amber→amber, veto/restudy red→red) without allowing an invalid adjustment to relabel or upgrade a
 		// more-severe base.
 		var worst = adjustments
-			.GroupBy(static a => a.Subject)
-			.ToDictionary(static g => g.Key, static g => g.MaxBy(static a => ((int)a.To, (int)a.Kind))!);
+					.GroupBy(static a => a.Subject)
+					.ToDictionary(static g => g.Key, static g => g.MaxBy(static a => ((int)a.To, (int)a.Kind))!);
 
 		return [
 			.. ratings.Select(r =>
 				worst.TryGetValue(r.Subject, out var adjustment) && adjustment.To >= r.Rating
-					? r with { Rating = adjustment.To, Reason = adjustment.Reason }
+					? r with {
+						Rating = adjustment.To, Reason = adjustment.Reason,
+					}
 					: r),
 		];
 	}
@@ -177,8 +179,8 @@ internal static class ConstraintPass
 	{
 		var requiredName = EnumNames.NameOf(required);
 		return catalogue.Meta(subject).EntryEquivalents
-			.Where(equivalent => string.Equals(equivalent.Subject, requiredName, StringComparison.OrdinalIgnoreCase))
-			.Any(equivalent => priorQualifications.Any(qualification => scale.Satisfies(qualification, equivalent)));
+						.Where(equivalent => string.Equals(equivalent.Subject, requiredName, StringComparison.OrdinalIgnoreCase))
+						.Any(equivalent => priorQualifications.Any(qualification => scale.Satisfies(qualification, equivalent)));
 	}
 
 	/// <summary>

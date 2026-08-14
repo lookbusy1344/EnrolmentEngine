@@ -23,8 +23,8 @@ public sealed class DirectoryDataSource : IEnrolmentDataSource
 	public IReadOnlyList<WorkflowContent> OpenWorkflows() =>
 		OpenWorkflowFiles(
 			Directory.EnumerateFiles(workflowsDirectory)
-				.Where(IsWorkflowFile)
-				.OrderBy(static file => file, StringComparer.Ordinal),
+					 .Where(IsWorkflowFile)
+					 .OrderBy(static file => file, StringComparer.Ordinal),
 			File.OpenRead);
 
 	public Stream OpenWorkflowSchema() => File.OpenRead(Path.Combine(workflowsDirectory, WorkflowStore.SchemaFileName));

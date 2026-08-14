@@ -13,7 +13,9 @@ public sealed partial class SaveFactsPostTests : IClassFixture<WebAppFactory>
 	[Fact]
 	public async Task Posting_save_facts_persists_the_snapshot_and_renders_it_back_after_redirect()
 	{
-		using var client = factory.CreateClient(new() { AllowAutoRedirect = false });
+		using var client = factory.CreateClient(new() {
+			AllowAutoRedirect = false,
+		});
 
 		using var getResponse = await client.GetAsync(new Uri("/razor", UriKind.Relative));
 		var antiForgeryToken = await ExtractAntiForgeryTokenAsync(getResponse);
@@ -49,7 +51,9 @@ public sealed partial class SaveFactsPostTests : IClassFixture<WebAppFactory>
 	[InlineData("7.4", "7")]
 	public async Task Posting_a_grade_off_the_scale_normalises_it_before_it_reaches_the_session(string posted, string expected)
 	{
-		using var client = factory.CreateClient(new() { AllowAutoRedirect = false });
+		using var client = factory.CreateClient(new() {
+			AllowAutoRedirect = false,
+		});
 
 		using var getResponse = await client.GetAsync(new Uri("/razor", UriKind.Relative));
 		var antiForgeryToken = await ExtractAntiForgeryTokenAsync(getResponse);

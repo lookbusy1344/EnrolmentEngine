@@ -19,19 +19,9 @@ Final rating: green. Entry met (English at standard entry and humanities average
 The engine rated this **green** because: Entry met (English at standard entry and humanities average); predicted A-level grade at or above the green threshold (predicted A, ~5).
 This was not downgraded.
 
-## politics
-Final rating: green. Entry met (English at standard entry and humanities average); predicted A-level grade at or above the green threshold
-The engine rated this **green** because: Entry met (English at standard entry and humanities average); predicted A-level grade at or above the green threshold (predicted A, ~4.9).
-This was not downgraded.
-
 ## maths
 Final rating: green. Entry met (Maths GCSE at the exceptional grade); predicted A-level grade at or above the green threshold
 The engine rated this **green** because: Entry met (Maths GCSE at the exceptional grade); predicted A-level grade at or above the green threshold (predicted A, ~5.4).
-This was not downgraded.
-
-## geography
-Final rating: green. Entry met (humanities average and English at standard entry); predicted A-level grade at or above the green threshold
-The engine rated this **green** because: Entry met (humanities average and English at standard entry); predicted A-level grade at or above the green threshold (predicted A, ~4.95).
 This was not downgraded.
 
 ## physics
@@ -131,4 +121,14 @@ The engine rated this **green** because: Entry met (GCSE Maths at the top grade,
 This was downgraded:
 - green → red: maths prerequisite not met
 
-Summary: 24 green, 1 amber; programme priority score 1055
+## politics
+Final rating: red. Entry requirement unmet or predicted grade below the amber threshold
+The engine rated this **red** because: Entry requirement unmet or predicted grade below the amber threshold (predicted A, ~4.9).
+This was not downgraded.
+
+## geography
+Final rating: red. Entry requirement unmet or predicted grade below the amber threshold
+The engine rated this **red** because: Entry requirement unmet or predicted grade below the amber threshold (predicted A, ~4.95).
+This was not downgraded.
+
+Summary: 22 green, 1 amber; programme priority score 955

@@ -86,18 +86,15 @@ public static class CatalogueStore
 				_ => new(() => JsonSchema.FromText(schemaText))).Value;
 
 			using var doc = JsonDocument.Parse(node.ToJsonString());
-			var results = schema.Evaluate(doc.RootElement, new() { OutputFormat = OutputFormat.List });
+			var results = schema.Evaluate(doc.RootElement, new() {
+				OutputFormat = OutputFormat.List,
+			});
 			if (!results.IsValid) {
 				throw new CatalogueException(
 					$"Catalogue file '{cataloguePath ?? CatalogueFileName}' failed schema validation: {DescribeErrors(results)}");
 			}
 
-			var catalogue = Catalogue.Build(node, scale ?? QualificationScale.Default);
-			// Coverage is guarded here (and in Catalogue.LoadFromFile), not in Build, on purpose: Build is also used
-			// to construct deliberately partial catalogues (e.g. the open-subject test fixtures), which a
-			// full-vocabulary coverage check would wrongly reject. The guard belongs only on the full-load entry points.
-			GcseSubjects.ValidateCatalogueCoverage(catalogue.Subjects);
-			return catalogue;
+			return Catalogue.Build(node, scale ?? QualificationScale.Default);
 		}
 		catch (Exception ex) when (ex is InvalidDataException or FormatException) {
 			throw new CatalogueException($"Catalogue file '{cataloguePath ?? CatalogueFileName}' is invalid: {ex.Message}", ex);
@@ -110,8 +107,8 @@ public static class CatalogueStore
 	private static string DescribeErrors(EvaluationResults results)
 	{
 		var messages = (results.Details ?? [])
-			.Where(d => d.Errors is { Count: > 0 })
-			.SelectMany(d => d.Errors!.Select(e => $"{d.InstanceLocation}: {e.Value}"));
+					   .Where(d => d.Errors is { Count: > 0 })
+					   .SelectMany(d => d.Errors!.Select(e => $"{d.InstanceLocation}: {e.Value}"));
 		var joined = string.Join("; ", messages);
 		return joined.Length > 0 ? joined : "schema validation failed (no detailed errors reported)";
 	}

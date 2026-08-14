@@ -43,7 +43,7 @@ public sealed class BootstrapTests
 		highBandStream.ProbabilityA.Should().Be(0.2);
 
 		fromStream.EvidenceFor(7.5, SingleSubjectCatalogue(Subject.Maths)).Should()
-			.BeEquivalentTo(fromPath.EvidenceFor(7.5, SingleSubjectCatalogue(Subject.Maths)));
+				  .BeEquivalentTo(fromPath.EvidenceFor(7.5, SingleSubjectCatalogue(Subject.Maths)));
 	}
 
 	[Fact]
@@ -140,7 +140,9 @@ public sealed class BootstrapTests
 	}
 
 	private static CatalogueData SingleSubjectCatalogue(Subject subject) =>
-		new(new Dictionary<Subject, SubjectMeta> { [subject] = Harness.Catalogue.Meta(subject) }, [subject]);
+		new(new Dictionary<Subject, SubjectMeta> {
+			[subject] = Harness.Catalogue.Meta(subject),
+		}, [subject]);
 
 	private static string ValidTransitionRow(
 		string band,
@@ -243,10 +245,10 @@ public sealed class BootstrapTests
 			byte[]? transitionMatrix = null)
 		{
 			var workflows = Directory.EnumerateFiles(workflowsDirectory)
-				.Where(IsWorkflowFile)
-				.OrderBy(static file => file, StringComparer.Ordinal)
-				.Select(static file => (file, File.ReadAllBytes(file)))
-				.ToArray();
+									 .Where(IsWorkflowFile)
+									 .OrderBy(static file => file, StringComparer.Ordinal)
+									 .Select(static file => (file, File.ReadAllBytes(file)))
+									 .ToArray();
 
 			return new(
 				workflows,

@@ -96,13 +96,18 @@ public sealed record SubjectAdvice(
 
 /// <summary>
 ///     The minimal bundle of GCSE grade changes that clears the eligibility gate for an ineligible
-///     student. Present only when <see cref="AdviceResult.Eligible" /> is <c>false</c>; the per-subject
-///     <see cref="AdviceResult.Advice" /> is empty in that case, since no subject tiers are reached behind
-///     a closed gate. This path may introduce brand-new GCSEs even when the diagnostic
-///     <see cref="PolicyThresholds.AdviceConsidersUnsatGcses" /> knob is off: if the student lacks enough
-///     passes, there is no grade-bump-only way to open the gate.
+///     student, found by the same bounded engine-backed search the per-subject <see cref="SubjectAdvice" />
+///     uses (§1.6) — so it honours every declared eligibility rule, including a top-N GCSE aggregate an
+///     auxiliary policy adds, not only the Standard English/Maths/pass-count shape. Present only when
+///     <see cref="AdviceResult.Eligible" /> is <c>false</c>; the per-subject <see cref="AdviceResult.Advice" />
+///     is empty in that case, since no subject tiers are reached behind a closed gate. This path may
+///     introduce brand-new GCSEs even when the diagnostic <see cref="PolicyThresholds.AdviceConsidersUnsatGcses" />
+///     knob is off: if the student lacks enough passes, there is no grade-bump-only way to open the gate.
+///     <see cref="Reachable" /> is <c>false</c> when the search exhausted its grade-cost/subject-count
+///     budget without clearing the gate — <see cref="Changes" /> is then empty rather than a partial,
+///     non-clearing bundle.
 /// </summary>
-public sealed record GateAdvice(EquatableArray<GradeChange> Changes);
+public sealed record GateAdvice(EquatableArray<GradeChange> Changes, bool Reachable);
 
 /// <summary>
 ///     The counterfactual advisor output. For an eligible student, <see cref="Advice" /> carries one
@@ -119,6 +124,36 @@ public sealed record AdviceResult(
 	/// <summary>Present when <see cref="PolicyThresholds.AdviceMaxPipelineEvaluations" /> truncated the search.</summary>
 	public string? TruncationReason { get; init; }
 }
+
+/// <summary>
+///     The final-programme boundary (distinct from the incrementally-editable basket
+///     <c>StudentValidator</c> guards): a validated selection with the resolved policy bounds it was
+///     checked against, so a caller can render "you have chosen N of a required MinRequired-MaxAllowed"
+///     without recomputing the effective high-attainment cap itself.
+/// </summary>
+public sealed record FinalProgramme(EquatableArray<Subject> Subjects, int MinRequired, int MaxAllowed);
+
+/// <summary>
+///     Where one chosen subject stands under a specific policy's non-destructive comparison view
+///     (§2.3) — an enum, not a display string, so front ends render their own label/styling.
+/// </summary>
+public enum ChoiceStatus
+{
+	/// <summary>Offered by the selected policy and currently green or amber.</summary>
+	Available,
+
+	/// <summary>Offered by the selected policy but currently red.</summary>
+	Unavailable,
+
+	/// <summary>Absent from the selected policy's catalogue entirely.</summary>
+	NotOffered,
+}
+
+/// <summary>
+///     One <c>chosen_a_levels</c> entry's comparison status. <see cref="Reason" /> carries the deciding
+///     rating reason for <see cref="ChoiceStatus.Unavailable" /> and is <c>null</c> otherwise.
+/// </summary>
+public sealed record ChosenSubjectStatus(Subject Subject, ChoiceStatus Status, string? Reason);
 
 /// <summary>
 ///     The outcome of <see cref="StudentValidator" /> at the evaluation boundary: an empty

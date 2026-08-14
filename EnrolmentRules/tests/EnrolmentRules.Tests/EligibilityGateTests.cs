@@ -96,7 +96,7 @@ public sealed class EligibilityGateTests
 		var act = () => PolicyThresholdsStore.LoadAndValidate(new StringReader(invalid), new StringReader(schema));
 
 		act.Should().Throw<PolicyThresholdsException>()
-			.WithMessage("*high_attainment_max_chosen_a_levels must be greater than or equal to max_chosen_a_levels*");
+		   .WithMessage("*high_attainment_max_chosen_a_levels must be greater than or equal to max_chosen_a_levels*");
 	}
 
 	[Fact]
@@ -134,7 +134,9 @@ public sealed class EligibilityGateTests
 	[Fact]
 	public void english_failure_reason_uses_the_loaded_pass_grade()
 	{
-		var thresholds = Harness.Thresholds with { PassGrade = 7 };
+		var thresholds = Harness.Thresholds with {
+			PassGrade = 7,
+		};
 		var evaluator = Evaluator(thresholds);
 
 		var gate = evaluator.EvaluateEligibility(Gcses(
@@ -148,7 +150,9 @@ public sealed class EligibilityGateTests
 	[Fact]
 	public void maths_failure_reason_uses_the_loaded_pass_grade()
 	{
-		var thresholds = Harness.Thresholds with { PassGrade = 7 };
+		var thresholds = Harness.Thresholds with {
+			PassGrade = 7,
+		};
 		var evaluator = Evaluator(thresholds);
 
 		var gate = evaluator.EvaluateEligibility(Gcses(
@@ -175,7 +179,10 @@ public sealed class EligibilityGateTests
 	[Fact]
 	public void multiple_failures_keep_declared_order_with_loaded_threshold_values()
 	{
-		var thresholds = Harness.Thresholds with { PassGrade = 7, MinPasses = 6 };
+		var thresholds = Harness.Thresholds with {
+			PassGrade = 7,
+			MinPasses = 6,
+		};
 		var evaluator = Evaluator(thresholds);
 
 		var gate = evaluator.EvaluateEligibility(Gcses(("maths", 7), ("physics", 7), ("chemistry", 7)));
@@ -205,7 +212,10 @@ public sealed class EligibilityGateTests
 	[Fact]
 	public void pass_count_failure_reason_uses_the_loaded_thresholds()
 	{
-		var thresholds = Harness.Thresholds with { PassGrade = 7, MinPasses = 6 };
+		var thresholds = Harness.Thresholds with {
+			PassGrade = 7,
+			MinPasses = 6,
+		};
 		var evaluator = Evaluator(thresholds);
 
 		var gate = evaluator.EvaluateEligibility(Gcses(
@@ -260,7 +270,9 @@ public sealed class EligibilityGateTests
 			("biology", Harness.Thresholds.PassGrade));
 
 		var shippedThresholds = PolicyThresholdsStore.LoadAndValidate(DataDir);
-		var raisedThresholds = shippedThresholds with { MinPasses = shippedThresholds.MinPasses + 1 };
+		var raisedThresholds = shippedThresholds with {
+			MinPasses = shippedThresholds.MinPasses + 1,
+		};
 
 		var workflows = WorkflowStore.LoadAndValidate(Harness.WorkflowsDir, Harness.SchemaPath);
 		var engine = WorkflowStore.BuildEngine(workflows);
@@ -288,10 +300,10 @@ public sealed class EligibilityGateTests
 	public void public_constructors_do_not_expose_the_rulesengine_dependency()
 	{
 		typeof(EnrolmentEngine).GetConstructors()
-			.Where(static constructor =>
-				constructor.GetParameters().Any(static parameter => parameter.ParameterType == typeof(IRulesEngine)))
-			.Should()
-			.BeEmpty();
+							   .Where(static constructor =>
+								   constructor.GetParameters().Any(static parameter => parameter.ParameterType == typeof(IRulesEngine)))
+							   .Should()
+							   .BeEmpty();
 	}
 
 	[Fact]
@@ -313,10 +325,10 @@ public sealed class EligibilityGateTests
 	public void evaluation_surface_accepts_a_terminal_cancellation_token()
 	{
 		typeof(IEnrolmentEngine).GetMethods()
-			.Where(static method => method.Name is nameof(IEnrolmentEngine.Evaluate) or nameof(IEnrolmentEngine.Explain)
-				or nameof(IEnrolmentEngine.Advise))
-			.Should()
-			.OnlyContain(static method => method.GetParameters().Last().ParameterType == typeof(CancellationToken));
+								.Where(static method => method.Name is nameof(IEnrolmentEngine.Evaluate) or nameof(IEnrolmentEngine.Explain)
+									or nameof(IEnrolmentEngine.Advise))
+								.Should()
+								.OnlyContain(static method => method.GetParameters().Last().ParameterType == typeof(CancellationToken));
 	}
 
 	// Strong all-round student sitting on the Art age gate: Art GCSE at grade 6 with a high average.
@@ -332,7 +344,9 @@ public sealed class EligibilityGateTests
 				["biology"] = 9,
 				["art"] = 6,
 			},
-			[]) { DateOfBirth = new(2007, 9, 1) };
+			[]) {
+			DateOfBirth = new(2007, 9, 1),
+		};
 
 	private static Rating ArtRating(EnrolmentResult result) =>
 		result.Recommendations.Single(r => r.Subject == Subject.Art).Rating;
@@ -397,7 +411,7 @@ public sealed class EligibilityGateTests
 			var created = EnrolmentEngine.Create(workflowsDir, dataDir, Harness.AsOf);
 
 			var expected = EnrolmentEngine.Create(Harness.WorkflowsDir, DataDir, Harness.AsOf)
-				.Evaluate(ExampleStudent());
+										  .Evaluate(ExampleStudent());
 			var actual = created.Evaluate(ExampleStudent());
 			actual.Should().BeEquivalentTo(expected);
 		}

@@ -59,9 +59,15 @@ public sealed class EquatableCollectionsTests
 	[Fact]
 	public void records_with_equal_but_distinct_dictionaries_are_equal()
 	{
-		var a = new StudentInput("S1", new Dictionary<string, int> { ["maths"] = 7, ["physics"] = 6 }, []);
+		var a = new StudentInput("S1", new Dictionary<string, int> {
+			["maths"] = 7,
+			["physics"] = 6,
+		}, []);
 		// Same entries, different insertion order — value equality must ignore order.
-		var b = new StudentInput("S1", new Dictionary<string, int> { ["physics"] = 6, ["maths"] = 7 }, []);
+		var b = new StudentInput("S1", new Dictionary<string, int> {
+			["physics"] = 6,
+			["maths"] = 7,
+		}, []);
 
 		a.Should().Be(b);
 		a.GetHashCode().Should().Be(b.GetHashCode());
@@ -75,7 +81,9 @@ public sealed class EquatableCollectionsTests
 			7.5,
 			[new(Subject.Maths, 5.0), new(Subject.Physics, 4.5)],
 			[],
-			["plays_piano", "chess"]) { ChosenALevels = [Subject.Maths] };
+			["plays_piano", "chess"]) {
+			ChosenALevels = [Subject.Maths],
+		};
 
 		var json = JsonSerializer.Serialize(profile, EnrolmentJsonContext.Default.StudentProfile);
 		var back = JsonSerializer.Deserialize(json, EnrolmentJsonContext.Default.StudentProfile);
@@ -87,7 +95,10 @@ public sealed class EquatableCollectionsTests
 	public void student_document_dictionary_round_trips_through_source_generated_json()
 	{
 		var document = new StudentDocument(
-			new StudentInput("S1", new Dictionary<string, int> { ["maths"] = 7, ["physics"] = 6 }, ["chess"]) with {
+			new StudentInput("S1", new Dictionary<string, int> {
+				["maths"] = 7,
+				["physics"] = 6,
+			}, ["chess"]) with {
 				ChosenALevels = [Subject.Physics],
 			});
 

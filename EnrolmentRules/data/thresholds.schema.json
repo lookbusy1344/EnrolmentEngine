@@ -97,6 +97,32 @@
       "description": "Optional hard cap on full pipeline evaluations across one advise call; omit for unlimited.",
       "type": "integer",
       "minimum": 1
+    },
+    "best_gcse_count": {
+      "description": "Optional top-N eligibility knob: the number of best GCSEs an auxiliary policy's best-total rule sums (e.g. 8). Validates all-or-none with min_best_gcse_points, top_gcse_average_count and min_top_gcse_average.",
+      "type": "integer",
+      "minimum": 1
+    },
+    "min_best_gcse_points": {
+      "description": "Optional top-N eligibility knob: the minimum sum of the best best_gcse_count GCSE grades.",
+      "type": "integer",
+      "minimum": 1
+    },
+    "top_gcse_average_count": {
+      "description": "Optional top-N eligibility knob: the number of best GCSEs an auxiliary policy's top-average rule means (e.g. 7). Must not exceed best_gcse_count.",
+      "type": "integer",
+      "minimum": 1
+    },
+    "min_top_gcse_average": {
+      "description": "Optional top-N eligibility knob: the minimum mean of the best top_gcse_average_count GCSE grades.",
+      "type": "number",
+      "minimum": 1,
+      "maximum": 9
+    },
+    "min_chosen_a_levels": {
+      "description": "Optional, defaults to 0 (no minimum). The fewest distinct offered A-levels a final programme must contain for this policy.",
+      "type": "integer",
+      "minimum": 0
     }
   }
 }

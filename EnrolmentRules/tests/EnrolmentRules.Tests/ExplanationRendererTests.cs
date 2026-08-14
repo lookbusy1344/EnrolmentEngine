@@ -27,14 +27,16 @@ public sealed class ExplanationRendererTests
 
 		var expected = File.ReadAllText(expectedPath);
 		stdout.ToString().ReplaceLineEndings().TrimEnd()
-			.Should().Be(expected.ReplaceLineEndings().TrimEnd());
+			  .Should().Be(expected.ReplaceLineEndings().TrimEnd());
 	}
 
 	[Fact]
 	public void ineligible_explanations_render_the_gate_reasons()
 	{
 		var engine = Harness.ShippedEngine();
-		var explained = engine.Explain(new("S-INELIGIBLE", new Dictionary<string, int> { ["maths"] = 6 }, []));
+		var explained = engine.Explain(new("S-INELIGIBLE", new Dictionary<string, int> {
+			["maths"] = 6,
+		}, []));
 		using var stdout = new StringWriter();
 
 		ExplanationRenderer.Render(explained, stdout);

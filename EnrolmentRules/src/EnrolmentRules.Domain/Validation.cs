@@ -15,28 +15,11 @@ public static class GcseSubjects
 {
 	/// <summary>The recognised GCSE subject keys (snake_case, matching the document and workflow lambdas).</summary>
 	public static IReadOnlySet<string> Known { get; } = new[] {
-		"maths", "english_language", "english_literature", "physics", "chemistry", "biology", "french", "german", "physical_education",
-		"computer_studies", "history", "music", "art", "psychology", "sociology",
+		"maths", "english_language", "english_literature", "physics", "chemistry", "biology", "french", "german", "physical_education", "computer_studies", "history", "music", "art", "psychology", "sociology", "geography", "politics",
 	}.ToFrozenSet(StringComparer.Ordinal);
 
 	/// <summary>Whether <paramref name="subject" /> is a recognised GCSE subject key.</summary>
 	public static bool IsKnown(string subject) => Known.Contains(subject);
-
-	/// <summary>
-	///     Load-time guard against vocabulary drift: every compiled GCSE key must have a matching catalogue
-	///     subject so student input validation and the prediction table stay aligned when subjects are added.
-	/// </summary>
-	public static void ValidateCatalogueCoverage(IReadOnlyList<Subject> catalogueSubjects)
-	{
-		var catalogue = catalogueSubjects.ToHashSet();
-		foreach (var key in Known) {
-			if (!Subject.TryParse(key, out var subject) || !catalogue.Contains(subject)) {
-				throw new InvalidDataException(
-					$"GCSE vocabulary key '{key}' has no matching catalogue subject; "
-					+ "update data/catalogue.yaml or GcseSubjects.Known.");
-			}
-		}
-	}
 }
 
 /// <summary>
@@ -67,14 +50,60 @@ public static class StudentValidator
 			.. student.Gcses is EquatableDictionary<string, int> gcses ? gcses.SelectMany(ValidateGcse) : ["gcses is required"],
 			.. student.Hobbies is EquatableArray<string> hobbies
 				? hobbies
-					.Index()
-					.Where(static h => string.IsNullOrWhiteSpace(h.Item))
-					.Select(static h => $"hobby tag at position {h.Index} is blank")
+				  .Index()
+				  .Where(static h => string.IsNullOrWhiteSpace(h.Item))
+				  .Select(static h => $"hobby tag at position {h.Index} is blank")
 				: ["hobbies is required"],
 			.. ValidateDateOfBirth(student.DateOfBirth),
 			.. ValidateChosenALevels(student.ChosenALevels, catalogue),
 			.. ValidatePriorQualifications(student.PriorQualifications, scale),
 		];
+	}
+
+	/// <summary>
+	///     The policy-independent subset of <see cref="Validate" />: everything except catalogue-membership
+	///     of <see cref="StudentInput.ChosenALevels" />. Used by the non-destructive policy comparison
+	///     projection, which classifies a chosen subject absent from the selected policy's catalogue as
+	///     <c>NotOffered</c> rather than a structural validation failure — that classification would
+	///     otherwise collide with this same "invalid" message. Duplicate chosen entries remain a structural
+	///     error regardless of catalogue membership; see <see cref="ValidateChosenALevelsDuplicates" />.
+	/// </summary>
+	public static IReadOnlyList<string> ValidateFacts(StudentInput? student, QualificationScale scale)
+	{
+		if (student is null) {
+			return ["student is required"];
+		}
+
+		return [
+			.. RequiredText(student.Id, "student id"),
+			.. student.Gcses is EquatableDictionary<string, int> gcses ? gcses.SelectMany(ValidateGcse) : ["gcses is required"],
+			.. student.Hobbies is EquatableArray<string> hobbies
+				? hobbies
+				  .Index()
+				  .Where(static h => string.IsNullOrWhiteSpace(h.Item))
+				  .Select(static h => $"hobby tag at position {h.Index} is blank")
+				: ["hobbies is required"],
+			.. ValidateDateOfBirth(student.DateOfBirth),
+			.. ValidateChosenALevelsDuplicates(student.ChosenALevels),
+			.. ValidatePriorQualifications(student.PriorQualifications, scale),
+		];
+	}
+
+	/// <summary>
+	///     Duplicate <c>chosen_a_levels</c> entries only, independent of catalogue membership — the
+	///     comparison path's structural check on the chosen basket (see <see cref="ValidateFacts" />).
+	/// </summary>
+	public static IReadOnlyList<string> ValidateChosenALevelsDuplicates(IReadOnlyList<Subject> chosenALevels)
+	{
+		var seen = new HashSet<Subject>();
+		var errors = new List<string>();
+		foreach (var (index, subject) in chosenALevels.Index()) {
+			if (!seen.Add(subject)) {
+				errors.Add($"chosen_a_levels entry at position {index} duplicates '{EnumNames.NameOf(subject)}'");
+			}
+		}
+
+		return errors;
 	}
 
 	private static IEnumerable<string> RequiredText(string? value, string fieldName)

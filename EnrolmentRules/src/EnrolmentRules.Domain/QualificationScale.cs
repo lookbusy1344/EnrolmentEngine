@@ -131,9 +131,9 @@ public sealed class QualificationScale
 	internal static QualificationScale RequireCompleteCoverage(QualificationScale scale)
 	{
 		var missing = AllTypes
-			.Where(type => !scale.ContainsType(type))
-			.Select(EnumNames.NameOf)
-			.ToArray();
+					  .Where(type => !scale.ContainsType(type))
+					  .Select(EnumNames.NameOf)
+					  .ToArray();
 		if (missing.Length > 0) {
 			throw new InvalidDataException(
 				$"Qualification scale is missing entries for: {string.Join(", ", missing)}.");
@@ -169,8 +169,8 @@ public sealed class QualificationScale
 			}
 
 			var duplicateOrdinal = grades.Values
-				.GroupBy(static entry => entry.Ordinal)
-				.FirstOrDefault(static group => group.Count() > 1);
+										 .GroupBy(static entry => entry.Ordinal)
+										 .FirstOrDefault(static group => group.Count() > 1);
 			if (duplicateOrdinal is not null) {
 				throw new InvalidDataException(
 					$"Qualification scale type {EnumNames.NameOf(type)} has a duplicate ordinal {duplicateOrdinal.Key}.");
@@ -200,7 +200,9 @@ public sealed class QualificationScale
 			return bundled;
 		}
 
-		var starts = new[] { Directory.GetCurrentDirectory(), AppContext.BaseDirectory };
+		var starts = new[] {
+			Directory.GetCurrentDirectory(), AppContext.BaseDirectory,
+		};
 		foreach (var start in starts) {
 			for (var dir = new DirectoryInfo(start); dir is not null; dir = dir.Parent) {
 				var candidate = Path.Combine(dir.FullName, DefaultRelativePath);

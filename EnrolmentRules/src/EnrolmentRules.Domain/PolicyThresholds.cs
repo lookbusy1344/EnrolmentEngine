@@ -28,6 +28,16 @@ namespace EnrolmentRules.Domain;
 ///         without enough passes. Retained for diagnosing why a subject is reachable/unreachable, not
 ///         for normal operation.
 ///     </para>
+///     <para>
+///         <see cref="BestGcseCount" />, <see cref="MinBestGcsePoints" />, <see cref="TopGcseAverageCount" />
+///         and <see cref="MinTopGcseAverage" /> are the top-N GCSE eligibility knobs an auxiliary policy
+///         (e.g. Elite's "best eight total at least 60" and "top seven average at least 7.0") binds a
+///         <c>lookup.BestTotal(...)</c>/<c>lookup.BestAverage(...)</c> eligibility rule to. All four are
+///         optional and validate all-or-none: the shipped Standard policy leaves them unset, and no
+///         top-N eligibility rule may reference them. <see cref="MinChosenALevels" /> is independent and
+///         defaults to zero so existing callers and Standard behaviour do not change; a policy that
+///         requires a minimum committed-choice count for final-programme validation sets it directly.
+///     </para>
 /// </remarks>
 public sealed record PolicyThresholds(
 	int PassGrade,
@@ -45,4 +55,9 @@ public sealed record PolicyThresholds(
 	bool AdviceConsidersUnsatGcses = false,
 	int AdviceMaxGradeCost = 12,
 	int AdviceMaxSubjectsChanged = 3,
-	int? AdviceMaxPipelineEvaluations = null);
+	int? AdviceMaxPipelineEvaluations = null,
+	int? BestGcseCount = null,
+	int? MinBestGcsePoints = null,
+	int? TopGcseAverageCount = null,
+	double? MinTopGcseAverage = null,
+	int MinChosenALevels = 0);

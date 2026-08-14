@@ -22,7 +22,10 @@ public sealed class GcseRowBinding
 
 	public GcseRow ToRow() => new(Subject, Grade.HasValue ? Thresholds.NormalizeGcseGrade(Grade.Value) : null);
 
-	public static GcseRowBinding FromRow(GcseRow row) => new() { Subject = row.Subject, Grade = row.Grade };
+	public static GcseRowBinding FromRow(GcseRow row) => new() {
+		Subject = row.Subject,
+		Grade = row.Grade,
+	};
 }
 
 /// <summary>The mutable model-binding target for one prior-qualification form row. See <see cref="GcseRowBinding" /> for why.</summary>
@@ -37,5 +40,9 @@ public sealed class PriorQualificationRowBinding
 	public PriorQualificationRow ToRow() => new(Subject, Type, Grade);
 
 	public static PriorQualificationRowBinding FromRow(PriorQualificationRow row) =>
-		new() { Subject = row.Subject, Type = row.Type, Grade = row.Grade };
+		new() {
+			Subject = row.Subject,
+			Type = row.Type,
+			Grade = row.Grade,
+		};
 }

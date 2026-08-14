@@ -8,14 +8,23 @@ using Domain;
 public sealed class DomainTests
 {
 	public static TheoryData<string, string> SerialisedSubjects { get; } = new() {
-		{ "maths", "\"maths\"" },
-		{ "further_maths", "\"further_maths\"" },
-		{ "english_language", "\"english_language\"" },
-		{ "english_literature", "\"english_literature\"" },
-		{ "french", "\"french\"" },
-		{ "german", "\"german\"" },
-		{ "physical_education", "\"physical_education\"" },
-		{ "computer_studies", "\"computer_studies\"" },
+		{
+			"maths", "\"maths\""
+		}, {
+			"further_maths", "\"further_maths\""
+		}, {
+			"english_language", "\"english_language\""
+		}, {
+			"english_literature", "\"english_literature\""
+		}, {
+			"french", "\"french\""
+		}, {
+			"german", "\"german\""
+		}, {
+			"physical_education", "\"physical_education\""
+		}, {
+			"computer_studies", "\"computer_studies\""
+		},
 	};
 
 	[Theory]

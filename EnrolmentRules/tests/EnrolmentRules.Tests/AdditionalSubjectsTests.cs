@@ -17,10 +17,6 @@ using Domain;
 /// </summary>
 public sealed class AdditionalSubjectsTests
 {
-	// The humanities average-GCSE entry bar — now a literal in workflows/subject-ratings.yaml rather than a
-	// named policy threshold. Kept here so the geography boundary test documents the value it probes.
-	private const int HumanitiesAverageEntry = 5;
-
 	private static readonly Subject[] Added = [
 		Subject.Economics, Subject.Geography, Subject.Psychology, Subject.Sociology,
 		Subject.BusinessStudies, Subject.Politics, Subject.ReligiousStudies, Subject.Drama,
@@ -37,6 +33,7 @@ public sealed class AdditionalSubjectsTests
 		("chemistry", grade), ("biology", grade), ("english_literature", grade),
 		("french", grade), ("german", grade), ("physical_education", grade),
 		("computer_studies", grade), ("history", grade), ("music", grade), ("art", grade),
+		("geography", grade), ("politics", grade),
 	];
 
 	private static IReadOnlyList<SubjectRating> Rate(params (string Subject, int Grade)[] gcses)
@@ -93,15 +90,21 @@ public sealed class AdditionalSubjectsTests
 	}
 
 	[Fact]
-	public void geography_gates_on_the_humanities_average_not_a_geography_gcse()
+	public void geography_and_politics_gate_on_their_own_gcse_at_standard_entry()
 	{
-		// There is no geography GCSE key, so entry is the humanities average plus English. One full set just
-		// below the humanities-average entry fails; lifting the average over the threshold opens entry.
-		var below = Rate(Uniform(HumanitiesAverageEntry - 1));
-		Of(below, Subject.Geography).Should().Be(Rating.Red);
+		// Both now read a dedicated GCSE, matching every other cognate-GCSE subject — not the humanities
+		// average plus English proxy they used before those GCSE keys existed.
+		var belowGeography = Rate(("geography", Harness.Thresholds.StandardEntry - 1), ("english_language", 9));
+		Of(belowGeography, Subject.Geography).Should().Be(Rating.Red);
 
-		var met = Rate(Uniform(HumanitiesAverageEntry + 2));
-		Of(met, Subject.Geography).Should().NotBe(Rating.Red);
+		var metGeography = Rate(("geography", Harness.Thresholds.StandardEntry), ("english_language", 9));
+		Of(metGeography, Subject.Geography).Should().NotBe(Rating.Red);
+
+		var belowPolitics = Rate(("politics", Harness.Thresholds.StandardEntry - 1), ("english_language", 9));
+		Of(belowPolitics, Subject.Politics).Should().Be(Rating.Red);
+
+		var metPolitics = Rate(("politics", Harness.Thresholds.StandardEntry), ("english_language", 9));
+		Of(metPolitics, Subject.Politics).Should().NotBe(Rating.Red);
 	}
 
 	[Fact]
@@ -131,7 +134,9 @@ public sealed class AdditionalSubjectsTests
 		economics.Rating.Should().Be(Rating.Green);
 		business.Rating.Should().Be(Rating.Green);
 
-		var chosen = engine.Evaluate(student with { ChosenALevels = [Subject.Economics] });
+		var chosen = engine.Evaluate(student with {
+			ChosenALevels = [Subject.Economics],
+		});
 		chosen.Recommendations.Single(r => r.Subject == Subject.Economics).Rating.Should().Be(Rating.Green);
 		var excludedBusiness = chosen.Recommendations.Single(r => r.Subject == Subject.BusinessStudies);
 		excludedBusiness.Rating.Should().Be(Rating.Amber);

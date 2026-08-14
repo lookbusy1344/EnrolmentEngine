@@ -18,8 +18,12 @@ public sealed class WorkflowLinterTests
 			new() {
 				WorkflowName = RatingEvaluator.SubjectRatingsWorkflow,
 				Rules = [
-					new() { RuleName = "maths:green", Expression = "facts.Gcse(\"maths\") >= Thresholds.TopEntry" },
-					new() { RuleName = "maths:red", Expression = "true" },
+					new() {
+						RuleName = "maths:green", Expression = "facts.Gcse(\"maths\") >= Thresholds.TopEntry",
+					},
+					new() {
+						RuleName = "maths:red", Expression = "true",
+					},
 				],
 			},
 		];
@@ -41,9 +45,15 @@ public sealed class WorkflowLinterTests
 			new() {
 				WorkflowName = RatingEvaluator.SubjectRatingsWorkflow,
 				Rules = [
-					new() { RuleName = "maths:green", Expression = "facts.Gcse(\"maths\") >= Thresholds.TopEntry" },
-					new() { RuleName = "maths:amber", Expression = "facts.Gcse(\"maths\") >= facts.StandardEntry" },
-					new() { RuleName = "maths:red", Expression = "facts.Predicted(\"maths\") < ALevelGrade.C" },
+					new() {
+						RuleName = "maths:green", Expression = "facts.Gcse(\"maths\") >= Thresholds.TopEntry",
+					},
+					new() {
+						RuleName = "maths:amber", Expression = "facts.Gcse(\"maths\") >= facts.StandardEntry",
+					},
+					new() {
+						RuleName = "maths:red", Expression = "facts.Predicted(\"maths\") < ALevelGrade.C",
+					},
 				],
 			},
 		];
@@ -62,9 +72,15 @@ public sealed class WorkflowLinterTests
 			new() {
 				WorkflowName = RatingEvaluator.SubjectRatingsWorkflow,
 				Rules = [
-					new() { RuleName = "maths:amber", Expression = "facts.Gcse(\"maths\") >= facts.StandardEntry" },
-					new() { RuleName = "maths:green", Expression = "facts.Gcse(\"maths\") >= Thresholds.TopEntry" },
-					new() { RuleName = "maths:red", Expression = "true" },
+					new() {
+						RuleName = "maths:amber", Expression = "facts.Gcse(\"maths\") >= facts.StandardEntry",
+					},
+					new() {
+						RuleName = "maths:green", Expression = "facts.Gcse(\"maths\") >= Thresholds.TopEntry",
+					},
+					new() {
+						RuleName = "maths:red", Expression = "true",
+					},
 				],
 			},
 		];
@@ -83,9 +99,15 @@ public sealed class WorkflowLinterTests
 			new() {
 				WorkflowName = RatingEvaluator.SubjectRatingsWorkflow,
 				Rules = [
-					new() { RuleName = "maths:green", Expression = "facts.Prediced(\"maths\") >= ALevelGrade.A" },
-					new() { RuleName = "maths:amber", Expression = "facts.Predicted(\"maths\") >= ALevelGrade.B" },
-					new() { RuleName = "maths:red", Expression = "true" },
+					new() {
+						RuleName = "maths:green", Expression = "facts.Prediced(\"maths\") >= ALevelGrade.A",
+					},
+					new() {
+						RuleName = "maths:amber", Expression = "facts.Predicted(\"maths\") >= ALevelGrade.B",
+					},
+					new() {
+						RuleName = "maths:red", Expression = "true",
+					},
 				],
 			},
 		];
@@ -104,9 +126,15 @@ public sealed class WorkflowLinterTests
 			new() {
 				WorkflowName = RatingEvaluator.SubjectRatingsWorkflow,
 				Rules = [
-					new() { RuleName = "maths:green", Expression = "facts.Gcse(\"mathz\") >= Thresholds.TopEntry" },
-					new() { RuleName = "maths:amber", Expression = "facts.Gcse(\"maths\") >= facts.StandardEntry" },
-					new() { RuleName = "maths:red", Expression = "true" },
+					new() {
+						RuleName = "maths:green", Expression = "facts.Gcse(\"mathz\") >= Thresholds.TopEntry",
+					},
+					new() {
+						RuleName = "maths:amber", Expression = "facts.Gcse(\"maths\") >= facts.StandardEntry",
+					},
+					new() {
+						RuleName = "maths:red", Expression = "true",
+					},
 				],
 			},
 		];
@@ -127,9 +155,15 @@ public sealed class WorkflowLinterTests
 			new() {
 				WorkflowName = RatingEvaluator.SubjectRatingsWorkflow,
 				Rules = [
-					new() { RuleName = "maths:green", Expression = "facts.Predicted(\"further_mathz\") >= ALevelGrade.A" },
-					new() { RuleName = "maths:amber", Expression = "facts.Predicted(\"maths\") >= ALevelGrade.B" },
-					new() { RuleName = "maths:red", Expression = "true" },
+					new() {
+						RuleName = "maths:green", Expression = "facts.Predicted(\"further_mathz\") >= ALevelGrade.A",
+					},
+					new() {
+						RuleName = "maths:amber", Expression = "facts.Predicted(\"maths\") >= ALevelGrade.B",
+					},
+					new() {
+						RuleName = "maths:red", Expression = "true",
+					},
 				],
 			},
 		];
@@ -153,11 +187,14 @@ public sealed class WorkflowLinterTests
 				WorkflowName = RatingEvaluator.SubjectRatingsWorkflow,
 				Rules = [
 					new() {
-						RuleName = "maths:green",
-						Expression = "facts.Gcse(\"english_language\") >= Thresholds.TopEntry && facts.Predicted(\"further_maths\") >= ALevelGrade.A",
+						RuleName = "maths:green", Expression = "facts.Gcse(\"english_language\") >= Thresholds.TopEntry && facts.Predicted(\"further_maths\") >= ALevelGrade.A",
 					},
-					new() { RuleName = "maths:amber", Expression = "facts.Gcse(\"maths\") >= facts.StandardEntry" },
-					new() { RuleName = "maths:red", Expression = "true" },
+					new() {
+						RuleName = "maths:amber", Expression = "facts.Gcse(\"maths\") >= facts.StandardEntry",
+					},
+					new() {
+						RuleName = "maths:red", Expression = "true",
+					},
 				],
 			},
 		];
@@ -174,9 +211,15 @@ public sealed class WorkflowLinterTests
 			new() {
 				WorkflowName = RatingEvaluator.SubjectRatingsWorkflow,
 				Rules = [
-					new() { RuleName = "philosophy:green", Expression = "true" },
-					new() { RuleName = "philosophy:amber", Expression = "true" },
-					new() { RuleName = "philosophy:red", Expression = "true" },
+					new() {
+						RuleName = "philosophy:green", Expression = "true",
+					},
+					new() {
+						RuleName = "philosophy:amber", Expression = "true",
+					},
+					new() {
+						RuleName = "philosophy:red", Expression = "true",
+					},
 				],
 			},
 		];
@@ -199,9 +242,15 @@ public sealed class WorkflowLinterTests
 			new() {
 				WorkflowName = RatingEvaluator.SubjectRatingsWorkflow,
 				Rules = [
-					new() { RuleName = "maths:green", Expression = "facts.Predicted(\"maths\") >= ALevelGrade.C" },
-					new() { RuleName = "maths:amber", Expression = "facts.Predicted(\"maths\") >= ALevelGrade.B" },
-					new() { RuleName = "maths:red", Expression = "true" },
+					new() {
+						RuleName = "maths:green", Expression = "facts.Predicted(\"maths\") >= ALevelGrade.C",
+					},
+					new() {
+						RuleName = "maths:amber", Expression = "facts.Predicted(\"maths\") >= ALevelGrade.B",
+					},
+					new() {
+						RuleName = "maths:red", Expression = "true",
+					},
 				],
 			},
 		];
@@ -231,7 +280,9 @@ public sealed class WorkflowLinterTests
 						Expression =
 							"facts.Predicted(\"maths\") >= ALevelGrade.B && facts.DfeProbabilityAtOrAbove(\"maths\", ALevelGrade.B) >= facts.MinDfeAmberProbabilityAtOrAbove",
 					},
-					new() { RuleName = "maths:red", Expression = "true" },
+					new() {
+						RuleName = "maths:red", Expression = "true",
+					},
 				],
 			},
 		];
@@ -261,7 +312,9 @@ public sealed class WorkflowLinterTests
 						Expression =
 							"facts.Predicted(\"maths\") >= ALevelGrade.B && facts.DfeProbabilityAtOrAbove(\"maths\", ALevelGrade.B) >= facts.MinDfeGreenProbabilityAtOrAbove",
 					},
-					new() { RuleName = "maths:red", Expression = "true" },
+					new() {
+						RuleName = "maths:red", Expression = "true",
+					},
 				],
 			},
 		];
@@ -293,7 +346,9 @@ public sealed class WorkflowLinterTests
 						Expression =
 							"facts.Predicted(\"maths\") >= ALevelGrade.B && facts.DfeProbabilityAtOrAbove(\"maths\", ALevelGrade.B) >= facts.MinDfeAmberProbabilityAtOrAbove",
 					},
-					new() { RuleName = "maths:red", Expression = "true" },
+					new() {
+						RuleName = "maths:red", Expression = "true",
+					},
 				],
 			},
 		];
@@ -327,7 +382,9 @@ public sealed class WorkflowLinterTests
 					new() {
 						RuleName = "parent",
 						Rules = [
-							new() { RuleName = "child", Expression = "facts.Gcse(\"mathz\") >= Thresholds.TopEntry" },
+							new() {
+								RuleName = "child", Expression = "facts.Gcse(\"mathz\") >= Thresholds.TopEntry",
+							},
 						],
 					},
 				],
@@ -379,7 +436,7 @@ public sealed class WorkflowLinterTests
 		try {
 			var ratingsPath = Path.Combine(brokenDir, "subject-ratings.yaml");
 			var corrupted = File.ReadAllText(ratingsPath)
-				.Replace("facts.Predicted", "facts.Prediced", StringComparison.Ordinal);
+								.Replace("facts.Predicted", "facts.Prediced", StringComparison.Ordinal);
 			File.WriteAllText(ratingsPath, corrupted);
 
 			using var stdout = new StringWriter();

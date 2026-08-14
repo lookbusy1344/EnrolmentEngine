@@ -7,6 +7,12 @@ export interface OptionItem {
   readonly label: string
 }
 
+/** One registered policy's wire identifier and display label — the client's own list, never hard-coded. */
+export interface PolicyDescriptor {
+  readonly id: string
+  readonly displayName: string
+}
+
 export interface QualificationGradeOptions {
   readonly type: string
   readonly grades: readonly OptionItem[]
@@ -24,6 +30,8 @@ export interface QualificationSubjectGroup {
 }
 
 export interface EnrolmentOptionsResponse {
+  readonly selectedPolicy: PolicyDescriptor
+  readonly availablePolicies: readonly PolicyDescriptor[]
   readonly defaultDateOfBirth: string
   readonly defaultAge: number
   readonly gcseSubjects: readonly OptionItem[]
@@ -31,6 +39,7 @@ export interface EnrolmentOptionsResponse {
   readonly priorQualificationSubjects: readonly QualificationSubjectGroup[]
   readonly qualificationGrades: readonly QualificationGradeOptions[]
   readonly hobbies: readonly OptionItem[]
+  readonly minChoices: number
   readonly choiceLimit: number
 }
 
@@ -73,19 +82,32 @@ export interface ExplanationResponse {
   readonly overrides: readonly AdjustmentResponse[]
 }
 
+/**
+ * One `chosenALevels` entry's non-destructive comparison status under the selected policy:
+ * "Available" (offered and currently green/amber), "Unavailable" (offered but currently red), or
+ * "NotOffered" (absent from the selected policy's catalogue). Never a reason to drop the choice from
+ * the client's basket.
+ */
+export type ChoiceStatusKind = 'Available' | 'Unavailable' | 'NotOffered'
+
+export interface ChoiceStatus {
+  readonly subject: OptionItem
+  readonly status: ChoiceStatusKind
+  readonly reason: string | null
+}
+
 export interface EnrolmentApiResult {
+  readonly policy: PolicyDescriptor
   readonly eligible: boolean
   readonly eligibilityReasons: readonly string[]
   readonly choiceLimitReason: string | null
   readonly explanations: readonly ExplanationResponse[]
+  readonly choiceStatuses: readonly ChoiceStatus[]
+  readonly minChoices: number
+  readonly maxChoices: number
 }
 
 export interface EnrolmentEvaluateResponse {
   readonly validationErrors: readonly string[]
-  /**
-   * Chosen A-levels the engine now rates red, and so refuses to evaluate against. Non-empty only when
-   * `result` is null; drop these from the basket and re-post rather than showing the errors to the student.
-   */
-  readonly ejectedChoices: readonly OptionItem[]
   readonly result: EnrolmentApiResult | null
 }

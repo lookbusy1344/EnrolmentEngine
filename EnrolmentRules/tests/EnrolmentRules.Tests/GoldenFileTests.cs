@@ -141,7 +141,9 @@ public sealed class GoldenFileTests
 		using var stream = File.OpenRead(Path.Combine(GoldenDir, "strong-constraints.json"));
 		var document = JsonSerializer.Deserialize(stream, EnrolmentJsonContext.Default.StudentDocument)!;
 		var rules = Harness.BuildFromShippedWorkflows().Engine;
-		var cappedEngine = new EnrolmentEngine(rules, Harness.Thresholds with { MaxGreenChoices = cap }, Harness.Catalogue, Harness.AsOf);
+		var cappedEngine = new EnrolmentEngine(rules, Harness.Thresholds with {
+			MaxGreenChoices = cap,
+		}, Harness.Catalogue, Harness.AsOf);
 
 		var result = cappedEngine.Evaluate(document.Student);
 
@@ -163,8 +165,12 @@ public sealed class GoldenFileTests
 				["chemistry"] = 9,
 				["art"] = 6,
 			},
-			[]) { DateOfBirth = new DateOnly(2007, 9, 1) };
-		var younger = adult with { DateOfBirth = adult.DateOfBirth!.Value.AddDays(1) };
+			[]) {
+			DateOfBirth = new DateOnly(2007, 9, 1),
+		};
+		var younger = adult with {
+			DateOfBirth = adult.DateOfBirth!.Value.AddDays(1),
+		};
 
 		var adultExplanation = engine.Explain(adult);
 		var youngerExplanation = engine.Explain(younger);
@@ -180,7 +186,9 @@ public sealed class GoldenFileTests
 	{
 		var engine = Harness.ShippedEngine();
 		var fixture = LoadFixture("prior-equivalent-restudy-bar");
-		var equivalentOnly = fixture with { PriorQualifications = [fixture.PriorQualifications[0]] };
+		var equivalentOnly = fixture with {
+			PriorQualifications = [fixture.PriorQualifications[0]],
+		};
 
 		var equivalentOnlyResult = engine.Evaluate(equivalentOnly);
 		var combinedResult = engine.Evaluate(fixture);
@@ -202,7 +210,9 @@ public sealed class GoldenFileTests
 	{
 		var engine = Harness.ShippedEngine();
 		var fixture = LoadFixture("veto-precedence");
-		var withoutVeto = fixture with { Hobbies = ["plays_piano"] };
+		var withoutVeto = fixture with {
+			Hobbies = ["plays_piano"],
+		};
 
 		var withoutVetoResult = engine.Evaluate(withoutVeto);
 		var withVetoResult = engine.Evaluate(fixture);

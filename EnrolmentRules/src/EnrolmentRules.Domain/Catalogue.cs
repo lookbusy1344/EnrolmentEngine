@@ -76,22 +76,18 @@ public sealed class CatalogueData
 	private readonly FrozenDictionary<Subject, int> order;
 
 	public CatalogueData(IReadOnlyDictionary<Subject, SubjectMeta> entries)
-		: this(entries, [.. entries.Keys], QualificationScale.Default)
-	{
-	}
+		: this(entries, [.. entries.Keys], QualificationScale.Default) { }
 
 	public CatalogueData(IReadOnlyDictionary<Subject, SubjectMeta> entries, IReadOnlyList<Subject> subjects)
-		: this(entries, subjects, QualificationScale.Default)
-	{
-	}
+		: this(entries, subjects, QualificationScale.Default) { }
 
 	internal CatalogueData(IReadOnlyDictionary<Subject, SubjectMeta> entries, IReadOnlyList<Subject> subjects, QualificationScale scale)
 	{
 		this.entries = entries.ToFrozenDictionary();
 		Subjects = [.. subjects];
 		order = Subjects
-			.Select(static (subject, index) => (subject, index))
-			.ToFrozenDictionary(static pair => pair.subject, static pair => pair.index);
+				.Select(static (subject, index) => (subject, index))
+				.ToFrozenDictionary(static pair => pair.subject, static pair => pair.index);
 		Validate(this.entries, order, scale);
 
 		// Each mutual-exclusion pair once, as an ordered tuple in catalogue declaration order so the symmetric
@@ -100,10 +96,10 @@ public sealed class CatalogueData
 		// cross-product.
 		ExclusionPairs = [
 			.. from subject in Subjects
-			from exclusion in this.entries[subject].Exclusions
-			let other = exclusion.Other
-			where order[subject] < order[other]
-			select new ExclusionPair(subject, other, exclusion.Severity),
+			   from exclusion in this.entries[subject].Exclusions
+			   let other = exclusion.Other
+			   where order[subject] < order[other]
+			   select new ExclusionPair(subject, other, exclusion.Severity),
 		];
 	}
 
@@ -156,7 +152,7 @@ public sealed class CatalogueData
 				}
 
 				var mirrored = otherMeta.Exclusions
-					.Any(back => back.Other == subject && back.Severity == exclusion.Severity);
+										.Any(back => back.Other == subject && back.Severity == exclusion.Severity);
 				if (!mirrored) {
 					throw new InvalidDataException(
 						$"Catalogue exclusion {EnumNames.NameOf(subject)} → {EnumNames.NameOf(exclusion.Other)} "
@@ -291,15 +287,7 @@ public static class Catalogue
 	public static CatalogueData Load(string yaml) => Build(YamlConverter.ToJsonNode(yaml));
 
 	/// <summary>Read, parse and validate the catalogue file at <paramref name="path" />.</summary>
-	public static CatalogueData LoadFromFile(string path)
-	{
-		var data = Load(File.ReadAllText(path));
-		// Coverage is guarded here (and in CatalogueStore.LoadAndValidate), not in Build, on purpose: Build/Load is
-		// also used to construct deliberately partial catalogues (e.g. the open-subject test fixtures), which a
-		// full-vocabulary coverage check would wrongly reject. The guard belongs only on the full-load entry points.
-		GcseSubjects.ValidateCatalogueCoverage(data.Subjects);
-		return data;
-	}
+	public static CatalogueData LoadFromFile(string path) => Load(File.ReadAllText(path));
 
 	/// <summary>
 	///     Project an already-normalized catalogue document (post YAML→JSON, post schema validation) into the
@@ -360,7 +348,9 @@ public static class Catalogue
 			return bundled;
 		}
 
-		var starts = new[] { Directory.GetCurrentDirectory(), AppContext.BaseDirectory };
+		var starts = new[] {
+			Directory.GetCurrentDirectory(), AppContext.BaseDirectory,
+		};
 		foreach (var start in starts) {
 			for (var dir = new DirectoryInfo(start); dir is not null; dir = dir.Parent) {
 				var candidate = Path.Combine(dir.FullName, DefaultRelativePath);

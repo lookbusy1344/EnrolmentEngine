@@ -85,9 +85,9 @@ internal sealed class RatingEvaluator(
 	private EligibilityGate EvaluateEligibility(IReadOnlyList<RuleResultTree> results)
 	{
 		var reasons = results
-			.Where(static r => !r.IsSuccess)
-			.Select(result => EligibilityFailureReason(result))
-			.ToList();
+					  .Where(static r => !r.IsSuccess)
+					  .Select(result => EligibilityFailureReason(result))
+					  .ToList();
 
 		return new(reasons.Count == 0, EquatableArray.CopyOf(reasons));
 	}
@@ -230,13 +230,26 @@ internal sealed class RatingEvaluator(
 			SubjectRatingsWorkflow, $"rule name '{ruleName}' is not a valid '<subject>{RuleNameSeparator}<rating>' pair");
 	}
 
+	/// <summary>
+	///     Whether <paramref name="ruleName" /> is one of the three Standard eligibility rules with
+	///     specialised, threshold-aware wording (§ EligibilityFailureReason) rather than the generic
+	///     SuccessEvent-derived fallback. Any other rule name — including every top-N GCSE aggregate rule
+	///     an auxiliary policy declares — must carry a SuccessEvent (enforced by
+	///     <see cref="Authoring.WorkflowLinter" />) so its failure reason can still be derived rather than
+	///     hand-authored per rule.
+	/// </summary>
+	internal static bool IsSpecialisedEligibilityRule(string? ruleName) =>
+		ruleName is EnglishLanguagePassRule or MathsPassRule or EnoughPassesRule;
+
 	private string EligibilityFailureReason(RuleResultTree result) =>
 		result.Rule.RuleName switch {
 			EnglishLanguagePassRule => $"GCSE English Language below the pass grade ({Thresholds.PassGrade})",
 			MathsPassRule => $"GCSE Maths below the pass grade ({Thresholds.PassGrade})",
 			EnoughPassesRule => $"Fewer than the required number of GCSE passes ({Thresholds.MinPasses} at grade {Thresholds.PassGrade} or above)",
+			_ when !string.IsNullOrWhiteSpace(result.Rule.SuccessEvent) => $"Not met: {result.Rule.SuccessEvent}",
 			_ => throw new WorkflowProbeException(
-				EligibilityWorkflow, $"unknown eligibility rule '{result.Rule.RuleName}' cannot be projected into a threshold-aware failure reason"),
+				EligibilityWorkflow,
+				$"eligibility rule '{result.Rule.RuleName}' has no SuccessEvent to project into a failure reason"),
 		};
 }
 
@@ -253,13 +266,36 @@ internal sealed class GcseFacts(IEnumerable<GcseResult> gcses)
 	// scale so it tracks Thresholds.MinGcseGrade rather than drifting from a hard-coded literal.
 	private const int NotTaken = Thresholds.MinGcseGrade - 1;
 
-	// Defensive against a repeated subject key: keep the best grade (real inputs come from a
-	// dictionary and carry no duplicates, but the engine inputs are a plain list).
+	// Best grade per distinct subject key (defensive against a repeated subject key: real inputs come
+	// from a dictionary and carry no duplicates, but the engine inputs are a plain list). Grouped once
+	// and shared by the keyed lookup and the descending top-N projection below.
 	private readonly IReadOnlyDictionary<string, int> byKey = gcses
-		.GroupBy(static g => g.Subject, StringComparer.OrdinalIgnoreCase)
-		.ToDictionary(static grp => grp.Key, static grp => grp.Max(static g => g.Grade), StringComparer.OrdinalIgnoreCase);
+															  .GroupBy(static g => g.Subject, StringComparer.OrdinalIgnoreCase)
+															  .ToDictionary(static grp => grp.Key, static grp => grp.Max(static g => g.Grade), StringComparer.OrdinalIgnoreCase);
+
+	// One descending projection over the best-grade-per-subject values, materialised once and reused by
+	// every BestTotal/BestAverage call for this evaluation rather than re-sorted per top-N rule.
+	private readonly IReadOnlyList<int> descending = [
+		.. gcses
+		   .GroupBy(static g => g.Subject, StringComparer.OrdinalIgnoreCase)
+		   .Select(static grp => grp.Max(static g => g.Grade))
+		   .OrderDescending(),
+	];
+
+	/// <summary>The number of distinct submitted GCSE subjects.</summary>
+	public int Count => descending.Count;
 
 	public int Grade(string subject) => byKey.GetValueOrDefault(subject, NotTaken);
+
+	/// <summary>The sum of the best <paramref name="count" /> grades (fewer submitted GCSEs sum only what exists).</summary>
+	public int BestTotal(int count) => descending.Take(count).Sum();
+
+	/// <summary>The mean of the best <paramref name="count" /> grades (0.0 when no GCSEs were submitted).</summary>
+	public double BestAverage(int count)
+	{
+		var taken = descending.Take(count).ToList();
+		return taken.Count == 0 ? 0.0 : taken.Average();
+	}
 }
 
 /// <summary>

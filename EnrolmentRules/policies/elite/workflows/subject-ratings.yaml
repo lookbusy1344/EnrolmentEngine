@@ -1,0 +1,192 @@
+# Elite auxiliary policy — per-subject entry + rating tiers for the fourteen offered A-levels (Biology,
+# Chemistry, Economics, English Language, English Literature, French, Further Mathematics, Geography,
+# History, Mathematics, Physics, Politics, Psychology, Religious Studies — standing in for "Philosophy &
+# Theology", see data/catalogue.yaml). Tier shape is deliberately different from Standard's: published
+# Elite minimums are hard availability rules, so
+#   green  = the hard Elite entry clause AND the configured advisory prediction/DfE-evidence clause;
+#   amber  = the hard Elite entry clause alone;
+#   red    = unconditional catch-all.
+# A student who meets the published entry grade is therefore never red merely because prediction/DfE
+# evidence is weak — evidence only ever promotes amber to green, never demotes entry-met to red. Every
+# standard subject's entry clause is grade 8 in its cognate GCSE (facts.StandardEntry) except:
+#   - Further Mathematics: grade 9 in GCSE Mathematics (facts.ExceptionalEntry), plus a chosen-Mathematics
+#     prerequisite declared in data/catalogue.yaml (this policy) — not expressible inside a per-subject
+#     rating rule, since the engine cannot see ChosenALevels (§ constraint pass is host code).
+#   - Economics: no cognate GCSE exists in the shared GCSE vocabulary, so its configured related
+#     discipline is GCSE Mathematics at facts.StandardEntry (mirrors the Standard policy's own Economics
+#     tier, which already gates on GCSE Maths for the same reason).
+#   - Religious Studies ("Philosophy & Theology"): no cognate GCSE exists either; its configured related
+#     discipline is GCSE History at facts.StandardEntry (the closest essay-based humanities GCSE already
+#     offered).
+#   - Every other subject (English Language, English Literature, French, Geography, History, Mathematics,
+#     Physics, Politics, Psychology): its own cognate GCSE only; no configured related discipline.
+WorkflowName: 'subject-ratings'
+Rules:
+  - RuleName: 'biology:green'
+    SuccessEvent: 'Entry met (GCSE Biology at grade 8 or above); predicted A-level grade at or above the green threshold'
+    Expression: >-
+      facts.Gcse("biology") >= facts.StandardEntry && facts.Predicted("biology") >= ALevelGrade.D && facts.DfeProbabilityAtOrAbove("biology", ALevelGrade.D) >= facts.MinDfeGreenProbabilityAtOrAbove
+  - RuleName: 'biology:amber'
+    SuccessEvent: 'Entry met (GCSE Biology at grade 8 or above)'
+    Expression: >-
+      facts.Gcse("biology") >= facts.StandardEntry
+  - RuleName: 'biology:red'
+    SuccessEvent: 'Entry requirement unmet (GCSE Biology below grade 8)'
+    Expression: >-
+      true
+  - RuleName: 'chemistry:green'
+    SuccessEvent: 'Entry met (GCSE Chemistry at grade 8 or above); predicted A-level grade at or above the green threshold'
+    Expression: >-
+      facts.Gcse("chemistry") >= facts.StandardEntry && facts.Predicted("chemistry") >= ALevelGrade.D && facts.DfeProbabilityAtOrAbove("chemistry", ALevelGrade.D) >= facts.MinDfeGreenProbabilityAtOrAbove
+  - RuleName: 'chemistry:amber'
+    SuccessEvent: 'Entry met (GCSE Chemistry at grade 8 or above)'
+    Expression: >-
+      facts.Gcse("chemistry") >= facts.StandardEntry
+  - RuleName: 'chemistry:red'
+    SuccessEvent: 'Entry requirement unmet (GCSE Chemistry below grade 8)'
+    Expression: >-
+      true
+  - RuleName: 'economics:green'
+    SuccessEvent: 'Entry met (GCSE Mathematics at grade 8 or above, the configured related discipline); predicted A-level grade at or above the green threshold'
+    Expression: >-
+      facts.Gcse("maths") >= facts.StandardEntry && facts.Predicted("economics") >= ALevelGrade.D && facts.DfeProbabilityAtOrAbove("economics", ALevelGrade.D) >= facts.MinDfeGreenProbabilityAtOrAbove
+  - RuleName: 'economics:amber'
+    SuccessEvent: 'Entry met (GCSE Mathematics at grade 8 or above, the configured related discipline)'
+    Expression: >-
+      facts.Gcse("maths") >= facts.StandardEntry
+  - RuleName: 'economics:red'
+    SuccessEvent: 'Entry requirement unmet (GCSE Mathematics below grade 8)'
+    Expression: >-
+      true
+  - RuleName: 'further_maths:green'
+    SuccessEvent: 'Entry met (GCSE Mathematics at grade 9); predicted A-level grade at or above the green threshold'
+    Expression: >-
+      facts.Gcse("maths") >= facts.ExceptionalEntry && facts.Predicted("further_maths") >= ALevelGrade.D && facts.DfeProbabilityAtOrAbove("further_maths", ALevelGrade.D) >= facts.MinDfeGreenProbabilityAtOrAbove
+  - RuleName: 'further_maths:amber'
+    SuccessEvent: 'Entry met (GCSE Mathematics at grade 9)'
+    Expression: >-
+      facts.Gcse("maths") >= facts.ExceptionalEntry
+  - RuleName: 'further_maths:red'
+    SuccessEvent: 'Entry requirement unmet (GCSE Mathematics below grade 9)'
+    Expression: >-
+      true
+  - RuleName: 'history:green'
+    SuccessEvent: 'Entry met (GCSE History at grade 8 or above); predicted A-level grade at or above the green threshold'
+    Expression: >-
+      facts.Gcse("history") >= facts.StandardEntry && facts.Predicted("history") >= ALevelGrade.D && facts.DfeProbabilityAtOrAbove("history", ALevelGrade.D) >= facts.MinDfeGreenProbabilityAtOrAbove
+  - RuleName: 'history:amber'
+    SuccessEvent: 'Entry met (GCSE History at grade 8 or above)'
+    Expression: >-
+      facts.Gcse("history") >= facts.StandardEntry
+  - RuleName: 'history:red'
+    SuccessEvent: 'Entry requirement unmet (GCSE History below grade 8)'
+    Expression: >-
+      true
+  - RuleName: 'maths:green'
+    SuccessEvent: 'Entry met (GCSE Mathematics at grade 8 or above); predicted A-level grade at or above the green threshold'
+    Expression: >-
+      facts.Gcse("maths") >= facts.StandardEntry && facts.Predicted("maths") >= ALevelGrade.D && facts.DfeProbabilityAtOrAbove("maths", ALevelGrade.D) >= facts.MinDfeGreenProbabilityAtOrAbove
+  - RuleName: 'maths:amber'
+    SuccessEvent: 'Entry met (GCSE Mathematics at grade 8 or above)'
+    Expression: >-
+      facts.Gcse("maths") >= facts.StandardEntry
+  - RuleName: 'maths:red'
+    SuccessEvent: 'Entry requirement unmet (GCSE Mathematics below grade 8)'
+    Expression: >-
+      true
+  - RuleName: 'physics:green'
+    SuccessEvent: 'Entry met (GCSE Physics at grade 8 or above); predicted A-level grade at or above the green threshold'
+    Expression: >-
+      facts.Gcse("physics") >= facts.StandardEntry && facts.Predicted("physics") >= ALevelGrade.D && facts.DfeProbabilityAtOrAbove("physics", ALevelGrade.D) >= facts.MinDfeGreenProbabilityAtOrAbove
+  - RuleName: 'physics:amber'
+    SuccessEvent: 'Entry met (GCSE Physics at grade 8 or above)'
+    Expression: >-
+      facts.Gcse("physics") >= facts.StandardEntry
+  - RuleName: 'physics:red'
+    SuccessEvent: 'Entry requirement unmet (GCSE Physics below grade 8)'
+    Expression: >-
+      true
+  - RuleName: 'psychology:green'
+    SuccessEvent: 'Entry met (GCSE Psychology at grade 8 or above); predicted A-level grade at or above the green threshold'
+    Expression: >-
+      facts.Gcse("psychology") >= facts.StandardEntry && facts.Predicted("psychology") >= ALevelGrade.D && facts.DfeProbabilityAtOrAbove("psychology", ALevelGrade.D) >= facts.MinDfeGreenProbabilityAtOrAbove
+  - RuleName: 'psychology:amber'
+    SuccessEvent: 'Entry met (GCSE Psychology at grade 8 or above)'
+    Expression: >-
+      facts.Gcse("psychology") >= facts.StandardEntry
+  - RuleName: 'psychology:red'
+    SuccessEvent: 'Entry requirement unmet (GCSE Psychology below grade 8)'
+    Expression: >-
+      true
+  - RuleName: 'english_language:green'
+    SuccessEvent: 'Entry met (GCSE English Language at grade 8 or above); predicted A-level grade at or above the green threshold'
+    Expression: >-
+      facts.Gcse("english_language") >= facts.StandardEntry && facts.Predicted("english_language") >= ALevelGrade.D && facts.DfeProbabilityAtOrAbove("english_language", ALevelGrade.D) >= facts.MinDfeGreenProbabilityAtOrAbove
+  - RuleName: 'english_language:amber'
+    SuccessEvent: 'Entry met (GCSE English Language at grade 8 or above)'
+    Expression: >-
+      facts.Gcse("english_language") >= facts.StandardEntry
+  - RuleName: 'english_language:red'
+    SuccessEvent: 'Entry requirement unmet (GCSE English Language below grade 8)'
+    Expression: >-
+      true
+  - RuleName: 'english_literature:green'
+    SuccessEvent: 'Entry met (GCSE English Literature at grade 8 or above); predicted A-level grade at or above the green threshold'
+    Expression: >-
+      facts.Gcse("english_literature") >= facts.StandardEntry && facts.Predicted("english_literature") >= ALevelGrade.D && facts.DfeProbabilityAtOrAbove("english_literature", ALevelGrade.D) >= facts.MinDfeGreenProbabilityAtOrAbove
+  - RuleName: 'english_literature:amber'
+    SuccessEvent: 'Entry met (GCSE English Literature at grade 8 or above)'
+    Expression: >-
+      facts.Gcse("english_literature") >= facts.StandardEntry
+  - RuleName: 'english_literature:red'
+    SuccessEvent: 'Entry requirement unmet (GCSE English Literature below grade 8)'
+    Expression: >-
+      true
+  - RuleName: 'french:green'
+    SuccessEvent: 'Entry met (GCSE French at grade 8 or above); predicted A-level grade at or above the green threshold'
+    Expression: >-
+      facts.Gcse("french") >= facts.StandardEntry && facts.Predicted("french") >= ALevelGrade.D && facts.DfeProbabilityAtOrAbove("french", ALevelGrade.D) >= facts.MinDfeGreenProbabilityAtOrAbove
+  - RuleName: 'french:amber'
+    SuccessEvent: 'Entry met (GCSE French at grade 8 or above)'
+    Expression: >-
+      facts.Gcse("french") >= facts.StandardEntry
+  - RuleName: 'french:red'
+    SuccessEvent: 'Entry requirement unmet (GCSE French below grade 8)'
+    Expression: >-
+      true
+  - RuleName: 'geography:green'
+    SuccessEvent: 'Entry met (GCSE Geography at grade 8 or above); predicted A-level grade at or above the green threshold'
+    Expression: >-
+      facts.Gcse("geography") >= facts.StandardEntry && facts.Predicted("geography") >= ALevelGrade.D && facts.DfeProbabilityAtOrAbove("geography", ALevelGrade.D) >= facts.MinDfeGreenProbabilityAtOrAbove
+  - RuleName: 'geography:amber'
+    SuccessEvent: 'Entry met (GCSE Geography at grade 8 or above)'
+    Expression: >-
+      facts.Gcse("geography") >= facts.StandardEntry
+  - RuleName: 'geography:red'
+    SuccessEvent: 'Entry requirement unmet (GCSE Geography below grade 8)'
+    Expression: >-
+      true
+  - RuleName: 'politics:green'
+    SuccessEvent: 'Entry met (GCSE Politics at grade 8 or above); predicted A-level grade at or above the green threshold'
+    Expression: >-
+      facts.Gcse("politics") >= facts.StandardEntry && facts.Predicted("politics") >= ALevelGrade.D && facts.DfeProbabilityAtOrAbove("politics", ALevelGrade.D) >= facts.MinDfeGreenProbabilityAtOrAbove
+  - RuleName: 'politics:amber'
+    SuccessEvent: 'Entry met (GCSE Politics at grade 8 or above)'
+    Expression: >-
+      facts.Gcse("politics") >= facts.StandardEntry
+  - RuleName: 'politics:red'
+    SuccessEvent: 'Entry requirement unmet (GCSE Politics below grade 8)'
+    Expression: >-
+      true
+  - RuleName: 'religious_studies:green'
+    SuccessEvent: 'Entry met (GCSE History at grade 8 or above, the configured related discipline); predicted A-level grade at or above the green threshold'
+    Expression: >-
+      facts.Gcse("history") >= facts.StandardEntry && facts.Predicted("religious_studies") >= ALevelGrade.D && facts.DfeProbabilityAtOrAbove("religious_studies", ALevelGrade.D) >= facts.MinDfeGreenProbabilityAtOrAbove
+  - RuleName: 'religious_studies:amber'
+    SuccessEvent: 'Entry met (GCSE History at grade 8 or above, the configured related discipline)'
+    Expression: >-
+      facts.Gcse("history") >= facts.StandardEntry
+  - RuleName: 'religious_studies:red'
+    SuccessEvent: 'Entry requirement unmet (GCSE History below grade 8)'
+    Expression: >-
+      true

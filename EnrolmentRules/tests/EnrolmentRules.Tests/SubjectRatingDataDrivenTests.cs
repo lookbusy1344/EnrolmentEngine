@@ -61,7 +61,7 @@ public sealed class SubjectRatingDataDrivenTests
 			profile.PredictedGrades.Select(static grade => grade.Subject).Should().Contain(subject);
 			result.Recommendations.Should().HaveCount(catalogue.Subjects.Count);
 			result.Recommendations.Should()
-				.ContainSingle(recommendation => recommendation.Subject == subject && recommendation.Rating == Rating.Green);
+				  .ContainSingle(recommendation => recommendation.Subject == subject && recommendation.Rating == Rating.Green);
 		}
 		finally {
 			Directory.Delete(fixture, true);

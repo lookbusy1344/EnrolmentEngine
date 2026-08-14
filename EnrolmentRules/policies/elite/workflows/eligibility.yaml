@@ -1,0 +1,32 @@
+# Elite auxiliary policy — eligibility gate. Published requirements:
+#   - GCSE English Language at grade 7 or above
+#   - GCSE Mathematics at grade 7 or above
+#   - at least eight GCSE results
+#   - the best eight GCSEs total at least 60 points
+#   - the top seven GCSEs average at least 7.0
+# policy.PassGrade carries the English/Maths grade-7 bar (data/thresholds.yaml, this policy); the
+# best-eight/top-seven knobs are the policy.BestGcseCount/MinBestGcsePoints/TopGcseAverageCount/
+# MinTopGcseAverage knobs the same file configures. There is no separate pass-count rule: Standard's
+# EnoughPasses has no Elite equivalent, replaced entirely by the explicit count/total/average rules below.
+WorkflowName: 'eligibility'
+Rules:
+  - RuleName: 'EnglishLanguagePass'
+    SuccessEvent: 'GCSE English Language at grade 7 or above'
+    Expression: >-
+      lookup.Grade("english_language") >= policy.PassGrade
+  - RuleName: 'MathsPass'
+    SuccessEvent: 'GCSE Mathematics at grade 7 or above'
+    Expression: >-
+      lookup.Grade("maths") >= policy.PassGrade
+  - RuleName: 'AtLeastEightGcses'
+    SuccessEvent: 'At least eight GCSE results submitted'
+    Expression: >-
+      lookup.Count >= policy.BestGcseCount
+  - RuleName: 'BestEightTotal'
+    SuccessEvent: 'Best eight GCSE total at or above the minimum'
+    Expression: >-
+      lookup.BestTotal(policy.BestGcseCount) >= policy.MinBestGcsePoints
+  - RuleName: 'TopSevenAverage'
+    SuccessEvent: 'Top seven GCSE average at or above the minimum'
+    Expression: >-
+      lookup.BestAverage(policy.TopGcseAverageCount) >= policy.MinTopGcseAverage

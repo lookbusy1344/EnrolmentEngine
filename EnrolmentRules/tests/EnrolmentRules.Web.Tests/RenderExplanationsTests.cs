@@ -12,7 +12,9 @@ public sealed class RenderExplanationsTests : IClassFixture<WebAppFactory>
 	[Fact]
 	public async Task Saving_a_known_valid_student_renders_green_amber_and_red_explanations()
 	{
-		using var client = factory.CreateClient(new() { AllowAutoRedirect = false });
+		using var client = factory.CreateClient(new() {
+			AllowAutoRedirect = false,
+		});
 
 		using var getResponse = await client.GetAsync(new Uri("/razor", UriKind.Relative));
 		var token = await ExtractAntiForgeryTokenAsync(getResponse);
@@ -24,8 +26,7 @@ public sealed class RenderExplanationsTests : IClassFixture<WebAppFactory>
 			["Hobbies[0]"] = "chess_club",
 		};
 		var gcses = new (string Subject, int Grade)[] {
-			("maths", 8), ("english_language", 8), ("english_literature", 8), ("physics", 8), ("chemistry", 8), ("biology", 8), ("french", 8),
-			("german", 8), ("physical_education", 8), ("computer_studies", 8), ("history", 8), ("music", 8), ("art", 8),
+			("maths", 8), ("english_language", 8), ("english_literature", 8), ("physics", 8), ("chemistry", 8), ("biology", 8), ("french", 8), ("german", 8), ("physical_education", 8), ("computer_studies", 8), ("history", 8), ("music", 8), ("art", 8),
 		};
 		for (var i = 0; i < gcses.Length; ++i) {
 			form[$"Gcses[{i}].Subject"] = gcses[i].Subject;

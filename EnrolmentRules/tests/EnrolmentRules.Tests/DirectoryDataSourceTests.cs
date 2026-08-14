@@ -14,7 +14,7 @@ public sealed class DirectoryDataSourceTests
 		var returnType = typeof(IEnrolmentDataSource).GetMethod(nameof(IEnrolmentDataSource.OpenWorkflows))!.ReturnType;
 
 		returnType.GetGenericArguments().Should().ContainSingle()
-			.Which.Should().Be<WorkflowContent>();
+				  .Which.Should().Be<WorkflowContent>();
 	}
 
 	[Fact]

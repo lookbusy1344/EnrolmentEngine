@@ -12,8 +12,12 @@ using RulesEngine.Models;
 [MemoryDiagnoser]
 public class EnrolmentBenchmarks
 {
+	private const int EliteGateNearMissGrade = 6;
+	private const int EliteStrongGrade = 8;
 	private StudentInput adviseStudent = null!;
 	private StudentInput[] batch = [];
+	private EnrolmentEngine eliteEngine = null!;
+	private StudentInput eliteGateNearMissStudent = null!;
 	private EnrolmentEngine engine = null!;
 	private StudentInput student = null!;
 	private IReadOnlyList<Workflow> workflows = [];
@@ -32,6 +36,23 @@ public class EnrolmentBenchmarks
 		var scale = QualificationScaleStore.LoadAndValidate(DataDir);
 		engine = new(new(rulesEngine, thresholds, catalogue, scale), catalogue, DateOnly.FromDateTime(DateTime.Today));
 		student = StrongStudent("S-BENCH-1", "plays_piano");
+		eliteEngine = EnrolmentEngine.Create(
+			new OverlayEnrolmentDataSource(
+				new DirectoryDataSource(
+					Path.Combine(RepoRoot, "policies", "elite", "workflows"),
+					Path.Combine(RepoRoot, "policies", "elite", "data")),
+				new DirectoryDataSource(WorkflowsDir, DataDir)),
+			DateOnly.FromDateTime(DateTime.Today));
+		eliteGateNearMissStudent = new("S-ELITE-ADVISE", EquatableDictionaryFactory.CopyOf(new Dictionary<string, int> {
+			["english_language"] = EliteGateNearMissGrade,
+			["maths"] = EliteGateNearMissGrade,
+			["biology"] = EliteStrongGrade,
+			["chemistry"] = EliteStrongGrade,
+			["history"] = EliteStrongGrade,
+			["physics"] = EliteStrongGrade,
+			["psychology"] = EliteStrongGrade,
+			["french"] = EliteStrongGrade,
+		}), []);
 
 		// Worst case for the counterfactual advisor: an eligible-but-middling student whose subjects are
 		// mostly amber/red, so the advisor runs a grade search per amber/red subject and each search expands
@@ -82,6 +103,9 @@ public class EnrolmentBenchmarks
 
 	[Benchmark]
 	public AdviceResult Advise() => engine.Advise(adviseStudent);
+
+	[Benchmark]
+	public AdviceResult AdviseEliteGateNearMiss() => eliteEngine.Advise(eliteGateNearMissStudent);
 
 	private static StudentInput StrongStudent(string id, params string[] hobbies) =>
 		new(id, EquatableDictionaryFactory.CopyOf(new Dictionary<string, int> {

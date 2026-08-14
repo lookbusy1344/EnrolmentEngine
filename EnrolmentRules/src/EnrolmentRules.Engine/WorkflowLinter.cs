@@ -97,8 +97,8 @@ public static partial class WorkflowLinter
 			}
 
 			var byRating = subjectRules
-				.GroupBy(static entry => entry.Rating)
-				.ToDictionary(static group => group.Key, static group => group.OrderBy(static entry => entry.Index).ToArray());
+						   .GroupBy(static entry => entry.Rating)
+						   .ToDictionary(static group => group.Key, static group => group.OrderBy(static entry => entry.Index).ToArray());
 
 			foreach (var rating in Enum.GetValues<Rating>()) {
 				if (!byRating.TryGetValue(rating, out var matches)) {
@@ -156,8 +156,8 @@ public static partial class WorkflowLinter
 		}
 
 		foreach (var subject in parsedRules.Keys
-					 .Where(subject => !catalogue.Subjects.Contains(subject))
-					 .OrderBy(static subject => EnumNames.NameOf(subject), StringComparer.Ordinal)) {
+										   .Where(subject => !catalogue.Subjects.Contains(subject))
+										   .OrderBy(static subject => EnumNames.NameOf(subject), StringComparer.Ordinal)) {
 			yield return new(
 				workflowName,
 				EnumNames.NameOf(subject),
@@ -224,35 +224,81 @@ public static partial class WorkflowLinter
 	private static bool References(string? expression, string member) =>
 		expression is not null && expression.Contains(member, StringComparison.Ordinal);
 
-	private static IEnumerable<LintFinding> LintEligibility(string workflowName, IReadOnlyList<Rule> rules)
+	// Structural invariants only: an auxiliary policy may declare additional eligibility rules beyond the
+	// three Standard requirements (English pass, Maths pass, enough passes — themselves no longer
+	// hard-coded here), including top-N GCSE aggregate rules. What every eligibility workflow must still
+	// guarantee is a non-empty, uniquely-named rule set with a SuccessEvent to project into a failure
+	// reason for any rule RatingEvaluator does not specially recognise (§ EligibilityFailureReason).
+	private static IEnumerable<LintFinding> LintEligibility(string workflowName, Rule[] rules)
 	{
-		var expected = new[] { "EnglishLanguagePass", "MathsPass", "EnoughPasses" };
-		var seen = rules.Select(static rule => rule.RuleName).ToArray();
-
-		if (!seen.SequenceEqual(expected, StringComparer.Ordinal)) {
+		if (rules.Length == 0) {
 			yield return new(
 				workflowName,
 				RatingEvaluator.EligibilityWorkflow,
 				LintSeverity.Error,
-				"eligibility must contain exactly EnglishLanguagePass, MathsPass and EnoughPasses in that order");
+				"eligibility must declare at least one rule");
+			yield break;
 		}
 
-		foreach (var ruleName in seen.Where(ruleName => !expected.Contains(ruleName, StringComparer.Ordinal))) {
+		foreach (var duplicate in rules
+								  .GroupBy(static rule => rule.RuleName, StringComparer.Ordinal)
+								  .Where(static group => group.Count() > 1)
+								  .Select(static group => group.Key)) {
 			yield return new(
 				workflowName,
-				ruleName,
+				duplicate,
 				LintSeverity.Error,
-				$"eligibility contains unexpected rule '{ruleName}'");
+				$"eligibility declares '{duplicate}' more than once");
 		}
 
-		foreach (var ruleName in expected.Except(seen, StringComparer.Ordinal)) {
-			yield return new(
-				workflowName,
-				ruleName,
-				LintSeverity.Error,
-				$"eligibility is missing required rule '{ruleName}'");
+		foreach (var rule in rules) {
+			if (string.IsNullOrWhiteSpace(rule.RuleName)) {
+				yield return new(
+					workflowName,
+					rule.RuleName,
+					LintSeverity.Error,
+					"eligibility rule has a blank RuleName");
+			}
+
+			if (RatingEvaluator.IsSpecialisedEligibilityRule(rule.RuleName) && !MatchesSpecialisedEligibilityShape(rule)) {
+				yield return new(
+					workflowName,
+					rule.RuleName,
+					LintSeverity.Error,
+					$"eligibility rule '{rule.RuleName}' uses specialised failure wording and must retain its canonical expression shape");
+			}
+
+			if (!RatingEvaluator.IsSpecialisedEligibilityRule(rule.RuleName) && string.IsNullOrWhiteSpace(rule.SuccessEvent)) {
+				yield return new(
+					workflowName,
+					rule.RuleName,
+					LintSeverity.Error,
+					$"eligibility rule '{rule.RuleName}' has no SuccessEvent to project into a failure reason");
+			}
 		}
 	}
+
+	private static bool MatchesSpecialisedEligibilityShape(Rule rule) =>
+		rule.RuleName switch {
+			RatingEvaluator.EnglishLanguagePassRule =>
+				SameExpression(rule.Expression, "lookup.Grade(\"english_language\") >= policy.PassGrade"),
+			RatingEvaluator.MathsPassRule =>
+				SameExpression(rule.Expression, "lookup.Grade(\"maths\") >= policy.PassGrade"),
+			RatingEvaluator.EnoughPassesRule => MatchesEnoughPassesShape(rule),
+			_ => true,
+		};
+
+	private static bool MatchesEnoughPassesShape(Rule rule) =>
+		SameExpression(rule.Expression, "passCount >= policy.MinPasses")
+		&& rule.LocalParams?.ToArray() is [var passCount]
+		&& passCount.Name == "passCount"
+		&& SameExpression(passCount.Expression, "gcses.Count(g => g.Grade >= policy.PassGrade)");
+
+	private static bool SameExpression(string? actual, string expected) =>
+		actual is not null && RemoveWhitespace(actual) == RemoveWhitespace(expected);
+
+	private static string RemoveWhitespace(string expression) =>
+		string.Concat(expression.Where(static character => !char.IsWhiteSpace(character)));
 
 	private static IEnumerable<LintFinding> LintExpressions(string workflowName, IReadOnlyList<Rule> rules, CatalogueData catalogue)
 	{

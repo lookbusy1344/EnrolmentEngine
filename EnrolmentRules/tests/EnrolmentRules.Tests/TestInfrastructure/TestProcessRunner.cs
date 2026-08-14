@@ -92,8 +92,7 @@ internal static class TestProcessRunner
 				process.Kill(true);
 			}
 		}
-		catch (InvalidOperationException) {
-		}
+		catch (InvalidOperationException) { }
 	}
 
 	private static string BuildTimeoutMessage(
@@ -105,18 +104,18 @@ internal static class TestProcessRunner
 	{
 		var builder = new StringBuilder();
 		_ = builder.Append("Process timed out after ")
-			.Append(timeout)
-			.Append(": ")
-			.Append(fileName);
+				   .Append(timeout)
+				   .Append(": ")
+				   .Append(fileName);
 		foreach (var argument in arguments) {
 			_ = builder.Append(' ').Append(argument);
 		}
 
 		_ = builder.AppendLine()
-			.AppendLine("stdout:")
-			.AppendLine(stdout)
-			.AppendLine("stderr:")
-			.Append(stderr);
+				   .AppendLine("stdout:")
+				   .AppendLine(stdout)
+				   .AppendLine("stderr:")
+				   .Append(stderr);
 		return builder.ToString();
 	}
 }

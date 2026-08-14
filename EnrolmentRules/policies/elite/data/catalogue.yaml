@@ -1,0 +1,55 @@
+# Elite auxiliary policy catalogue — exactly its fourteen offered A-levels (§ catalogue means offered
+# A-levels, not recognised GCSEs). No exclusion, restudy, own-time or prior-equivalence rule is carried
+# over from the Standard catalogue: none is published for Elite, so none is authored here. The only
+# cross-subject relationship is Further Mathematics' chosen-Mathematics prerequisite, matching the
+# published requirement that Further Mathematics builds on Mathematics. priority_weight and regression
+# values are carried over unchanged from data/catalogue.yaml for the same subject — the same national
+# statistical relationship applies regardless of which policy is asking. "Philosophy & Theology" is
+# modelled as the existing religious_studies subject (its GCSE-vocabulary key, matrix row and display
+# name) — no distinct A-level or DfE data exists for that exact title.
+subjects:
+  - subject: biology
+    priority_weight: 44
+    regression: { slope: 0.90, intercept: -2.30 }
+  - subject: chemistry
+    priority_weight: 46
+    regression: { slope: 0.90, intercept: -2.30 }
+  - subject: economics
+    priority_weight: 45
+    regression: { slope: 0.90, intercept: -2.10 }
+  - subject: english_language
+    priority_weight: 41
+    regression: { slope: 0.85, intercept: -1.75 }
+  - subject: english_literature
+    priority_weight: 42
+    regression: { slope: 0.85, intercept: -1.80 }
+  - subject: french
+    priority_weight: 39
+    regression: { slope: 0.85, intercept: -1.85 }
+  - subject: further_maths
+    priority_weight: 56
+    regression: { slope: 1.00, intercept: -2.00 }
+    prerequisites:
+      - any_of: [ maths ]
+        requires: chosen
+  - subject: geography
+    priority_weight: 49
+    regression: { slope: 0.85, intercept: -1.85 }
+  - subject: history
+    priority_weight: 40
+    regression: { slope: 0.85, intercept: -1.90 }
+  - subject: maths
+    priority_weight: 50
+    regression: { slope: 0.80, intercept: -1.00 }
+  - subject: physics
+    priority_weight: 48
+    regression: { slope: 0.90, intercept: -2.20 }
+  - subject: politics
+    priority_weight: 51
+    regression: { slope: 0.85, intercept: -1.90 }
+  - subject: psychology
+    priority_weight: 47
+    regression: { slope: 0.85, intercept: -1.35 }
+  - subject: religious_studies
+    priority_weight: 52
+    regression: { slope: 0.85, intercept: -1.80 }

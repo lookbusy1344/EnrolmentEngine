@@ -5,10 +5,23 @@
 	ViewData["Title"] = "Enrolment · server rendered";
 }
 
+@{
+	var otherPolicy = Model.AvailablePolicies.FirstOrDefault(p => p.Id != Model.SelectedPolicy.Id);
+	var availableChoiceCount = Model.Basket.Count(entry => entry.Status == ChoiceStatus.Available);
+	var maxChoices = Model.Results?.Comparison?.MaxChosenALevels;
+	var exceedsChoiceLimit = maxChoices is int limit && availableChoiceCount > limit;
+}
+
 <section class="hero" aria-labelledby="hero-heading">
 	<p class="hero-eyebrow">GCSEs in → A-Levels out
 		<span class="mode-tag">Server rendered</span>
-		<a class="mode-switch" href="/app">Dynamic version</a>
+		<a class="mode-switch" href="/app?policy=@Model.SelectedPolicy.Id.Value">Dynamic version</a>
+	</p>
+	<p class="policy-switch" aria-label="Selected enrolment policy">
+		<strong>@Model.SelectedPolicy.DisplayName</strong>
+		@if (otherPolicy is not null) {
+			<a href="/razor?policy=@otherPolicy.Id.Value">Switch to @otherPolicy.DisplayName</a>
+		}
 	</p>
 	<h1 id="hero-heading">See how your skills can <span class="grow">grow</span>.</h1>
 	<p class="hero-lede">Add your grades and interests. We'll show which A-Levels are wide open, worth a look, or not a fit yet — so you can plant the
@@ -23,18 +36,25 @@
 	</svg>
 </section>
 
-<section class="chosen-summary sticky-top bg-body border-bottom py-2 mb-4" aria-labelledby="chosen-heading">
+<section
+	class="chosen-summary sticky-top bg-body border-bottom py-2 mb-4 @(exceedsChoiceLimit ? "bg-danger-subtle border border-danger rounded px-3" : null)"
+	aria-labelledby="chosen-heading">
 	<h2 id="chosen-heading" class="h5">Your basket</h2>
 	@if (Model.Basket.Count == 0) {
 		<p class="mb-0 text-body-secondary">None chosen yet.</p>
 	} else {
 		<ul class="list-inline mb-0">
-			@* An amber choice keeps its amber pill and carries the word "Borderline", so the flag survives
-			   for anyone who cannot use the colour. *@
+			@* An amber choice keeps its amber pill and carries the word "Borderline"; an unavailable (red) or
+			   not-offered choice keeps its own status tag instead of being ejected — the flag survives for
+			   anyone who cannot use the colour, and switching policies never silently drops a selection. *@
 			@foreach (var entry in Model.Basket) {
 				<li class="list-inline-item badge @entry.CssClass rounded-pill">@TextFormatting.Prettify(entry.Subject.Value)
 					@if (entry.IsBorderline) {
-						<span class="basket-borderline-tag">Borderline</span>
+						<span class="basket-borderline-tag"> - Borderline</span>
+					} else if (entry.Status == ChoiceStatus.Unavailable) {
+						<span class="basket-status-tag"> - Unavailable</span>
+					} else if (entry.Status == ChoiceStatus.NotOffered) {
+						<span class="basket-status-tag"> - Not offered by @Model.SelectedPolicy.DisplayName</span>
 					}
 				</li>
 			}
@@ -44,15 +64,13 @@
 				Borderline choices stay in your basket, but need additional authorisation before you can enrol on them.
 			</p>
 		}
+		@if (exceedsChoiceLimit) {
+			<p id="basket-choice-limit-error" class="alert alert-danger mb-0 mt-2 py-2" role="alert">
+				Too many available choices: this policy allows at most @maxChoices, but your basket contains @availableChoiceCount. Remove a choice.
+			</p>
+		}
 	}
 </section>
-
-@if (Model.EjectedALevels.Count > 0) {
-	<div class="alert alert-warning" role="status">
-		Removed from your basket — no longer available with your current grades:
-		@string.Join(", ", Model.EjectedALevels.Select(subject => TextFormatting.Prettify(subject.Value))).
-	</div>
-}
 
 <!-- novalidate: other submit buttons opt out individually with formnovalidate; kept here too so a
      future required/pattern field doesn't silently start blocking the main submit. -->
@@ -260,19 +278,19 @@
 				}
 			</ul>
 		</div>
-	} else if (!results.Result!.Eligible) {
+	} else if (!results.Comparison!.Explanation.Eligible) {
 		<div class="alert alert-danger" role="alert">
 			<p class="fw-bold">Not eligible.</p>
 			<ul class="mb-0">
-				@foreach (var reason in results.Result.EligibilityReasons) {
+				@foreach (var reason in results.Comparison.Explanation.EligibilityReasons) {
 					<li>@reason</li>
 				}
 			</ul>
 		</div>
 	} else {
-		var choiceLimitReason = results.Result.Explanations
-			.SelectMany(e => e.Overrides)
-			.FirstOrDefault(a => a.Kind == AdjustmentKind.ChosenSubjectCap)?.Reason;
+		var choiceLimitReason = results.Comparison.Explanation.Explanations
+			                               .SelectMany(e => e.Overrides)
+			                               .FirstOrDefault(a => a.Kind == AdjustmentKind.ChosenSubjectCap)?.Reason;
 		if (choiceLimitReason is not null) {
 			<div id="choice-limit-notice" class="alert alert-info" role="status">
 				<p class="fw-bold mb-1">Choice limit reached.</p>
@@ -281,7 +299,7 @@
 		}
 
 		<div class="row row-cols-1 row-cols-md-2 row-cols-lg-3 g-3">
-			@foreach (var explanation in results.Result.Explanations) {
+			@foreach (var explanation in results.Comparison.Explanation.Explanations) {
 				var chosen = Model.ChosenALevels.Contains(explanation.Subject);
 				var canChoose = explanation.Rating != Rating.Red;
 				var reasonId = $"reason-{explanation.Subject.Value}";

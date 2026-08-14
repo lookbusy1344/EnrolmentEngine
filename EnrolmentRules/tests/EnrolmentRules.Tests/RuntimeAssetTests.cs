@@ -25,7 +25,7 @@ public sealed class RuntimeAssetTests
 		var cliProject = Path.Combine(Harness.RepoRoot, "src", "EnrolmentRules.Cli", "EnrolmentRules.Cli.csproj");
 		var publish = await TestProcessRunner.RunAsync(
 			"dotnet",
-			["publish", cliProject, "-c", "Debug", "--no-restore", "-o", publishDir],
+			["publish", cliProject, "-c", "Debug", "--no-restore", "--disable-build-servers", "-o", publishDir],
 			Harness.RepoRoot,
 			ProcessTimeout);
 
@@ -37,6 +37,16 @@ public sealed class RuntimeAssetTests
 		File.Exists(Path.Combine(publishDir, "data", "dfe-transition-matrices", "gce-a-level-2019-transition-probabilities.csv")).Should().BeTrue();
 		File.Exists(Path.Combine(publishDir, "data", "catalogue.yaml")).Should().BeTrue();
 		File.Exists(Path.Combine(publishDir, "data", "catalogue.schema.json")).Should().BeTrue();
+
+		// The Elite auxiliary policy: only its own workflows/catalogue/thresholds — no copied schemas,
+		// qualifications or transition matrix (those stay single-copy above, under the shared data/ tree
+		// OverlayEnrolmentDataSource reads from at runtime).
+		File.Exists(Path.Combine(publishDir, "policies", "elite", "workflows", "eligibility.yaml")).Should().BeTrue();
+		File.Exists(Path.Combine(publishDir, "policies", "elite", "workflows", "subject-ratings.yaml")).Should().BeTrue();
+		File.Exists(Path.Combine(publishDir, "policies", "elite", "data", "catalogue.yaml")).Should().BeTrue();
+		File.Exists(Path.Combine(publishDir, "policies", "elite", "data", "thresholds.yaml")).Should().BeTrue();
+		File.Exists(Path.Combine(publishDir, "policies", "elite", "workflows", "workflow.schema.json")).Should().BeFalse();
+		File.Exists(Path.Combine(publishDir, "policies", "elite", "data", "catalogue.schema.json")).Should().BeFalse();
 
 		var executable = Path.Combine(
 			publishDir,

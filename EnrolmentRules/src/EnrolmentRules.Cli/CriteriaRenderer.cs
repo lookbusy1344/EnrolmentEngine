@@ -48,6 +48,6 @@ public static class CriteriaRenderer
 
 	private static string Title(string snakeCase) =>
 		string.Join(' ', snakeCase
-			.Split('_', StringSplitOptions.RemoveEmptyEntries)
-			.Select(static word => string.Concat(char.ToUpperInvariant(word[0]).ToString(), word[1..])));
+						 .Split('_', StringSplitOptions.RemoveEmptyEntries)
+						 .Select(static word => string.Concat(char.ToUpperInvariant(word[0]).ToString(), word[1..])));
 }

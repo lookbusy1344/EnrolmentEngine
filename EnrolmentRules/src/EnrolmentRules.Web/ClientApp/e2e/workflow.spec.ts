@@ -34,7 +34,7 @@ test.describe('Vue workflow', () => {
     await musicCard.getByRole('button', { name: 'Choose' }).click()
 
     const basket = page.locator('.chosen-summary')
-    await expect(basket.locator('li.text-bg-warning')).toContainText(['Music', 'Borderline'].join(''))
+    await expect(basket.locator('li.text-bg-warning')).toContainText('Music - Borderline')
     await expect(basket.locator('#borderline-notice')).toContainText('additional authorisation')
 
     // A green choice sits on the plain pill and does not extend the notice to itself.
@@ -48,21 +48,22 @@ test.describe('Vue workflow', () => {
     await expect(basket.locator('li.text-bg-primary')).not.toContainText('Borderline')
   })
 
-  test('lowering the GCSE grades ejects a chosen subject that is no longer available', async ({ page }) => {
+  test('lowering the GCSE grades keeps a chosen subject in the basket, flagged unavailable', async ({ page }) => {
     await page.goto('/app')
     await fillGoldenFacts(page)
 
     await page.locator('article.card').getByRole('button', { name: 'Choose' }).first().click()
-    await expect(page.locator('.chosen-summary')).not.toContainText('None chosen yet.')
+    const basket = page.locator('.chosen-summary')
+    await expect(basket).not.toContainText('None chosen yet.')
+    await expect(basket.locator('li')).toHaveCount(1)
 
-    // One grade down to a 1 is enough: the golden set is exactly `min_passes` passes, so the student
-    // drops below the eligibility gate and the chosen subject goes red and can no longer be held.
-    // Only one grade is lowered because each fact edit retires the notice before re-evaluating —
-    // further clicks would clear the very announcement this test is asserting.
+    // The golden set is exactly `min_passes` passes, so lowering one grade drops the student below the
+    // eligibility gate and the chosen subject goes red — it stays in the basket, marked unavailable,
+    // rather than being ejected.
     await setGcseGrade(page, 0, 1)
 
-    await expect(page.locator('.chosen-summary')).toContainText('None chosen yet.')
-    await expect(page.getByRole('status')).toContainText('no longer available with your current grades')
+    await expect(basket.locator('li')).toHaveCount(1)
+    await expect(basket.locator('li.text-bg-danger')).toContainText('Unavailable')
   })
 
   test('refresh restores the browser-local snapshot and re-evaluates through the API', async ({ page }) => {

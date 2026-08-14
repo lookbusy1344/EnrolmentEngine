@@ -133,11 +133,36 @@ This separation means the presentation can change without duplicating the enrolm
 receive the same recommendation from the same policy and student information.
 
 `src/EnrolmentRules.Web` is a small reference implementation of the website option. Run it locally with `./scripts/run-web.sh`, which builds the
-generated Vue assets and then watches both the C# and Vue sources, rebuilding each on change; run the focused web gate with `./scripts/verify-web.sh`.
-See
+generated Vue assets, watches both the C# and Vue sources, and opens `/app` once the server answers; run the focused web gate with
+`./scripts/verify-web.sh`. See
 [Web Interface](docs/technical-reference.md#web-interface) for details and Rider debugging setup. To run it as a container (OrbStack locally, or a
 free container host), see the technical
 [deployment guide](docs/deployment.md).
+
+## Multiple Enrolment Policies
+
+An institution can publish more than one policy at once — for example a standard entry policy alongside a stricter, smaller-cohort one. Each is a
+completely independent set of workflows and catalogue data, loaded and startup-validated in its own right; nothing about one policy's rules leaks into
+another. `standard` is the default everywhere; this repository also ships a second,
+`elite`, as a worked example of a stricter auxiliary policy sitting alongside it.
+
+| Setup        | Overall entry gate                                                                                                   | Offered subjects | Final programme                                                         |
+|--------------|----------------------------------------------------------------------------------------------------------------------|-----------------:|-------------------------------------------------------------------------|
+| **Standard** | English Language and Maths at grade 4+, with at least five GCSE passes                                               |               26 | Up to three A-levels, or four at the configured high-attainment average |
+| **Elite**    | English Language and Maths at grade 7+, at least eight GCSEs, best-eight total of 60+, and a top-seven average of 7+ |               14 | Three or four A-levels                                                  |
+
+Standard owns the base `workflows/` and `data/` trees. Elite overrides its workflows, catalogue, and thresholds under `policies/elite/`, while reusing
+the shared schemas, qualification scale, and DfE transition evidence through the overlay data source.
+
+- **CLI**: pass `--policy elite` (or `--policy standard`, the default) alongside any other command.
+- **Web**: append `?policy=elite` to either front end's URL (`/razor?policy=elite`,
+  `/app?policy=elite`), or use the switch link both pages show next to the current policy's name.
+
+A student's entered facts and chosen subjects are shared across policies — switching policy re-evaluates the same basket rather than clearing it. A
+choice the newly selected policy rates red, or does not offer at all, stays visible in the basket, clearly flagged, rather than being silently
+dropped. See [Policy registry](docs/technical-reference.md#policy-registry) for the API/CLI contracts
+and [Authoring an auxiliary policy](docs/rule-authoring.md#9-authoring-an-auxiliary-policy)
+for how to add another one.
 
 ## Quality And Assurance
 

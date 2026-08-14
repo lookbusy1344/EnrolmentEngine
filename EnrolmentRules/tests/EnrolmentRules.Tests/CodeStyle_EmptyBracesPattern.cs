@@ -11,14 +11,14 @@ using Microsoft.CodeAnalysis.CSharp.Syntax;
 ///     a named type pattern (<c>x is SomeType y</c>) is real pattern matching and stays fine. This test scans
 ///     the tracked <c>.cs</c> and <c>.cshtml</c> sources so the pattern cannot creep back in.
 /// </summary>
-public sealed class EmptyBracesPatternTests
+public sealed class CodeStyle_EmptyBracesPattern
 {
 	[Fact]
 	public void repository_sources_do_not_use_the_empty_braces_property_pattern()
 	{
 		var violations = SourceFiles()
-			.SelectMany(static file => EmptyBracesPatternGuard.FindViolations(file, File.ReadAllText(file)))
-			.ToArray();
+						 .SelectMany(static file => EmptyBracesPatternGuard.FindViolations(file, File.ReadAllText(file)))
+						 .ToArray();
 
 		violations.Should().BeEmpty();
 	}
@@ -61,8 +61,8 @@ public sealed class EmptyBracesPatternTests
 		foreach (var top in (string[])["src", "tests"]) {
 			var directory = Path.Combine(Harness.RepoRoot, top);
 			foreach (var file in Directory.EnumerateFiles(directory, "*.cs", SearchOption.AllDirectories)
-						 .Concat(Directory.EnumerateFiles(directory, "*.cshtml", SearchOption.AllDirectories))
-						 .Where(static file => !IsGeneratedOutput(file))) {
+										  .Concat(Directory.EnumerateFiles(directory, "*.cshtml", SearchOption.AllDirectories))
+										  .Where(static file => !IsGeneratedOutput(file))) {
 				yield return file;
 			}
 		}
@@ -98,9 +98,9 @@ internal static partial class EmptyBracesPatternGuard
 	{
 		var root = CSharpSyntaxTree.ParseText(source).GetRoot();
 		return root.DescendantNodes()
-			.OfType<RecursivePatternSyntax>()
-			.Where(IsEmptyBracesBinding)
-			.Select(pattern => Describe(fileName, pattern));
+				   .OfType<RecursivePatternSyntax>()
+				   .Where(IsEmptyBracesBinding)
+				   .Select(pattern => Describe(fileName, pattern));
 	}
 
 	// `{ } y` and — under a `not` — `not { } y`: an empty property pattern that both binds a designation and

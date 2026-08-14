@@ -68,7 +68,9 @@ public sealed class AdvisorTests
 			["chemistry"] = 5,
 			["biology"] = 9,
 			["history"] = 9,
-		}, []) { DateOfBirth = new DateOnly(2009, 9, 1) };
+		}, []) {
+			DateOfBirth = new DateOnly(2009, 9, 1),
+		};
 
 		var advice = engine.Advise(student);
 		// Maths is red on its Maths-8 entry gate; its amber target is met by a single bump that actually
@@ -95,7 +97,9 @@ public sealed class AdvisorTests
 			["biology"] = 9,
 			["history"] = 9,
 			["art"] = 6, // below the adult's TopEntry (7) bar, so the age-gated advice must raise it
-		}, []) { DateOfBirth = Harness.AsOf.AddYears(-19) }; // exactly the adult-age gate written into the Art rule
+		}, []) {
+			DateOfBirth = Harness.AsOf.AddYears(-19),
+		}; // exactly the adult-age gate written into the Art rule
 
 		var advice = engine.Advise(student);
 		var art = advice.Advice.Single(a => a.Subject == Subject.Art);
@@ -126,9 +130,9 @@ public sealed class AdvisorTests
 		// new one: a grade bump is actionable advice, "go and take another GCSE from scratch" is not.
 		var held = student.Gcses!.Value;
 		advice.Advice
-			.SelectMany(static a => a.Changes)
-			.Select(static c => c.GcseSubject)
-			.Should().OnlyContain(subject => held.ContainsKey(subject));
+			  .SelectMany(static a => a.Changes)
+			  .Select(static c => c.GcseSubject)
+			  .Should().OnlyContain(subject => held.ContainsKey(subject));
 
 		// Spanish A-level is gated on a French or German GCSE the student never sat, so with new GCSEs off
 		// the table it is unreachable by grade changes alone rather than reached by inventing a qualification.
@@ -147,7 +151,9 @@ public sealed class AdvisorTests
 			["physics"] = 5,
 			["chemistry"] = 5,
 			["biology"] = 5,
-		}, []) { ChosenALevels = [Subject.Maths] };
+		}, []) {
+			ChosenALevels = [Subject.Maths],
+		};
 
 		var advice = engine.Advise(student, UnsatGcseAdvice.IncludeUnsat);
 
@@ -155,9 +161,9 @@ public sealed class AdvisorTests
 		// the student never sat, becomes reachable by proposing those brand-new GCSEs.
 		advice.Advice.Single(a => a.Subject == Subject.Spanish).Reachable.Should().BeTrue();
 		advice.Advice
-			.SelectMany(static a => a.Changes)
-			.Select(static c => c.GcseSubject)
-			.Should().Contain("french");
+			  .SelectMany(static a => a.Changes)
+			  .Select(static c => c.GcseSubject)
+			  .Should().Contain("french");
 	}
 
 	[Fact]
@@ -165,14 +171,18 @@ public sealed class AdvisorTests
 	{
 		var (_, rules) = Harness.BuildFromShippedWorkflows();
 		var engine = new EnrolmentEngine(
-			rules, Harness.Thresholds with { AdviceConsidersUnsatGcses = true }, Harness.Catalogue, Harness.AsOf);
+			rules, Harness.Thresholds with {
+				AdviceConsidersUnsatGcses = true,
+			}, Harness.Catalogue, Harness.AsOf);
 		var student = new StudentInput("S-HELD-ONLY", new Dictionary<string, int> {
 			["english_language"] = 7,
 			["maths"] = 5,
 			["physics"] = 5,
 			["chemistry"] = 5,
 			["biology"] = 5,
-		}, []) { ChosenALevels = [Subject.Maths] };
+		}, []) {
+			ChosenALevels = [Subject.Maths],
+		};
 
 		// No per-call override: the diagnostic knob is read from the loaded thresholds, so Spanish is reachable.
 		var advice = engine.Advise(student);
@@ -185,7 +195,10 @@ public sealed class AdvisorTests
 	{
 		var engine = Harness.ShippedEngine();
 		var student = new StudentInput("S-GATE",
-			new Dictionary<string, int> { ["english_language"] = Harness.Thresholds.PassGrade, ["maths"] = Harness.Thresholds.PassGrade }, []) {
+			new Dictionary<string, int> {
+				["english_language"] = Harness.Thresholds.PassGrade,
+				["maths"] = Harness.Thresholds.PassGrade,
+			}, []) {
 			DateOfBirth = new DateOnly(2009, 9, 1),
 		};
 
@@ -195,7 +208,7 @@ public sealed class AdvisorTests
 		advice.Gate.Should().NotBeNull();
 		advice.Gate!.Changes.Should().NotBeEmpty();
 		advice.Gate.Changes.Select(change => change.GcseSubject)
-			.Should().Contain(subject => subject != "english_language" && subject != "maths");
+			  .Should().Contain(subject => subject != "english_language" && subject != "maths");
 	}
 
 	[Fact]
@@ -230,7 +243,9 @@ public sealed class AdvisorTests
 			["history"] = 8,
 			["music"] = 8,
 			["art"] = 8,
-		}, []) { PriorQualifications = [new(Subject.Biology.Value, QualificationType.ALevel, "e")] });
+		}, []) {
+			PriorQualifications = [new(Subject.Biology.Value, QualificationType.ALevel, "e")],
+		});
 
 		var biology = advice.Advice.Single(a => a.Subject == Subject.Biology);
 
@@ -278,7 +293,9 @@ public sealed class AdvisorTests
 		// so it is unreachable.
 		const int cap = 4;
 		var rules = Harness.BuildFromShippedWorkflows().Engine;
-		var engine = new EnrolmentEngine(rules, Harness.Thresholds with { MaxGreenChoices = cap }, Harness.Catalogue, Harness.AsOf);
+		var engine = new EnrolmentEngine(rules, Harness.Thresholds with {
+			MaxGreenChoices = cap,
+		}, Harness.Catalogue, Harness.AsOf);
 
 		var advice = engine.Advise(StrongStudent("plays_piano"));
 		var computerStudies = advice.Advice.Single(a => a.Subject == Subject.ComputerStudies);
@@ -306,7 +323,11 @@ public sealed class AdvisorTests
 	public void ineligible_student_gets_a_gate_clearing_bundle()
 	{
 		var engine = Harness.ShippedEngine();
-		var student = new StudentInput("S-INELIGIBLE", new Dictionary<string, int> { ["maths"] = 8, ["physics"] = 7, ["chemistry"] = 6 }, []);
+		var student = new StudentInput("S-INELIGIBLE", new Dictionary<string, int> {
+			["maths"] = 8,
+			["physics"] = 7,
+			["chemistry"] = 6,
+		}, []);
 
 		var advice = engine.Advise(student);
 
@@ -326,7 +347,9 @@ public sealed class AdvisorTests
 		// Raising the pass-count requirement via loaded data (no rebuild) must extend the gate-clearing
 		// bundle: a five-pass student who clears the shipped gate needs a sixth pass under the override.
 		var (_, rules) = Harness.BuildFromShippedWorkflows();
-		var raised = Harness.Thresholds with { MinPasses = Harness.Thresholds.MinPasses + 1 };
+		var raised = Harness.Thresholds with {
+			MinPasses = Harness.Thresholds.MinPasses + 1,
+		};
 		var engine = new EnrolmentEngine(rules, raised, Harness.AsOf);
 
 		var student = new StudentInput("S-MINPASS", new Dictionary<string, int> {
@@ -362,7 +385,9 @@ public sealed class AdvisorTests
 			["physics"] = 4,
 			["chemistry"] = 4,
 			["biology"] = 4,
-		}, []) { ChosenALevels = [Subject.Maths] });
+		}, []) {
+			ChosenALevels = [Subject.Maths],
+		});
 
 		var furtherMaths = advice.Advice.Single(a => a.Subject == Subject.FurtherMaths);
 		furtherMaths.Reachable.Should().BeFalse();
@@ -386,7 +411,7 @@ public sealed class AdvisorTests
 
 		var expected = File.ReadAllText(expectedPath);
 		stdout.ToString().ReplaceLineEndings().TrimEnd()
-			.Should().Be(expected.ReplaceLineEndings().TrimEnd());
+			  .Should().Be(expected.ReplaceLineEndings().TrimEnd());
 
 		var parsed = JsonSerializer.Deserialize(stdout.ToString(), EnrolmentJsonContext.Default.AdviceResult);
 		parsed.Should().NotBeNull();
@@ -454,7 +479,9 @@ public sealed class AdvisorTests
 	{
 		var (_, rules) = Harness.BuildFromShippedWorkflows();
 		var engine = new EnrolmentEngine(
-			rules, Harness.Thresholds with { AdviceMaxGradeCost = 1 }, Harness.Catalogue, Harness.AsOf);
+			rules, Harness.Thresholds with {
+				AdviceMaxGradeCost = 1,
+			}, Harness.Catalogue, Harness.AsOf);
 		var student = new StudentInput("S-ADVISE", new Dictionary<string, int> {
 			["english_language"] = 7,
 			["maths"] = 5,
@@ -490,7 +517,9 @@ public sealed class AdvisorTests
 
 		// Evaluate with an aggressive cap: 1 pipeline evaluation.
 		var capped = new EnrolmentEngine(
-			rules, Harness.Thresholds with { AdviceMaxPipelineEvaluations = 1 }, Harness.Catalogue, Harness.AsOf);
+			rules, Harness.Thresholds with {
+				AdviceMaxPipelineEvaluations = 1,
+			}, Harness.Catalogue, Harness.AsOf);
 		var truncated = capped.Advise(student);
 
 		truncated.TruncationReason.Should().Be("advice truncated");
@@ -559,6 +588,8 @@ public sealed class AdvisorTests
 			gcses[change.GcseSubject] = change.To;
 		}
 
-		return original with { Gcses = EquatableDictionaryFactory.CopyOf(gcses) };
+		return original with {
+			Gcses = EquatableDictionaryFactory.CopyOf(gcses),
+		};
 	}
 }

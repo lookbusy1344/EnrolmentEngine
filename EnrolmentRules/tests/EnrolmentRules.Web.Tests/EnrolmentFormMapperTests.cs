@@ -59,7 +59,9 @@ public sealed class EnrolmentFormMapperTests
 	[Fact]
 	public void Apply_replaces_facts_but_preserves_student_id_and_chosen_a_levels()
 	{
-		var current = EnrolmentSession.Empty("student-2") with { ChosenALevels = [new("biology")] };
+		var current = EnrolmentSession.Empty("student-2") with {
+			ChosenALevels = [new("biology")],
+		};
 		var input = new SaveFactsInput(
 			new DateOnly(2010, 1, 1),
 			[new("physics", 7)],

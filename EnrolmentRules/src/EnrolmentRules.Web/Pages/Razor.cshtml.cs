@@ -11,8 +11,15 @@ using Services;
 using EquatableArray = Infrastructure.EquatableArray;
 using Subject = Domain.Subject;
 
-public sealed class RazorModel(IEnrolmentSessionStore sessionStore, IEnrolmentEngine engine, EnrolmentOptionsService options) : PageModel
+public sealed class RazorModel(
+	IEnrolmentSessionStore sessionStore,
+	IEnrolmentPolicyRegistry registry,
+	TimeProvider timeProvider) : PageModel
 {
+	private const string PolicySessionKey = "enrolment.policy";
+
+	private EnrolmentOptionsService options = null!;
+
 	[BindProperty] public DateOnly? DateOfBirth { get; set; }
 
 	/// <summary>Whole-years age as of today for the currently displayed <see cref="DateOfBirth" />.</summary>
@@ -25,6 +32,12 @@ public sealed class RazorModel(IEnrolmentSessionStore sessionStore, IEnrolmentEn
 	[BindProperty] public List<string> Hobbies { get; set; } = [];
 
 	public EnrolmentResultsViewModel? Results { get; private set; }
+
+	/// <summary>The policy this request resolved to — the URL query value when valid, else the session's last choice, else the registry default.</summary>
+	public EnrolmentPolicyDescriptor SelectedPolicy { get; private set; } = null!;
+
+	/// <summary>Every registered policy's descriptor, in registration order — the source for the top switch link, never a hard-coded second list.</summary>
+	public IReadOnlyList<EnrolmentPolicyDescriptor> AvailablePolicies => registry.Descriptors;
 
 	/// <summary>The authoritative A-level list, in catalogue order — the web layer keeps no parallel subject list.</summary>
 	public IReadOnlyList<Subject> CatalogueSubjects => options.ALevelSubjects;
@@ -41,7 +54,8 @@ public sealed class RazorModel(IEnrolmentSessionStore sessionStore, IEnrolmentEn
 	///     without a full postback.
 	/// </summary>
 	public string QualificationGradeOptionsJson =>
-		JsonSerializer.Serialize(EnrolmentOptionsResponseFactory.Create(options).QualificationGrades, EnrolmentApiJsonContext.Default.Options);
+		JsonSerializer.Serialize(
+			EnrolmentOptionsResponseFactory.Create(options, registry.Descriptors).QualificationGrades, EnrolmentApiJsonContext.Default.Options);
 
 	/// <summary>
 	///     Subject names a prior qualification can usefully name, one group per exact
@@ -57,8 +71,9 @@ public sealed class RazorModel(IEnrolmentSessionStore sessionStore, IEnrolmentEn
 	public IReadOnlyList<Subject> ChosenALevels { get; private set; } = [];
 
 	/// <summary>
-	///     <see cref="ChosenALevels" /> paired with each choice's current rating, so the basket can flag an amber
-	///     (borderline) choice rather than showing every entry as equally settled. Empty until <see cref="OnGetAsync" />
+	///     <see cref="ChosenALevels" /> paired with each choice's non-destructive status/rating under the
+	///     selected policy, so the basket can flag a borderline (amber), unavailable (red) or not-offered
+	///     choice rather than showing every entry as equally settled. Empty until <see cref="OnGetAsync" />
 	///     has evaluated; the POST handlers redirect, so no rendered page sees it unpopulated.
 	/// </summary>
 	public IReadOnlyList<BasketEntry> Basket { get; private set; } = [];
@@ -66,112 +81,172 @@ public sealed class RazorModel(IEnrolmentSessionStore sessionStore, IEnrolmentEn
 	/// <summary>Whether any committed choice is amber, and so needs additional authorisation before enrolment.</summary>
 	public bool HasBorderlineChoices => Basket.Any(static entry => entry.IsBorderline);
 
-	/// <summary>The choices dropped from the basket on this load because they are no longer available.</summary>
-	public IReadOnlyList<Subject> EjectedALevels { get; private set; } = [];
-
 	/// <summary>Whether another GCSE row (not <paramref name="excludingIndex" />) already names <paramref name="subjectKey" />.</summary>
 	public bool IsGcseSubjectChosenElsewhere(int excludingIndex, string subjectKey) =>
 		Gcses.Where((_, idx) => idx != excludingIndex).Any(g => g.Subject == subjectKey);
 
-	public async Task OnGetAsync()
+	public async Task<IActionResult> OnGetAsync(string? policy)
 	{
-		var session = await PruneStaleChoicesAsync(await sessionStore.LoadAsync(HttpContext.Session, HttpContext.RequestAborted));
+		if (!ResolvePolicy(policy, out var redirect)) {
+			return redirect!;
+		}
+
+		var session = await sessionStore.LoadAsync(HttpContext.Session, HttpContext.RequestAborted);
 		Bind(session);
-		var evaluation = engine.ExplainValidated(EnrolmentFormMapper.ToStudentInput(session), HttpContext.RequestAborted);
-		Results = EnrolmentResultsViewModel.From(evaluation);
-		Basket = BasketEntry.From(ChosenALevels, Results);
+		var comparison = registry.Compare(SelectedPolicy.Id, EnrolmentFormMapper.ToStudentInput(session), HttpContext.RequestAborted);
+		Results = EnrolmentResultsViewModel.From(comparison);
+		Basket = BasketEntry.From(Results.Comparison);
+		return Page();
 	}
 
 	/// <summary>
-	///     Drop every committed choice the engine now rates red, persisting the smaller basket before the page
-	///     evaluates. A choice was green or amber when the student made it, so a red one means their facts have
-	///     since moved (typically lowered GCSEs) — the engine refuses a document that still names it, and the
-	///     student would otherwise be stuck on a blank results panel with no way to clear it but "start over".
-	///     Ejecting here keeps the session a document the engine will accept.
+	///     Resolve the policy this request uses: the <paramref name="requested" /> URL query value when it
+	///     names a registered policy, else the session's last selection, else the registry default. Stores
+	///     the resolved id back into the session as a convenience for the next request without one. An
+	///     invalid/unknown URL value never falls back silently — it redirects to the canonical URL for the
+	///     resolved policy instead, so a bad link is visibly corrected rather than quietly served as if the
+	///     mistyped policy had been honoured.
 	/// </summary>
-	private async Task<EnrolmentSession> PruneStaleChoicesAsync(EnrolmentSession session)
+	private bool ResolvePolicy(string? requested, out IActionResult? redirect)
 	{
-		var stale = engine.StaleChoices(EnrolmentFormMapper.ToStudentInput(session), HttpContext.RequestAborted);
-		if (stale.Count == 0) {
-			return session;
+		if (!string.IsNullOrWhiteSpace(requested)) {
+			if (EnrolmentPolicySelector.TryResolve(registry, requested, out var fromUrl)) {
+				SelectedPolicy = fromUrl.Descriptor;
+				options = new(fromUrl, timeProvider);
+				HttpContext.Session.SetString(PolicySessionKey, SelectedPolicy.Id.Value);
+				redirect = null;
+				return true;
+			}
+
+			redirect = RedirectToPage(new
+			{
+				policy = (string?)null,
+			});
+			return false;
 		}
 
-		EjectedALevels = stale;
-		var pruned = session with { ChosenALevels = EquatableArray.CopyOf(session.ChosenALevels.Except(stale)) };
-		await sessionStore.SaveAsync(HttpContext.Session, pruned, HttpContext.RequestAborted);
-		return pruned;
+		var sessionPolicy = HttpContext.Session.GetString(PolicySessionKey);
+		var resolved = EnrolmentPolicySelector.TryResolve(registry, sessionPolicy, out var policy)
+			? policy
+			: registry.GetPolicy(registry.DefaultPolicyId);
+		SelectedPolicy = resolved.Descriptor;
+		options = new(resolved, timeProvider);
+		redirect = null;
+		return true;
 	}
 
-	public async Task<IActionResult> OnPostChooseSubjectAsync(string subject)
+	public async Task<IActionResult> OnPostChooseSubjectAsync(string subject, string? policy)
 	{
+		if (!ResolvePolicy(policy, out var redirect)) {
+			return redirect!;
+		}
+
 		if (Subject.TryParse(subject, out var parsed)) {
-			// Prune first: CanChoose evaluates the session, and the engine refuses a document still naming a
-			// stale choice — leaving one in place would silently block every new choice.
-			var session = await PruneStaleChoicesAsync(await sessionStore.LoadAsync(HttpContext.Session, HttpContext.RequestAborted));
+			var session = await sessionStore.LoadAsync(HttpContext.Session, HttpContext.RequestAborted);
 			if (!session.ChosenALevels.Contains(parsed) && CanChoose(parsed, session)) {
 				await sessionStore.SaveAsync(
 					HttpContext.Session,
-					session with { ChosenALevels = EquatableArray.CopyOf([.. session.ChosenALevels, parsed]) },
+					session with {
+						ChosenALevels = EquatableArray.CopyOf([.. session.ChosenALevels, parsed]),
+					},
 					HttpContext.RequestAborted);
 			}
 		}
 
-		return RedirectToPage(null, null, "results-heading");
+		return RedirectToPage(null, null, new
+		{
+			policy = SelectedPolicy.Id.Value,
+		}, "results-heading");
 	}
 
-	public async Task<IActionResult> OnPostRemoveSubjectAsync(string subject)
+	public async Task<IActionResult> OnPostRemoveSubjectAsync(string subject, string? policy)
 	{
+		if (!ResolvePolicy(policy, out var redirect)) {
+			return redirect!;
+		}
+
 		if (Subject.TryParse(subject, out var parsed)) {
 			var session = await sessionStore.LoadAsync(HttpContext.Session, HttpContext.RequestAborted);
 			await sessionStore.SaveAsync(
 				HttpContext.Session,
-				session with { ChosenALevels = EquatableArray.CopyOf(session.ChosenALevels.Where(s => s != parsed)) },
+				session with {
+					ChosenALevels = EquatableArray.CopyOf(session.ChosenALevels.Where(s => s != parsed)),
+				},
 				HttpContext.RequestAborted);
 		}
 
-		return RedirectToPage(null, null, "results-heading");
+		return RedirectToPage(null, null, new
+		{
+			policy = SelectedPolicy.Id.Value,
+		}, "results-heading");
 	}
 
 	private bool CanChoose(Subject subject, EnrolmentSession session)
 	{
-		var evaluation = engine.ExplainValidated(EnrolmentFormMapper.ToStudentInput(session), HttpContext.RequestAborted);
-		if (!evaluation.Validation.IsValid || evaluation.Value is not { Eligible: true } result) {
+		var comparison = registry.Compare(SelectedPolicy.Id, EnrolmentFormMapper.ToStudentInput(session), HttpContext.RequestAborted);
+		if (!comparison.Validation.IsValid || comparison.Value is not { Explanation.Eligible: true } value) {
 			return false;
 		}
 
-		var explanation = result.Explanations.SingleOrDefault(explanation => explanation.Subject == subject);
+		var explanation = value.Explanation.Explanations.SingleOrDefault(explanation => explanation.Subject == subject);
 		return explanation is not null && explanation.Rating != Rating.Red;
 	}
 
 	/// <summary>Applies the currently posted (bound) facts to the session and redirects.</summary>
 	/// <param name="fragment">Anchor to redirect to; a section "Add" button supplies its own section id, the main save button omits it.</param>
-	public Task<RedirectToPageResult> OnPostSaveFactsAsync(string? fragment) => SaveCurrentFactsAsync(fragment ?? "results-heading");
+	public async Task<IActionResult> OnPostSaveFactsAsync(string? fragment, string? policy)
+	{
+		if (!ResolvePolicy(policy, out var redirect)) {
+			return redirect!;
+		}
+
+		return await SaveCurrentFactsAsync(fragment ?? "results-heading");
+	}
 
 	/// <summary>Removes GCSE row <paramref name="index" /> from the form's current (posted, not-yet-saved) state, then saves.</summary>
-	public Task<RedirectToPageResult> OnPostRemoveGcseRowAsync(int index)
+	public async Task<IActionResult> OnPostRemoveGcseRowAsync(int index, string? policy)
 	{
+		if (!ResolvePolicy(policy, out var redirect)) {
+			return redirect!;
+		}
+
 		RemoveAt(Gcses, index);
-		return SaveCurrentFactsAsync("gcse-section");
+		return await SaveCurrentFactsAsync("gcse-section");
 	}
 
 	/// <summary>Removes prior-qualification row <paramref name="index" /> from the form's current (posted, not-yet-saved) state, then saves.</summary>
-	public Task<RedirectToPageResult> OnPostRemoveQualificationRowAsync(int index)
+	public async Task<IActionResult> OnPostRemoveQualificationRowAsync(int index, string? policy)
 	{
+		if (!ResolvePolicy(policy, out var redirect)) {
+			return redirect!;
+		}
+
 		RemoveAt(PriorQualifications, index);
-		return SaveCurrentFactsAsync("qualifications-section");
+		return await SaveCurrentFactsAsync("qualifications-section");
 	}
 
 	/// <summary>Removes hobby row <paramref name="index" /> from the form's current (posted, not-yet-saved) state, then saves.</summary>
-	public Task<RedirectToPageResult> OnPostRemoveHobbyRowAsync(int index)
+	public async Task<IActionResult> OnPostRemoveHobbyRowAsync(int index, string? policy)
 	{
+		if (!ResolvePolicy(policy, out var redirect)) {
+			return redirect!;
+		}
+
 		RemoveAt(Hobbies, index);
-		return SaveCurrentFactsAsync("hobbies-section");
+		return await SaveCurrentFactsAsync("hobbies-section");
 	}
 
-	public async Task<IActionResult> OnPostResetAsync()
+	public async Task<IActionResult> OnPostResetAsync(string? policy)
 	{
+		if (!ResolvePolicy(policy, out var redirect)) {
+			return redirect!;
+		}
+
 		await sessionStore.ResetAsync(HttpContext.Session, HttpContext.RequestAborted);
-		return RedirectToPage();
+		return RedirectToPage(new
+		{
+			policy = SelectedPolicy.Id.Value,
+		});
 	}
 
 	/// <summary>Project a session snapshot onto the form's bound properties for rendering.</summary>
@@ -213,7 +288,7 @@ public sealed class RazorModel(IEnrolmentSessionStore sessionStore, IEnrolmentEn
 
 	/// <summary>Applies the form's currently posted (bound) facts to the session and redirects — the shared tail of every facts-editing handler.</summary>
 	/// <param name="fragment">Anchor id to redirect to, so the reload lands back near the row the user was editing instead of the page top.</param>
-	private async Task<RedirectToPageResult> SaveCurrentFactsAsync(string fragment)
+	private async Task<IActionResult> SaveCurrentFactsAsync(string fragment)
 	{
 		var current = await sessionStore.LoadAsync(HttpContext.Session, HttpContext.RequestAborted);
 		var input = new SaveFactsInput(
@@ -223,6 +298,9 @@ public sealed class RazorModel(IEnrolmentSessionStore sessionStore, IEnrolmentEn
 			EquatableArray.CopyOf(Hobbies.Where(static hobby => hobby is not null)));
 
 		await sessionStore.SaveAsync(HttpContext.Session, EnrolmentFormMapper.Apply(input, current), HttpContext.RequestAborted);
-		return RedirectToPage(null, null, fragment);
+		return RedirectToPage(null, null, new
+		{
+			policy = SelectedPolicy.Id.Value,
+		}, fragment);
 	}
 }

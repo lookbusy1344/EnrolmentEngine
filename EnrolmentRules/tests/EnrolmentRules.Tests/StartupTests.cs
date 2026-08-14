@@ -46,8 +46,8 @@ public sealed class StartupTests
 		var workflows = WorkflowStore.LoadAndValidate(Harness.WorkflowsDir, Harness.SchemaPath);
 
 		workflows.Select(static workflow => workflow.WorkflowName)
-			.Should()
-			.BeEquivalentTo(RatingEvaluator.EligibilityWorkflow, RatingEvaluator.SubjectRatingsWorkflow);
+				 .Should()
+				 .BeEquivalentTo(RatingEvaluator.EligibilityWorkflow, RatingEvaluator.SubjectRatingsWorkflow);
 	}
 
 	[Fact]
@@ -64,7 +64,7 @@ public sealed class StartupTests
 		var act = () => WorkflowStore.LoadAndValidate(dir, Harness.SchemaPath);
 
 		act.Should().Throw<WorkflowSchemaException>()
-			.WithMessage("*broken.yaml*");
+		   .WithMessage("*broken.yaml*");
 	}
 
 	[Fact]
@@ -88,14 +88,18 @@ public sealed class StartupTests
 		var act = () => WorkflowStore.ProbeCompile(engine, workflows, probe);
 
 		act.Should().Throw<WorkflowProbeException>()
-			.WithMessage("*bad-field*");
+		   .WithMessage("*bad-field*");
 	}
 
 	[Fact]
 	public void probe_compile_surfaces_the_engine_error_for_a_missing_workflow()
 	{
 		var (_, engine) = Harness.BuildFromShippedWorkflows();
-		Workflow[] missing = [new() { WorkflowName = "missing-workflow" }];
+		Workflow[] missing = [
+			new() {
+				WorkflowName = "missing-workflow",
+			},
+		];
 
 		var act = () => WorkflowStore.ProbeCompile(engine, missing, Harness.CanonicalProbe());
 
@@ -153,7 +157,7 @@ public sealed class StartupTests
 		var results = ExecuteAllRules(engine, "defaulted", new RuleParameter("input1", new ProbeInput(1.0)));
 
 		results.Should().ContainSingle(r => r.Rule.RuleName == "ValueIsNonNegative")
-			.Which.IsSuccess.Should().BeTrue();
+			   .Which.IsSuccess.Should().BeTrue();
 	}
 
 	private static List<RuleResultTree> ExecuteAllRules(IRulesEngine engine, string workflowName, params RuleParameter[] ruleParams)

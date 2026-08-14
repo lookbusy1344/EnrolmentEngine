@@ -149,7 +149,9 @@ internal static class Parser
 
 	private static Node ParseOr(IReadOnlyList<Token> tokens, ref int position)
 	{
-		var parts = new List<Node> { ParseAnd(tokens, ref position) };
+		var parts = new List<Node> {
+			ParseAnd(tokens, ref position),
+		};
 		while (Peek(tokens, position) is "||") {
 			++position;
 			parts.Add(ParseAnd(tokens, ref position));
@@ -160,7 +162,9 @@ internal static class Parser
 
 	private static Node ParseAnd(IReadOnlyList<Token> tokens, ref int position)
 	{
-		var parts = new List<Node> { ParseComparison(tokens, ref position) };
+		var parts = new List<Node> {
+			ParseComparison(tokens, ref position),
+		};
 		while (Peek(tokens, position) is "&&") {
 			++position;
 			parts.Add(ParseComparison(tokens, ref position));

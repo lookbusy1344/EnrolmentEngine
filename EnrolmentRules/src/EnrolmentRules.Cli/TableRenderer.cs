@@ -14,7 +14,9 @@ internal static class TableRenderer
 {
 	public static void Render(EnrolmentResult result, TextWriter stdout)
 	{
-		var console = AnsiConsole.Create(new() { Out = new AnsiConsoleOutput(stdout) });
+		var console = AnsiConsole.Create(new() {
+			Out = new AnsiConsoleOutput(stdout),
+		});
 
 		if (!result.Eligible) {
 			console.MarkupLine("[red]Ineligible[/] — every subject is red:");
@@ -24,10 +26,10 @@ internal static class TableRenderer
 		}
 
 		var table = new Table()
-			.Border(TableBorder.Rounded)
-			.AddColumn("Subject")
-			.AddColumn("Rating")
-			.AddColumn("Reason");
+					.Border(TableBorder.Rounded)
+					.AddColumn("Subject")
+					.AddColumn("Rating")
+					.AddColumn("Reason");
 
 		foreach (var recommendation in result.Recommendations) {
 			_ = table.AddRow(

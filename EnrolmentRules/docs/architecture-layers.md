@@ -21,6 +21,7 @@ policy change ships.
 | [`data/qualifications.yaml`](../data/qualifications.yaml) | The qualification-grade scale used to compare prior qualifications against GCSE/A-level grades. |
 | [`data/catalogue.schema.json`](../data/catalogue.schema.json), [`data/thresholds.schema.json`](../data/thresholds.schema.json), [`data/qualifications.schema.json`](../data/qualifications.schema.json) | Schemas for the three data files above. |
 | [`data/dfe-transition-matrices/`](../data/dfe-transition-matrices) | Historical GCSE→A-level transition data feeding the regression in step 2. |
+| [`policies/<id>/`](../policies) | Auxiliary-policy workflow, catalogue, and threshold overrides. `OverlayEnrolmentDataSource` falls through to the base tree for shared schemas, qualifications, and DfE evidence; `policies/elite/` is the shipped example. |
 
 ## 1. Domain — [`src/EnrolmentRules.Domain`](../src/EnrolmentRules.Domain)
 
@@ -99,6 +100,16 @@ RulesEngine itself cannot express (a rule can't read sibling results).
   [`IEnrolmentAdvisor.cs`](../src/EnrolmentRules.Engine/IEnrolmentAdvisor.cs),
   [`IEnrolmentDataSource.cs`](../src/EnrolmentRules.Engine/IEnrolmentDataSource.cs),
   [`IEnrolmentCriteriaExplainer.cs`](../src/EnrolmentRules.Engine/IEnrolmentCriteriaExplainer.cs)
+- **Multi-policy registry (one engine per registered id, no mutable "current" one):**
+  [`EnrolmentPolicyId.cs`](../src/EnrolmentRules.Engine/EnrolmentPolicyId.cs),
+  [`IEnrolmentPolicyRegistry.cs`](../src/EnrolmentRules.Engine/IEnrolmentPolicyRegistry.cs)
+  (`EnrolmentPolicyDescriptor`, `EnrolmentPolicy`, `PolicyComparisonResult`, the registry exception
+  hierarchy), [`EnrolmentPolicyRegistry.cs`](../src/EnrolmentRules.Engine/EnrolmentPolicyRegistry.cs)
+  (eager build-and-validate at construction; `Compare` for non-destructive multi-policy basket
+  comparison — see [technical-reference.md#policy-registry](technical-reference.md#policy-registry)),
+  [`OverlayEnrolmentDataSource.cs`](../src/EnrolmentRules.Engine/OverlayEnrolmentDataSource.cs)
+  (an auxiliary policy's own `workflows/`/`catalogue.yaml`/`thresholds.yaml`, everything else
+  delegated to a shared base `IEnrolmentDataSource`)
 - **Advice / explanation:** [`CounterfactualAdvisor.cs`](../src/EnrolmentRules.Engine/CounterfactualAdvisor.cs)
   (the heavier `Advise` path — see [`docs/benchmarks.md`](benchmarks.md)),
   [`Authoring/CriteriaExplainer.cs`](../src/EnrolmentRules.Engine/Authoring/CriteriaExplainer.cs),
@@ -114,10 +125,14 @@ Optional glue for `Microsoft.Extensions.DependencyInjection` hosts (ASP.NET, wor
 on the path for a plain library consumer or the CLI.
 
 - [`ServiceCollectionExtensions.cs`](../src/EnrolmentRules.Extensions.DependencyInjection/ServiceCollectionExtensions.cs)
-  — `AddEnrolmentEngineFactory`/`AddEnrolmentEngine`
+  — `AddEnrolmentEngineFactory`/`AddEnrolmentEngine`/`AddEnrolmentPolicies`
 - [`ReloadingEnrolmentEngineProxy.cs`](../src/EnrolmentRules.Extensions.DependencyInjection/ReloadingEnrolmentEngineProxy.cs)
   — swaps in a freshly reloaded engine without restarting the host
 - [`EnrolmentEngineOptions.cs`](../src/EnrolmentRules.Extensions.DependencyInjection/EnrolmentEngineOptions.cs)
+  (single-policy hosts),
+  [`EnrolmentPolicyOptions.cs`](../src/EnrolmentRules.Extensions.DependencyInjection/EnrolmentPolicyOptions.cs)
+  (multi-policy hosts — registers an `IEnrolmentPolicyRegistry` singleton only, deliberately never
+  also a container-wide `IEnrolmentEngine`, so a consumer must always name the policy it wants)
 
 ## 5. Consumers — the two front ends
 
@@ -143,6 +158,8 @@ Vue single-page app.
   [`Configuration/ExperienceKind.cs`](../src/EnrolmentRules.Web/Configuration/ExperienceKind.cs)
 - **Session state:** [`Services/EnrolmentSessionStore.cs`](../src/EnrolmentRules.Web/Services/EnrolmentSessionStore.cs),
   [`Models/EnrolmentSession.cs`](../src/EnrolmentRules.Web/Models/EnrolmentSession.cs)
+- **Policy selection, shared by both UIs:** [`Services/EnrolmentPolicySelector.cs`](../src/EnrolmentRules.Web/Services/EnrolmentPolicySelector.cs)
+  resolves a `?policy=` value against `IEnrolmentPolicyRegistry`, no silent fallback on an unknown id.
 - **Razor Pages UI (`/razor`):** [`Pages/Index.cshtml`](../src/EnrolmentRules.Web/Pages/Index.cshtml)
   ([`.cs`](../src/EnrolmentRules.Web/Pages/Index.cshtml.cs)),
   [`Pages/Razor.cshtml`](../src/EnrolmentRules.Web/Pages/Razor.cshtml)
@@ -170,9 +187,11 @@ Vue single-page app.
   itself is [`ClientApp/src/`](../src/EnrolmentRules.Web/ClientApp/src) —
   [`App.vue`](../src/EnrolmentRules.Web/ClientApp/src/App.vue),
   [`main.ts`](../src/EnrolmentRules.Web/ClientApp/src/main.ts),
-  [`components/`](../src/EnrolmentRules.Web/ClientApp/src/components) (`ChosenBasket.vue`,
-  `FactsForm.vue`, `GcseRows.vue`, `HeroSection.vue`, `HobbyRows.vue`, `PriorQualificationRows.vue`,
-  `ResultsPanel.vue`, `SubjectCard.vue`),
+  [`components/`](../src/EnrolmentRules.Web/ClientApp/src/components) (`ChosenBasket.vue` — renders
+  `ChoiceStatus` (`Available`/`Unavailable`/`NotOffered`) without ever dropping a chosen subject,
+  `FactsForm.vue`, `GcseRows.vue`, `HeroSection.vue` (current-policy label and switch link,
+  `switch-policy` event), `HobbyRows.vue`, `PriorQualificationRows.vue`, `ResultsPanel.vue`,
+  `SubjectCard.vue`),
   [`api/contracts.ts`](../src/EnrolmentRules.Web/ClientApp/src/api/contracts.ts),
   [`api/enrolmentApi.ts`](../src/EnrolmentRules.Web/ClientApp/src/api/enrolmentApi.ts),
   [`api/validation.ts`](../src/EnrolmentRules.Web/ClientApp/src/api/validation.ts),
@@ -204,6 +223,9 @@ Vue single-page app.
 
 ```
 Student facts (JSON)
+      │
+      ▼
+Host selects an immutable engine snapshot (registry id when multi-policy)
       │
       ▼
 Prediction (§2)  ──►  StudentProfile

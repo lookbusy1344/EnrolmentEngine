@@ -7,6 +7,18 @@ using RulesEngine.Models;
 public sealed class RatingEvaluatorTests
 {
 	[Fact]
+	public void an_unrecognised_eligibility_rule_derives_its_failure_reason_from_the_success_event()
+	{
+		var engine = new SingleRuleEligibilityEngine("BestEightTotal", "Best eight GCSE total at or above the minimum");
+		var evaluator = new RatingEvaluator(engine, Harness.Thresholds);
+
+		var gate = evaluator.EvaluateEligibility([]);
+
+		gate.Eligible.Should().BeFalse();
+		gate.Reasons.Should().Equal("Not met: Best eight GCSE total at or above the minimum");
+	}
+
+	[Fact]
 	public void evaluate_eligibility_reuses_the_evaluator_policy_facts()
 	{
 		var engine = new CapturingEngine();
@@ -79,6 +91,43 @@ public sealed class RatingEvaluatorTests
 			PolicyFacts.Add(ruleParams.Single(parameter => parameter.Name == "policy").Value);
 			return ValueTask.FromResult<List<RuleResultTree>>([]);
 		}
+
+		public ValueTask<List<RuleResultTree>> ExecuteAllRulesAsync(string workflowName, params object[] inputs) =>
+			ValueTask.FromException<List<RuleResultTree>>(new NotImplementedException());
+
+		public ValueTask<ActionRuleResult> ExecuteActionWorkflowAsync(string workflowName, string ruleName, RuleParameter[] ruleParameters) =>
+			ValueTask.FromException<ActionRuleResult>(new NotImplementedException());
+
+		public void AddWorkflow(params Workflow[] workflows) => throw new NotImplementedException();
+
+		public void ClearWorkflows() => throw new NotImplementedException();
+
+		public void RemoveWorkflow(params string[] workflowNames) => throw new NotImplementedException();
+
+		public void AddOrUpdateWorkflow(params Workflow[] workflows) => throw new NotImplementedException();
+
+		public List<string> GetAllRegisteredWorkflowNames() => [];
+
+		public bool ContainsWorkflow(string workflowName) => false;
+	}
+
+	private sealed class SingleRuleEligibilityEngine(string ruleName, string successEvent) : IRulesEngine
+	{
+		public ValueTask<List<RuleResultTree>> ExecuteAllRulesAsync(string workflowName, params RuleParameter[] ruleParams) =>
+			ValueTask.FromResult<List<RuleResultTree>>([
+				new() {
+					Rule = new() {
+						RuleName = ruleName, SuccessEvent = successEvent,
+					},
+					IsSuccess = false,
+				},
+			]);
+
+		public ValueTask<List<RuleResultTree>> ExecuteAllRulesAsync(
+			string workflowName,
+			RuleParameter[] ruleParams,
+			CancellationToken cancellationToken) =>
+			ExecuteAllRulesAsync(workflowName, ruleParams);
 
 		public ValueTask<List<RuleResultTree>> ExecuteAllRulesAsync(string workflowName, params object[] inputs) =>
 			ValueTask.FromException<List<RuleResultTree>>(new NotImplementedException());

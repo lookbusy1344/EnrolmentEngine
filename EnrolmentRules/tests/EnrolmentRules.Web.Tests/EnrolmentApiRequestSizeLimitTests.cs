@@ -38,7 +38,9 @@ public sealed class EnrolmentApiRequestSizeLimitTests
 	[Fact]
 	public async Task Leaves_the_limit_untouched_when_the_feature_is_already_read_only()
 	{
-		var feature = new FakeMaxRequestBodySizeFeature { IsReadOnly = true };
+		var feature = new FakeMaxRequestBodySizeFeature {
+			IsReadOnly = true,
+		};
 		var context = ContextFor("POST", "/api/enrolment/evaluate", feature);
 
 		await BuildPipeline()(context);

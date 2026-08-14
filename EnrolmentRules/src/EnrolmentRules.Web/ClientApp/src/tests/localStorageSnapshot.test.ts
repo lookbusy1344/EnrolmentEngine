@@ -31,23 +31,28 @@ const sampleSnapshot: EnrolmentSnapshot = {
 }
 
 describe('localStorageSnapshot', () => {
-  it('round-trips a saved snapshot', () => {
+  it('round-trips a saved snapshot and its selected policy id', () => {
     const storage = createFakeStorage()
 
-    saveSnapshot(sampleSnapshot, storage)
+    saveSnapshot(sampleSnapshot, 'elite', storage)
 
-    expect(loadSnapshot(storage)).toEqual(sampleSnapshot)
+    expect(loadSnapshot(storage)).toEqual({ snapshot: sampleSnapshot, selectedPolicyId: 'elite' })
   })
 
-  it('returns an empty snapshot when nothing is stored', () => {
+  it('round-trips a null selected policy id', () => {
+    const storage = createFakeStorage()
+
+    saveSnapshot(sampleSnapshot, null, storage)
+
+    expect(loadSnapshot(storage).selectedPolicyId).toBeNull()
+  })
+
+  it('returns an empty snapshot and no policy id when nothing is stored', () => {
     const storage = createFakeStorage()
 
     expect(loadSnapshot(storage)).toEqual({
-      dateOfBirth: null,
-      gcses: [],
-      priorQualifications: [],
-      hobbies: [],
-      chosenALevels: [],
+      snapshot: { dateOfBirth: null, gcses: [], priorQualifications: [], hobbies: [], chosenALevels: [] },
+      selectedPolicyId: null,
     })
   })
 
@@ -55,17 +60,32 @@ describe('localStorageSnapshot', () => {
     const storage = createFakeStorage()
     storage.setItem('enrolmentRules.vue.snapshot.v1', '{not valid json')
 
-    expect(loadSnapshot(storage).gcses).toEqual([])
+    expect(loadSnapshot(storage).snapshot.gcses).toEqual([])
   })
 
-  it('returns an empty snapshot for an unrecognised schema version', () => {
+  it('migrates a v1 snapshot without losing facts or the chosen basket', () => {
     const storage = createFakeStorage()
     storage.setItem(
       'enrolmentRules.vue.snapshot.v1',
-      JSON.stringify({ schemaVersion: 2, savedAt: new Date().toISOString(), snapshot: sampleSnapshot }),
+      JSON.stringify({ schemaVersion: 1, savedAt: new Date().toISOString(), snapshot: sampleSnapshot }),
     )
 
-    expect(loadSnapshot(storage).gcses).toEqual([])
+    expect(loadSnapshot(storage)).toEqual({ snapshot: sampleSnapshot, selectedPolicyId: null })
+  })
+
+  it('returns an empty snapshot for an unrecognised future schema version', () => {
+    const storage = createFakeStorage()
+    storage.setItem(
+      'enrolmentRules.vue.snapshot.v1',
+      JSON.stringify({
+        schemaVersion: 3,
+        savedAt: new Date().toISOString(),
+        selectedPolicyId: 'elite',
+        snapshot: sampleSnapshot,
+      }),
+    )
+
+    expect(loadSnapshot(storage).snapshot.gcses).toEqual([])
   })
 
   it('returns an empty snapshot when a row has an invalid shape', () => {
@@ -73,42 +93,44 @@ describe('localStorageSnapshot', () => {
     storage.setItem(
       'enrolmentRules.vue.snapshot.v1',
       JSON.stringify({
-        schemaVersion: 1,
+        schemaVersion: 2,
         savedAt: new Date().toISOString(),
+        selectedPolicyId: 'standard',
         snapshot: { ...sampleSnapshot, gcses: [{ subject: 'maths', grade: 'not-a-number' }] },
       }),
     )
 
     expect(loadSnapshot(storage)).toEqual({
-      dateOfBirth: null,
-      gcses: [],
-      priorQualifications: [],
-      hobbies: [],
-      chosenALevels: [],
+      snapshot: { dateOfBirth: null, gcses: [], priorQualifications: [], hobbies: [], chosenALevels: [] },
+      selectedPolicyId: null,
     })
   })
 
-  it('stores only the editable snapshot, not API results', () => {
+  it('stores only the editable snapshot and policy id, not API results', () => {
     const storage = createFakeStorage()
 
-    saveSnapshot(sampleSnapshot, storage)
+    saveSnapshot(sampleSnapshot, 'elite', storage)
 
     const raw = storage.getItem('enrolmentRules.vue.snapshot.v1')
     expect(raw).not.toBeNull()
     const persisted: unknown = JSON.parse(raw ?? '')
     expect(persisted).toEqual({
-      schemaVersion: 1,
+      schemaVersion: 2,
       savedAt: expect.any(String) as unknown,
+      selectedPolicyId: 'elite',
       snapshot: sampleSnapshot,
     })
   })
 
-  it('clearSnapshot removes the stored value', () => {
+  it('clearSnapshot resets facts and basket but keeps the given policy id', () => {
     const storage = createFakeStorage()
-    saveSnapshot(sampleSnapshot, storage)
+    saveSnapshot(sampleSnapshot, 'elite', storage)
 
-    clearSnapshot(storage)
+    clearSnapshot('elite', storage)
 
-    expect(storage.getItem('enrolmentRules.vue.snapshot.v1')).toBeNull()
+    expect(loadSnapshot(storage)).toEqual({
+      snapshot: { dateOfBirth: null, gcses: [], priorQualifications: [], hobbies: [], chosenALevels: [] },
+      selectedPolicyId: 'elite',
+    })
   })
 })

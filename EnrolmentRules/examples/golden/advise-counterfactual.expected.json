@@ -41,6 +41,14 @@
       "blocked_reason": "Entry requirement unmet or predicted grade below the amber threshold"
     },
     {
+      "subject": "politics",
+      "current": "red",
+      "target": "amber",
+      "changes": [],
+      "reachable": false,
+      "blocked_reason": "Entry requirement unmet or predicted grade below the amber threshold"
+    },
+    {
       "subject": "maths",
       "current": "red",
       "target": "amber",
@@ -53,6 +61,14 @@
       ],
       "reachable": true,
       "blocked_reason": null
+    },
+    {
+      "subject": "geography",
+      "current": "red",
+      "target": "amber",
+      "changes": [],
+      "reachable": false,
+      "blocked_reason": "Entry requirement unmet or predicted grade below the amber threshold"
     },
     {
       "subject": "physics",

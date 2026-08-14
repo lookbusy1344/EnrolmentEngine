@@ -39,7 +39,9 @@ public sealed class EnrolmentEvaluateEndpointTests : IClassFixture<WebAppFactory
 	public async Task Out_of_range_grade_returns_200_with_validation_errors()
 	{
 		using var client = factory.CreateClient();
-		var request = KnownRequest() with { Gcses = [new("maths", 15)] };
+		var request = KnownRequest() with {
+			Gcses = [new("maths", 15)],
+		};
 
 		var response = await PostAsync(client, request);
 
@@ -53,7 +55,9 @@ public sealed class EnrolmentEvaluateEndpointTests : IClassFixture<WebAppFactory
 	public async Task Unparseable_prior_qualification_type_returns_400()
 	{
 		using var client = factory.CreateClient();
-		var request = KnownRequest() with { PriorQualifications = [new("applied_science", "NotAQualificationType", "Merit")] };
+		var request = KnownRequest() with {
+			PriorQualifications = [new("applied_science", "NotAQualificationType", "Merit")],
+		};
 
 		var response = await PostAsync(client, request);
 
@@ -61,76 +65,99 @@ public sealed class EnrolmentEvaluateEndpointTests : IClassFixture<WebAppFactory
 	}
 
 	[Fact]
-	public async Task A_forged_red_subject_choice_is_rejected()
+	public async Task A_forged_red_subject_choice_stays_in_the_basket_marked_unavailable()
 	{
-		// A red subject is not a choice the student may hold, however the value got into the snapshot —
-		// forged by hand, or left behind by GCSEs that were lowered after the choice was made. The engine
-		// refuses the whole document rather than returning a verdict that honours it.
+		// Non-destructive: a chosen subject the engine now rates red — however it got into the snapshot —
+		// is never ejected server-side. It stays in ChoiceStatuses as Unavailable, with the deciding reason,
+		// so the client's basket never silently loses a selection.
 		using var client = factory.CreateClient();
-		var request = KnownRequest() with { ChosenALevels = ["further_maths"] };
+		var request = KnownRequest() with {
+			ChosenALevels = ["further_maths"],
+		};
 
 		var response = await PostAsync(client, request);
 		var body = await ReadBodyAsync(response);
 
-		body.Result.Should().BeNull();
-		body.ValidationErrors.Should().ContainSingle()
-			.Which.Should().Contain("chosen_a_levels").And.Contain("further_maths");
+		body.ValidationErrors.Should().BeEmpty();
+		body.Result.Should().NotBeNull();
+		var status = body.Result!.ChoiceStatuses.Should().ContainSingle().Which;
+		status.Subject.Value.Should().Be("further_maths");
+		status.Status.Should().Be("Unavailable");
+		status.Reason.Should().NotBeNull();
 	}
 
 	[Fact]
-	public async Task A_rejected_choice_is_named_so_the_client_can_eject_it()
-	{
-		using var client = factory.CreateClient();
-		var request = KnownRequest() with { ChosenALevels = ["further_maths"] };
-
-		var response = await PostAsync(client, request);
-		var body = await ReadBodyAsync(response);
-
-		body.EjectedChoices.Should().ContainSingle().Which.Value.Should().Be("further_maths");
-	}
-
-	[Fact]
-	public async Task Lowering_gcses_ejects_a_choice_that_was_green_when_it_was_made()
+	public async Task Lowering_gcses_moves_a_choice_from_available_to_unavailable_without_dropping_it()
 	{
 		using var client = factory.CreateClient();
 		// French is green on the strong grades and accepted as a choice.
-		var chosen = KnownRequest() with { ChosenALevels = ["french"] };
+		var chosen = KnownRequest() with {
+			ChosenALevels = ["french"],
+		};
 		var accepted = await ReadBodyAsync(await PostAsync(client, chosen));
 		accepted.Result.Should().NotBeNull();
-		accepted.EjectedChoices.Should().BeEmpty();
+		accepted.Result!.ChoiceStatuses.Should().ContainSingle(s => s.Subject.Value == "french" && s.Status == "Available");
 
 		// The same choice, with every grade collapsed to a 1.
-		var lowered = chosen with { Gcses = [.. KnownGcses.Select(static row => row with { Grade = 1 })] };
+		var lowered = chosen with {
+			Gcses = [
+				.. KnownGcses.Select(static row => row with {
+					Grade = 1,
+				}),
+			],
+		};
 		var body = await ReadBodyAsync(await PostAsync(client, lowered));
 
-		body.Result.Should().BeNull();
-		body.EjectedChoices.Should().ContainSingle().Which.Value.Should().Be("french");
+		body.Result.Should().NotBeNull();
+		body.Result!.ChoiceStatuses.Should().ContainSingle(s => s.Subject.Value == "french" && s.Status == "Unavailable");
 	}
 
 	[Fact]
-	public async Task Re_posting_without_the_ejected_choice_evaluates_cleanly()
+	public async Task An_unavailable_choice_survives_unchanged_across_a_second_identical_request()
 	{
 		using var client = factory.CreateClient();
-		var lowered = KnownRequest() with { Gcses = [.. KnownGcses.Select(static row => row with { Grade = 1 })], ChosenALevels = ["french"] };
-
-		var rejected = await ReadBodyAsync(await PostAsync(client, lowered));
-		var pruned = lowered with {
-			ChosenALevels = [.. lowered.ChosenALevels.Where(subject => rejected.EjectedChoices.All(e => e.Value != subject))],
+		var lowered = KnownRequest() with {
+			Gcses = [
+				.. KnownGcses.Select(static row => row with {
+					Grade = 1,
+				}),
+			],
+			ChosenALevels = ["french"],
 		};
-		var body = await ReadBodyAsync(await PostAsync(client, pruned));
 
-		// One prune is always enough — the re-post is accepted, so the client never loops.
-		body.Result.Should().NotBeNull();
-		body.EjectedChoices.Should().BeEmpty();
+		var first = await ReadBodyAsync(await PostAsync(client, lowered));
+		var second = await ReadBodyAsync(await PostAsync(client, lowered));
+
+		first.Result!.ChoiceStatuses.Should().BeEquivalentTo(second.Result!.ChoiceStatuses);
+		second.Result.ChoiceStatuses.Should().ContainSingle(s => s.Subject.Value == "french" && s.Status == "Unavailable");
+	}
+
+	[Fact]
+	public async Task A_chosen_subject_outside_the_selected_policys_catalogue_is_not_offered()
+	{
+		using var client = factory.CreateClient();
+		var request = KnownRequest() with {
+			ChosenALevels = ["not_a_real_subject_key"],
+		};
+
+		var response = await PostAsync(client, request);
+		var body = await ReadBodyAsync(response);
+
 		body.ValidationErrors.Should().BeEmpty();
+		body.Result.Should().NotBeNull();
+		body.Result!.ChoiceStatuses.Should().ContainSingle(s => s.Subject.Value == "not_a_real_subject_key" && s.Status == "NotOffered");
 	}
 
 	[Fact]
 	public async Task Choosing_more_subjects_than_the_cap_reports_a_choice_limit_reason()
 	{
 		using var client = factory.CreateClient();
-		var greenSubjects = new[] { "design_technology", "spanish", "law", "religious_studies", "politics", "geography", "psychology", "economics" };
-		var request = KnownRequest() with { ChosenALevels = [.. greenSubjects] };
+		var greenSubjects = new[] {
+			"design_technology", "spanish", "law", "religious_studies", "sociology", "media_studies", "psychology", "economics",
+		};
+		var request = KnownRequest() with {
+			ChosenALevels = [.. greenSubjects],
+		};
 
 		var response = await PostAsync(client, request);
 		var body = await ReadBodyAsync(response);
@@ -145,7 +172,9 @@ public sealed class EnrolmentEvaluateEndpointTests : IClassFixture<WebAppFactory
 		// Duplicate subject keys, so the mapped StudentInput would collapse to one GCSE — the row count must be
 		// bounded on the raw posted array, before mapping, or this would slip past the boundary check entirely.
 		var tooMany = Enumerable.Range(0, GcseSubjects.Known.Count + 1).Select(static _ => new EvaluateGcseRow("maths", 6)).ToArray();
-		var request = KnownRequest() with { Gcses = [.. tooMany] };
+		var request = KnownRequest() with {
+			Gcses = [.. tooMany],
+		};
 
 		var response = await PostAsync(client, request);
 		var body = await ReadBodyAsync(response);
@@ -159,7 +188,9 @@ public sealed class EnrolmentEvaluateEndpointTests : IClassFixture<WebAppFactory
 	public async Task Too_many_chosen_a_levels_returns_200_with_a_validation_error()
 	{
 		using var client = factory.CreateClient();
-		var request = KnownRequest() with { ChosenALevels = [.. Enumerable.Range(0, 200).Select(static i => $"subject_{i}")] };
+		var request = KnownRequest() with {
+			ChosenALevels = [.. Enumerable.Range(0, 200).Select(static i => $"subject_{i}")],
+		};
 
 		var response = await PostAsync(client, request);
 		var body = await ReadBodyAsync(response);
@@ -191,7 +222,9 @@ public sealed class EnrolmentEvaluateEndpointTests : IClassFixture<WebAppFactory
 	public async Task Too_many_hobbies_returns_200_with_a_validation_error()
 	{
 		using var client = factory.CreateClient();
-		var request = KnownRequest() with { Hobbies = [.. Enumerable.Range(0, 51).Select(static i => $"hobby_{i}")] };
+		var request = KnownRequest() with {
+			Hobbies = [.. Enumerable.Range(0, 51).Select(static i => $"hobby_{i}")],
+		};
 
 		var response = await PostAsync(client, request);
 		var body = await ReadBodyAsync(response);
@@ -205,7 +238,9 @@ public sealed class EnrolmentEvaluateEndpointTests : IClassFixture<WebAppFactory
 	public async Task An_excessively_long_hobby_tag_returns_200_with_a_validation_error()
 	{
 		using var client = factory.CreateClient();
-		var request = KnownRequest() with { Hobbies = [new('x', 101)] };
+		var request = KnownRequest() with {
+			Hobbies = [new('x', 101)],
+		};
 
 		var response = await PostAsync(client, request);
 		var body = await ReadBodyAsync(response);
@@ -243,7 +278,9 @@ public sealed class EnrolmentEvaluateEndpointTests : IClassFixture<WebAppFactory
 	[Fact]
 	public async Task Matches_the_razor_workflow_for_the_same_facts()
 	{
-		using var razorClient = factory.CreateClient(new() { AllowAutoRedirect = false });
+		using var razorClient = factory.CreateClient(new() {
+			AllowAutoRedirect = false,
+		});
 		using var getResponse = await razorClient.GetAsync(new Uri("/razor", UriKind.Relative));
 		var token = await ExtractAntiForgeryTokenAsync(getResponse);
 		var form = new Dictionary<string, string> {
@@ -265,7 +302,9 @@ public sealed class EnrolmentEvaluateEndpointTests : IClassFixture<WebAppFactory
 		var apiResponse = await PostAsync(apiClient, KnownRequest());
 		var apiBody = await ReadBodyAsync(apiResponse);
 
-		foreach (var subject in new[] { "physics", "art", "further_maths" }) {
+		foreach (var subject in new[] {
+					 "physics", "art", "further_maths",
+				 }) {
 			var explanation = apiBody.Result!.Explanations.Single(e => e.Subject.Value == subject);
 			html.Should().Contain(subject).And.Contain(explanation.Rating);
 		}

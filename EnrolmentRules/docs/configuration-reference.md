@@ -16,7 +16,7 @@ The editable surfaces fall into three groups:
 
 | Surface | Files | Purpose |
 | --- | --- | --- |
-| Runtime policy data | `data/*.yaml`, `workflows/*.yaml` | The rules and thresholds the engine actually loads at startup. |
+| Runtime policy data | `data/*.yaml`, `workflows/*.yaml`, `policies/<id>/{data,workflows}/*.yaml` | The Standard rules/data and any auxiliary policy overrides the engine loads at startup. |
 | Validation contracts | `data/*.schema.json`, `workflows/workflow.schema.json` | JSON Schema files that define the allowed structure of the YAML files. |
 | Extension and input examples | `examples/**/*.yaml`, `examples/**/*.json` | Authoring examples, append snippets, and sample student documents. |
 
@@ -28,6 +28,12 @@ If you are changing live policy, the files that matter most are:
 - `workflows/eligibility.yaml`
 - `workflows/subject-ratings.yaml`
 
+An auxiliary policy owns the corresponding four policy-specific files under
+`policies/<id>/data/` and `policies/<id>/workflows/`. With `OverlayEnrolmentDataSource`, schemas,
+`qualifications.yaml`, and the DfE transition matrix fall through to the base `data/` tree. The
+shipped `policies/elite/` directory is the reference layout; see
+[Authoring an auxiliary policy](rule-authoring.md#9-authoring-an-auxiliary-policy).
+
 ## Runtime Policy Files
 
 ### `data/thresholds.yaml`
@@ -36,19 +42,27 @@ Numeric tuning knobs read by the workflow expressions and host-side aggregation/
 
 | Field | Type | Required | Meaning |
 | --- | --- | --- | --- |
-| `pass_grade` | integer `1..9` | yes | Inclusive GCSE pass boundary. The eligibility workflow compares English Language, Maths, and the count of all supplied GCSE grades against this value; a grade equal to it passes. It is also exposed to subject-rating expressions as `facts.PassGrade`, which the accessible tier (psychology, sociology, media studies) reads as its entry bar so those subjects open at the eligibility minimum. |
-| `min_passes` | integer `>= 1` | yes | Inclusive number of GCSE entries at or above `pass_grade` required by the `EnoughPasses` eligibility rule. Duplicate subjects cannot inflate the count because GCSE input is a subject-keyed map. |
+| `pass_grade` | integer `1..9` | yes | Inclusive GCSE boundary exposed as `policy.PassGrade` and `facts.PassGrade`. Standard uses it for English, Maths, pass count, and accessible-subject entry; Elite uses it for its English/Maths grade-7 gate. A policy expression decides where it applies. |
+| `min_passes` | integer `>= 1` | yes | Inclusive pass-count value exposed as `policy.MinPasses`. Standard's `EnoughPasses` rule uses it; a differently shaped gate may leave this required compatibility field unused. Duplicate subjects cannot inflate a count because GCSE facts are deduplicated by subject. |
 | `top_entry` | integer `1..9` | yes | Named high-selectivity GCSE boundary exposed to subject-rating expressions as `facts.TopEntry`. It has no intrinsic ordering relationship with the other entry fields: workflow expressions choose where and how to apply it. |
 | `standard_entry` | integer `1..9` | yes | Named baseline GCSE boundary exposed as `facts.StandardEntry`. It does not automatically apply to every subject; only expressions that reference it are affected. Most subjects gate their own cognate GCSE against this. |
 | `exceptional_entry` | integer `1..9` | yes | Named top-grade GCSE boundary exposed as `facts.ExceptionalEntry`, used as a hard gate for the most demanding subjects (Maths and Physics require Maths GCSE at this level). Must satisfy `standard_entry <= top_entry <= exceptional_entry`. |
 | `min_dfe_green_probability_at_or_above` | number `0..1` | yes | Inclusive probability floor exposed as `facts.MinDfeGreenProbabilityAtOrAbove`. A workflow normally compares it with the student's DfE probability of achieving a specified A-level grade or better; it has no effect unless the expression performs that comparison. |
 | `min_dfe_amber_probability_at_or_above` | number `0..1` | yes | Inclusive probability floor for amber expressions, exposed as `facts.MinDfeAmberProbabilityAtOrAbove`. Values are proportions (`0.50` means 50%), not percentages. |
+| `max_chosen_a_levels` | integer `>= 1` | yes | Normal maximum number of distinct committed A-level choices. The final-programme validator rejects a larger basket unless the high-attainment cap applies. |
+| `high_attainment_max_chosen_a_levels` | integer `>= 1` | yes | Maximum choices for a student whose average GCSE meets `high_attainment_average_gcse`. It must be at least `max_chosen_a_levels`. Setting both caps equal disables a distinct high-attainment uplift. |
+| `high_attainment_average_gcse` | number `1..9` | yes | Inclusive average-GCSE boundary selecting the high-attainment choice cap. |
+| `min_chosen_a_levels` | integer `>= 0` | no | Minimum distinct offered choices in a valid final programme. Defaults to `0`; it must not exceed `high_attainment_max_chosen_a_levels`. Elite sets `3`. |
 | `max_green_choices` | integer `>= 1` | no | Maximum number of subjects allowed to remain green after all constraint downgrades. When exceeded, the lowest-`priority_weight` greens are demoted to amber; omit the field to disable this pass. |
 | `amber_score_factor` | number `0..1` | yes | Multiplier applied to each final amber subject's `priority_weight` when calculating `programme_priority_score`. Green contributes full weight and red contributes zero; this field changes only the aggregate score, not a rating. |
 | `advice_considers_unsat_gcses` | boolean | no | Controls the advisor's candidate GCSE set. When `true`, it may propose adding a GCSE absent from the student's input; when `false` or omitted, it may only raise supplied GCSEs. It never changes ordinary evaluation. |
 | `advice_max_grade_cost` | integer `>= 1` | no | Upper bound on a proposal's total grade-step cost: the sum of every proposed GCSE increase, with a newly added GCSE costed from the advisor's baseline. Candidates over the bound are not explored. Defaults to `12` when omitted. |
 | `advice_max_subjects_changed` | integer `>= 1` | no | Upper bound on the number of distinct GCSE keys altered by one proposal, independent of how many grade steps each alteration costs. Defaults to `3` when omitted. |
 | `advice_max_pipeline_evaluations` | integer `>= 1` | no | Budget for complete evaluation-pipeline executions during one advice search. Reaching it returns deterministic partial advice marked as truncated; omit for no evaluation-count limit. |
+| `best_gcse_count` | integer `>= 1` | no | Number of highest GCSE grades included by a best-total gate. It is exposed as nullable `policy.BestGcseCount`. |
+| `min_best_gcse_points` | integer `>= 1` | no | Inclusive minimum sum for `lookup.BestTotal(policy.BestGcseCount)`. It must be reachable on the GCSE 1–9 scale. |
+| `top_gcse_average_count` | integer `>= 1` | no | Number of highest GCSE grades included by a top-average gate; it must not exceed `best_gcse_count`. |
+| `min_top_gcse_average` | number `1..9` | no | Inclusive minimum for `lookup.BestAverage(policy.TopGcseAverageCount)`. |
 
 Notes:
 
@@ -58,6 +72,8 @@ Notes:
   `workflows/subject-ratings.yaml` (e.g. `facts.Average >= 7.0`), not as config keys.
 - `max_green_choices` is intentionally absent in the shipped file. The normal mode is uncapped greens.
 - The `advice_*` values affect only the counterfactual advisor, not ordinary enrolment evaluation.
+- The four top-*n* fields validate all-or-none. Standard omits them; Elite uses them for its
+  count/best-eight-total/top-seven-average gate.
 
 Example:
 
@@ -69,6 +85,9 @@ standard_entry: 5
 exceptional_entry: 8
 min_dfe_green_probability_at_or_above: 0.60
 min_dfe_amber_probability_at_or_above: 0.50
+max_chosen_a_levels: 3
+high_attainment_max_chosen_a_levels: 4
+high_attainment_average_gcse: 7.5
 amber_score_factor: 0.5
 ```
 
@@ -78,6 +97,9 @@ What this means in practice:
 - a student needs at least `5` passes to clear the eligibility gate,
 - a subject can choose to require `7`, `6`, or `5` in a GCSE depending on how selective it is,
 - a green tier usually needs stronger DfE evidence than an amber tier.
+
+Elite's overlay additionally sets `min_chosen_a_levels: 3` and the four top-*n* fields, while
+setting both maximum-choice fields to `4` because it has no separate high-attainment uplift.
 
 ### `data/catalogue.yaml`
 
@@ -97,6 +119,7 @@ Each subject entry:
 | `subject` | `snake_case` string | yes | Canonical, case-sensitive subject identifier used in rule names, workflow fact lookups, results, relationships, and student choices. It must be unique and match the schema's lowercase identifier pattern. |
 | `priority_weight` | positive integer | yes | Subject policy priority. It contributes to `programme_priority_score`, orders subjects within a rating, and—only when the optional green cap is enabled—decides which surplus greens are demoted. It is not a UCAS tariff value and does not resolve exclusions. |
 | `regression` | object | yes | Coefficients for converting the student's average GCSE score into this subject's predicted A-level points before prior-qualification uplift and workflow rating. |
+| `dfe_evidence` | boolean | no | Whether startup requires transition-matrix coverage for this subject. Defaults to `true`; set `false` only when the subject's rating expressions deliberately do not use DfE evidence. |
 | `exclusions` | array | no | Pairwise timetable or policy clashes. The reciprocal subject must declare the same pair and severity. The clash does not downgrade either subject while both are merely viable; it activates when one side appears in `chosen_a_levels`, downgrading the qualifying other subject to the configured severity. |
 | `required_activities` | array of strings | no | Acceptable hobby-tag prefixes for an own-time requirement. At least one student hobby must start with at least one configured prefix; otherwise the subject is downgraded to amber. An empty/omitted list creates no requirement. |
 | `blocking_activities` | array of strings | no | Hobby-tag prefixes that veto the subject. Any student hobby starting with any configured prefix produces a red downgrade, even if a required-activity prefix also matches. |
@@ -286,9 +309,9 @@ Rule object fields used here:
 
 | Field | Type | Required | Meaning |
 | --- | --- | --- | --- |
-| `RuleName` | string | yes | Unique, stable identifier within the workflow. For the shipped gate it also keys the compiled failure-reason projection, so changing a standard name is a behavioral change rather than a cosmetic edit. |
-| `SuccessEvent` | string | no | Human-readable text attached by RulesEngine on success. Eligibility output does not use it as the failure explanation, but it remains useful workflow metadata and must accurately describe the expression. |
-| `ErrorMessage` | string | no | Permitted by the schema but not used by the shipped workflows. Eligibility failure reasons are projected from the loaded `data/thresholds.yaml` values in compiled code (keyed by rule name), not read from this field, so the explanation cannot drift from the threshold that actually fired. |
+| `RuleName` | string | yes | Unique, stable identifier within the workflow. `EnglishLanguagePass`, `MathsPass`, and `EnoughPasses` select specialised threshold-aware failure wording and therefore must retain their canonical expressions. Any other name denotes a generic eligibility rule. |
+| `SuccessEvent` | string | conditionally | Human-readable statement of what success means. It is required by the linter for every generic eligibility rule and is inverted as `Not met: <SuccessEvent>` when that rule fails. It remains optional metadata for the three specialised rules. |
+| `ErrorMessage` | string | no | Permitted by the RulesEngine schema but unused by this project. Eligibility failure reasons come from specialised threshold-aware projections or the generic rule's `SuccessEvent`. |
 | `Expression` | string | yes | C#-style lambda body compiled and evaluated by RulesEngine against the workflow inputs. It must return Boolean; startup probe-evaluation catches syntax/member errors but cannot prove that the policy comparison is logically correct. |
 | `LocalParams` | array | no | Rule-local named expressions evaluated for this rule and made available to its main `Expression`. Use them to name or reuse intermediate calculations; names must be unique within the rule. |
 
@@ -299,7 +322,7 @@ Rule object fields used here:
 | `Name` | string | yes | Identifier bound to the local result and referenced directly from the parent rule expression, such as `passCount`. It must be a valid, unique expression identifier. |
 | `Expression` | string | yes | C#-style expression evaluated against the same workflow inputs as the parent rule. Its inferred result type becomes the type of `Name`. |
 
-The shipped gate contains three ordered rules:
+The Standard gate contains three specialised rules:
 
 1. `EnglishLanguagePass`
 2. `MathsPass`
@@ -308,7 +331,12 @@ The shipped gate contains three ordered rules:
 Notes:
 
 - These expressions read `lookup`, `gcses`, and `policy`, not `facts`.
-- The workflow is intentionally small and rigid; tests and linter expectations assume the standard gate shape.
+- Eligibility may contain any non-empty set of uniquely named rules. Generic rules must carry a
+  non-blank `SuccessEvent`. The three specialised names are reserved: the linter pins their
+  canonical expressions so their generated failure wording cannot drift from their behavior.
+- Elite keeps the specialised English/Maths rules and adds `AtLeastEightGcses`, `BestEightTotal`,
+  and `TopSevenAverage`, using `lookup.Count`, `lookup.BestTotal(n)`, and
+  `lookup.BestAverage(n)` respectively.
 
 Example:
 
@@ -335,9 +363,8 @@ How to read that example:
 - `lookup.Grade("english_language")` fetches the student's English Language GCSE,
 - `policy.PassGrade` comes from `data/thresholds.yaml`,
 - `LocalParams` lets the workflow compute `passCount` once and reuse it in the rule.
-- The rules carry no `ErrorMessage`: a failed rule's reason text is projected from the loaded
-  thresholds in compiled code (keyed by `RuleName`), so changing `pass_grade` or `min_passes`
-  updates the explanation as well as the verdict.
+- The rules carry no `ErrorMessage`: specialised failures are projected from loaded thresholds;
+  generic failures use `Not met: <SuccessEvent>`.
 
 ### `workflows/subject-ratings.yaml`
 
@@ -420,11 +447,13 @@ bad YAML before evaluation starts.
 
 Defines:
 
-- the required threshold keys,
+- the required entry, DfE, programme-cap, and scoring keys,
 - numeric ranges such as GCSE `1..9` and probability `0..1`,
-- which advice-related fields are optional.
+- the optional advice, top-*n* eligibility, minimum-programme, and green-cap fields.
 
-Change this only when the shape of `data/thresholds.yaml` changes.
+Cross-field invariants that JSON Schema does not express are checked after deserialization: entry
+threshold ordering, amber/green probability ordering, maximum-choice ordering, the top-*n*
+all-or-none group and reachable total, and the minimum-programme bound.
 
 ### `data/catalogue.schema.json`
 
@@ -470,8 +499,8 @@ Relevant rule fields:
 | --- | --- | --- |
 | `RuleName` | yes | Identifier unique within the workflow. Project code parses eligibility names and subject-rating `<subject>:<tier>` names, so those conventions are contractual. |
 | `Enabled` | no | RulesEngine execution toggle. A disabled rule cannot succeed; disabling a shipped tier also violates the project's expected complete three-tier policy even if the generic schema accepts it. |
-| `ErrorMessage` | no | Permitted by the schema but not used by shipped workflows; eligibility failure reasons are projected from thresholds in compiled code. |
-| `SuccessEvent` | no | Text associated with successful evaluation. Subject-rating results expose this as their base explanation; eligibility failures do not. |
+| `ErrorMessage` | no | Permitted by the schema but unused by project evaluation. |
+| `SuccessEvent` | no at schema level | Subject-rating results expose it as their base explanation. The project linter requires it for a generic eligibility rule, whose failed reason becomes `Not met: <SuccessEvent>`. |
 | `Operator` | no | RulesEngine composite operator applied to child `Rules`, for example `And` or `Or`. The schema accepts any string and therefore does not validate the operator vocabulary; shipped workflows use flat lambda expressions instead. |
 | `RuleExpressionType` | no | Expression dialect selector. The only schema-supported value is `LambdaExpression`; normalization supplies it for rules with an `Expression`. |
 | `Expression` | conditional | Boolean lambda expression for a leaf rule. Required when the rule does not contain child `Rules`; project startup probe-evaluates it to force compilation. |
@@ -594,6 +623,8 @@ Examples of data-only changes:
 - adding a grade to an existing qualification type in `data/qualifications.yaml`,
 - changing a subject's workflow expression in `workflows/subject-ratings.yaml`,
 - adding a new A-level subject by updating both `data/catalogue.yaml` and `workflows/subject-ratings.yaml`.
+- authoring an auxiliary policy tree under `policies/<id>/` using existing rule and relationship
+  shapes (registering that tree is host bootstrap, not policy data).
 
 Examples that are not data-only:
 
@@ -609,4 +640,6 @@ Examples that are not data-only:
 3. Preserve the `green -> amber -> red` ordering in `subject-ratings.yaml`.
 4. Keep exclusions symmetric in `data/catalogue.yaml`.
 5. Run the workflow linter after workflow edits.
-6. Run the normal build/format/test gate before committing.
+6. For an auxiliary policy, lint its workflow directory explicitly and add engine-driven tests
+   against its overlay source.
+7. Run the normal build/format/test gate before committing.

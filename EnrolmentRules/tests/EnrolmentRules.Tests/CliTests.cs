@@ -42,8 +42,13 @@ public sealed class CliTests
 	{
 		var student = new StudentInput(
 			"S-OK",
-			new Dictionary<string, int> { ["maths"] = 6, ["english_language"] = 5 },
-			["plays_piano"]) { DateOfBirth = ValidDob };
+			new Dictionary<string, int> {
+				["maths"] = 6,
+				["english_language"] = 5,
+			},
+			["plays_piano"]) {
+			DateOfBirth = ValidDob,
+		};
 
 		StudentValidator.Validate(student, Harness.Catalogue, Harness.Scale).Should().BeEmpty();
 	}
@@ -54,11 +59,15 @@ public sealed class CliTests
 	[InlineData(-3)]
 	public void a_grade_outside_the_one_to_nine_scale_is_rejected(int grade)
 	{
-		var student = new StudentInput("S-BAD", new Dictionary<string, int> { ["maths"] = grade }, []) { DateOfBirth = ValidDob };
+		var student = new StudentInput("S-BAD", new Dictionary<string, int> {
+			["maths"] = grade,
+		}, []) {
+			DateOfBirth = ValidDob,
+		};
 
 		StudentValidator.Validate(student, Harness.Catalogue, Harness.Scale)
-			.Should().ContainSingle()
-			.Which.Should().Contain("maths").And.Contain("out of range");
+						.Should().ContainSingle()
+						.Which.Should().Contain("maths").And.Contain("out of range");
 	}
 
 	[Fact]
@@ -66,8 +75,13 @@ public sealed class CliTests
 	{
 		var student = new StudentInput(
 			"S-EDGE",
-			new Dictionary<string, int> { ["maths"] = Thresholds.MinGcseGrade, ["art"] = Thresholds.MaxGcseGrade },
-			[]) { DateOfBirth = ValidDob };
+			new Dictionary<string, int> {
+				["maths"] = Thresholds.MinGcseGrade,
+				["art"] = Thresholds.MaxGcseGrade,
+			},
+			[]) {
+			DateOfBirth = ValidDob,
+		};
 
 		StudentValidator.Validate(student, Harness.Catalogue, Harness.Scale).Should().BeEmpty();
 	}
@@ -75,57 +89,71 @@ public sealed class CliTests
 	[Fact]
 	public void an_unknown_gcse_subject_is_rejected()
 	{
-		var student = new StudentInput("S-BAD", new Dictionary<string, int> { ["underwater_basketweaving"] = 6 }, []) { DateOfBirth = ValidDob };
+		var student = new StudentInput("S-BAD", new Dictionary<string, int> {
+			["underwater_basketweaving"] = 6,
+		}, []) {
+			DateOfBirth = ValidDob,
+		};
 
 		StudentValidator.Validate(student, Harness.Catalogue, Harness.Scale)
-			.Should().ContainSingle()
-			.Which.Should().Contain("underwater_basketweaving");
+						.Should().ContainSingle()
+						.Which.Should().Contain("underwater_basketweaving");
 	}
 
 	[Fact]
 	public void a_blank_hobby_tag_is_rejected()
 	{
-		var student = new StudentInput("S-BAD", new Dictionary<string, int> { ["maths"] = 6 }, ["plays_piano", "   "]) { DateOfBirth = ValidDob };
+		var student = new StudentInput("S-BAD", new Dictionary<string, int> {
+			["maths"] = 6,
+		}, ["plays_piano", "   "]) {
+			DateOfBirth = ValidDob,
+		};
 
 		StudentValidator.Validate(student, Harness.Catalogue, Harness.Scale)
-			.Should().ContainSingle()
-			.Which.Should().Contain("hobby");
+						.Should().ContainSingle()
+						.Which.Should().Contain("hobby");
 	}
 
 	[Fact]
 	public void duplicate_chosen_a_levels_are_rejected()
 	{
-		var student = new StudentInput("S-BAD", new Dictionary<string, int> { ["maths"] = 6 }, []) {
+		var student = new StudentInput("S-BAD", new Dictionary<string, int> {
+			["maths"] = 6,
+		}, []) {
 			ChosenALevels = [Subject.French, Subject.German, Subject.French],
 			DateOfBirth = ValidDob,
 		};
 
 		StudentValidator.Validate(student, Harness.Catalogue, Harness.Scale)
-			.Should().ContainSingle()
-			.Which.Should().Contain("chosen_a_levels").And.Contain("duplicate");
+						.Should().ContainSingle()
+						.Which.Should().Contain("chosen_a_levels").And.Contain("duplicate");
 	}
 
 	[Fact]
 	public void an_unknown_chosen_a_level_value_is_rejected()
 	{
-		var student = new StudentInput("S-BAD", new Dictionary<string, int> { ["maths"] = 6 }, []) {
+		var student = new StudentInput("S-BAD", new Dictionary<string, int> {
+			["maths"] = 6,
+		}, []) {
 			ChosenALevels = [new("philosophy")],
 			DateOfBirth = ValidDob,
 		};
 
 		StudentValidator.Validate(student, Harness.Catalogue, Harness.Scale)
-			.Should().ContainSingle()
-			.Which.Should().Contain("chosen_a_levels").And.Contain("philosophy");
+						.Should().ContainSingle()
+						.Which.Should().Contain("chosen_a_levels").And.Contain("philosophy");
 	}
 
 	[Fact]
 	public void a_missing_date_of_birth_is_rejected()
 	{
-		var student = new StudentInput("S-BAD", new Dictionary<string, int> { ["maths"] = 6 }, ["plays_piano"]);
+		var student = new StudentInput("S-BAD", new Dictionary<string, int> {
+			["maths"] = 6,
+		}, ["plays_piano"]);
 
 		StudentValidator.Validate(student, Harness.Catalogue, Harness.Scale)
-			.Should().ContainSingle()
-			.Which.Should().Contain("date_of_birth").And.Contain("required");
+						.Should().ContainSingle()
+						.Which.Should().Contain("date_of_birth").And.Contain("required");
 	}
 
 	// ---- CLI validation gating ---------------------------------------------------------------
@@ -247,7 +275,9 @@ public sealed class CliTests
 	[Fact]
 	public void cli_batch_emits_one_well_formed_result_per_line_in_input_order()
 	{
-		var ids = new[] { "S-A", "S-B", "S-C" };
+		var ids = new[] {
+			"S-A", "S-B", "S-C",
+		};
 		var jsonl = string.Join('\n', ids.Select(EligibleLine));
 		var path = WriteTemp(jsonl, ".jsonl");
 		using var stdout = new StringWriter();
@@ -360,7 +390,7 @@ public sealed class CliTests
 
 		worker.Start();
 		SpinWait.SpinUntil(() => ParseOutcomes(stdout.ToString()).Count >= 2, TimeSpan.FromSeconds(5))
-			.Should().BeTrue("the first two outcomes must be written while the third line is still withheld");
+				.Should().BeTrue("the first two outcomes must be written while the third line is still withheld");
 		reader.Release();
 		worker.Join(TimeSpan.FromSeconds(5)).Should().BeTrue();
 
@@ -393,11 +423,11 @@ public sealed class CliTests
 		worker.Start();
 		try {
 			firstEvaluationStarted.Wait(TimeSpan.FromSeconds(5))
-				.Should().BeTrue("the first record must be in flight before read-ahead is measured");
+								  .Should().BeTrue("the first record must be in flight before read-ahead is measured");
 			SpinWait.SpinUntil(() => reader.ReadCount >= maxConcurrency, TimeSpan.FromSeconds(5))
-				.Should().BeTrue("the evaluation window should be filled");
+					.Should().BeTrue("the evaluation window should be filled");
 			SpinWait.SpinUntil(() => reader.ReadCount > maxConcurrency, TimeSpan.FromMilliseconds(250))
-				.Should().BeFalse("input must not advance beyond the bounded window while sequence zero is pending");
+					.Should().BeFalse("input must not advance beyond the bounded window while sequence zero is pending");
 		}
 		finally {
 			firstOutcomeGate.Set();
@@ -405,7 +435,7 @@ public sealed class CliTests
 
 		worker.Join(TimeSpan.FromSeconds(5)).Should().BeTrue();
 		ParseOutcomes(stdout.ToString()).Select(outcome => outcome.Id)
-			.Should().Equal(Enumerable.Range(0, lineCount).Select(static index => index.ToString(CultureInfo.InvariantCulture)));
+										.Should().Equal(Enumerable.Range(0, lineCount).Select(static index => index.ToString(CultureInfo.InvariantCulture)));
 	}
 
 	// ---- YAML input (single-student modes) ---------------------------------------------------
@@ -579,7 +609,7 @@ public sealed class CliTests
 
 	private static IReadOnlyList<BatchOutcome> ParseOutcomes(string stdout) => [
 		.. stdout.Split('\n', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries)
-			.Select(static line => JsonSerializer.Deserialize(line, BatchJsonContext.Default.BatchOutcome)!),
+				 .Select(static line => JsonSerializer.Deserialize(line, BatchJsonContext.Default.BatchOutcome)!),
 	];
 
 	private static (string Root, string DataDir, string WorkflowsDir) WriteMalformedDataFixture()

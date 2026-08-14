@@ -30,7 +30,9 @@ public static class ExpressionNarrator
 	private static readonly FrozenDictionary<string, PropertyInfo> PolicyMembers =
 		typeof(PolicyThresholds)
 			.GetProperties(BindingFlags.Public | BindingFlags.Instance)
-			.Where(static property => property.PropertyType == typeof(int) || property.PropertyType == typeof(double))
+			.Where(static property =>
+				property.PropertyType == typeof(int) || property.PropertyType == typeof(double)
+													 || property.PropertyType == typeof(int?) || property.PropertyType == typeof(double?))
 			.ToFrozenDictionary(static property => property.Name, StringComparer.Ordinal);
 
 	private static readonly FrozenDictionary<double, string> ALevelGrades = new Dictionary<double, string> {
@@ -124,6 +126,15 @@ public static class ExpressionNarrator
 			CallNode { Owner: "gcses", Method: "Count", Arguments: [LambdaNode lambda] } =>
 				$"at least {Number(node.Right, context)} GCSEs {CountedBy(lambda, context)}",
 
+			MemberNode { Owner: "lookup", Name: "Count" } =>
+				$"you have submitted {Bounded(node, context, static (bound, inner) => Number(bound, inner))} GCSE results",
+
+			CallNode { Owner: "lookup", Method: "BestTotal", Arguments: [var count] } =>
+				$"your best {Number(count, context)} GCSEs total {Bounded(node, context, static (bound, inner) => Number(bound, inner))} points",
+
+			CallNode { Owner: "lookup", Method: "BestAverage", Arguments: [var count] } =>
+				$"your best {Number(count, context)} GCSEs average {Bounded(node, context, static (bound, inner) => Number(bound, inner))}",
+
 			MemberNode { Owner: "facts", Name: "Average" } =>
 				$"an average GCSE grade of {Bounded(node, context, static (bound, inner) => Number(bound, inner))}",
 
@@ -191,7 +202,9 @@ public static class ExpressionNarrator
 			MemberNode { Owner: "ALevelGrade" } grade => Constant(typeof(ALevelGrade), grade.Name),
 			MemberNode { Owner: "Thresholds" } threshold => Constant(typeof(Thresholds), threshold.Name),
 			MemberNode member when PolicyMembers.TryGetValue(member.Name, out var property) =>
-				Convert.ToDouble(property.GetValue(context.Thresholds), CultureInfo.InvariantCulture),
+				property.GetValue(context.Thresholds) is object boxed
+					? Convert.ToDouble(boxed, CultureInfo.InvariantCulture)
+					: throw new CriteriaNarrationException($"policy member '{member.Name}' is not configured for this policy"),
 			_ => throw Unexplainable(node),
 		};
 

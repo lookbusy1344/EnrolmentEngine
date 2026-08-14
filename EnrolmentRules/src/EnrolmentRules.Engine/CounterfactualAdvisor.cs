@@ -23,20 +23,18 @@ internal static class CounterfactualAdvisor
 	{
 		cancellationToken.ThrowIfCancellationRequested();
 		var explained = engine.Explain(student, asOf, cancellationToken);
-		if (!explained.Eligible) {
-			return new(
-				false,
-				[.. explained.EligibilityReasons],
-				[],
-				new(BuildGateClearingAdvice(student, thresholds)));
-		}
 
-		// One evaluation cache shared across every subject's search: the searches all perturb the same
-		// student and explore heavily overlapping grade vectors, and a full EnrolmentResult is a pure
-		// function of the fixed non-GCSE student facts plus the grade vector, so a vector evaluated for one
-		// subject is reused by the rest. The per-subject searches run sequentially (below), so a plain
-		// dictionary suffices.
+		// One evaluation cache shared across every search below (the gate-clearing search and every
+		// per-subject search): they all perturb the same student and explore heavily overlapping grade
+		// vectors, and a full EnrolmentResult is a pure function of the fixed non-GCSE student facts plus
+		// the grade vector, so a vector evaluated once is reused by the rest. The searches run
+		// sequentially, so a plain dictionary suffices.
 		var evaluations = new Dictionary<string, EnrolmentResult>(StringComparer.Ordinal);
+		var pipelineBudget = new PipelineEvaluationBudget(thresholds.AdviceMaxPipelineEvaluations, onPipelineEvaluation);
+
+		if (!explained.Eligible) {
+			return GateClearingResult(engine, student, explained, thresholds, evaluations, pipelineBudget, asOf, cancellationToken);
+		}
 
 		// The per-subject reachability search only ever raises GCSEs the student already sat: a grade bump is
 		// actionable advice, "sit another GCSE from scratch" is not. Restricting the candidate set to the held
@@ -44,10 +42,9 @@ internal static class CounterfactualAdvisor
 		// candidates. A subject gated on a GCSE the student never took is then unreachable by grade changes
 		// alone, which ClassifyBlockedReasonAsync surfaces as that entry rule's own reason. The
 		// considerUnsatGcses diagnostic knob reverts to the old, heavier search over every known GCSE; the
-		// separate gate-clearing fallback for an ineligible student still considers every GCSE because there is
+		// gate-clearing search above always considers every GCSE regardless of this knob, because there is
 		// no grade-bump-only way to open the gate when the student simply lacks enough passes.
 		var candidates = considerUnsatGcses ? AdvisorCandidates.AllSubjects : HeldSubjects(student);
-		var pipelineBudget = new PipelineEvaluationBudget(thresholds.AdviceMaxPipelineEvaluations, onPipelineEvaluation);
 		var advice = new List<SubjectAdvice>();
 		string? truncation = null;
 
@@ -78,7 +75,9 @@ internal static class CounterfactualAdvisor
 			true,
 			[.. explained.EligibilityReasons],
 			[.. advice],
-			null) { TruncationReason = truncation };
+			null) {
+			TruncationReason = truncation,
+		};
 	}
 
 	private static SubjectAdvice BuildSubjectAdvice(
@@ -150,9 +149,9 @@ internal static class CounterfactualAdvisor
 	{
 		cancellationToken.ThrowIfCancellationRequested();
 		var restudyReason = explanation.Overrides
-			.FirstOrDefault(static override_ =>
-				override_.Reason.StartsWith(ConstraintPass.RestudyBarReasonPrefix, StringComparison.Ordinal))
-			?.Reason;
+									   .FirstOrDefault(static override_ =>
+										   override_.Reason.StartsWith(ConstraintPass.RestudyBarReasonPrefix, StringComparison.Ordinal))
+									   ?.Reason;
 		if (restudyReason is not null) {
 			return restudyReason;
 		}
@@ -211,7 +210,9 @@ internal static class CounterfactualAdvisor
 				var nextValue = current + 1;
 				var originalGrade = original.GetValueOrDefault(subject, 0);
 
-				var nextGrades = new Dictionary<string, int>(state.Grades, StringComparer.OrdinalIgnoreCase) { [subject] = nextValue };
+				var nextGrades = new Dictionary<string, int>(state.Grades, StringComparer.OrdinalIgnoreCase) {
+					[subject] = nextValue,
+				};
 				var nextChanged = new HashSet<string>(state.ChangedSubjects, StringComparer.OrdinalIgnoreCase);
 				if (originalGrade != nextValue) {
 					_ = nextChanged.Add(subject);
@@ -234,52 +235,45 @@ internal static class CounterfactualAdvisor
 		return new(false, []);
 	}
 
-	private static EquatableArray<GradeChange> BuildGateClearingAdvice(StudentInput student, PolicyThresholds thresholds)
+	/// <summary>
+	///     The gate-clearing search (§1.6): a bounded best-first search through the real eligibility
+	///     pipeline — the same <see cref="Search" /> the per-subject advice uses, targeting
+	///     <see cref="EnrolmentResult.Eligible" /> instead of a subject rating. Because the predicate is the
+	///     engine's own eligibility verdict, this honours every declared eligibility rule (English pass,
+	///     Maths pass, enough passes, and any top-N GCSE aggregate rule an auxiliary policy adds) without the
+	///     advisor needing to know their shapes. Always searches every known GCSE (not just held ones,
+	///     regardless of the <see cref="PolicyThresholds.AdviceConsidersUnsatGcses" /> knob): there is no
+	///     grade-bump-only way to open the gate when the student simply lacks enough passing subjects.
+	/// </summary>
+	private static AdviceResult GateClearingResult(
+		EnrolmentEngine engine,
+		StudentInput student,
+		ExplainedResult explained,
+		PolicyThresholds thresholds,
+		Dictionary<string, EnrolmentResult> evaluations,
+		PipelineEvaluationBudget pipelineBudget,
+		DateOnly asOf,
+		CancellationToken cancellationToken)
 	{
-		var grades = GradeMap(student);
-		var changes = new List<GradeChange>();
-		var passes = grades.Values.Count(grade => grade >= thresholds.PassGrade);
-
-		void RaiseToPass(string subject)
-		{
-			var current = grades.GetValueOrDefault(subject, 0);
-			if (current >= thresholds.PassGrade) {
-				return;
-			}
-
-			grades[subject] = thresholds.PassGrade;
-			changes.Add(new(subject, current, thresholds.PassGrade));
-			++passes;
+		string? truncation = null;
+		SearchResult search;
+		try {
+			search = Search(
+				engine, student, AdvisorCandidates.AllSubjects, evaluations, thresholds, pipelineBudget,
+				static result => result.Eligible, asOf, cancellationToken);
+		}
+		catch (PipelineEvaluationBudgetExhaustedException) {
+			search = new(false, []);
+			truncation = TruncationReason;
 		}
 
-		RaiseToPass("english_language");
-		RaiseToPass("maths");
-
-		if (passes >= thresholds.MinPasses) {
-			return [.. changes];
-		}
-
-		foreach (var subject in AdvisorCandidates.AllSubjects
-					 .Where(static subject => subject is not "english_language" and not "maths")
-					 .Select(subject => new
-					 {
-						 Subject = subject,
-						 Current = grades.GetValueOrDefault(subject, 0),
-						 Cost = Math.Max(0, thresholds.PassGrade - grades.GetValueOrDefault(subject, 0)),
-					 })
-					 .Where(candidate => candidate.Current < thresholds.PassGrade)
-					 .OrderBy(static candidate => candidate.Cost)
-					 .ThenBy(static candidate => candidate.Subject, StringComparer.Ordinal)) {
-			grades[subject.Subject] = thresholds.PassGrade;
-			changes.Add(new(subject.Subject, subject.Current, thresholds.PassGrade));
-			++passes;
-
-			if (passes >= thresholds.MinPasses) {
-				break;
-			}
-		}
-
-		return [.. changes];
+		return new(
+			false,
+			[.. explained.EligibilityReasons],
+			[],
+			new(search.Changes, search.Reachable)) {
+			TruncationReason = truncation,
+		};
 	}
 
 	// Evaluate the student with these grades, reusing a prior result for the same grade vector. Searches run
@@ -310,7 +304,9 @@ internal static class CounterfactualAdvisor
 	}
 
 	private static StudentInput Apply(StudentInput student, IReadOnlyDictionary<string, int> grades) =>
-		student with { Gcses = EquatableDictionaryFactory.CopyOf(GradeMap(grades)) };
+		student with {
+			Gcses = EquatableDictionaryFactory.CopyOf(GradeMap(grades)),
+		};
 
 	private static Dictionary<string, int> GradeMap(StudentInput student) => GradeMap(student.Gcses);
 
@@ -341,11 +337,11 @@ internal static class CounterfactualAdvisor
 
 		public EquatableArray<GradeChange> Changes => [
 			.. ChangedSubjects
-				.OrderBy(static subject => subject, StringComparer.Ordinal)
-				.Select(subject => new GradeChange(
-					subject,
-					OriginalGrades.GetValueOrDefault(subject, 0),
-					Grades.GetValueOrDefault(subject, OriginalGrades.GetValueOrDefault(subject, 0)))),
+			   .OrderBy(static subject => subject, StringComparer.Ordinal)
+			   .Select(subject => new GradeChange(
+				   subject,
+				   OriginalGrades.GetValueOrDefault(subject, 0),
+				   Grades.GetValueOrDefault(subject, OriginalGrades.GetValueOrDefault(subject, 0)))),
 		];
 	}
 
@@ -365,9 +361,7 @@ internal sealed class PipelineEvaluationBudgetExhaustedException : Exception
 	public PipelineEvaluationBudgetExhaustedException(string message) : base(message) { }
 
 	public PipelineEvaluationBudgetExhaustedException(string message, Exception innerException)
-		: base(message, innerException)
-	{
-	}
+		: base(message, innerException) { }
 }
 
 /// <summary>

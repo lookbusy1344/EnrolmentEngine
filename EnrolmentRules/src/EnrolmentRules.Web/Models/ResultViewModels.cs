@@ -1,45 +1,60 @@
 namespace EnrolmentRules.Web.Models;
 
 using Domain;
+using Engine;
 
 /// <summary>
 ///     The result the page renders for the current session snapshot: either the validation errors
-///     <see cref="Domain.StudentValidator" /> raised against the mapped <c>StudentInput</c>, or the full
-///     per-subject <see cref="ExplainedResult" /> from <c>ExplainValidated</c>. Never both — an invalid snapshot
-///     shows no (possibly stale) recommendations.
+///     <see cref="Domain.StudentValidator" /> raised against the mapped <c>StudentInput</c>, or the
+///     selected policy's non-destructive <see cref="PolicyComparisonResult" /> from
+///     <see cref="IEnrolmentPolicyRegistry.Compare" />. Never both — an invalid snapshot shows no
+///     (possibly stale) recommendations.
 /// </summary>
-public sealed record EnrolmentResultsViewModel(EquatableArray<string> ValidationErrors, ExplainedResult? Result)
+public sealed record EnrolmentResultsViewModel(EquatableArray<string> ValidationErrors, PolicyComparisonResult? Comparison)
 {
 	public bool IsValid => ValidationErrors.Count == 0;
 
-	public static EnrolmentResultsViewModel From(ValidatedEvaluation<ExplainedResult> evaluation)
+	public static EnrolmentResultsViewModel From(ValidatedEvaluation<PolicyComparisonResult> comparison)
 	{
-		ArgumentNullException.ThrowIfNull(evaluation);
-		return new(evaluation.Validation.Errors, evaluation.Value);
+		ArgumentNullException.ThrowIfNull(comparison);
+		return new(comparison.Validation.Errors, comparison.Value);
 	}
 }
 
 /// <summary>
-///     One committed choice as the basket renders it: the subject plus the rating this evaluation gives it.
-///     A choice is only ever green or amber (a red one is ejected before the page renders), and an amber one
-///     is <em>borderline</em> — it sits in the basket but would need additional authorisation before enrolment.
-///     <paramref name="Rating" /> is null when the snapshot produced no per-subject ratings at all — invalid
-///     facts, or the eligibility gate failed — in which case the basket falls back to a plain pill.
+///     One committed choice as the basket renders it: the subject, its non-destructive
+///     <see cref="ChoiceStatus" /> under the selected policy, and (when <see cref="ChoiceStatus.Available" />)
+///     the rating this evaluation gives it. A choice is never dropped from the basket by the page itself —
+///     an <see cref="ChoiceStatus.Unavailable" /> (offered, currently red) or
+///     <see cref="ChoiceStatus.NotOffered" /> (absent from this policy's catalogue) choice stays visible,
+///     annotated, so switching policies never silently loses a selection. An <see cref="ChoiceStatus.Available" />
+///     entry rated amber is <em>borderline</em> — it would need additional authorisation before enrolment.
 /// </summary>
-public sealed record BasketEntry(Subject Subject, Rating? Rating)
+public sealed record BasketEntry(Subject Subject, ChoiceStatus Status, Rating? Rating, string? Reason)
 {
-	public bool IsBorderline => RatingDisplay.IsBorderline(Rating);
+	public bool IsBorderline => Status == ChoiceStatus.Available && RatingDisplay.IsBorderline(Rating);
 
-	public string CssClass => RatingDisplay.BasketCssClass(Rating);
+	public string CssClass => Status switch {
+		ChoiceStatus.Unavailable => "text-bg-danger",
+		ChoiceStatus.NotOffered => "text-bg-danger",
+		_ => RatingDisplay.BasketCssClass(Rating),
+	};
 
-	/// <summary>Pairs each committed choice with its rating from <paramref name="results" />, in basket order.</summary>
-	public static IReadOnlyList<BasketEntry> From(IReadOnlyList<Subject> chosen, EnrolmentResultsViewModel? results)
+	/// <summary>Project every <see cref="PolicyComparisonResult.ChoiceStatuses" /> entry into a basket row, in the shared basket's own order.</summary>
+	public static IReadOnlyList<BasketEntry> From(PolicyComparisonResult? comparison)
 	{
-		ArgumentNullException.ThrowIfNull(chosen);
-		var ratings = results?.Result?.Explanations.ToDictionary(e => e.Subject, e => e.Rating);
-		return [.. chosen.Select(subject => new BasketEntry(subject, Lookup(ratings, subject)))];
-	}
+		if (comparison is null) {
+			return [];
+		}
 
-	private static Rating? Lookup(Dictionary<Subject, Rating>? ratings, Subject subject) =>
-		ratings is not null && ratings.TryGetValue(subject, out var rating) ? rating : null;
+		var ratings = comparison.Explanation.Explanations.ToDictionary(static e => e.Subject, static e => e.Rating);
+		return [
+			.. comparison.ChoiceStatuses.Select(status =>
+				new BasketEntry(
+					status.Subject,
+					status.Status,
+					ratings.TryGetValue(status.Subject, out var rating) ? rating : null,
+					status.Reason)),
+		];
+	}
 }

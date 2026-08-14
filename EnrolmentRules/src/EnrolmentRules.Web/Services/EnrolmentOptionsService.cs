@@ -12,11 +12,12 @@ public readonly record struct SubjectOptionGroup(QualificationType Type, string 
 
 /// <summary>
 ///     The picker/default data the Razor page and the <c>/api/enrolment/options</c> endpoint both need to
-///     render a facts form, derived from the same catalogue/validator/scale sources so the two front ends
-///     never drift. Recomputed per request/call (registered scoped) rather than cached, so a reloaded
-///     engine's catalogue is reflected immediately.
+///     render a facts form, derived from the selected <see cref="EnrolmentPolicy" />'s catalogue/validator/
+///     scale so the two front ends never drift. Constructed per request against the caller's resolved
+///     policy (never DI-scoped to a single fixed engine), so a Standard and an Elite request in flight at
+///     once never share state.
 /// </summary>
-public sealed class EnrolmentOptionsService(IEnrolmentEngine engine, TimeProvider timeProvider)
+public sealed class EnrolmentOptionsService(EnrolmentPolicy policy, TimeProvider timeProvider)
 {
 	/// <summary>
 	///     Age assumed for a student who hasn't entered a date of birth yet, used only to pre-fill the date
@@ -56,7 +57,10 @@ public sealed class EnrolmentOptionsService(IEnrolmentEngine engine, TimeProvide
 		[QualificationType.Nvq] = "NVQ examples",
 	};
 
-	private IEnrolmentEvaluator Evaluator => engine;
+	private IEnrolmentEvaluator Evaluator => policy.Engine;
+
+	/// <summary>The selected policy's descriptor and the caller's registry snapshot, so the response can name both.</summary>
+	public EnrolmentPolicy Policy => policy;
 
 	/// <summary>The authoritative A-level list, in catalogue order — the web layer keeps no parallel subject list.</summary>
 	public IReadOnlyList<Subject> ALevelSubjects => Evaluator.Catalogue.Subjects;
@@ -94,6 +98,9 @@ public sealed class EnrolmentOptionsService(IEnrolmentEngine engine, TimeProvide
 	/// <summary>The base selected-A-level cap (<see cref="PolicyThresholds.MaxChosenALevels" />); the high-attainment cap is evaluation-specific.</summary>
 	public int ChoiceLimit => Evaluator.Thresholds.MaxChosenALevels;
 
+	/// <summary>The minimum distinct offered choices this policy requires for a final programme (0 when unset — Standard's default).</summary>
+	public int MinChoices => Evaluator.Thresholds.MinChosenALevels;
+
 	public DateOnly DefaultDateOfBirth() => Today().AddYears(-TypicalEnrollmentAgeYears);
 
 	public int DefaultAge() => AgeCalculator.WholeYears(DefaultDateOfBirth(), Today());
@@ -105,8 +112,8 @@ public sealed class EnrolmentOptionsService(IEnrolmentEngine engine, TimeProvide
 		var realSubjects = type == QualificationType.ALevel
 			? catalogue.Subjects.Select(static subject => subject.Value)
 			: catalogue.Subjects.SelectMany(subject => catalogue.Meta(subject).EntryEquivalents)
-				.Where(equivalent => equivalent.Type == type)
-				.Select(static equivalent => equivalent.Subject);
+					   .Where(equivalent => equivalent.Type == type)
+					   .Select(static equivalent => equivalent.Subject);
 		var illustrativeSubjects = IllustrativeSubjectsByType.GetValueOrDefault(type, []);
 
 		return new(
@@ -117,6 +124,6 @@ public sealed class EnrolmentOptionsService(IEnrolmentEngine engine, TimeProvide
 
 	private static IEnumerable<string> BuildHobbyOptions(CatalogueData catalogue) =>
 		catalogue.Subjects
-			.SelectMany(subject => catalogue.Meta(subject).RequiredActivities.Concat(catalogue.Meta(subject).BlockingActivities))
-			.Distinct(StringComparer.Ordinal);
+				 .SelectMany(subject => catalogue.Meta(subject).RequiredActivities.Concat(catalogue.Meta(subject).BlockingActivities))
+				 .Distinct(StringComparer.Ordinal);
 }

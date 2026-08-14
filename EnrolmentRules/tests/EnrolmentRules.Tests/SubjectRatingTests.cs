@@ -34,7 +34,7 @@ public sealed class SubjectRatingTests
 	{
 		var profile = new StudentProfile("S-TEST", 6.0, [new(subject, predictedPoints)], [evidence], []);
 		var ratings = Harness.ShippedEvaluator()
-			.EvaluateRatings(profile, [.. gcses.Select(g => new GcseResult(g.Subject, g.Grade))]);
+							 .EvaluateRatings(profile, [.. gcses.Select(g => new GcseResult(g.Subject, g.Grade))]);
 		return ratings.Single(r => r.Subject == subject).Rating;
 	}
 
@@ -49,6 +49,7 @@ public sealed class SubjectRatingTests
 		("chemistry", grade), ("biology", grade), ("english_literature", grade),
 		("french", grade), ("german", grade), ("physical_education", grade),
 		("computer_studies", grade), ("history", grade), ("music", grade), ("art", grade),
+		("geography", grade), ("politics", grade),
 	];
 
 	[Fact]
@@ -71,9 +72,9 @@ public sealed class SubjectRatingTests
 		var outsideAccessibleTier = AccessibleSubjects.Append(Subject.PhysicalEducation);
 
 		ratings.Where(r => !outsideAccessibleTier.Contains(r.Subject))
-			.Should().OnlyContain(r => r.Rating == Rating.Red);
+			   .Should().OnlyContain(r => r.Rating == Rating.Red);
 		ratings.Where(r => AccessibleSubjects.Contains(r.Subject))
-			.Should().OnlyContain(r => r.Rating == Rating.Green);
+			   .Should().OnlyContain(r => r.Rating == Rating.Green);
 		Of(ratings, Subject.PhysicalEducation).Should().Be(Rating.Amber);
 	}
 

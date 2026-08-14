@@ -38,7 +38,7 @@ public sealed class CustomSubjectExampleTests
 			var result = engine.Evaluate(ReadSampleStudent());
 
 			result.Recommendations.Should().ContainSingle(recommendation => recommendation.Subject == Philosophy)
-				.Which.Rating.Should().Be(Rating.Green);
+				  .Which.Rating.Should().Be(Rating.Green);
 		}
 		finally {
 			Directory.Delete(Path.GetDirectoryName(workflowsDir)!, true);

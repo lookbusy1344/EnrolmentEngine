@@ -50,7 +50,9 @@ public sealed class ExplanationTests
 			["history"] = 8,
 			["music"] = 8,
 			["art"] = 8,
-		}, []) { PriorQualifications = [new("applied_science", QualificationType.BtecDiploma, "distinction")] };
+		}, []) {
+			PriorQualifications = [new("applied_science", QualificationType.BtecDiploma, "distinction")],
+		};
 
 	private static double PredictedPoints(Subject subject, double average) => ShippedCatalogue.Meta(subject).Regression.Predict(average);
 
@@ -80,7 +82,9 @@ public sealed class ExplanationTests
 	public void explanation_cites_the_constraint_that_overrode_the_base_rule()
 	{
 		var engine = Harness.ShippedEngine();
-		var explained = engine.Explain(StrongStudent("plays_piano") with { ChosenALevels = [Subject.History] });
+		var explained = engine.Explain(StrongStudent("plays_piano") with {
+			ChosenALevels = [Subject.History],
+		});
 
 		// History ↔ Art clash: both green at base, but Art is downgraded only once History is chosen.
 		// The explanation must cite the exclusion adjustment, not just the base art:green rule.
@@ -128,7 +132,9 @@ public sealed class ExplanationTests
 	public void ineligible_explanation_attributes_each_red_to_the_eligibility_gate()
 	{
 		// Only Maths present: English absent and too few passes ⇒ ineligible, every subject red.
-		var student = new StudentInput("S-INELIGIBLE", new Dictionary<string, int> { ["maths"] = 6 }, []);
+		var student = new StudentInput("S-INELIGIBLE", new Dictionary<string, int> {
+			["maths"] = 6,
+		}, []);
 
 		var engine = Harness.ShippedEngine();
 		var explained = engine.Explain(student);
@@ -153,7 +159,7 @@ public sealed class ExplanationTests
 		explained.Eligible.Should().Be(result.Eligible);
 		explained.Summary.Should().Be(result.Summary);
 		explained.Explanations.Select(e => (e.Subject, e.Rating))
-			.Should().Equal(result.Recommendations.Select(r => (r.Subject, r.Rating)));
+				 .Should().Equal(result.Recommendations.Select(r => (r.Subject, r.Rating)));
 	}
 
 	[Fact]

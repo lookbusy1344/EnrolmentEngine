@@ -13,9 +13,9 @@ public sealed class SynchronousTestSuiteTests
 	{
 		var testDirectory = Path.Combine(Harness.RepoRoot, "tests", "EnrolmentRules.Tests");
 		var violations = Directory.EnumerateFiles(testDirectory, "*.cs", SearchOption.AllDirectories)
-			.Where(static file => !IsGeneratedOutput(file))
-			.SelectMany(static file => SynchronousTestSuiteGuard.FindViolations(file, File.ReadAllText(file)))
-			.ToArray();
+								  .Where(static file => !IsGeneratedOutput(file))
+								  .SelectMany(static file => SynchronousTestSuiteGuard.FindViolations(file, File.ReadAllText(file)))
+								  .ToArray();
 
 		violations.Should().BeEmpty();
 	}
@@ -60,8 +60,8 @@ public sealed class SynchronousTestSuiteTests
 							  """;
 
 		SynchronousTestSuiteGuard.FindViolations("ExampleTests.cs", source)
-			.Should()
-			.Contain(static violation => violation.Contains("'Task'"));
+								 .Should()
+								 .Contain(static violation => violation.Contains("'Task'"));
 	}
 
 	[Fact]
@@ -190,7 +190,9 @@ internal static class SynchronousTestSuiteGuard
 				["ExecuteAllRulesAsync"] = ["ExecuteAllRulesAsync"],
 				["ExecuteActionWorkflowAsync"] = ["ExecuteActionWorkflowAsync"],
 			},
-			["StartupTests.cs"] = new Dictionary<string, HashSet<string>>(StringComparer.Ordinal) { ["ExecuteAllRulesAsync"] = ["ExecuteAllRules"] },
+			["StartupTests.cs"] = new Dictionary<string, HashSet<string>>(StringComparer.Ordinal) {
+				["ExecuteAllRulesAsync"] = ["ExecuteAllRules"],
+			},
 		};
 
 	public static IEnumerable<string> FindViolations(string fileName, string source)
@@ -294,16 +296,16 @@ internal static class SynchronousTestSuiteGuard
 
 	private static bool HasUsesTestInfrastructureAttribute(MethodDeclarationSyntax method) =>
 		method.AttributeLists
-			.SelectMany(static list => list.Attributes)
-			.Any(static attribute => attribute.Name.ToString() is "UsesTestInfrastructure" or "UsesTestInfrastructureAttribute");
+			  .SelectMany(static list => list.Attributes)
+			  .Any(static attribute => attribute.Name.ToString() is "UsesTestInfrastructure" or "UsesTestInfrastructureAttribute");
 
 	private static bool IsApprovedInfrastructureReference(SimpleNameSyntax identifier) =>
 		ApprovedInfrastructureTypes.Contains(identifier.Identifier.ValueText);
 
 	private static bool IsApprovedInfrastructureInvocation(SimpleNameSyntax identifier) =>
 		IsApprovedInfrastructureReference(identifier)
-		|| (identifier.Parent is MemberAccessExpressionSyntax { Expression: SimpleNameSyntax expression }
-			&& IsApprovedInfrastructureReference(expression));
+		|| identifier.Parent is MemberAccessExpressionSyntax { Expression: SimpleNameSyntax expression }
+		&& IsApprovedInfrastructureReference(expression);
 
 	private static bool IsAllowedMethodDeclaration(
 		string name,
@@ -322,8 +324,8 @@ internal static class SynchronousTestSuiteGuard
 		}
 
 		return identifier.AncestorsAndSelf()
-			.OfType<MethodDeclarationSyntax>()
-			.Any(method => allowedMethods.Contains(method.Identifier.ValueText));
+						 .OfType<MethodDeclarationSyntax>()
+						 .Any(method => allowedMethods.Contains(method.Identifier.ValueText));
 	}
 
 	private static string Describe(string fileName, SyntaxToken token, string construct)
@@ -338,9 +340,9 @@ internal static class SynchronousTestSuiteGuard
 		{
 			var shortFileName = Path.GetFileName(fileName);
 			var namespaceName = root.DescendantNodes()
-				.OfType<BaseNamespaceDeclarationSyntax>()
-				.Select(static declaration => declaration.Name.ToString())
-				.FirstOrDefault();
+									.OfType<BaseNamespaceDeclarationSyntax>()
+									.Select(static declaration => declaration.Name.ToString())
+									.FirstOrDefault();
 			var isInfrastructure = fileName.Split(Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar).Contains("TestInfrastructure")
 								   || string.Equals(namespaceName, ApprovedInfrastructureNamespace, StringComparison.Ordinal);
 			var isTestProjectSource = !fileName.Split(Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar).Contains("src");

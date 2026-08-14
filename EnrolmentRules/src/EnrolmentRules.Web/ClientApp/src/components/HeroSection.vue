@@ -1,9 +1,38 @@
+<script lang="ts" setup>
+import { computed } from 'vue'
+import type { PolicyDescriptor } from '../api/contracts'
+
+const props = defineProps<{
+  selectedPolicy: PolicyDescriptor | null
+  availablePolicies: readonly PolicyDescriptor[]
+}>()
+
+const emit = defineEmits<{
+  'switch-policy': [policyId: string]
+}>()
+
+const otherPolicy = computed(
+  () => props.availablePolicies.find((policy) => policy.id !== props.selectedPolicy?.id) ?? null,
+)
+
+const razorHref = computed(() =>
+  props.selectedPolicy === null ? '/razor' : `/razor?policy=${encodeURIComponent(props.selectedPolicy.id)}`,
+)
+</script>
+
 <template>
   <section aria-labelledby="hero-heading" class="hero">
     <p class="hero-eyebrow">
       GCSEs in → A-Levels out
       <span class="mode-tag">Dynamic</span>
-      <a class="mode-switch" href="/razor">Server-rendered version</a>
+      <a :href="razorHref" class="mode-switch">Server-rendered version</a>
+    </p>
+    <p v-if="selectedPolicy !== null" aria-label="Selected enrolment policy" class="policy-switch">
+      <strong>{{ selectedPolicy.displayName }}</strong>
+      <template v-if="otherPolicy !== null">
+        —
+        <a href="#" @click.prevent="emit('switch-policy', otherPolicy.id)">Switch to {{ otherPolicy.displayName }}</a>
+      </template>
     </p>
     <h1 id="hero-heading">See how your skills can <span class="grow">grow</span>.</h1>
     <p class="hero-lede">

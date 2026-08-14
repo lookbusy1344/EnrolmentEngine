@@ -28,7 +28,7 @@ public interface IEnrolmentAdvisor
 	/// <summary>Validates the input and produces counterfactual guidance with an explicit unsat GCSE advice scope.</summary>
 	/// <exception cref="ArgumentOutOfRangeException"><paramref name="unsatGcses" /> is not a supported advice scope.</exception>
 	ValidatedEvaluation<AdviceResult> AdviseValidated(StudentInput student, UnsatGcseAdvice unsatGcses,
-		CancellationToken cancellationToken = default);
+													  CancellationToken cancellationToken = default);
 
 	/// <summary>Validates the input and produces counterfactual guidance with an explicit reference date and advice scope.</summary>
 	/// <exception cref="ArgumentOutOfRangeException"><paramref name="unsatGcses" /> is not a supported advice scope.</exception>

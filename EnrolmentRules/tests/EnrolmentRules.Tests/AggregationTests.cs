@@ -16,7 +16,10 @@ public sealed class AggregationTests
 	// The green cap is an optional feature, disabled in the shipped thresholds (MaxGreenChoices is null).
 	// These tests opt it in explicitly to exercise the capping behaviour.
 	private const int Cap = 4;
-	private static readonly PolicyThresholds CappedThresholds = Harness.Thresholds with { MaxGreenChoices = Cap };
+
+	private static readonly PolicyThresholds CappedThresholds = Harness.Thresholds with {
+		MaxGreenChoices = Cap,
+	};
 
 	private static SubjectRating[] Ratings(params (Subject Subject, Rating Rating)[] overrides)
 	{
@@ -43,7 +46,9 @@ public sealed class AggregationTests
 			["history"] = 6,
 			["music"] = 6,
 			["art"] = 6,
-		}, []) { DateOfBirth = new(2009, 9, 1) };
+		}, []) {
+			DateOfBirth = new(2009, 9, 1),
+		};
 
 	private static StudentInput VeryStrongStudent() =>
 		new("S-VERY-STRONG", new Dictionary<string, int> {
@@ -60,7 +65,9 @@ public sealed class AggregationTests
 			["history"] = 8,
 			["music"] = 8,
 			["art"] = 8,
-		}, []) { DateOfBirth = new(2009, 9, 1) };
+		}, []) {
+			DateOfBirth = new(2009, 9, 1),
+		};
 
 	private static int Weight(Subject subject) => Catalogue.Meta(subject).PriorityWeight;
 
@@ -75,7 +82,7 @@ public sealed class AggregationTests
 
 		// Independent recomputation from the catalogue weights and the loaded amber factor.
 		var expected = Weight(Subject.Maths) + Weight(Subject.Physics) + Weight(Subject.Chemistry)
-					   + (Harness.Thresholds.AmberScoreFactor * (Weight(Subject.Biology) + Weight(Subject.Art)));
+					   + Harness.Thresholds.AmberScoreFactor * (Weight(Subject.Biology) + Weight(Subject.Art));
 
 		summary.GreenCount.Should().Be(3);
 		summary.AmberCount.Should().Be(2);
@@ -99,7 +106,9 @@ public sealed class AggregationTests
 	public void green_cap_downgrades_the_lowest_weight_surplus_greens_first()
 	{
 		// One green over the cap: the single lowest-weight green is demoted, the rest stay green.
-		var greens = new[] { Subject.Maths, Subject.Physics, Subject.Chemistry, Subject.Biology, Subject.EnglishLiterature };
+		var greens = new[] {
+			Subject.Maths, Subject.Physics, Subject.Chemistry, Subject.Biology, Subject.EnglishLiterature,
+		};
 		greens.Should().HaveCount(Cap + 1);
 		var lowest = greens.OrderBy(Weight).First();
 
@@ -131,7 +140,9 @@ public sealed class AggregationTests
 	public void green_cap_demotes_exactly_the_surplus_count()
 	{
 		// Two greens over the cap ⇒ the two lowest-weight greens are demoted.
-		var greens = new[] { Subject.Maths, Subject.FurtherMaths, Subject.Physics, Subject.Chemistry, Subject.Biology, Subject.History };
+		var greens = new[] {
+			Subject.Maths, Subject.FurtherMaths, Subject.Physics, Subject.Chemistry, Subject.Biology, Subject.History,
+		};
 		var surplus = greens.Length - Cap;
 		var expected = greens.OrderBy(Weight).Take(surplus).ToHashSet();
 
@@ -180,8 +191,8 @@ public sealed class AggregationTests
 		// Monotonic non-increasing by (rating-severity, then weight) across the whole list.
 		ranked.Zip(ranked.Skip(1)).Should().OnlyContain(p =>
 			(int)p.First.Rating < (int)p.Second.Rating
-			|| ((int)p.First.Rating == (int)p.Second.Rating
-				&& Weight(p.First.Subject) >= Weight(p.Second.Subject)));
+			|| (int)p.First.Rating == (int)p.Second.Rating
+			&& Weight(p.First.Subject) >= Weight(p.Second.Subject));
 	}
 
 	[Fact]
@@ -189,25 +200,31 @@ public sealed class AggregationTests
 	{
 		// Enabling the cap via loaded data (no rebuild) must change the demotion: with the shipped default
 		// (disabled) four greens demote none; setting a cap of three demotes the lowest-weight one.
-		var capped = Harness.Thresholds with { MaxGreenChoices = 3 };
-		var greens = new[] { Subject.Maths, Subject.Physics, Subject.Chemistry, Subject.Biology };
+		var capped = Harness.Thresholds with {
+			MaxGreenChoices = 3,
+		};
+		var greens = new[] {
+			Subject.Maths, Subject.Physics, Subject.Chemistry, Subject.Biology,
+		};
 		var ratings = Ratings([.. greens.Select(s => (s, Rating.Green))]);
 
 		Aggregator.CapGreens(ratings, Catalogue.Default, Harness.Thresholds).Should().BeEmpty();
 		Aggregator.CapGreens(ratings, Catalogue.Default, capped)
-			.Should().ContainSingle().Which.Subject.Should().Be(greens.OrderBy(Weight).First());
+				  .Should().ContainSingle().Which.Subject.Should().Be(greens.OrderBy(Weight).First());
 	}
 
 	[Fact]
 	public void programme_priority_score_honours_a_loaded_amber_factor_override()
 	{
 		// The amber score factor is loaded data: changing it must change the programme priority score.
-		var halved = Harness.Thresholds with { AmberScoreFactor = Harness.Thresholds.AmberScoreFactor / 2 };
+		var halved = Harness.Thresholds with {
+			AmberScoreFactor = Harness.Thresholds.AmberScoreFactor / 2,
+		};
 		var ratings = Ratings((Subject.Maths, Rating.Green), (Subject.Art, Rating.Amber));
 
 		var summary = Aggregator.Summarise(ratings, Catalogue.Default, halved);
 
-		summary.ProgrammePriorityScore.Should().Be(Weight(Subject.Maths) + (halved.AmberScoreFactor * Weight(Subject.Art)));
+		summary.ProgrammePriorityScore.Should().Be(Weight(Subject.Maths) + halved.AmberScoreFactor * Weight(Subject.Art));
 	}
 
 	[Fact]
@@ -221,7 +238,9 @@ public sealed class AggregationTests
 		// Constraint pass first: choosing History demotes Art to amber.
 		var afterConstraints = ConstraintPass.Apply(
 			sixGreens,
-			ConstraintPass.Evaluate(sixGreens, new("S", 7.0, [], [], []) { ChosenALevels = [Subject.History] }, Harness.Catalogue));
+			ConstraintPass.Evaluate(sixGreens, new("S", 7.0, [], [], []) {
+				ChosenALevels = [Subject.History],
+			}, Harness.Catalogue));
 
 		var capOnConstrained = Aggregator.CapGreens(afterConstraints, Catalogue.Default, CappedThresholds);
 		var capOnBase = Aggregator.CapGreens(sixGreens, Catalogue.Default, CappedThresholds);
@@ -237,7 +256,9 @@ public sealed class AggregationTests
 	public void french_and_german_both_chosen_are_red_from_chosen_subject_exclusions()
 	{
 		var engine = Harness.ShippedEngine();
-		var student = StrongStudent() with { ChosenALevels = [Subject.French, Subject.German] };
+		var student = StrongStudent() with {
+			ChosenALevels = [Subject.French, Subject.German],
+		};
 
 		var result = engine.Evaluate(student);
 
@@ -252,8 +273,8 @@ public sealed class AggregationTests
 		german.Reason.Should().Be($"Cannot be combined with chosen {EnumNames.NameOf(Subject.French)}");
 
 		var choiceAdjustments = result.Adjustments
-			.Where(a => a.Subject == Subject.French || a.Subject == Subject.German)
-			.ToArray();
+									  .Where(a => a.Subject == Subject.French || a.Subject == Subject.German)
+									  .ToArray();
 		choiceAdjustments.Should().HaveCount(2);
 		choiceAdjustments.Should().Contain(a =>
 			a.Subject == Subject.French
@@ -271,7 +292,9 @@ public sealed class AggregationTests
 	public void normal_attainment_student_with_two_choices_leaves_another_qualifying_subject_selectable()
 	{
 		var engine = Harness.ShippedEngine();
-		var student = StrongStudent() with { ChosenALevels = [Subject.Maths, Subject.Physics] };
+		var student = StrongStudent() with {
+			ChosenALevels = [Subject.Maths, Subject.Physics],
+		};
 
 		var result = engine.Evaluate(student);
 
@@ -284,7 +307,9 @@ public sealed class AggregationTests
 	public void normal_attainment_student_with_three_choices_blocks_further_unchosen_subjects()
 	{
 		var engine = Harness.ShippedEngine();
-		var student = StrongStudent() with { ChosenALevels = [Subject.Maths, Subject.Physics, Subject.Chemistry] };
+		var student = StrongStudent() with {
+			ChosenALevels = [Subject.Maths, Subject.Physics, Subject.Chemistry],
+		};
 
 		var result = engine.Evaluate(student);
 
@@ -298,14 +323,16 @@ public sealed class AggregationTests
 			&& a.To == Rating.Red
 			&& a.Reason == biology.Reason);
 		result.Recommendations.Where(r => student.ChosenALevels.Contains(r.Subject))
-			.Should().NotContain(r => r.Reason.StartsWith(Aggregator.ExceedsChosenSubjectCapReason, StringComparison.Ordinal));
+			  .Should().NotContain(r => r.Reason.StartsWith(Aggregator.ExceedsChosenSubjectCapReason, StringComparison.Ordinal));
 	}
 
 	[Fact]
 	public void chosen_subject_cap_reason_names_the_count_the_limit_and_the_chosen_subjects()
 	{
 		var engine = Harness.ShippedEngine();
-		var student = StrongStudent() with { ChosenALevels = [Subject.Maths, Subject.Physics, Subject.Chemistry] };
+		var student = StrongStudent() with {
+			ChosenALevels = [Subject.Maths, Subject.Physics, Subject.Chemistry],
+		};
 
 		var result = engine.Evaluate(student);
 
@@ -324,7 +351,9 @@ public sealed class AggregationTests
 	public void high_attainment_chosen_subject_cap_reason_says_the_limit_is_already_raised()
 	{
 		var engine = Harness.ShippedEngine();
-		var student = VeryStrongStudent() with { ChosenALevels = [Subject.Maths, Subject.Physics, Subject.Chemistry, Subject.Biology] };
+		var student = VeryStrongStudent() with {
+			ChosenALevels = [Subject.Maths, Subject.Physics, Subject.Chemistry, Subject.Biology],
+		};
 
 		var result = engine.Evaluate(student);
 
@@ -337,7 +366,9 @@ public sealed class AggregationTests
 	public void high_attainment_student_with_three_choices_can_still_take_a_fourth()
 	{
 		var engine = Harness.ShippedEngine();
-		var student = VeryStrongStudent() with { ChosenALevels = [Subject.Maths, Subject.Physics, Subject.Chemistry] };
+		var student = VeryStrongStudent() with {
+			ChosenALevels = [Subject.Maths, Subject.Physics, Subject.Chemistry],
+		};
 
 		var result = engine.Evaluate(student);
 
@@ -350,7 +381,9 @@ public sealed class AggregationTests
 	public void high_attainment_student_with_four_choices_blocks_further_unchosen_subjects()
 	{
 		var engine = Harness.ShippedEngine();
-		var student = VeryStrongStudent() with { ChosenALevels = [Subject.Maths, Subject.Physics, Subject.Chemistry, Subject.Biology] };
+		var student = VeryStrongStudent() with {
+			ChosenALevels = [Subject.Maths, Subject.Physics, Subject.Chemistry, Subject.Biology],
+		};
 
 		var result = engine.Evaluate(student);
 

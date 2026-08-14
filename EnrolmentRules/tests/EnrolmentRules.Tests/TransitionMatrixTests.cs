@@ -21,7 +21,7 @@ public sealed class TransitionMatrixTests
 		var act = () => DfeTransitionMatrix.Load(new StringReader(string.Empty));
 
 		act.Should().Throw<TransitionMatrixException>()
-			.WithMessage("*header row*");
+		   .WithMessage("*header row*");
 	}
 
 	[Fact]
@@ -30,7 +30,7 @@ public sealed class TransitionMatrixTests
 		var act = () => DfeTransitionMatrix.Load(new StringReader(Header));
 
 		act.Should().Throw<TransitionMatrixException>()
-			.WithMessage("*at least one data row*");
+		   .WithMessage("*at least one data row*");
 	}
 
 	[Fact]
@@ -41,7 +41,7 @@ public sealed class TransitionMatrixTests
 			ValidRow()));
 
 		act.Should().Throw<TransitionMatrixException>()
-			.WithMessage("*header*");
+		   .WithMessage("*header*");
 	}
 
 	[Fact]
@@ -52,7 +52,7 @@ public sealed class TransitionMatrixTests
 			"maths,111,12210,Mathematics,7 to < 8,0.1"));
 
 		act.Should().Throw<TransitionMatrixException>()
-			.WithMessage("*12 fields*");
+		   .WithMessage("*12 fields*");
 	}
 
 	[Fact]
@@ -78,7 +78,7 @@ public sealed class TransitionMatrixTests
 			ValidRow(probabilityA: value)));
 
 		act.Should().Throw<TransitionMatrixException>()
-			.WithMessage("*finite*");
+		   .WithMessage("*finite*");
 	}
 
 	[Theory]
@@ -91,7 +91,7 @@ public sealed class TransitionMatrixTests
 			ValidRow(probabilityA: value)));
 
 		act.Should().Throw<TransitionMatrixException>()
-			.WithMessage("*[0, 1]*");
+		   .WithMessage("*[0, 1]*");
 	}
 
 	[Fact]
@@ -103,7 +103,7 @@ public sealed class TransitionMatrixTests
 			ValidRow()));
 
 		act.Should().Throw<TransitionMatrixException>()
-			.WithMessage("*duplicate*maths*7 to < 8*");
+		   .WithMessage("*duplicate*maths*7 to < 8*");
 	}
 
 	[Fact]
@@ -114,7 +114,7 @@ public sealed class TransitionMatrixTests
 			ValidRow("7+")));
 
 		act.Should().Throw<TransitionMatrixException>()
-			.WithMessage("*prior_attainment_band*7+*");
+		   .WithMessage("*prior_attainment_band*7+*");
 	}
 
 	[Fact]
@@ -125,7 +125,7 @@ public sealed class TransitionMatrixTests
 			ValidRow(probabilityAStar: "0.1")));
 
 		act.Should().Throw<TransitionMatrixException>()
-			.WithMessage("*sum to 1*");
+		   .WithMessage("*sum to 1*");
 	}
 
 	[Fact]
@@ -226,8 +226,12 @@ public sealed class TransitionMatrixTests
 	public void validate_coverage_accepts_a_subject_that_opts_out_of_dfe_evidence()
 	{
 		var matrix = DfeTransitionMatrix.Load(new StringReader(Header + "\n" + ValidRow()));
-		var meta = Harness.Catalogue.Meta(Subject.Physics) with { RequiresDfeEvidence = false };
-		var catalogue = new CatalogueData(new Dictionary<Subject, SubjectMeta> { [Subject.Physics] = meta }, [Subject.Physics]);
+		var meta = Harness.Catalogue.Meta(Subject.Physics) with {
+			RequiresDfeEvidence = false,
+		};
+		var catalogue = new CatalogueData(new Dictionary<Subject, SubjectMeta> {
+			[Subject.Physics] = meta,
+		}, [Subject.Physics]);
 
 		var act = () => matrix.ValidateCoverage(catalogue);
 
@@ -385,7 +389,7 @@ public sealed class TransitionMatrixTests
 	{
 		var path = Path.Combine(Harness.DataDir, DfeTransitionMatrix.DataDirectoryRelativePath);
 		var lines = File.ReadAllLines(path)
-			.Where(line => !line.StartsWith(EnumNames.NameOf(subject) + ",", StringComparison.Ordinal));
+						.Where(line => !line.StartsWith(EnumNames.NameOf(subject) + ",", StringComparison.Ordinal));
 		return Encoding.UTF8.GetBytes(string.Join('\n', lines));
 	}
 
@@ -394,7 +398,7 @@ public sealed class TransitionMatrixTests
 		var dataDir = CopyDirectory(Harness.DataDir);
 		var matrixPath = Path.Combine(dataDir, DfeTransitionMatrix.DataDirectoryRelativePath);
 		var lines = File.ReadAllLines(matrixPath)
-			.Where(line => !line.StartsWith(EnumNames.NameOf(subject) + ",", StringComparison.Ordinal));
+						.Where(line => !line.StartsWith(EnumNames.NameOf(subject) + ",", StringComparison.Ordinal));
 		File.WriteAllLines(matrixPath, lines);
 		return dataDir;
 	}
@@ -415,7 +419,9 @@ public sealed class TransitionMatrixTests
 	}
 
 	private static CatalogueData SingleSubjectCatalogue(Subject subject) =>
-		new(new Dictionary<Subject, SubjectMeta> { [subject] = Harness.Catalogue.Meta(subject) }, [subject]);
+		new(new Dictionary<Subject, SubjectMeta> {
+			[subject] = Harness.Catalogue.Meta(subject),
+		}, [subject]);
 
 	private sealed class InMemoryDataSource(
 		IReadOnlyList<(string FileName, byte[] Bytes)> workflows,
@@ -450,12 +456,12 @@ public sealed class TransitionMatrixTests
 		public static InMemoryDataSource WithTransitionMatrix(byte[] transitionMatrix)
 		{
 			var workflows = Directory.EnumerateFiles(Harness.WorkflowsDir)
-				.Where(static file =>
-					!string.Equals(Path.GetFileName(file), WorkflowStore.SchemaFileName, StringComparison.OrdinalIgnoreCase)
-					&& Path.GetExtension(file) is ".json" or ".yaml" or ".yml")
-				.OrderBy(static file => file, StringComparer.Ordinal)
-				.Select(static file => (file, File.ReadAllBytes(file)))
-				.ToArray();
+									 .Where(static file =>
+										 !string.Equals(Path.GetFileName(file), WorkflowStore.SchemaFileName, StringComparison.OrdinalIgnoreCase)
+										 && Path.GetExtension(file) is ".json" or ".yaml" or ".yml")
+									 .OrderBy(static file => file, StringComparer.Ordinal)
+									 .Select(static file => (file, File.ReadAllBytes(file)))
+									 .ToArray();
 
 			return new(
 				workflows,

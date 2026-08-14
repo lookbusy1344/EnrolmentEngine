@@ -12,7 +12,9 @@ public sealed class SmokeTests : IClassFixture<WebAppFactory>
 	[Fact]
 	public async Task Get_index_redirects_to_razor_by_default()
 	{
-		using var client = factory.CreateClient(new() { AllowAutoRedirect = false });
+		using var client = factory.CreateClient(new() {
+			AllowAutoRedirect = false,
+		});
 
 		using var response = await client.GetAsync(new Uri("/", UriKind.Relative));
 

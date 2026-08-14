@@ -4,7 +4,7 @@
 #
 # Build context MUST be the EnrolmentRules/ folder (this file's directory), not the
 # monorepo root: the Web project pulls in sibling projects, the shared
-# Directory.Build.props/.editorconfig, and the workflows/ + data/ content trees, all of
+# Directory.Build.props/.editorconfig, and the workflows/ + data/ + policies/ content trees, all of
 # which live under EnrolmentRules/.
 #
 #   docker build -t enrolment-web .
@@ -36,7 +36,7 @@ RUN NODE_ARCH=$(echo "${TARGETARCH:-amd64}" | sed 's/amd64/x64/') \
     && corepack enable
 
 # The Web project references sibling projects, shared build props, and copies
-# workflows/ + data/ as content — a partial copy is fragile, so copy the whole
+# workflows/ + data/ + policies/ as content — a partial copy is fragile, so copy the whole
 # folder and let .dockerignore prune build junk (bin/obj/artifacts/tests).
 COPY . .
 
@@ -69,7 +69,7 @@ ARG SOURCE_REVISION_ID=""
 # already R2R-compiled), so only the app's own assemblies need crossgen here. Trimming is
 # deliberately NOT enabled: RulesEngine compiles the YAML lambda expressions by reflection
 # at runtime, which a trimmed assembly graph would break.
-# workflows/ and data/ are copied into /app via the csproj's CopyToPublishDirectory
+# workflows/, data/, and policies/ are copied into /app via the csproj's CopyToPublishDirectory
 # rules, so the app's ContentRootPath resolves them at runtime.
 RUN dotnet publish src/EnrolmentRules.Web/EnrolmentRules.Web.csproj \
     -c Release -o /app --no-restore -r "$(cat /rid)" --self-contained false \

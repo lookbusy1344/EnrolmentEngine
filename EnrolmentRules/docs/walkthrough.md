@@ -71,7 +71,7 @@ foreach (var r in results)
 
 The headline benefit is that **policy lives in editable YAML data files, not in a recompiled binary**.
 A college administrator (in principle) could change "5 GCSE passes required" to "6" by editing
-`workflows/eligibility.yaml` and reloading — no code change, no rebuild, no redeploy. That
+`data/thresholds.yaml` and reloading — no code change, no rebuild, no redeploy. That
 "rules-as-data" property is the entire reason this engine was chosen for the table-shaped part
 of the problem.
 
@@ -307,7 +307,7 @@ step 3 below.
 
 ### Step 2a — Eligibility gate (engine, `workflows/eligibility.yaml`)
 
-A small workflow of three independent rules:
+The Standard policy is a small workflow of three independent rules:
 
 | Rule | Expression (paraphrased) |
 | --- | --- |
@@ -315,22 +315,27 @@ A small workflow of three independent rules:
 | `MathsPass` | Maths GCSE ≥ `policy.PassGrade` (4) |
 | `EnoughPasses` | count of GCSEs at grade ≥ 4 is ≥ `policy.MinPasses` (5) |
 
-The engine reports each rule's pass/fail. The internal rating evaluator then
-*assembles the verdict in host code*: if any rule failed, the student is ineligible and each
-failed rule's reason is projected from the loaded thresholds (keyed by `RuleName`), kept in
-declared order. Projecting the text from `PolicyThresholds` rather than reading a static
-`ErrorMessage` keeps the explanation in step with the `pass_grade` / `min_passes` that actually
-fired. Note this assembly is host code precisely because the engine can't aggregate sibling rules.
+The engine reports each rule's pass/fail. The internal rating evaluator then *assembles the verdict
+in host code*. Standard's three canonical rule names have threshold-aware failure text projected
+from `PolicyThresholds`, keeping explanations in step with `pass_grade` / `min_passes`. An auxiliary
+policy can replace the gate with any number of rules: each non-canonical rule supplies a
+`SuccessEvent`, and a failure is reported as `Not met: <SuccessEvent>` in declared order. The
+canonical names are reserved for their shipped expression shapes so an author cannot accidentally
+attach Standard's specialised explanation to different logic. This assembly is host code precisely
+because the engine cannot aggregate sibling rules.
 
 A subtlety in how inputs are shaped: counting passes needs to iterate a **collection**, but
 checking a single subject needs a **keyed lookup**. So the engine is given two inputs —
 `gcses` (an array, which `EnoughPasses` counts over) and `lookup` (a GCSE accessor, on
 which the single-subject rules call `lookup.Grade("maths")`). An absent subject returns `0`,
-which can never satisfy a threshold.
+which can never satisfy a threshold. Auxiliary aggregate gates can also use `lookup.Count`,
+`lookup.BestTotal`, and `lookup.BestAverage`; their top-N counts and minima come from the loaded
+thresholds and are materialized into the workflow facts before evaluation.
 
 ### Step 2b — Per-subject ratings (engine, `workflows/subject-ratings.yaml`)
 
-For each of the twenty-six subjects there are **three ordered rules**: `:green`, `:amber`, `:red`.
+For each subject offered by the selected policy there are **three ordered rules**: `:green`,
+`:amber`, `:red` (26 subjects in Standard, 14 in Elite).
 Each green/amber rule combines an **entry requirement** (the right GCSEs) with two pieces of
 evidence about likely A-level performance: the simulated ALIS-style point prediction and the
 DfE national transition-matrix probability at the same grade threshold. The `:red` rule is
@@ -532,7 +537,7 @@ ratings at once. It is a pure function `(ratings, profile) → Adjustment[]`. Si
   counts as satisfying an alternative: **`qualifying`** (the default) — rating green/amber this run *or*
   being a committed `chosen_a_levels` choice (it is enough to be *viable*); **`chosen`** — *only* a
   committed choice counts, so a subject that merely rates well does not satisfy it. Unmet groups compose
-  by most-severe-wins. The shipped policy has one: Further Maths hard-requires Maths and requires it to
+  by most-severe-wins. The Standard policy has one: Further Maths hard-requires Maths and requires it to
   have been **chosen** (`any_of: [maths]`, `requires: chosen`):
 
   ```yaml
@@ -691,6 +696,19 @@ All bootstrap and evaluate/explain/advise overloads accept an optional `Cancella
 long-running hosts (live clock per evaluation), the `IEnrolmentEngine` abstraction, DI registration
 via `AddEnrolmentEngine`, and stream-backed `EnrolmentRules.Engine.Hosting.IEnrolmentDataSource` bootstrap, see
 [Using EnrolmentRules as a library](technical-reference.md#using-enrolmentrules-as-a-library).
+
+### More than one policy at once
+
+`EnrolmentEngine.Create` builds one immutable snapshot for one `workflows/`/`data/` tree. A host
+that must offer more than one policy — a stricter, smaller-cohort programme alongside the standard
+one, say — builds one such snapshot **per policy** up front via `AddEnrolmentPolicies` and looks
+them up by id through an `IEnrolmentPolicyRegistry`. There is deliberately no mutable "currently
+selected policy" anywhere in the engine: every call names the policy id it wants, so two requests
+for two different policies against the same registry can run concurrently without one clobbering the
+other's state. Both shipped web front ends (and the CLI's `--policy` option) work this way — see
+[Policy registry](technical-reference.md#policy-registry) for the full API and
+[Authoring an auxiliary policy](rule-authoring.md#9-authoring-an-auxiliary-policy) for how the
+second, `elite`, policy shipped in this repository was built.
 
 ---
 

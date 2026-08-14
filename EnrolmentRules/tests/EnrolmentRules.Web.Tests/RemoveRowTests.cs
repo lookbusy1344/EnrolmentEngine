@@ -11,7 +11,9 @@ public sealed class RemoveRowTests : IClassFixture<WebAppFactory>
 	[Fact]
 	public async Task Removing_a_gcse_row_drops_it_from_the_saved_snapshot()
 	{
-		using var client = factory.CreateClient(new() { AllowAutoRedirect = false });
+		using var client = factory.CreateClient(new() {
+			AllowAutoRedirect = false,
+		});
 
 		using var getResponse = await client.GetAsync(new Uri("/razor", UriKind.Relative));
 		var token = await ExtractAntiForgeryTokenAsync(getResponse);

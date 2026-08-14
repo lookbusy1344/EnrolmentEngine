@@ -45,7 +45,9 @@ public static class QualificationScaleStore
 				_ => new(() => JsonSchema.FromText(schemaText))).Value;
 
 			using var doc = JsonDocument.Parse(node.ToJsonString());
-			var results = schema.Evaluate(doc.RootElement, new() { OutputFormat = OutputFormat.List });
+			var results = schema.Evaluate(doc.RootElement, new() {
+				OutputFormat = OutputFormat.List,
+			});
 			if (!results.IsValid) {
 				throw new QualificationScaleException(
 					$"qualification scale file '{qualificationsPath ?? QualificationsFileName}' failed schema validation: {DescribeErrors(results)}");
@@ -65,8 +67,8 @@ public static class QualificationScaleStore
 	private static string DescribeErrors(EvaluationResults results)
 	{
 		var messages = (results.Details ?? [])
-			.Where(d => d.Errors is { Count: > 0 })
-			.SelectMany(d => d.Errors!.Select(e => $"{d.InstanceLocation}: {e.Value}"));
+					   .Where(d => d.Errors is { Count: > 0 })
+					   .SelectMany(d => d.Errors!.Select(e => $"{d.InstanceLocation}: {e.Value}"));
 		var joined = string.Join("; ", messages);
 		return joined.Length > 0 ? joined : "schema validation failed (no detailed errors reported)";
 	}

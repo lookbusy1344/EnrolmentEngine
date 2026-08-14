@@ -27,4 +27,17 @@ public sealed class PolicyFacts(PolicyThresholds thresholds)
 	public double MinDfeGreenProbabilityAtOrAbove { get; } = thresholds.MinDfeGreenProbabilityAtOrAbove;
 
 	public double MinDfeAmberProbabilityAtOrAbove { get; } = thresholds.MinDfeAmberProbabilityAtOrAbove;
+
+	/// <summary>
+	///     The top-N GCSE eligibility knobs (§ top-N aggregate facts). Zero/0.0 when unset — a policy
+	///     that does not configure these never authors an eligibility rule that reads them, so the
+	///     default is unreachable rather than a real "pass automatically" value.
+	/// </summary>
+	public int BestGcseCount { get; } = thresholds.BestGcseCount.GetValueOrDefault();
+
+	public int MinBestGcsePoints { get; } = thresholds.MinBestGcsePoints.GetValueOrDefault();
+
+	public int TopGcseAverageCount { get; } = thresholds.TopGcseAverageCount.GetValueOrDefault();
+
+	public double MinTopGcseAverage { get; } = thresholds.MinTopGcseAverage.GetValueOrDefault();
 }

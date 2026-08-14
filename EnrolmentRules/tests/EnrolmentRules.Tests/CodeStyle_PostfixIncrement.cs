@@ -14,14 +14,14 @@ using Microsoft.CodeAnalysis.CSharp.Syntax;
 ///     (<c>var b = a++;</c>, <c>buffer[i++] = x;</c>, <c>return count--;</c>), where it stays untouched.
 ///     Scans the tracked <c>.cs</c> and <c>.cshtml</c> sources under <c>src</c> and <c>tests</c>.
 /// </summary>
-public sealed class PostfixIncrementArchitectureTests
+public sealed class CodeStyle_PostfixIncrement
 {
 	[Fact]
 	public void repository_sources_do_not_discard_a_postfix_increment_result()
 	{
 		var violations = SourceFiles()
-			.SelectMany(static file => PostfixIncrementGuard.FindViolations(file, File.ReadAllText(file)))
-			.ToArray();
+						 .SelectMany(static file => PostfixIncrementGuard.FindViolations(file, File.ReadAllText(file)))
+						 .ToArray();
 
 		violations.Should().BeEmpty(
 			"the prefix form should be used wherever the result is discarded:{0}{1}",
@@ -87,8 +87,8 @@ public sealed class PostfixIncrementArchitectureTests
 		foreach (var top in (string[])["src", "tests"]) {
 			var directory = Path.Combine(Harness.RepoRoot, top);
 			foreach (var file in Directory.EnumerateFiles(directory, "*.cs", SearchOption.AllDirectories)
-						 .Concat(Directory.EnumerateFiles(directory, "*.cshtml", SearchOption.AllDirectories))
-						 .Where(static file => !IsGeneratedOutput(file))) {
+										  .Concat(Directory.EnumerateFiles(directory, "*.cshtml", SearchOption.AllDirectories))
+										  .Where(static file => !IsGeneratedOutput(file))) {
 				yield return file;
 			}
 		}
@@ -129,10 +129,10 @@ internal static partial class PostfixIncrementGuard
 	{
 		var root = CSharpSyntaxTree.ParseText(source).GetRoot();
 		return root.DescendantNodes()
-			.OfType<PostfixUnaryExpressionSyntax>()
-			.Where(IsIncrementOrDecrement)
-			.Where(IsResultDiscarded)
-			.Select(expression => Describe(fileName, expression.GetLocation().GetLineSpan().StartLinePosition.Line + 1));
+				   .OfType<PostfixUnaryExpressionSyntax>()
+				   .Where(IsIncrementOrDecrement)
+				   .Where(IsResultDiscarded)
+				   .Select(expression => Describe(fileName, expression.GetLocation().GetLineSpan().StartLinePosition.Line + 1));
 	}
 
 	private static bool IsIncrementOrDecrement(PostfixUnaryExpressionSyntax expression) =>

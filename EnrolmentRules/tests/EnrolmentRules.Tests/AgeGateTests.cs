@@ -40,7 +40,9 @@ public sealed class AgeGateTests
 				["history"] = 9,
 				["art"] = artGcse,
 			},
-			[]) { DateOfBirth = dateOfBirth };
+			[]) {
+			DateOfBirth = dateOfBirth,
+		};
 
 		var evaluator = Harness.ShippedEvaluator();
 		var ratings = evaluator.EvaluateRatings(Harness.Predict(student), student.ToGcseResults());

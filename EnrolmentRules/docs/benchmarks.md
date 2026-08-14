@@ -12,7 +12,9 @@ than assertion.
   deserialization, and RulesEngine lambda compilation — happens at startup (`Create` /
   `WorkflowStore.LoadValidateBuildAndProbe`). The built engine is immutable and the evaluation
   path threads every per-student fact through the call, so a single instance serves the whole
-  process. Register it as a DI **singleton** (`AddEnrolmentEngineFactory` / `AddEnrolmentEngine`); never rebuild per request.
+  process. Register one policy as a DI **singleton** (`AddEnrolmentEngineFactory` /
+  `AddEnrolmentEngine`), or use the singleton registry from `AddEnrolmentPolicies`; never rebuild an
+  engine per request.
 - **Stateless and parallel-safe.** `EnrolmentEngine` and `RatingEvaluator` hold only the shared
   engine, catalogue, scale, and thresholds. There is no per-request mutable state, so concurrent
   `Evaluate` calls neither contend nor interfere — batch is just parallel work over one
@@ -24,7 +26,7 @@ than assertion.
 ## Methodology
 
 Benchmarks live in `src/EnrolmentRules.Benchmarks` (`EnrolmentBenchmarks.cs`), built on
-**BenchmarkDotNet** with `[MemoryDiagnoser]` so allocations are measured, not estimated. Four
+**BenchmarkDotNet** with `[MemoryDiagnoser]` so allocations are measured, not estimated. Five
 benchmarks isolate the phases:
 
 | Benchmark | What it measures |
@@ -33,6 +35,7 @@ benchmarks isolate the phases:
 | `EvaluateSingle` | The warm per-student path — the hot loop an API hits per request. |
 | `EvaluateBatch` | Three students over **one shared engine**, to confirm linear scaling and zero reuse overhead. |
 | `Advise` | Counterfactual advice for a worst-case middling student (the search-heavy path). |
+| `AdviseEliteGateNearMiss` | Elite's real top-eight eligibility search for eight GCSEs where English and Maths must each rise from 6 to 7. |
 
 ## Results
 
@@ -49,6 +52,13 @@ your target hardware for absolute numbers.
 | `EvaluateBatch` (3 students) | 39.5 µs | 177 KB | 0.94× |
 | `Advise` | **631 ms** | **1.67 GB** | ~15,000× |
 
+The focused Elite gate benchmark was added and measured separately on the same Apple M4 Pro with
+BenchmarkDotNet v0.15.8, .NET 10.0.11 and Concurrent Workstation GC:
+
+| Method | Mean | Allocated |
+|---|--:|--:|
+| `AdviseEliteGateNearMiss` | **2.333 ms** | **5.77 MB** |
+
 ### Reading the numbers
 
 - **Per-request evaluation is cheap.** ~13 µs and ~59 KB per student, entirely Gen0. A web endpoint
@@ -64,6 +74,10 @@ your target hardware for absolute numbers.
   predict → engine → constraint pipeline per node of its grade search; the worst-case middling
   student here costs ~631 ms and allocates ~1.67 GB (with real Gen2 traffic) for a single call —
   roughly 48,000× a single evaluation.
+- **The bounded Elite gate near-miss is tractable.** Its five-rule, best-eight/top-seven gate takes
+  ~2.3 ms and 5.77 MB when the held GCSE set already satisfies the aggregate bars and only English
+  and Maths need one grade step each. This does not replace the worst-case benchmark: wider or less
+  promising search spaces can still approach the heavyweight `Advise` cost above.
 
 ## Hosting guidance
 
@@ -88,6 +102,9 @@ dotnet run -c Release --project src/EnrolmentRules.Benchmarks -- --filter '*' --
 
 # A single benchmark:
 dotnet run -c Release --project src/EnrolmentRules.Benchmarks -- --filter '*EvaluateSingle*'
+
+# The Elite top-eight gate near-miss:
+dotnet run -c Release --project src/EnrolmentRules.Benchmarks -- --filter '*AdviseEliteGateNearMiss*' --job short
 ```
 
 Confirm any performance change against these benchmarks rather than by eyeballing — that is what the

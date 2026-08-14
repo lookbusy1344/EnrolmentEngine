@@ -18,7 +18,7 @@ container host.
 The `Dockerfile`, `.dockerignore`, and `compose.yaml` live in the `EnrolmentRules/` folder.
 **The build context must be that folder** — the Web project pulls in sibling projects, the
 shared `Directory.Build.props`, and the `workflows/` + `data/` trees, all under
-`EnrolmentRules/`.
+`EnrolmentRules/`, including auxiliary overrides under `policies/`.
 
 > **Monorepo note.** In the public GitHub repo, this project sits in a top-level
 > `EnrolmentRules/` subfolder. Every git-connected provider below therefore needs its **root /
@@ -538,11 +538,12 @@ sessions.
 
 ## Notes and troubleshooting
 
-- **`dotnet run` vs the container.** Running the project source with `dotnet run` sets the
-  content root to the *source* directory, where `workflows/`/`data/` don't exist, and fails at
-  startup. The container runs the *published* output where those trees are copied alongside the
-  DLL, so `ContentRootPath` resolves them — the same reason `README`/`CLAUDE.md` tell you to run
-  the compiled binary locally rather than `dotnet run`.
+- **`dotnet run` vs the container.** The checked-in `EnrolmentRules.Web` launch profile sets
+  `ASPNETCORE_CONTENTROOT="."`, resolved against the app base directory, so
+  `dotnet run --project src/EnrolmentRules.Web` finds the published `workflows/`, `data/`, and
+  `policies/` trees in the build output. The container needs no launch profile: those same trees are
+  copied alongside the DLL and its default `ContentRootPath` already points at `/app`. If a custom
+  launch bypasses the profile, give it the build output as its working/content-root directory.
 - **Client-side libs.** `wwwroot/lib/` is gitignored and `.dockerignore`d; the LibMan build
   target restores it inside the image during publish. No manual `libman restore` needed.
 - **Vue assets.** `wwwroot/app/` is likewise gitignored and `.dockerignore`d; the

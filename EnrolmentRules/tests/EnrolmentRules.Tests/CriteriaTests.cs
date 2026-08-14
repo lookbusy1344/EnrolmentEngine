@@ -20,7 +20,7 @@ public sealed class ExpressionNarratorTests
 		var bullets = ExpressionNarrator.Narrate("facts.Gcse(\"maths\") >= facts.ExceptionalEntry", Thresholds);
 
 		bullets.Should().ContainSingle()
-			.Which.Should().Be("GCSE Maths at grade 8 or above.");
+			   .Which.Should().Be("GCSE Maths at grade 8 or above.");
 	}
 
 	[Fact]
@@ -41,7 +41,7 @@ public sealed class ExpressionNarratorTests
 			"(facts.Gcse(\"biology\") >= facts.PassGrade || facts.Gcse(\"psychology\") >= facts.PassGrade)", Thresholds);
 
 		bullets.Should().ContainSingle()
-			.Which.Should().Be("Either GCSE Biology at grade 4 or above, or GCSE Psychology at grade 4 or above.");
+			   .Which.Should().Be("Either GCSE Biology at grade 4 or above, or GCSE Psychology at grade 4 or above.");
 	}
 
 	[Fact]
@@ -50,7 +50,7 @@ public sealed class ExpressionNarratorTests
 		var bullets = ExpressionNarrator.Narrate("facts.HasEntryEquivalent(\"biology\")", Thresholds);
 
 		bullets.Should().ContainSingle()
-			.Which.Should().Contain("qualification");
+			   .Which.Should().Contain("qualification");
 	}
 
 	[Fact]
@@ -71,7 +71,7 @@ public sealed class ExpressionNarratorTests
 		var bullets = ExpressionNarrator.Narrate("facts.Average >= 7.0", Thresholds);
 
 		bullets.Should().ContainSingle()
-			.Which.Should().Contain("average").And.Contain("7");
+			   .Which.Should().Contain("average").And.Contain("7");
 	}
 
 	[Fact]
@@ -80,7 +80,9 @@ public sealed class ExpressionNarratorTests
 		var bullets = ExpressionNarrator.Narrate(
 			"passCount >= policy.MinPasses",
 			Thresholds,
-			new Dictionary<string, string>(StringComparer.Ordinal) { ["passCount"] = "gcses.Count(g => g.Grade >= policy.PassGrade)" });
+			new Dictionary<string, string>(StringComparer.Ordinal) {
+				["passCount"] = "gcses.Count(g => g.Grade >= policy.PassGrade)",
+			});
 
 		bullets.Should().ContainSingle();
 		bullets[0].Should().Contain("5").And.Contain("grade 4");
@@ -97,7 +99,7 @@ public sealed class ExpressionNarratorTests
 			"facts.Gcse(\"art\") >= (facts.Age >= 19 ? facts.TopEntry : facts.StandardEntry)", Thresholds);
 
 		bullets.Should().ContainSingle()
-			.Which.Should().Be("GCSE Art at grade 7 or above if you are 19 or older, or grade 5 or above if not.");
+			   .Which.Should().Be("GCSE Art at grade 7 or above if you are 19 or older, or grade 5 or above if not.");
 	}
 
 	[Fact]
@@ -106,7 +108,7 @@ public sealed class ExpressionNarratorTests
 		var narrate = () => ExpressionNarrator.Narrate("facts.SomethingNobodyTaughtMe() >= 3", Thresholds);
 
 		narrate.Should().Throw<CriteriaNarrationException>()
-			.WithMessage("*SomethingNobodyTaughtMe*");
+			   .WithMessage("*SomethingNobodyTaughtMe*");
 	}
 
 	/// <summary>
@@ -126,8 +128,8 @@ public sealed class ExpressionNarratorTests
 				}
 
 				var locals = (rule.LocalParams ?? [])
-					.Where(static param => !string.IsNullOrWhiteSpace(param.Expression))
-					.ToDictionary(static param => param.Name, static param => param.Expression!, StringComparer.Ordinal);
+							 .Where(static param => !string.IsNullOrWhiteSpace(param.Expression))
+							 .ToDictionary(static param => param.Name, static param => param.Expression!, StringComparer.Ordinal);
 
 				var narrate = () => ExpressionNarrator.Narrate(rule.Expression!, Harness.Thresholds, locals);
 
@@ -270,7 +272,7 @@ public sealed class CriteriaExplainerTests
 	{
 		RatingMeaning.All.Should().HaveCount(3);
 		RatingMeaning.All.Select(static meaning => meaning.Rating)
-			.Should().Equal(Rating.Green, Rating.Amber, Rating.Red);
+					 .Should().Equal(Rating.Green, Rating.Amber, Rating.Red);
 		RatingMeaning.All.Should().OnlyContain(meaning => meaning.Meaning.EndsWith('.'));
 	}
 }
@@ -311,7 +313,7 @@ public sealed class CriteriaCliTests
 		stdout.Should().Contain("You are borderline");
 		stdout.Should().Contain("not right for you at this stage");
 		stdout.IndexOf("What the colours mean", StringComparison.Ordinal)
-			.Should().BeLessThan(stdout.IndexOf("Everyone needs these first", StringComparison.Ordinal));
+			  .Should().BeLessThan(stdout.IndexOf("Everyone needs these first", StringComparison.Ordinal));
 	}
 
 	/// <summary>A section with nothing to say is omitted rather than printed empty.</summary>

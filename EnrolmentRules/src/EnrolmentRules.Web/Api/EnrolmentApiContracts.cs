@@ -5,6 +5,9 @@ using Infrastructure;
 /// <summary>A single picker option: the value posted back to <c>/api/enrolment/evaluate</c>, and its display label.</summary>
 public sealed record OptionItem(string Value, string Label);
 
+/// <summary>One registered policy's wire identifier and display label — the client's own list, never hard-coded.</summary>
+public sealed record PolicyDescriptorResponse(string Id, string DisplayName);
+
 /// <summary>The Grade dropdown options for one <see cref="Domain.QualificationType" />, keyed by its wire name (e.g. <c>"BtecDiploma"</c>).</summary>
 public sealed record QualificationGradeOptions(string Type, EquatableArray<OptionItem> Grades);
 
@@ -19,6 +22,8 @@ public sealed record QualificationSubjectGroup(string Type, string Label, Equata
 
 /// <summary>Every option and default the Vue app needs to render a facts form without duplicating catalogue knowledge.</summary>
 public sealed record EnrolmentOptionsResponse(
+	PolicyDescriptorResponse SelectedPolicy,
+	EquatableArray<PolicyDescriptorResponse> AvailablePolicies,
 	DateOnly DefaultDateOfBirth,
 	int DefaultAge,
 	EquatableArray<OptionItem> GcseSubjects,
@@ -26,6 +31,7 @@ public sealed record EnrolmentOptionsResponse(
 	EquatableArray<QualificationSubjectGroup> PriorQualificationSubjects,
 	EquatableArray<QualificationGradeOptions> QualificationGrades,
 	EquatableArray<OptionItem> Hobbies,
+	int MinChoices,
 	int ChoiceLimit);
 
 /// <summary>One posted GCSE row. A row with a blank <see cref="Subject" /> is dropped by the mapper, matching the Razor form's blank-row behaviour.</summary>
@@ -62,21 +68,32 @@ public sealed record ExplanationResponse(
 	string? EntryEquivalentReason,
 	EquatableArray<AdjustmentResponse> Overrides);
 
+/// <summary>
+///     One <c>chosenALevels</c> entry's non-destructive comparison status under the selected policy:
+///     <c>"Available"</c> (offered and currently green/amber), <c>"Unavailable"</c> (offered but currently
+///     red), or <c>"NotOffered"</c> (absent from the selected policy's catalogue). Never a reason to drop
+///     the choice from the client's basket — see <see cref="EnrolmentApiResult.ChoiceStatuses" />.
+/// </summary>
+public sealed record ChoiceStatusResponse(OptionItem Subject, string Status, string? Reason);
+
 /// <summary>The client-friendly mirror of <c>ExplainedResult</c>, present only when the posted snapshot validated.</summary>
 public sealed record EnrolmentApiResult(
+	PolicyDescriptorResponse Policy,
 	bool Eligible,
 	EquatableArray<string> EligibilityReasons,
 	string? ChoiceLimitReason,
-	EquatableArray<ExplanationResponse> Explanations);
+	EquatableArray<ExplanationResponse> Explanations,
+	EquatableArray<ChoiceStatusResponse> ChoiceStatuses,
+	int MinChoices,
+	int MaxChoices);
 
 /// <summary>
 ///     The full <c>POST /api/enrolment/evaluate</c> response: either <see cref="Result" />, or
-///     <see cref="ValidationErrors" />, never both. <see cref="EjectedChoices" /> is non-empty only in the
-///     error case, and only when the cause was a posted <c>chosenALevels</c> entry the engine now rates red:
-///     it names those subjects so the client can drop them from its basket and re-post, rather than parsing
-///     them back out of the error text.
+///     <see cref="ValidationErrors" />, never both. No choice is ever ejected server-side: a chosen subject
+///     that has gone red under the selected policy, or is absent from its catalogue, stays in
+///     <see cref="EnrolmentApiResult.ChoiceStatuses" /> annotated rather than silently dropped — the client
+///     owns the basket and decides whether to remove anything.
 /// </summary>
 public sealed record EnrolmentEvaluateResponse(
 	EquatableArray<string> ValidationErrors,
-	EquatableArray<OptionItem> EjectedChoices,
 	EnrolmentApiResult? Result);

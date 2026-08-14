@@ -18,19 +18,9 @@
       "reason": "Entry met (English at standard entry and humanities average); predicted A-level grade at or above the green threshold"
     },
     {
-      "subject": "politics",
-      "rating": "green",
-      "reason": "Entry met (English at standard entry and humanities average); predicted A-level grade at or above the green threshold"
-    },
-    {
       "subject": "maths",
       "rating": "green",
       "reason": "Entry met (Maths GCSE at the exceptional grade); predicted A-level grade at or above the green threshold"
-    },
-    {
-      "subject": "geography",
-      "rating": "green",
-      "reason": "Entry met (humanities average and English at standard entry); predicted A-level grade at or above the green threshold"
     },
     {
       "subject": "physics",
@@ -118,6 +108,16 @@
       "reason": "Entry requirement unmet or predicted grade below the amber threshold"
     },
     {
+      "subject": "politics",
+      "rating": "red",
+      "reason": "Entry requirement unmet or predicted grade below the amber threshold"
+    },
+    {
+      "subject": "geography",
+      "rating": "red",
+      "reason": "Entry requirement unmet or predicted grade below the amber threshold"
+    },
+    {
       "subject": "computer_studies",
       "rating": "red",
       "reason": "Entry requirement unmet or predicted grade below the amber threshold"
@@ -134,9 +134,9 @@
     }
   ],
   "summary": {
-    "green_count": 21,
+    "green_count": 19,
     "amber_count": 0,
-    "programme_priority_score": 900
+    "programme_priority_score": 800
   },
   "adjustments": []
 }

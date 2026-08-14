@@ -41,7 +41,7 @@ public sealed class WorkflowBootstrapLintTests
 			var act = () => EnrolmentEngine.Create(WorkflowsDir(fixture), DataDir(fixture), Harness.AsOf);
 
 			act.Should().Throw<WorkflowLintException>()
-				.WithMessage("*maths rules must be ordered green → amber → red*");
+			   .WithMessage("*maths rules must be ordered green → amber → red*");
 		}
 		finally {
 			Directory.Delete(fixture, true);
@@ -68,7 +68,7 @@ public sealed class WorkflowBootstrapLintTests
 			var act = () => EnrolmentEngine.Create(WorkflowsDir(fixture), DataDir(fixture), Harness.AsOf);
 
 			act.Should().Throw<WorkflowLintException>()
-				.WithMessage("*maths is missing its amber rule*");
+			   .WithMessage("*maths is missing its amber rule*");
 		}
 		finally {
 			Directory.Delete(fixture, true);
@@ -98,7 +98,7 @@ public sealed class WorkflowBootstrapLintTests
 			var act = () => EnrolmentEngine.Create(WorkflowsDir(fixture), DataDir(fixture), Harness.AsOf);
 
 			act.Should().Throw<WorkflowLintException>()
-				.WithMessage("*maths has 2 amber rules*");
+			   .WithMessage("*maths has 2 amber rules*");
 		}
 		finally {
 			Directory.Delete(fixture, true);
@@ -130,7 +130,7 @@ public sealed class WorkflowBootstrapLintTests
 			var act = () => EnrolmentEngine.Create(WorkflowsDir(fixture), DataDir(fixture), Harness.AsOf);
 
 			act.Should().Throw<WorkflowLintException>()
-				.WithMessage("*maths:red must be an unconditional true catch-all*");
+			   .WithMessage("*maths:red must be an unconditional true catch-all*");
 		}
 		finally {
 			Directory.Delete(fixture, true);
@@ -150,7 +150,7 @@ public sealed class WorkflowBootstrapLintTests
 			var act = () => EnrolmentEngine.Create(WorkflowsDir(fixture), DataDir(fixture), Harness.AsOf);
 
 			act.Should().Throw<WorkflowLintException>()
-				.WithMessage("*unknown subject key 'mathz'*");
+			   .WithMessage("*unknown subject key 'mathz'*");
 		}
 		finally {
 			Directory.Delete(fixture, true);

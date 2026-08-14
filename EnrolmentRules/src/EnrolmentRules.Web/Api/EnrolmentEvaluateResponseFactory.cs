@@ -1,38 +1,48 @@
 namespace EnrolmentRules.Web.Api;
 
 using Domain;
+using Engine;
 using Models;
 
-/// <summary>Builds the client-friendly <see cref="EnrolmentEvaluateResponse" /> from the engine's <see cref="ValidatedEvaluation{T}" />.</summary>
+/// <summary>
+///     Builds the client-friendly <see cref="EnrolmentEvaluateResponse" /> from the library's non-destructive <see cref="PolicyComparisonResult" />
+///     .
+/// </summary>
 public static class EnrolmentEvaluateResponseFactory
 {
-	public static EnrolmentEvaluateResponse Create(
-		ValidatedEvaluation<ExplainedResult> evaluation,
-		IReadOnlyList<Subject> ejectedChoices)
+	public static EnrolmentEvaluateResponse Create(ValidatedEvaluation<PolicyComparisonResult> comparison)
 	{
-		ArgumentNullException.ThrowIfNull(evaluation);
-		ArgumentNullException.ThrowIfNull(ejectedChoices);
+		ArgumentNullException.ThrowIfNull(comparison);
 
-		if (!evaluation.Validation.IsValid || evaluation.Value is not ExplainedResult result) {
-			return new(
-				[.. evaluation.Validation.Errors],
-				[.. ejectedChoices.Select(static subject => new OptionItem(subject.Value, TextFormatting.Prettify(subject.Value)))],
-				null);
+		if (!comparison.Validation.IsValid || comparison.Value is not PolicyComparisonResult value) {
+			return new([.. comparison.Validation.Errors], null);
 		}
 
+		var result = value.Explanation;
 		var choiceLimitReason = result.Explanations
-			.SelectMany(static explanation => explanation.Overrides)
-			.FirstOrDefault(static adjustment => adjustment.Kind == AdjustmentKind.ChosenSubjectCap)?.Reason;
+									  .SelectMany(static explanation => explanation.Overrides)
+									  .FirstOrDefault(static adjustment => adjustment.Kind == AdjustmentKind.ChosenSubjectCap)?.Reason;
 
 		return new(
 			[],
-			[],
 			new(
+				ToPolicyDescriptor(value.Descriptor),
 				result.Eligible,
 				[.. result.EligibilityReasons],
 				choiceLimitReason,
-				[.. result.Explanations.Select(ToExplanationResponse)]));
+				[.. result.Explanations.Select(ToExplanationResponse)],
+				[.. value.ChoiceStatuses.Select(ToChoiceStatusResponse)],
+				value.MinChosenALevels,
+				value.MaxChosenALevels));
 	}
+
+	private static PolicyDescriptorResponse ToPolicyDescriptor(EnrolmentPolicyDescriptor descriptor) =>
+		new(descriptor.Id.Value, descriptor.DisplayName);
+
+	private static ChoiceStatusResponse ToChoiceStatusResponse(ChosenSubjectStatus status) => new(
+		new(status.Subject.Value, TextFormatting.Prettify(status.Subject.Value)),
+		status.Status.ToString(),
+		status.Reason);
 
 	private static ExplanationResponse ToExplanationResponse(Explanation explanation) => new(
 		new(explanation.Subject.Value, TextFormatting.Prettify(explanation.Subject.Value)),

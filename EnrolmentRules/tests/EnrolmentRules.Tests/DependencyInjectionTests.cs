@@ -21,7 +21,9 @@ public sealed class DependencyInjectionTests
 				["biology"] = 9,
 				["art"] = 6,
 			},
-			[]) { DateOfBirth = new(2007, 9, 1) };
+			[]) {
+			DateOfBirth = new(2007, 9, 1),
+		};
 
 	private static Rating ArtRating(EnrolmentResult result) =>
 		result.Recommendations.Single(r => r.Subject == Subject.Art).Rating;
@@ -32,8 +34,8 @@ public sealed class DependencyInjectionTests
 		var services = new ServiceCollection();
 		_ = services.AddEnrolmentEngine(options => {
 			options.UseWorkflowsDirectory(Harness.WorkflowsDir)
-				.UseDataDirectory(Harness.DataDir)
-				.UseFixedAsOf(Harness.AsOf);
+				   .UseDataDirectory(Harness.DataDir)
+				   .UseFixedAsOf(Harness.AsOf);
 		});
 
 		using var provider = services.BuildServiceProvider();
@@ -51,7 +53,7 @@ public sealed class DependencyInjectionTests
 
 		var act = () => services.AddEnrolmentEngine(options => {
 			options.UseWorkflowsDirectory(string.Empty)
-				.UseDataDirectory(Harness.DataDir);
+				   .UseDataDirectory(Harness.DataDir);
 		});
 
 		act.Should().Throw<ArgumentException>().WithParameterName("workflowsDirectory");
@@ -64,7 +66,7 @@ public sealed class DependencyInjectionTests
 
 		var act = () => services.AddEnrolmentEngine(options => {
 			options.UseWorkflowsDirectory(Harness.WorkflowsDir)
-				.UseDataDirectory(string.Empty);
+				   .UseDataDirectory(string.Empty);
 		});
 
 		act.Should().Throw<ArgumentException>().WithParameterName("dataDirectory");
@@ -98,8 +100,8 @@ public sealed class DependencyInjectionTests
 		var services = new ServiceCollection();
 		_ = services.AddEnrolmentEngine(options => {
 			options.UseWorkflowsDirectory(Harness.WorkflowsDir)
-				.UseDataDirectory(Harness.DataDir)
-				.UseFixedAsOf(Harness.AsOf);
+				   .UseDataDirectory(Harness.DataDir)
+				   .UseFixedAsOf(Harness.AsOf);
 		});
 
 		using var provider = services.BuildServiceProvider();
@@ -145,8 +147,8 @@ public sealed class DependencyInjectionTests
 		var services = new ServiceCollection();
 		_ = services.AddEnrolmentEngine(options => {
 			options.UseWorkflowsDirectory(Harness.WorkflowsDir)
-				.UseDataDirectory(Harness.DataDir)
-				.UseFixedAsOf(Harness.AsOf);
+				   .UseDataDirectory(Harness.DataDir)
+				   .UseFixedAsOf(Harness.AsOf);
 		});
 
 		using var provider = services.BuildServiceProvider();
@@ -165,8 +167,8 @@ public sealed class DependencyInjectionTests
 		var services = new ServiceCollection();
 		_ = services.AddEnrolmentEngine(options => {
 			options.UseWorkflowsDirectory(Harness.WorkflowsDir)
-				.UseDataDirectory(Harness.DataDir)
-				.UseTimeProvider(clock);
+				   .UseDataDirectory(Harness.DataDir)
+				   .UseTimeProvider(clock);
 		});
 
 		using var provider = services.BuildServiceProvider();
@@ -187,8 +189,8 @@ public sealed class DependencyInjectionTests
 		var services = new ServiceCollection();
 		_ = services.AddEnrolmentEngineFactory(options => {
 			options.UseWorkflowsDirectory(Harness.WorkflowsDir)
-				.UseDataDirectory(Harness.DataDir)
-				.UseFixedAsOf(Harness.AsOf);
+				   .UseDataDirectory(Harness.DataDir)
+				   .UseFixedAsOf(Harness.AsOf);
 		});
 
 		using var provider = services.BuildServiceProvider();
@@ -210,8 +212,8 @@ public sealed class DependencyInjectionTests
 			var services = new ServiceCollection();
 			_ = services.AddEnrolmentEngineFactory(options => {
 				options.UseWorkflowsDirectory(Path.Combine(fixture, "workflows"))
-					.UseDataDirectory(Path.Combine(fixture, "data"))
-					.UseFixedAsOf(Harness.AsOf);
+					   .UseDataDirectory(Path.Combine(fixture, "data"))
+					   .UseFixedAsOf(Harness.AsOf);
 			});
 
 			using var provider = services.BuildServiceProvider();
@@ -237,8 +239,8 @@ public sealed class DependencyInjectionTests
 		var services = new ServiceCollection();
 		_ = services.AddEnrolmentEngineFactory(options => {
 			options.UseWorkflowsDirectory(Harness.WorkflowsDir)
-				.UseDataDirectory(Harness.DataDir)
-				.UseFixedAsOf(Harness.AsOf);
+				   .UseDataDirectory(Harness.DataDir)
+				   .UseFixedAsOf(Harness.AsOf);
 		});
 
 		var provider = services.BuildServiceProvider();
@@ -257,20 +259,24 @@ public sealed class DependencyInjectionTests
 		var services = new ServiceCollection();
 		_ = services.AddEnrolmentEngine(options => {
 			options.UseWorkflowsDirectory(Harness.WorkflowsDir)
-				.UseDataDirectory(Harness.DataDir)
-				.UseFixedAsOf(Harness.AsOf);
+				   .UseDataDirectory(Harness.DataDir)
+				   .UseFixedAsOf(Harness.AsOf);
 		});
 
 		using var provider = services.BuildServiceProvider();
 		var engine = provider.GetRequiredService<IEnrolmentEngine>();
-		var student = new StudentInput("S-BAD", new Dictionary<string, int> { ["maths"] = 99 }, []) { DateOfBirth = new(2009, 9, 1) };
+		var student = new StudentInput("S-BAD", new Dictionary<string, int> {
+			["maths"] = 99,
+		}, []) {
+			DateOfBirth = new(2009, 9, 1),
+		};
 
 		var outcome = engine.EvaluateValidated(student);
 
 		outcome.Validation.IsValid.Should().BeFalse();
 		outcome.Value.Should().BeNull();
 		outcome.Validation.Errors.Should().ContainSingle()
-			.Which.Should().Contain("maths").And.Contain("out of range");
+			   .Which.Should().Contain("maths").And.Contain("out of range");
 	}
 
 	[Fact]
@@ -279,8 +285,8 @@ public sealed class DependencyInjectionTests
 		var services = new ServiceCollection();
 		_ = services.AddEnrolmentEngineFactory(options => {
 			options.UseWorkflowsDirectory(Harness.WorkflowsDir)
-				.UseDataDirectory(Harness.DataDir)
-				.UseFixedAsOf(Harness.AsOf);
+				   .UseDataDirectory(Harness.DataDir)
+				   .UseFixedAsOf(Harness.AsOf);
 		});
 
 		using var provider = services.BuildServiceProvider();
@@ -312,7 +318,9 @@ public sealed class DependencyInjectionTests
 				["chemistry"] = 6,
 				["biology"] = 6,
 			},
-			[]) { DateOfBirth = new(2009, 9, 1) };
+			[]) {
+			DateOfBirth = new(2009, 9, 1),
+		};
 
 	private static string CopyShippedLayout()
 	{
@@ -378,6 +386,13 @@ public sealed class DependencyInjectionTests
 
 		public IReadOnlyList<Subject> StaleChoices(StudentInput student, CancellationToken cancellationToken = default) => [];
 
+		public ValidatedEvaluation<FinalProgramme> ValidateFinalProgramme(StudentInput student, CancellationToken cancellationToken = default) =>
+			ValidateFinalProgramme(student, default, cancellationToken);
+
+		public ValidatedEvaluation<FinalProgramme> ValidateFinalProgramme(StudentInput student, DateOnly asOf,
+																		  CancellationToken cancellationToken = default) =>
+			new(ValidationOutcome.Valid, null);
+
 		public SubjectCriteria Describe(Subject subject) => new(subject, [], [], [], []);
 
 		public AdviceResult Advise(StudentInput student, CancellationToken cancellationToken = default) =>
@@ -390,32 +405,32 @@ public sealed class DependencyInjectionTests
 			Advise(student, default(DateOnly), CancellationToken.None);
 
 		public AdviceResult Advise(StudentInput student, DateOnly asOf, UnsatGcseAdvice unsatGcses,
-			CancellationToken cancellationToken = default) =>
+								   CancellationToken cancellationToken = default) =>
 			Advise(student, asOf, CancellationToken.None);
 
 		public ValidatedEvaluation<EnrolmentResult> EvaluateValidated(StudentInput student, CancellationToken cancellationToken = default) =>
 			EvaluateValidated(student, default, cancellationToken);
 
 		public ValidatedEvaluation<EnrolmentResult> EvaluateValidated(StudentInput student, DateOnly asOf,
-			CancellationToken cancellationToken = default) =>
+																	  CancellationToken cancellationToken = default) =>
 			new(ValidationOutcome.Valid, null);
 
 		public ValidatedEvaluation<ExplainedResult> ExplainValidated(StudentInput student, CancellationToken cancellationToken = default) =>
 			ExplainValidated(student, default, cancellationToken);
 
 		public ValidatedEvaluation<ExplainedResult> ExplainValidated(StudentInput student, DateOnly asOf,
-			CancellationToken cancellationToken = default) =>
+																	 CancellationToken cancellationToken = default) =>
 			new(ValidationOutcome.Valid, null);
 
 		public ValidatedEvaluation<AdviceResult> AdviseValidated(StudentInput student, CancellationToken cancellationToken = default) =>
 			AdviseValidated(student, default(DateOnly), cancellationToken);
 
 		public ValidatedEvaluation<AdviceResult> AdviseValidated(StudentInput student, DateOnly asOf,
-			CancellationToken cancellationToken = default) =>
+																 CancellationToken cancellationToken = default) =>
 			AdviseValidated(student, asOf, UnsatGcseAdvice.HeldOnly, cancellationToken);
 
 		public ValidatedEvaluation<AdviceResult> AdviseValidated(StudentInput student, UnsatGcseAdvice unsatGcses,
-			CancellationToken cancellationToken = default) =>
+																 CancellationToken cancellationToken = default) =>
 			AdviseValidated(student, default, unsatGcses, cancellationToken);
 
 		public ValidatedEvaluation<AdviceResult> AdviseValidated(

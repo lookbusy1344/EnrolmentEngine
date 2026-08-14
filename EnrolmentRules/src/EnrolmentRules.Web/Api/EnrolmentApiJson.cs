@@ -10,6 +10,7 @@ using System.Text.Json.Serialization;
 /// </summary>
 [JsonSourceGenerationOptions(PropertyNamingPolicy = JsonKnownNamingPolicy.CamelCase)]
 [JsonSerializable(typeof(OptionItem))]
+[JsonSerializable(typeof(PolicyDescriptorResponse))]
 [JsonSerializable(typeof(QualificationGradeOptions))]
 [JsonSerializable(typeof(QualificationSubjectGroup))]
 [JsonSerializable(typeof(EnrolmentOptionsResponse))]
@@ -21,5 +22,6 @@ using System.Text.Json.Serialization;
 [JsonSerializable(typeof(EvaluatePriorQualificationRow))]
 [JsonSerializable(typeof(ExplanationResponse))]
 [JsonSerializable(typeof(AdjustmentResponse))]
+[JsonSerializable(typeof(ChoiceStatusResponse))]
 [JsonSerializable(typeof(string))]
 public sealed partial class EnrolmentApiJsonContext : JsonSerializerContext;

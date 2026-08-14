@@ -27,6 +27,6 @@ public static class PredictionModel
 	{
 		/// <summary>Predict clamped A-level points from an average GCSE score.</summary>
 		public double Predict(double averageGcseScore) =>
-			Math.Clamp((Slope * averageGcseScore) + Intercept, ALevelGrade.Min, ALevelGrade.Max);
+			Math.Clamp(Slope * averageGcseScore + Intercept, ALevelGrade.Min, ALevelGrade.Max);
 	}
 }

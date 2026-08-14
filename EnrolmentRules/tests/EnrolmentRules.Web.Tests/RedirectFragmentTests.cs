@@ -15,7 +15,9 @@ public sealed class RedirectFragmentTests : IClassFixture<WebAppFactory>
 	[Fact]
 	public async Task Saving_facts_via_the_main_button_redirects_to_the_results_section()
 	{
-		using var client = factory.CreateClient(new() { AllowAutoRedirect = false });
+		using var client = factory.CreateClient(new() {
+			AllowAutoRedirect = false,
+		});
 		using var getResponse = await client.GetAsync(new Uri("/razor", UriKind.Relative));
 		var token = await ExtractAntiForgeryTokenAsync(getResponse);
 
@@ -35,7 +37,9 @@ public sealed class RedirectFragmentTests : IClassFixture<WebAppFactory>
 	[InlineData("hobbies-section")]
 	public async Task Saving_facts_via_a_section_add_button_redirects_back_to_that_section(string sectionFragment)
 	{
-		using var client = factory.CreateClient(new() { AllowAutoRedirect = false });
+		using var client = factory.CreateClient(new() {
+			AllowAutoRedirect = false,
+		});
 		using var getResponse = await client.GetAsync(new Uri("/razor", UriKind.Relative));
 		var token = await ExtractAntiForgeryTokenAsync(getResponse);
 
@@ -52,7 +56,9 @@ public sealed class RedirectFragmentTests : IClassFixture<WebAppFactory>
 	[Fact]
 	public async Task Removing_a_gcse_row_redirects_back_to_the_gcse_section()
 	{
-		using var client = factory.CreateClient(new() { AllowAutoRedirect = false });
+		using var client = factory.CreateClient(new() {
+			AllowAutoRedirect = false,
+		});
 		using var getResponse = await client.GetAsync(new Uri("/razor", UriKind.Relative));
 		var token = await ExtractAntiForgeryTokenAsync(getResponse);
 
@@ -69,7 +75,9 @@ public sealed class RedirectFragmentTests : IClassFixture<WebAppFactory>
 	[Fact]
 	public async Task Removing_a_prior_qualification_row_redirects_back_to_the_qualifications_section()
 	{
-		using var client = factory.CreateClient(new() { AllowAutoRedirect = false });
+		using var client = factory.CreateClient(new() {
+			AllowAutoRedirect = false,
+		});
 		using var getResponse = await client.GetAsync(new Uri("/razor", UriKind.Relative));
 		var token = await ExtractAntiForgeryTokenAsync(getResponse);
 
@@ -87,7 +95,9 @@ public sealed class RedirectFragmentTests : IClassFixture<WebAppFactory>
 	[Fact]
 	public async Task Removing_a_hobby_row_redirects_back_to_the_hobbies_section()
 	{
-		using var client = factory.CreateClient(new() { AllowAutoRedirect = false });
+		using var client = factory.CreateClient(new() {
+			AllowAutoRedirect = false,
+		});
 		using var getResponse = await client.GetAsync(new Uri("/razor", UriKind.Relative));
 		var token = await ExtractAntiForgeryTokenAsync(getResponse);
 

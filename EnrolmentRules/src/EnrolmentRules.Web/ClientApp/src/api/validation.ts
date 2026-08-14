@@ -4,11 +4,14 @@
 // not a full business-rule revalidation.
 import type {
   AdjustmentResponse,
+  ChoiceStatus,
+  ChoiceStatusKind,
   EnrolmentApiResult,
   EnrolmentEvaluateResponse,
   EnrolmentOptionsResponse,
   ExplanationResponse,
   OptionItem,
+  PolicyDescriptor,
   QualificationGradeOptions,
   QualificationSubjectGroup,
 } from './contracts'
@@ -18,14 +21,20 @@ export function parseOptionsResponse(value: unknown): EnrolmentOptionsResponse |
     return null
   }
 
+  const selectedPolicy = parsePolicyDescriptor(value.selectedPolicy)
+  const availablePolicies = parseArray(value.availablePolicies, parsePolicyDescriptor)
   const gcseSubjects = parseArray(value.gcseSubjects, parseOptionItem)
   const aLevelSubjects = parseArray(value.aLevelSubjects, parseOptionItem)
   const priorQualificationSubjects = parseArray(value.priorQualificationSubjects, parseQualificationSubjectGroup)
   const qualificationGrades = parseArray(value.qualificationGrades, parseQualificationGradeOptions)
   const hobbies = parseArray(value.hobbies, parseOptionItem)
   if (
+    selectedPolicy === null ||
+    availablePolicies === null ||
+    !isConsistentPolicyRegistry(selectedPolicy, availablePolicies) ||
     typeof value.defaultDateOfBirth !== 'string' ||
     typeof value.defaultAge !== 'number' ||
+    typeof value.minChoices !== 'number' ||
     typeof value.choiceLimit !== 'number' ||
     gcseSubjects === null ||
     aLevelSubjects === null ||
@@ -37,6 +46,8 @@ export function parseOptionsResponse(value: unknown): EnrolmentOptionsResponse |
   }
 
   return {
+    selectedPolicy,
+    availablePolicies,
     defaultDateOfBirth: value.defaultDateOfBirth,
     defaultAge: value.defaultAge,
     gcseSubjects,
@@ -44,6 +55,7 @@ export function parseOptionsResponse(value: unknown): EnrolmentOptionsResponse |
     priorQualificationSubjects,
     qualificationGrades,
     hobbies,
+    minChoices: value.minChoices,
     choiceLimit: value.choiceLimit,
   }
 }
@@ -54,17 +66,16 @@ export function parseEvaluateResponse(value: unknown): EnrolmentEvaluateResponse
   }
 
   const validationErrors = parseArray(value.validationErrors, parseStringItem)
-  const ejectedChoices = parseArray(value.ejectedChoices, parseOptionItem)
-  if (validationErrors === null || ejectedChoices === null) {
+  if (validationErrors === null) {
     return null
   }
 
   if (value.result === null) {
-    return { validationErrors, ejectedChoices, result: null }
+    return { validationErrors, result: null }
   }
 
   const result = parseApiResult(value.result)
-  return result === null ? null : { validationErrors, ejectedChoices, result }
+  return result === null ? null : { validationErrors, result }
 }
 
 function parseApiResult(value: unknown): EnrolmentApiResult | null {
@@ -72,23 +83,92 @@ function parseApiResult(value: unknown): EnrolmentApiResult | null {
     return null
   }
 
+  const policy = parsePolicyDescriptor(value.policy)
   const eligibilityReasons = parseArray(value.eligibilityReasons, parseStringItem)
   const explanations = parseArray(value.explanations, parseExplanation)
+  const choiceStatuses = parseArray(value.choiceStatuses, parseChoiceStatus)
   if (
+    policy === null ||
     typeof value.eligible !== 'boolean' ||
     (value.choiceLimitReason !== null && typeof value.choiceLimitReason !== 'string') ||
     eligibilityReasons === null ||
-    explanations === null
+    explanations === null ||
+    choiceStatuses === null ||
+    typeof value.minChoices !== 'number' ||
+    typeof value.maxChoices !== 'number'
   ) {
     return null
   }
 
   return {
+    policy,
     eligible: value.eligible,
     eligibilityReasons,
     choiceLimitReason: value.choiceLimitReason,
     explanations,
+    choiceStatuses,
+    minChoices: value.minChoices,
+    maxChoices: value.maxChoices,
   }
+}
+
+function parsePolicyDescriptor(value: unknown): PolicyDescriptor | null {
+  if (
+    !isRecord(value) ||
+    typeof value.id !== 'string' ||
+    !policyIdPattern.test(value.id) ||
+    typeof value.displayName !== 'string' ||
+    value.displayName.trim().length === 0
+  ) {
+    return null
+  }
+
+  return { id: value.id, displayName: value.displayName }
+}
+
+const policyIdPattern = /^[a-z][a-z0-9-]*$/
+
+function isConsistentPolicyRegistry(
+  selectedPolicy: PolicyDescriptor,
+  availablePolicies: readonly PolicyDescriptor[],
+): boolean {
+  if (availablePolicies.length === 0) {
+    return false
+  }
+
+  const ids = new Set<string>()
+  const displayNames = new Set<string>()
+  for (const policy of availablePolicies) {
+    if (ids.has(policy.id) || displayNames.has(policy.displayName)) {
+      return false
+    }
+
+    ids.add(policy.id)
+    displayNames.add(policy.displayName)
+  }
+
+  return availablePolicies.some(
+    (policy) => policy.id === selectedPolicy.id && policy.displayName === selectedPolicy.displayName,
+  )
+}
+
+const choiceStatusKinds: readonly ChoiceStatusKind[] = ['Available', 'Unavailable', 'NotOffered']
+
+function parseChoiceStatus(value: unknown): ChoiceStatus | null {
+  if (!isRecord(value) || (value.reason !== null && typeof value.reason !== 'string')) {
+    return null
+  }
+
+  const subject = parseOptionItem(value.subject)
+  if (
+    subject === null ||
+    typeof value.status !== 'string' ||
+    !choiceStatusKinds.includes(value.status as ChoiceStatusKind)
+  ) {
+    return null
+  }
+
+  return { subject, status: value.status as ChoiceStatusKind, reason: value.reason }
 }
 
 function parseExplanation(value: unknown): ExplanationResponse | null {

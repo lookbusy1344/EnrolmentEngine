@@ -71,8 +71,8 @@ public sealed class CriteriaExplainer(
 	private IReadOnlyList<string> Narrate(Rule rule)
 	{
 		var locals = (rule.LocalParams ?? [])
-			.Where(static param => !string.IsNullOrWhiteSpace(param.Expression))
-			.ToDictionary(static param => param.Name, static param => param.Expression!, StringComparer.Ordinal);
+					 .Where(static param => !string.IsNullOrWhiteSpace(param.Expression))
+					 .ToDictionary(static param => param.Name, static param => param.Expression!, StringComparer.Ordinal);
 
 		return ExpressionNarrator.Narrate(rule.Expression ?? string.Empty, thresholds, locals);
 	}

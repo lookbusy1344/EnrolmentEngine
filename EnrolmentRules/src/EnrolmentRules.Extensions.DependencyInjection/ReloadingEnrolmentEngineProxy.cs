@@ -60,6 +60,13 @@ internal sealed class ReloadingEnrolmentEngineProxy(IEnrolmentEngineFactory fact
 	public IReadOnlyList<Subject> StaleChoices(StudentInput student, CancellationToken cancellationToken = default) =>
 		Evaluator.StaleChoices(student, cancellationToken);
 
+	public ValidatedEvaluation<FinalProgramme> ValidateFinalProgramme(StudentInput student, CancellationToken cancellationToken = default) =>
+		Evaluator.ValidateFinalProgramme(student, cancellationToken);
+
+	public ValidatedEvaluation<FinalProgramme> ValidateFinalProgramme(
+		StudentInput student, DateOnly asOf, CancellationToken cancellationToken = default) =>
+		Evaluator.ValidateFinalProgramme(student, asOf, cancellationToken);
+
 	/// <summary>
 	///     Resolved through the factory like every other call, so a reload that retunes a threshold or edits
 	///     an entry rule changes the criteria this returns without a container rebuild.

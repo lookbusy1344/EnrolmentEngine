@@ -14,8 +14,8 @@ public sealed class WebAppFactory : WebApplicationFactory<Program>
 	// copy step; wwwroot lives one level down under the project folder instead, so WebRoot is
 	// pointed there explicitly rather than defaulting to (the nonexistent) {RepoRoot}/wwwroot.
 	protected override void ConfigureWebHost(IWebHostBuilder builder) => builder
-		.UseContentRoot(RepoRoot)
-		.UseWebRoot(Path.Combine(RepoRoot, "src", "EnrolmentRules.Web", "wwwroot"));
+																		 .UseContentRoot(RepoRoot)
+																		 .UseWebRoot(Path.Combine(RepoRoot, "src", "EnrolmentRules.Web", "wwwroot"));
 
 	private static string FindRepoRoot()
 	{

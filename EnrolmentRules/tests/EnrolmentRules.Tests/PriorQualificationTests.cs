@@ -27,7 +27,11 @@ public sealed class PriorQualificationTests
 	[Fact]
 	public void a_matching_entry_equivalent_raises_the_predicted_points_for_the_subject()
 	{
-		var student = Student(new() { ["english_language"] = 1, ["maths"] = 1, ["biology"] = 1 },
+		var student = Student(new() {
+			["english_language"] = 1,
+			["maths"] = 1,
+			["biology"] = 1,
+		},
 			new Qualification("applied_science", QualificationType.BtecDiploma, "distinction"));
 
 		var profile = Harness.Predict(student);
@@ -39,7 +43,11 @@ public sealed class PriorQualificationTests
 	[Fact]
 	public void a_non_matching_prior_qualification_leaves_the_prediction_unchanged()
 	{
-		var student = Student(new() { ["english_language"] = 7, ["maths"] = 7, ["biology"] = 7 },
+		var student = Student(new() {
+			["english_language"] = 7,
+			["maths"] = 7,
+			["biology"] = 7,
+		},
 			new Qualification("applied_science", QualificationType.BtecDiploma, "pass"));
 
 		var profile = Harness.Predict(student);
@@ -51,7 +59,11 @@ public sealed class PriorQualificationTests
 	[Fact]
 	public void an_entry_equivalent_never_lowers_a_stronger_regression_prediction()
 	{
-		var student = Student(new() { ["english_language"] = 9, ["maths"] = 9, ["biology"] = 9 },
+		var student = Student(new() {
+			["english_language"] = 9,
+			["maths"] = 9,
+			["biology"] = 9,
+		},
 			new Qualification("applied_science", QualificationType.BtecDiploma, "distinction"));
 
 		var profile = Harness.Predict(student);
@@ -73,12 +85,15 @@ public sealed class PriorQualificationTests
 		var engine = new EnrolmentEngine(
 			new(rulesEngine, Harness.Thresholds, Harness.Catalogue, customScale), Harness.Catalogue, Harness.AsOf);
 
-		var student = Student(new() { ["english_language"] = 7, ["maths"] = 7 },
+		var student = Student(new() {
+			["english_language"] = 7,
+			["maths"] = 7,
+		},
 			new Qualification("applied_science", QualificationType.BtecDiploma, "platinum"));
 
 		StudentValidator.Validate(student, engine.Catalogue, engine.Scale).Should().BeEmpty();
 		StudentValidator.Validate(student, engine.Catalogue, QualificationScale.Default)
-			.Should().Contain(error => error.Contains("platinum"));
+						.Should().Contain(error => error.Contains("platinum"));
 	}
 
 	[Fact]
@@ -100,7 +115,9 @@ public sealed class PriorQualificationTests
 			["music"] = 8,
 			["art"] = 8,
 		});
-		var withEquivalent = withoutEquivalent with { PriorQualifications = [new("applied_science", QualificationType.BtecDiploma, "distinction")] };
+		var withEquivalent = withoutEquivalent with {
+			PriorQualifications = [new("applied_science", QualificationType.BtecDiploma, "distinction")],
+		};
 
 		var without = engine.Evaluate(withoutEquivalent);
 		var with = engine.Evaluate(withEquivalent);
@@ -127,7 +144,9 @@ public sealed class PriorQualificationTests
 			["physics"] = 6,
 			["chemistry"] = 6,
 		});
-		var withEquivalent = withoutEquivalent with { PriorQualifications = [new("maths", QualificationType.ALevel, "d")] };
+		var withEquivalent = withoutEquivalent with {
+			PriorQualifications = [new("maths", QualificationType.ALevel, "d")],
+		};
 
 		var without = engine.Evaluate(withoutEquivalent);
 		var with = engine.Evaluate(withEquivalent);
@@ -204,8 +223,8 @@ public sealed class PriorQualificationTests
 		var act = () => new EnrolmentEngine(evaluator, mismatchedCatalogue, Harness.AsOf);
 
 		act.Should()
-			.Throw<InvalidOperationException>()
-			.WithMessage("*catalogue*");
+		   .Throw<InvalidOperationException>()
+		   .WithMessage("*catalogue*");
 	}
 }
 
@@ -229,7 +248,9 @@ public sealed class QualificationScaleResolutionTests
 	{
 		var document = new StudentDocument(new(
 			"S-QUAL",
-			new Dictionary<string, int> { ["maths"] = 6 },
+			new Dictionary<string, int> {
+				["maths"] = 6,
+			},
 			[]) {
 			PriorQualifications = [
 				new("biology", QualificationType.BtecDiploma, "distinction"),
@@ -244,7 +265,7 @@ public sealed class QualificationScaleResolutionTests
 		var roundTripped = JsonSerializer.Deserialize(json, EnrolmentJsonContext.Default.StudentDocument);
 		roundTripped.Should().NotBeNull();
 		roundTripped!.Student.PriorQualifications.Should().ContainSingle().Which.Should()
-			.Be(new Qualification("biology", QualificationType.BtecDiploma, "distinction"));
+					 .Be(new Qualification("biology", QualificationType.BtecDiploma, "distinction"));
 	}
 
 	[Fact]
@@ -336,17 +357,22 @@ public sealed class QualificationScaleResolutionTests
 	{
 		var student = new StudentInput(
 			"S-BAD",
-			new Dictionary<string, int> { ["maths"] = 6 },
-			[]) { DateOfBirth = new DateOnly(2009, 9, 1), PriorQualifications = [new("biology", QualificationType.ALevel, "not-a-grade")] };
+			new Dictionary<string, int> {
+				["maths"] = 6,
+			},
+			[]) {
+			DateOfBirth = new DateOnly(2009, 9, 1),
+			PriorQualifications = [new("biology", QualificationType.ALevel, "not-a-grade")],
+		};
 
 		var scale = new QualificationScale([
 			new(QualificationType.ALevel, "u", 0, ALevelGrade.U),
 		]);
 
 		StudentValidator.Validate(student, Harness.Catalogue, scale)
-			.Should()
-			.ContainSingle()
-			.Which.Should().Contain("prior_qualifications").And.Contain("biology").And.Contain("not-a-grade");
+						.Should()
+						.ContainSingle()
+						.Which.Should().Contain("prior_qualifications").And.Contain("biology").And.Contain("not-a-grade");
 	}
 
 	[Fact]
@@ -354,20 +380,27 @@ public sealed class QualificationScaleResolutionTests
 	{
 		var student = new StudentInput(
 			"S-BAD",
-			new Dictionary<string, int> { ["maths"] = 6 },
-			[]) { DateOfBirth = new DateOnly(2009, 9, 1), PriorQualifications = [new("biology", QualificationType.ALevel, null!)] };
+			new Dictionary<string, int> {
+				["maths"] = 6,
+			},
+			[]) {
+			DateOfBirth = new DateOnly(2009, 9, 1),
+			PriorQualifications = [new("biology", QualificationType.ALevel, null!)],
+		};
 
 		var act = () => StudentValidator.Validate(student, Harness.Catalogue, Harness.Scale);
 
 		act.Should().NotThrow();
 		act().Should().ContainSingle().Which.Should()
-			.Contain("prior_qualifications")
-			.And.Contain("biology")
-			.And.Contain("unknown qualification")
-			.And.Contain("''");
+			 .Contain("prior_qualifications")
+			 .And.Contain("biology")
+			 .And.Contain("unknown qualification")
+			 .And.Contain("''");
 	}
 
-	[Property(Arbitrary = new[] { typeof(MalformedStudentArbitraries) }, MaxTest = 200)]
+	[Property(Arbitrary = new[] {
+		typeof(MalformedStudentArbitraries),
+	}, MaxTest = 200)]
 	public bool student_validator_validate_is_total_for_malformed_student_documents(StudentInput student)
 	{
 		var act = () => StudentValidator.Validate(student, Harness.Catalogue, Harness.Scale);
@@ -398,8 +431,8 @@ public sealed class QualificationScaleResolutionTests
 			"missing-nvq.yaml");
 
 		act.Should().Throw<QualificationScaleException>()
-			.WithMessage("*missing-nvq.yaml*")
-			.Which.Message.Should().Contain("nvq");
+		   .WithMessage("*missing-nvq.yaml*")
+		   .Which.Message.Should().Contain("nvq");
 	}
 
 	[Fact]
@@ -430,8 +463,8 @@ public sealed class QualificationScaleResolutionTests
 			"duplicate-type.yaml");
 
 		act.Should().Throw<QualificationScaleException>()
-			.WithMessage("*duplicate-type.yaml*")
-			.Which.Message.Should().Contain("duplicate entry for a_level grade 'u'");
+		   .WithMessage("*duplicate-type.yaml*")
+		   .Which.Message.Should().Contain("duplicate entry for a_level grade 'u'");
 	}
 
 	[Fact]
@@ -445,8 +478,8 @@ public sealed class QualificationScaleResolutionTests
 			"malformed-qualifications.yaml");
 
 		act.Should().Throw<QualificationScaleException>()
-			.WithMessage("*malformed-qualifications.yaml*")
-			.Which.InnerException.Should().BeOfType<FormatException>();
+		   .WithMessage("*malformed-qualifications.yaml*")
+		   .Which.InnerException.Should().BeOfType<FormatException>();
 	}
 
 	[Fact]
@@ -514,10 +547,10 @@ public sealed class RestudyBarConstraintTests
 			StrongStudent(new Qualification(Subject.Physics.Value, QualificationType.ALevel, "e")));
 
 		ConstraintPass.Evaluate([
-				new(Subject.Biology, Rating.Green, "base"),
-			], profile, Harness.Catalogue)
-			.Should()
-			.BeEmpty();
+						  new(Subject.Biology, Rating.Green, "base"),
+					  ], profile, Harness.Catalogue)
+					  .Should()
+					  .BeEmpty();
 	}
 
 	[Fact]
@@ -560,7 +593,12 @@ public static class MalformedStudentArbitraries
 			select new StudentInput(
 				id!,
 				includeGcses
-					? new Dictionary<string, int>(StringComparer.OrdinalIgnoreCase) { ["maths"] = 6 }
+					? new Dictionary<string, int>(StringComparer.OrdinalIgnoreCase) {
+						["maths"] = 6,
+					}
 					: null,
-				hobbies) { DateOfBirth = includeBirthDate ? new DateOnly(2009, 9, 1) : null, PriorQualifications = [.. priorQualifications] });
+				hobbies) {
+				DateOfBirth = includeBirthDate ? new DateOnly(2009, 9, 1) : null,
+				PriorQualifications = [.. priorQualifications],
+			});
 }

@@ -35,17 +35,17 @@ public sealed partial class InvariantTests
 		using var doc = WorkflowDocument("subject-ratings.yaml");
 
 		var rules = doc.RootElement.GetProperty("Rules").EnumerateArray()
-			.Select(static rule => rule.GetProperty("RuleName").GetString())
-			.ToArray();
+					   .Select(static rule => rule.GetProperty("RuleName").GetString())
+					   .ToArray();
 
 		rules.Should().OnlyContain(static name => !string.IsNullOrWhiteSpace(name));
 
 		var subjectNames = rules
-			.Select(static name => name!.Split(':', 2)[0])
-			.ToArray();
+						   .Select(static name => name!.Split(':', 2)[0])
+						   .ToArray();
 		var parsedSubjects = subjectNames
-			.Select(static name => Subject.TryParse(name, out var subject) ? subject : throw new InvalidOperationException(name))
-			.ToArray();
+							 .Select(static name => Subject.TryParse(name, out var subject) ? subject : throw new InvalidOperationException(name))
+							 .ToArray();
 
 		subjectNames.Should().OnlyContain(name => IsKnownSubject(name));
 		parsedSubjects
@@ -75,8 +75,8 @@ public sealed partial class InvariantTests
 	public void catalogue_exclusion_pairs_include_the_illustrative_red_clash()
 	{
 		Catalogue.ExclusionPairs.Should().Contain(pair =>
-			(pair.A == Subject.French && pair.B == Subject.German && pair.Severity == Rating.Red)
-			|| (pair.A == Subject.German && pair.B == Subject.French && pair.Severity == Rating.Red));
+			pair.A == Subject.French && pair.B == Subject.German && pair.Severity == Rating.Red
+			|| pair.A == Subject.German && pair.B == Subject.French && pair.Severity == Rating.Red);
 	}
 
 	[Fact]
@@ -85,8 +85,8 @@ public sealed partial class InvariantTests
 		using var doc = WorkflowDocument("eligibility.yaml");
 
 		var ruleNames = doc.RootElement.GetProperty("Rules").EnumerateArray()
-			.Select(static rule => rule.GetProperty("RuleName").GetString())
-			.ToArray();
+						   .Select(static rule => rule.GetProperty("RuleName").GetString())
+						   .ToArray();
 
 		ruleNames.Should().OnlyContain(static name => !string.IsNullOrWhiteSpace(name));
 	}
@@ -95,9 +95,9 @@ public sealed partial class InvariantTests
 	public void shipped_workflows_are_yaml_not_json()
 	{
 		Directory.EnumerateFiles(Harness.WorkflowsDir, "*.json")
-			.Where(static file => Path.GetFileName(file) is not WorkflowStore.SchemaFileName)
-			.Should()
-			.BeEmpty();
+				 .Where(static file => Path.GetFileName(file) is not WorkflowStore.SchemaFileName)
+				 .Should()
+				 .BeEmpty();
 	}
 
 	[Fact]
@@ -119,7 +119,9 @@ public sealed partial class InvariantTests
 			"GCSE/A-level grade gates must reference named bands; only the whole-profile average and adult-age bars may be literals");
 	}
 
-	[Property(Arbitrary = new[] { typeof(StudentArbitraries) }, MaxTest = 250)]
+	[Property(Arbitrary = new[] {
+		typeof(StudentArbitraries),
+	}, MaxTest = 250)]
 	public bool random_valid_students_never_throw_and_preserve_phase_nine_invariants(StudentInput student)
 	{
 		StudentValidator.Validate(student, Harness.Catalogue, Harness.Scale).Should().BeEmpty();
@@ -128,8 +130,8 @@ public sealed partial class InvariantTests
 
 		explained.Explanations.Should().HaveCount(Catalogue.Subjects.Count);
 		explained.Explanations.Select(static explanation => explanation.Subject)
-			.Should()
-			.BeEquivalentTo(Catalogue.Subjects);
+				 .Should()
+				 .BeEquivalentTo(Catalogue.Subjects);
 
 		explained.Summary.ProgrammePriorityScore.Should().BeInRange(0, MaxProgrammePriorityScore);
 
@@ -153,13 +155,17 @@ public sealed partial class InvariantTests
 		return true;
 	}
 
-	[Property(Arbitrary = new[] { typeof(StudentArbitraries) }, MaxTest = 100)]
+	[Property(Arbitrary = new[] {
+		typeof(StudentArbitraries),
+	}, MaxTest = 100)]
 	public bool random_valid_students_are_not_upgraded_by_an_amber_restudy_bar(StudentInput student)
 	{
 		StudentValidator.Validate(student, Harness.Catalogue, Harness.Scale).Should().BeEmpty();
 
 		var catalogue = CatalogueWithRestudyBarSeverity(Subject.Biology, Rating.Amber);
-		var constrainedStudent = student with { PriorQualifications = [BiologyPriorALevel] };
+		var constrainedStudent = student with {
+			PriorQualifications = [BiologyPriorALevel],
+		};
 		var constrainedEngine = new EnrolmentEngine(rulesEngine, Harness.Thresholds, catalogue, Harness.AsOf, Harness.Scale);
 
 		var explained = constrainedEngine.Explain(constrainedStudent);
@@ -188,8 +194,8 @@ public sealed partial class InvariantTests
 
 	private static IEnumerable<string> WorkflowFiles() =>
 		Directory.EnumerateFiles(Harness.WorkflowsDir)
-			.Where(static file => Path.GetFileName(file) is not WorkflowStore.SchemaFileName
-								  && Path.GetExtension(file) is ".yaml" or ".yml");
+				 .Where(static file => Path.GetFileName(file) is not WorkflowStore.SchemaFileName
+									   && Path.GetExtension(file) is ".yaml" or ".yml");
 
 	private static IEnumerable<string> ExpressionsIn(JsonElement element)
 	{
@@ -222,7 +228,9 @@ public sealed partial class InvariantTests
 			Catalogue.Subjects.ToDictionary(
 				static subject => subject,
 				subject_ => subject_ == subject
-					? Catalogue.Meta(subject_) with { RestudyBar = new([QualificationType.ALevel], severity) }
+					? Catalogue.Meta(subject_) with {
+						RestudyBar = new([QualificationType.ALevel], severity),
+					}
 					: Catalogue.Meta(subject_)),
 			Catalogue.Subjects);
 
@@ -253,7 +261,9 @@ public sealed partial class InvariantTests
 				select new StudentInput(
 					id,
 					gcseKeys.Zip(grades, static (subject, grade) => new KeyValuePair<string, int>(subject, grade))
-						.ToDictionary(static pair => pair.Key, static pair => pair.Value, StringComparer.OrdinalIgnoreCase),
-					hobbies) { DateOfBirth = new DateOnly(birthYear, birthMonth, birthDay) });
+							.ToDictionary(static pair => pair.Key, static pair => pair.Value, StringComparer.OrdinalIgnoreCase),
+					hobbies) {
+					DateOfBirth = new DateOnly(birthYear, birthMonth, birthDay),
+				});
 	}
 }

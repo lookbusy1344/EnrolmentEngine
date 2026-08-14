@@ -36,7 +36,9 @@ public sealed class VetoTests
 		var entries = shipped.Subjects.ToDictionary(
 			static subject => subject,
 			subject => subject == Subject.Music
-				? shipped.Meta(subject) with { Prerequisites = [new([Subject.Maths], Rating.Red)] }
+				? shipped.Meta(subject) with {
+					Prerequisites = [new([Subject.Maths], Rating.Red)],
+				}
 				: shipped.Meta(subject));
 
 		return new(entries, shipped.Subjects);
@@ -75,7 +77,7 @@ public sealed class VetoTests
 	public void veto_overrides_an_amber_base()
 	{
 		ConstraintPass.Evaluate(Ratings((Subject.Music, Rating.Amber)), Profile(TromboneHobby), Harness.Catalogue)
-			.Should().ContainSingle().Which.To.Should().Be(Rating.Red);
+					  .Should().ContainSingle().Which.To.Should().Be(Rating.Red);
 	}
 
 	[Fact]
@@ -83,7 +85,7 @@ public sealed class VetoTests
 	{
 		// The rating is red either way, but the veto is the more informative reason, so it still fires.
 		var veto = ConstraintPass.Evaluate(Ratings((Subject.Music, Rating.Red)), Profile(TromboneHobby), Harness.Catalogue)
-			.Should().ContainSingle().Which;
+								 .Should().ContainSingle().Which;
 		veto.To.Should().Be(Rating.Red);
 		veto.Reason.Should().Contain(TromboneHobby);
 	}
@@ -108,7 +110,7 @@ public sealed class VetoTests
 	{
 		// A piano player satisfies Music's own-time requirement and triggers no veto.
 		ConstraintPass.Evaluate(Ratings((Subject.Music, Rating.Green)), Profile("plays_piano"), Harness.Catalogue)
-			.Should().BeEmpty();
+					  .Should().BeEmpty();
 	}
 
 	[Fact]

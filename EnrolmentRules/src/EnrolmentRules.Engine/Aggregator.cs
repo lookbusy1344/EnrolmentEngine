@@ -19,13 +19,35 @@ internal static class Aggregator
 	/// <summary>The clause marking a limit already lifted by the high-attainment threshold.</summary>
 	public const string RaisedLimitNote = "already raised for a high GCSE average";
 
+	/// <summary>
+	///     The effective chosen-subject ceiling for one student: <see cref="PolicyThresholds.HighAttainmentMaxChosenALevels" />
+	///     once their average GCSE score reaches <see cref="PolicyThresholds.HighAttainmentAverageGcse" />,
+	///     otherwise <see cref="PolicyThresholds.MaxChosenALevels" />. Shared by <see cref="CapChosenSubjects" />
+	///     (the soft, per-subject downgrade below) and the final-programme validation boundary
+	///     (<see cref="EnrolmentEngine.ValidateFinalProgramme(Domain.StudentInput, System.Threading.CancellationToken)" />),
+	///     which reads the same number as a hard structural limit — one calculation, not two definitions of "the cap".
+	/// </summary>
+	public static int EffectiveMaxChosenALevels(StudentProfile profile, PolicyThresholds thresholds) =>
+		EffectiveMaxChosenALevels(profile.AverageGcseScore, thresholds);
+
+	/// <inheritdoc cref="EffectiveMaxChosenALevels(StudentProfile, PolicyThresholds)" />
+	/// <remarks>
+	///     Takes the average directly for callers that only need the cap (e.g. the policy comparison
+	///     projection), which do not otherwise need a full <see cref="StudentProfile" /> and can compute the
+	///     average from GCSEs alone via <see cref="Prediction.GradePredictor.AverageGcseScore" />.
+	/// </remarks>
+	public static int EffectiveMaxChosenALevels(double averageGcseScore, PolicyThresholds thresholds) =>
+		averageGcseScore >= thresholds.HighAttainmentAverageGcse
+			? thresholds.HighAttainmentMaxChosenALevels
+			: thresholds.MaxChosenALevels;
+
 	public static IReadOnlyList<Adjustment> CapChosenSubjects(
 		IReadOnlyList<SubjectRating> ratings,
 		StudentProfile profile,
 		PolicyThresholds thresholds)
 	{
 		var highAttainment = profile.AverageGcseScore >= thresholds.HighAttainmentAverageGcse;
-		var cap = highAttainment ? thresholds.HighAttainmentMaxChosenALevels : thresholds.MaxChosenALevels;
+		var cap = EffectiveMaxChosenALevels(profile, thresholds);
 		if (profile.ChosenALevels.Count < cap) {
 			return [];
 		}
@@ -33,8 +55,8 @@ internal static class Aggregator
 		var reason = ChosenSubjectCapReason(profile, thresholds, cap, highAttainment);
 		return [
 			.. ratings
-				.Where(r => r.Rating != Rating.Red && !profile.ChosenALevels.Contains(r.Subject))
-				.Select(r => new Adjustment(r.Subject, r.Rating, Rating.Red, AdjustmentKind.ChosenSubjectCap, reason)),
+			   .Where(r => r.Rating != Rating.Red && !profile.ChosenALevels.Contains(r.Subject))
+			   .Select(r => new Adjustment(r.Subject, r.Rating, Rating.Red, AdjustmentKind.ChosenSubjectCap, reason)),
 		];
 	}
 
@@ -76,19 +98,19 @@ internal static class Aggregator
 		}
 
 		var greens = ratings
-			.Where(static r => r.Rating == Rating.Green)
-			.OrderBy(r => catalogue.Meta(r.Subject).PriorityWeight)
-			.ThenBy(static r => r.Subject)
-			.ToList();
+					 .Where(static r => r.Rating == Rating.Green)
+					 .OrderBy(r => catalogue.Meta(r.Subject).PriorityWeight)
+					 .ThenBy(static r => r.Subject)
+					 .ToList();
 
 		var surplus = greens.Count - cap;
 		return surplus <= 0
 			? []
 			: [
 				.. greens.Take(surplus)
-					.Select(r => new Adjustment(
-						r.Subject, Rating.Green, Rating.Amber, AdjustmentKind.Cap,
-						GreenCapReason(greens.Count, cap, catalogue.Meta(r.Subject).PriorityWeight))),
+						 .Select(r => new Adjustment(
+							 r.Subject, Rating.Green, Rating.Amber, AdjustmentKind.Cap,
+							 GreenCapReason(greens.Count, cap, catalogue.Meta(r.Subject).PriorityWeight))),
 			];
 	}
 
@@ -115,7 +137,7 @@ internal static class Aggregator
 		return new(
 			ratings.Count(static r => r.Rating == Rating.Green),
 			ratings.Count(static r => r.Rating == Rating.Amber),
-			greenWeight + (thresholds.AmberScoreFactor * amberWeight));
+			greenWeight + thresholds.AmberScoreFactor * amberWeight);
 	}
 
 	/// <summary>
@@ -124,7 +146,7 @@ internal static class Aggregator
 	/// </summary>
 	public static IReadOnlyList<SubjectRating> Rank(IReadOnlyList<SubjectRating> ratings, CatalogueData catalogue) => [
 		.. ratings
-			.OrderBy(static r => (int)r.Rating)
-			.ThenByDescending(r => catalogue.Meta(r.Subject).PriorityWeight),
+		   .OrderBy(static r => (int)r.Rating)
+		   .ThenByDescending(r => catalogue.Meta(r.Subject).PriorityWeight),
 	];
 }

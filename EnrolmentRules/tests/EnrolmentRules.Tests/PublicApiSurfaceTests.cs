@@ -11,13 +11,15 @@ public sealed class PublicApiSurfaceTests
 	[Fact]
 	public void equatable_collections_expose_no_implicit_conversion_operators()
 	{
-		var wrapperTypes = new[] { typeof(EquatableArray<int>), typeof(EquatableDictionary<string, int>) };
+		var wrapperTypes = new[] {
+			typeof(EquatableArray<int>), typeof(EquatableDictionary<string, int>),
+		};
 
 		var implicitOperators = wrapperTypes
-			.SelectMany(static type => type.GetMethods(BindingFlags.Public | BindingFlags.Static))
-			.Where(static method => method.Name == "op_Implicit")
-			.Select(static method => method.ToString())
-			.ToArray();
+								.SelectMany(static type => type.GetMethods(BindingFlags.Public | BindingFlags.Static))
+								.Where(static method => method.Name == "op_Implicit")
+								.Select(static method => method.ToString())
+								.ToArray();
 
 		implicitOperators.Should().BeEmpty("collection copying must remain explicit at the call site");
 	}
@@ -28,62 +30,43 @@ public sealed class PublicApiSurfaceTests
 		var assemblies = new[] {
 			(typeof(StudentInput).Assembly,
 				new[] {
-					"EnrolmentRules.Domain.AgeCalculator", "EnrolmentRules.Domain.ALevelGrade", "EnrolmentRules.Domain.AdjustmentKind",
-					"EnrolmentRules.Domain.Adjustment", "EnrolmentRules.Domain.AdviceResult", "EnrolmentRules.Domain.BatchJsonContext",
-					"EnrolmentRules.Domain.BuildInfo", "EnrolmentRules.Domain.BatchOutcome", "EnrolmentRules.Domain.Catalogue",
-					"EnrolmentRules.Domain.CatalogueData", "EnrolmentRules.Domain.CatalogueDataException",
-					"EnrolmentRules.Domain.EnrolmentDataException", "EnrolmentRules.Domain.EnrolmentJsonContext",
-					"EnrolmentRules.Domain.EnrolmentResult", "EnrolmentRules.Domain.EnrolmentSummary", "EnrolmentRules.Domain.EnumNames",
-					"EnrolmentRules.Domain.EntryEquivalent", "EnrolmentRules.Domain.ExclusionPair", "EnrolmentRules.Domain.ExplainedResult",
-					"EnrolmentRules.Domain.Explanation", "EnrolmentRules.Domain.EquatableArray", "EnrolmentRules.Domain.EquatableArray`1",
-					"EnrolmentRules.Domain.EquatableDictionary`2", "EnrolmentRules.Domain.EquatableDictionaryFactory",
-					"EnrolmentRules.Domain.GateAdvice", "EnrolmentRules.Domain.GcseResult", "EnrolmentRules.Domain.GcseSubjects",
-					"EnrolmentRules.Domain.GradeChange", "EnrolmentRules.Domain.LintFinding", "EnrolmentRules.Domain.LintSeverity",
-					"EnrolmentRules.Domain.PredictedGrade", "EnrolmentRules.Domain.PolicyFacts", "EnrolmentRules.Domain.PolicyThresholds",
-					"EnrolmentRules.Domain.PolicyThresholdsException", "EnrolmentRules.Domain.PolicyThresholdsStore",
-					"EnrolmentRules.Domain.PredictionModel", "EnrolmentRules.Domain.PredictionModel+Coefficients",
-					"EnrolmentRules.Domain.Prerequisite", "EnrolmentRules.Domain.PrerequisiteSatisfaction", "EnrolmentRules.Domain.Qualification",
-					"EnrolmentRules.Domain.QualificationScale", "EnrolmentRules.Domain.QualificationScaleEntry",
-					"EnrolmentRules.Domain.QualificationScaleException", "EnrolmentRules.Domain.QualificationScaleStore",
-					"EnrolmentRules.Domain.QualificationType", "EnrolmentRules.Domain.Rating", "EnrolmentRules.Domain.RatingExtensions",
-					"EnrolmentRules.Domain.RatingMeaning", "EnrolmentRules.Domain.SubjectCriteria", "EnrolmentRules.Domain.Recommendation",
-					"EnrolmentRules.Domain.RestudyBar", "EnrolmentRules.Domain.StudentDocument", "EnrolmentRules.Domain.StudentInput",
-					"EnrolmentRules.Domain.StudentProfile", "EnrolmentRules.Domain.StudentValidator", "EnrolmentRules.Domain.Subject",
-					"EnrolmentRules.Domain.SubjectAdvice", "EnrolmentRules.Domain.SubjectExclusion", "EnrolmentRules.Domain.SubjectJsonConverter",
-					"EnrolmentRules.Domain.SubjectMeta", "EnrolmentRules.Domain.Thresholds", "EnrolmentRules.Domain.TransitionEvidence",
-					"EnrolmentRules.Domain.UnsatGcseAdvice",
-					"EnrolmentRules.Domain.ValidationOutcome", "EnrolmentRules.Domain.ValidatedEvaluation`1", "EnrolmentRules.Domain.YamlConverter",
+					"EnrolmentRules.Domain.AgeCalculator", "EnrolmentRules.Domain.ALevelGrade", "EnrolmentRules.Domain.AdjustmentKind", "EnrolmentRules.Domain.Adjustment", "EnrolmentRules.Domain.AdviceResult", "EnrolmentRules.Domain.BatchJsonContext", "EnrolmentRules.Domain.BuildInfo",
+					"EnrolmentRules.Domain.BatchOutcome", "EnrolmentRules.Domain.Catalogue", "EnrolmentRules.Domain.CatalogueData", "EnrolmentRules.Domain.CatalogueDataException", "EnrolmentRules.Domain.EnrolmentDataException", "EnrolmentRules.Domain.EnrolmentJsonContext", "EnrolmentRules.Domain.EnrolmentResult",
+					"EnrolmentRules.Domain.EnrolmentSummary", "EnrolmentRules.Domain.EnumNames", "EnrolmentRules.Domain.ChoiceStatus", "EnrolmentRules.Domain.ChosenSubjectStatus", "EnrolmentRules.Domain.EntryEquivalent", "EnrolmentRules.Domain.ExclusionPair", "EnrolmentRules.Domain.ExplainedResult",
+					"EnrolmentRules.Domain.Explanation", "EnrolmentRules.Domain.EquatableArray", "EnrolmentRules.Domain.EquatableArray`1", "EnrolmentRules.Domain.EquatableDictionary`2", "EnrolmentRules.Domain.EquatableDictionaryFactory", "EnrolmentRules.Domain.FinalProgramme", "EnrolmentRules.Domain.GateAdvice",
+					"EnrolmentRules.Domain.GcseResult", "EnrolmentRules.Domain.GcseSubjects", "EnrolmentRules.Domain.GradeChange", "EnrolmentRules.Domain.LintFinding", "EnrolmentRules.Domain.LintSeverity", "EnrolmentRules.Domain.PredictedGrade", "EnrolmentRules.Domain.PolicyFacts",
+					"EnrolmentRules.Domain.PolicyThresholds", "EnrolmentRules.Domain.PolicyThresholdsException", "EnrolmentRules.Domain.PolicyThresholdsStore", "EnrolmentRules.Domain.PredictionModel", "EnrolmentRules.Domain.PredictionModel+Coefficients", "EnrolmentRules.Domain.Prerequisite",
+					"EnrolmentRules.Domain.PrerequisiteSatisfaction", "EnrolmentRules.Domain.Qualification", "EnrolmentRules.Domain.QualificationScale", "EnrolmentRules.Domain.QualificationScaleEntry", "EnrolmentRules.Domain.QualificationScaleException", "EnrolmentRules.Domain.QualificationScaleStore",
+					"EnrolmentRules.Domain.QualificationType", "EnrolmentRules.Domain.Rating", "EnrolmentRules.Domain.RatingExtensions", "EnrolmentRules.Domain.RatingMeaning", "EnrolmentRules.Domain.SubjectCriteria", "EnrolmentRules.Domain.Recommendation", "EnrolmentRules.Domain.RestudyBar",
+					"EnrolmentRules.Domain.StudentDocument", "EnrolmentRules.Domain.StudentInput", "EnrolmentRules.Domain.StudentProfile", "EnrolmentRules.Domain.StudentValidator", "EnrolmentRules.Domain.Subject", "EnrolmentRules.Domain.SubjectAdvice", "EnrolmentRules.Domain.SubjectExclusion",
+					"EnrolmentRules.Domain.SubjectJsonConverter", "EnrolmentRules.Domain.SubjectMeta", "EnrolmentRules.Domain.Thresholds", "EnrolmentRules.Domain.TransitionEvidence", "EnrolmentRules.Domain.UnsatGcseAdvice", "EnrolmentRules.Domain.ValidationOutcome", "EnrolmentRules.Domain.ValidatedEvaluation`1",
+					"EnrolmentRules.Domain.YamlConverter",
 				}),
 			(typeof(GradePredictor).Assembly,
 				new[] {
-					"EnrolmentRules.Prediction.DfeTransitionMatrix", "EnrolmentRules.Prediction.GradePredictor",
-					"EnrolmentRules.Prediction.TransitionMatrixException",
+					"EnrolmentRules.Prediction.DfeTransitionMatrix", "EnrolmentRules.Prediction.GradePredictor", "EnrolmentRules.Prediction.TransitionMatrixException",
 				}),
 			(typeof(IEnrolmentEngine).Assembly,
 				new[] {
-					"EnrolmentRules.Engine.Authoring.CatalogueException", "EnrolmentRules.Engine.Authoring.CatalogueStore",
-					"EnrolmentRules.Engine.Authoring.CriteriaExplainer", "EnrolmentRules.Engine.Authoring.CriteriaNarrationException",
-					"EnrolmentRules.Engine.Authoring.ExpressionNarrator", "EnrolmentRules.Engine.IEnrolmentCriteriaExplainer",
-					"EnrolmentRules.Engine.Authoring.WorkflowException", "EnrolmentRules.Engine.Authoring.WorkflowLintException",
-					"EnrolmentRules.Engine.Authoring.WorkflowLinter", "EnrolmentRules.Engine.Authoring.WorkflowProbeException",
-					"EnrolmentRules.Engine.Authoring.WorkflowSchemaException", "EnrolmentRules.Engine.Authoring.WorkflowStore",
-					"EnrolmentRules.Engine.EnrolmentEngine", "EnrolmentRules.Engine.IEnrolmentAdvisor", "EnrolmentRules.Engine.IEnrolmentEngine",
-					"EnrolmentRules.Engine.IEnrolmentEngineFactory", "EnrolmentRules.Engine.IEnrolmentEvaluator",
-					"EnrolmentRules.Engine.Hosting.DirectoryDataSource", "EnrolmentRules.Engine.Hosting.EnrolmentEngineFactory",
-					"EnrolmentRules.Engine.Hosting.IEnrolmentDataSource", "EnrolmentRules.Engine.Hosting.WorkflowContent",
+					"EnrolmentRules.Engine.Authoring.CatalogueException", "EnrolmentRules.Engine.Authoring.CatalogueStore", "EnrolmentRules.Engine.Authoring.CriteriaExplainer", "EnrolmentRules.Engine.Authoring.CriteriaNarrationException", "EnrolmentRules.Engine.Authoring.ExpressionNarrator",
+					"EnrolmentRules.Engine.IEnrolmentCriteriaExplainer", "EnrolmentRules.Engine.Authoring.WorkflowException", "EnrolmentRules.Engine.Authoring.WorkflowLintException", "EnrolmentRules.Engine.Authoring.WorkflowLinter", "EnrolmentRules.Engine.Authoring.WorkflowProbeException",
+					"EnrolmentRules.Engine.Authoring.WorkflowSchemaException", "EnrolmentRules.Engine.Authoring.WorkflowStore", "EnrolmentRules.Engine.EnrolmentEngine", "EnrolmentRules.Engine.IEnrolmentAdvisor", "EnrolmentRules.Engine.IEnrolmentEngine", "EnrolmentRules.Engine.IEnrolmentEngineFactory",
+					"EnrolmentRules.Engine.IEnrolmentEvaluator", "EnrolmentRules.Engine.Hosting.DirectoryDataSource", "EnrolmentRules.Engine.Hosting.EnrolmentEngineFactory", "EnrolmentRules.Engine.Hosting.IEnrolmentDataSource", "EnrolmentRules.Engine.Hosting.WorkflowContent",
+					"EnrolmentRules.Engine.Hosting.OverlayEnrolmentDataSource", "EnrolmentRules.Engine.EnrolmentPolicy", "EnrolmentRules.Engine.EnrolmentPolicyBuildException", "EnrolmentRules.Engine.EnrolmentPolicyConfigurationException", "EnrolmentRules.Engine.EnrolmentPolicyDefinition",
+					"EnrolmentRules.Engine.EnrolmentPolicyDescriptor", "EnrolmentRules.Engine.EnrolmentPolicyId", "EnrolmentRules.Engine.EnrolmentPolicyRegistry", "EnrolmentRules.Engine.EnrolmentPolicyRegistryException", "EnrolmentRules.Engine.IEnrolmentPolicyRegistry",
+					"EnrolmentRules.Engine.UnknownEnrolmentPolicyException", "EnrolmentRules.Engine.PolicyComparisonResult",
 				}),
 			(typeof(ServiceCollectionExtensions).Assembly,
 				new[] {
-					"EnrolmentRules.Extensions.DependencyInjection.EnrolmentEngineOptions",
-					"EnrolmentRules.Extensions.DependencyInjection.ServiceCollectionExtensions",
+					"EnrolmentRules.Extensions.DependencyInjection.EnrolmentEngineOptions", "EnrolmentRules.Extensions.DependencyInjection.EnrolmentPolicyOptions", "EnrolmentRules.Extensions.DependencyInjection.ServiceCollectionExtensions",
 				}),
 		};
 
 		foreach (var (assembly, expected) in assemblies) {
 			var actual = assembly.GetExportedTypes()
-				.Select(static type => type.FullName)
-				.OrderBy(static name => name, StringComparer.Ordinal)
-				.ToArray();
+								 .Select(static type => type.FullName)
+								 .OrderBy(static name => name, StringComparer.Ordinal)
+								 .ToArray();
 
 			var expectedSorted = expected.OrderBy(static name => name, StringComparer.Ordinal).ToArray();
 			var missing = expectedSorted.Except(actual, StringComparer.Ordinal).ToArray();

@@ -9,8 +9,8 @@ using Domain;
 /// </summary>
 public sealed class ValidatedEvaluationTests
 {
-	private static readonly DateOnly ValidDob = new(2009, 9, 1);
 	private const UnsatGcseAdvice UndefinedUnsatGcseAdvice = (UnsatGcseAdvice)int.MaxValue;
+	private static readonly DateOnly ValidDob = new(2009, 9, 1);
 
 	private readonly EnrolmentEngine engine = Harness.ShippedEngine();
 
@@ -24,7 +24,9 @@ public sealed class ValidatedEvaluationTests
 				["chemistry"] = 6,
 				["biology"] = 6,
 			},
-			[]) { DateOfBirth = ValidDob };
+			[]) {
+			DateOfBirth = ValidDob,
+		};
 
 	private static StudentInput EligibleStudent() => StudentWithMathsGrade(6);
 
@@ -52,11 +54,15 @@ public sealed class ValidatedEvaluationTests
 				["music"] = 8,
 				["art"] = 8,
 			},
-			["chess_club"]) { DateOfBirth = ValidDob };
+			["chess_club"]) {
+			DateOfBirth = ValidDob,
+		};
 
 	private static CatalogueData MathsOnlyCatalogue() =>
 		new(
-			new Dictionary<Subject, SubjectMeta> { [Subject.Maths] = Harness.Catalogue.Meta(Subject.Maths) },
+			new Dictionary<Subject, SubjectMeta> {
+				[Subject.Maths] = Harness.Catalogue.Meta(Subject.Maths),
+			},
 			[Subject.Maths]);
 
 	private static void ShouldRejectNull(Action action) =>
@@ -82,13 +88,19 @@ public sealed class ValidatedEvaluationTests
 		var limitedEngine = new EnrolmentEngine(rulesEngine, Harness.Thresholds, MathsOnlyCatalogue(), Harness.AsOf, Harness.Scale);
 		var student = new StudentInput(
 			"S-BAD",
-			new Dictionary<string, int> { ["english_language"] = 6, ["maths"] = 6 },
-			[]) { DateOfBirth = ValidDob, ChosenALevels = [Subject.Physics] };
+			new Dictionary<string, int> {
+				["english_language"] = 6,
+				["maths"] = 6,
+			},
+			[]) {
+			DateOfBirth = ValidDob,
+			ChosenALevels = [Subject.Physics],
+		};
 
 		var act = () => limitedEngine.Evaluate(student);
 
 		act.Should().Throw<CatalogueDataException>()
-			.WithMessage("*physics*bound catalogue*");
+		   .WithMessage("*physics*bound catalogue*");
 	}
 
 	[Fact]
@@ -110,7 +122,7 @@ public sealed class ValidatedEvaluationTests
 		outcome.Validation.IsValid.Should().BeFalse();
 		outcome.Value.Should().BeNull();
 		outcome.Validation.Errors.Should().ContainSingle()
-			.Which.Should().Contain("maths").And.Contain("out of range");
+			   .Which.Should().Contain("maths").And.Contain("out of range");
 	}
 
 	[Fact]
@@ -132,14 +144,16 @@ public sealed class ValidatedEvaluationTests
 	[Fact]
 	public void validated_evaluation_rejects_a_missing_date_of_birth()
 	{
-		var student = new StudentInput("S-BAD", new Dictionary<string, int> { ["maths"] = 6 }, []);
+		var student = new StudentInput("S-BAD", new Dictionary<string, int> {
+			["maths"] = 6,
+		}, []);
 
 		var outcome = engine.EvaluateValidated(student);
 
 		outcome.Validation.IsValid.Should().BeFalse();
 		outcome.Value.Should().BeNull();
 		outcome.Validation.Errors.Should().ContainSingle()
-			.Which.Should().Contain("date_of_birth");
+			   .Which.Should().Contain("date_of_birth");
 	}
 
 	[Fact]
@@ -161,31 +175,37 @@ public sealed class ValidatedEvaluationTests
 	{
 		// Further Maths requires Maths as a committed choice; choosing it alone leaves the prerequisite
 		// unmet, so it rates red — the shape of a choice whose facts moved under it after it was made.
-		var student = EligibleStudent() with { ChosenALevels = [Subject.FurtherMaths] };
+		var student = EligibleStudent() with {
+			ChosenALevels = [Subject.FurtherMaths],
+		};
 
 		var outcome = engine.EvaluateValidated(student);
 
 		outcome.Validation.IsValid.Should().BeFalse();
 		outcome.Value.Should().BeNull();
 		outcome.Validation.Errors.Should().ContainSingle()
-			.Which.Should().Contain("chosen_a_levels").And.Contain("further_maths");
+			   .Which.Should().Contain("chosen_a_levels").And.Contain("further_maths");
 	}
 
 	[Fact]
 	public void a_rejected_chosen_a_level_reports_the_reason_it_went_red()
 	{
-		var student = StrongStudent() with { ChosenALevels = [Subject.FurtherMaths] };
+		var student = StrongStudent() with {
+			ChosenALevels = [Subject.FurtherMaths],
+		};
 
 		var outcome = engine.ExplainValidated(student);
 
 		outcome.Validation.Errors.Should().ContainSingle()
-			.Which.Should().Contain(ConstraintPass.MathsPrerequisiteReason);
+			   .Which.Should().Contain(ConstraintPass.MathsPrerequisiteReason);
 	}
 
 	[Fact]
 	public void validated_explanation_rejects_a_chosen_a_level_the_pipeline_now_rates_red()
 	{
-		var student = EligibleStudent() with { ChosenALevels = [Subject.FurtherMaths] };
+		var student = EligibleStudent() with {
+			ChosenALevels = [Subject.FurtherMaths],
+		};
 
 		var outcome = engine.ExplainValidated(student);
 
@@ -197,7 +217,9 @@ public sealed class ValidatedEvaluationTests
 	public void an_ineligible_student_has_every_chosen_a_level_rejected()
 	{
 		// The gate reds every subject, so nothing the student committed to survives.
-		var student = new StudentInput("S-INELIGIBLE", new Dictionary<string, int> { ["maths"] = 6 }, []) {
+		var student = new StudentInput("S-INELIGIBLE", new Dictionary<string, int> {
+			["maths"] = 6,
+		}, []) {
 			DateOfBirth = ValidDob,
 			ChosenALevels = [Subject.Maths, Subject.Physics],
 		};
@@ -214,7 +236,9 @@ public sealed class ValidatedEvaluationTests
 	{
 		// Only red is rejected: Music's own-time requirement demotes it to amber for a student with no
 		// "plays_" hobby, and an amber choice remains a choice the student may hold.
-		var student = StrongStudent() with { ChosenALevels = [Subject.Music] };
+		var student = StrongStudent() with {
+			ChosenALevels = [Subject.Music],
+		};
 
 		var outcome = engine.ExplainValidated(student);
 
@@ -228,7 +252,9 @@ public sealed class ValidatedEvaluationTests
 		// The deliberate exemption: advice exists to say what would have to change, so a red committed
 		// choice is the case that most needs an answer rather than a refusal. EvaluateValidated/ExplainValidated
 		// refuse the same document — nothing is accepted by advising on it.
-		var student = EligibleStudent() with { ChosenALevels = [Subject.FurtherMaths] };
+		var student = EligibleStudent() with {
+			ChosenALevels = [Subject.FurtherMaths],
+		};
 
 		var outcome = engine.AdviseValidated(student);
 
@@ -241,7 +267,9 @@ public sealed class ValidatedEvaluationTests
 	public void explain_still_reports_a_red_chosen_a_level_without_validating_it()
 	{
 		// The unchecked path is unchanged: rejection is a validated-boundary concern, not a pipeline one.
-		var student = EligibleStudent() with { ChosenALevels = [Subject.FurtherMaths] };
+		var student = EligibleStudent() with {
+			ChosenALevels = [Subject.FurtherMaths],
+		};
 
 		var result = engine.Explain(student);
 

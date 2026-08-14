@@ -20,8 +20,8 @@ public sealed class ProductionExceptionHandlingTests
 	{
 		using var baseFactory = new WebAppFactory();
 		using var factory = baseFactory.WithWebHostBuilder(builder => builder
-			.UseEnvironment("Production")
-			.ConfigureServices(services => services.AddSingleton<IViteManifestReader>(new ThrowingViteManifestReader())));
+																	  .UseEnvironment("Production")
+																	  .ConfigureServices(services => services.AddSingleton<IViteManifestReader>(new ThrowingViteManifestReader())));
 		using var client = factory.CreateClient();
 
 		using var response = await client.GetAsync(new Uri("/app", UriKind.Relative));
@@ -38,8 +38,8 @@ public sealed class ProductionExceptionHandlingTests
 	{
 		using var baseFactory = new WebAppFactory();
 		using var factory = baseFactory.WithWebHostBuilder(builder => builder
-			.UseEnvironment("Production")
-			.ConfigureServices(services => services.AddSingleton<IEnrolmentEngine>(new ThrowingEnrolmentEngine())));
+																	  .UseEnvironment("Production")
+																	  .ConfigureServices(services => services.AddSingleton<IEnrolmentPolicyRegistry>(new ThrowingEnrolmentPolicyRegistry())));
 		using var client = factory.CreateClient();
 
 		using var response = await client.GetAsync(new Uri("/api/enrolment/options", UriKind.Relative));
@@ -51,7 +51,7 @@ public sealed class ProductionExceptionHandlingTests
 		problem.Should().NotBeNull();
 		problem!.Status.Should().Be(StatusCodes.Status500InternalServerError);
 		var body = await response.Content.ReadAsStringAsync();
-		body.Should().NotContain("ThrowingEnrolmentEngine");
+		body.Should().NotContain("ThrowingEnrolmentPolicyRegistry");
 		body.Should().NotContain("at EnrolmentRules.Web");
 	}
 
@@ -61,71 +61,21 @@ public sealed class ProductionExceptionHandlingTests
 			throw new InvalidOperationException("ThrowingViteManifestReader: simulated manifest failure.");
 	}
 
-	private sealed class ThrowingEnrolmentEngine : IEnrolmentEngine
+	private sealed class ThrowingEnrolmentPolicyRegistry : IEnrolmentPolicyRegistry
 	{
-		public CatalogueData Catalogue => throw Failure();
+		public IReadOnlyList<EnrolmentPolicyDescriptor> Descriptors => throw Failure();
 
-		public QualificationScale Scale => throw Failure();
+		public EnrolmentPolicyId DefaultPolicyId => throw Failure();
 
-		public PolicyThresholds Thresholds => throw Failure();
+		public EnrolmentPolicy GetPolicy(EnrolmentPolicyId id) => throw Failure();
 
-		public EnrolmentResult Evaluate(StudentInput student, CancellationToken cancellationToken = default) => throw Failure();
+		public bool TryGetPolicy(EnrolmentPolicyId id, out EnrolmentPolicy policy) => throw Failure();
 
-		public EnrolmentResult Evaluate(StudentInput student, DateOnly asOf, CancellationToken cancellationToken = default) =>
+		public ValidatedEvaluation<PolicyComparisonResult> Compare(
+			EnrolmentPolicyId id, StudentInput student, CancellationToken cancellationToken = default) =>
 			throw Failure();
-
-		public ExplainedResult Explain(StudentInput student, CancellationToken cancellationToken = default) => throw Failure();
-
-		public ExplainedResult Explain(StudentInput student, DateOnly asOf, CancellationToken cancellationToken = default) =>
-			throw Failure();
-
-		public ValidatedEvaluation<EnrolmentResult> EvaluateValidated(StudentInput student, CancellationToken cancellationToken = default) =>
-			throw Failure();
-
-		public ValidatedEvaluation<EnrolmentResult> EvaluateValidated(
-			StudentInput student, DateOnly asOf, CancellationToken cancellationToken = default) =>
-			throw Failure();
-
-		public ValidatedEvaluation<ExplainedResult> ExplainValidated(StudentInput student, CancellationToken cancellationToken = default) =>
-			throw Failure();
-
-		public ValidatedEvaluation<ExplainedResult> ExplainValidated(
-			StudentInput student, DateOnly asOf, CancellationToken cancellationToken = default) =>
-			throw Failure();
-
-		public IReadOnlyList<Subject> StaleChoices(StudentInput student, CancellationToken cancellationToken = default) =>
-			throw Failure();
-
-		public AdviceResult Advise(StudentInput student, CancellationToken cancellationToken = default) => throw Failure();
-
-		public AdviceResult Advise(StudentInput student, DateOnly asOf, CancellationToken cancellationToken = default) =>
-			throw Failure();
-
-		public AdviceResult Advise(StudentInput student, UnsatGcseAdvice unsatGcses, CancellationToken cancellationToken = default) =>
-			throw Failure();
-
-		public AdviceResult Advise(
-			StudentInput student, DateOnly asOf, UnsatGcseAdvice unsatGcses, CancellationToken cancellationToken = default) =>
-			throw Failure();
-
-		public ValidatedEvaluation<AdviceResult> AdviseValidated(StudentInput student, CancellationToken cancellationToken = default) =>
-			throw Failure();
-
-		public ValidatedEvaluation<AdviceResult> AdviseValidated(
-			StudentInput student, DateOnly asOf, CancellationToken cancellationToken = default) =>
-			throw Failure();
-
-		public ValidatedEvaluation<AdviceResult> AdviseValidated(
-			StudentInput student, UnsatGcseAdvice unsatGcses, CancellationToken cancellationToken = default) =>
-			throw Failure();
-
-		public ValidatedEvaluation<AdviceResult> AdviseValidated(
-			StudentInput student, DateOnly asOf, UnsatGcseAdvice unsatGcses, CancellationToken cancellationToken = default) =>
-			throw Failure();
-
-		public SubjectCriteria Describe(Subject subject) => throw Failure();
 
 		private static InvalidOperationException Failure() =>
-			new("ThrowingEnrolmentEngine: simulated engine failure.");
+			new("ThrowingEnrolmentPolicyRegistry: simulated registry failure.");
 	}
 }

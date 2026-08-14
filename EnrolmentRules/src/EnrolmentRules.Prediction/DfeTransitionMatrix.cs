@@ -47,8 +47,8 @@ public sealed class DfeTransitionMatrix
 		var materialized = evidence.ToArray();
 		rows = materialized.ToFrozenDictionary(static e => (e.Subject, e.PriorAttainmentBand));
 		populatedBands = materialized
-			.GroupBy(static e => e.Subject)
-			.ToFrozenDictionary(static grp => grp.Key, static grp => grp.Select(static e => e.PriorAttainmentBand).ToFrozenSet());
+						 .GroupBy(static e => e.Subject)
+						 .ToFrozenDictionary(static grp => grp.Key, static grp => grp.Select(static e => e.PriorAttainmentBand).ToFrozenSet());
 	}
 
 	/// <summary>Load the project-local DfE transition-matrix extract (the zero-wiring fallback path).</summary>
@@ -123,10 +123,10 @@ public sealed class DfeTransitionMatrix
 		ArgumentNullException.ThrowIfNull(catalogue);
 
 		var missing = catalogue.Subjects
-			.Where(subject => catalogue.Meta(subject).RequiresDfeEvidence)
-			.Where(subject => !populatedBands.ContainsKey(subject))
-			.Select(EnumNames.NameOf)
-			.ToArray();
+							   .Where(subject => catalogue.Meta(subject).RequiresDfeEvidence)
+							   .Where(subject => !populatedBands.ContainsKey(subject))
+							   .Select(EnumNames.NameOf)
+							   .ToArray();
 
 		if (missing.Length > 0) {
 			throw new TransitionMatrixException(
@@ -158,12 +158,16 @@ public sealed class DfeTransitionMatrix
 		for (var distance = 1; distance < Bands.Length; ++distance) {
 			var lower = bandIndex - distance;
 			if (lower >= 0 && subjectBands.Contains(Bands[lower])) {
-				return rows[(subject, Bands[lower])] with { RequestedBand = band };
+				return rows[(subject, Bands[lower])] with {
+					RequestedBand = band,
+				};
 			}
 
 			var upper = bandIndex + distance;
 			if (upper < Bands.Length && subjectBands.Contains(Bands[upper])) {
-				return rows[(subject, Bands[upper])] with { RequestedBand = band };
+				return rows[(subject, Bands[upper])] with {
+					RequestedBand = band,
+				};
 			}
 		}
 
@@ -196,10 +200,8 @@ public sealed class DfeTransitionMatrix
 		}
 
 		var probabilities = new[] {
-			Probability(fields[5], rowNumber, "probability_u"), Probability(fields[6], rowNumber, "probability_e"),
-			Probability(fields[7], rowNumber, "probability_d"), Probability(fields[8], rowNumber, "probability_c"),
-			Probability(fields[9], rowNumber, "probability_b"), Probability(fields[10], rowNumber, "probability_a"),
-			Probability(fields[11], rowNumber, "probability_a_star"),
+			Probability(fields[5], rowNumber, "probability_u"), Probability(fields[6], rowNumber, "probability_e"), Probability(fields[7], rowNumber, "probability_d"), Probability(fields[8], rowNumber, "probability_c"), Probability(fields[9], rowNumber, "probability_b"),
+			Probability(fields[10], rowNumber, "probability_a"), Probability(fields[11], rowNumber, "probability_a_star"),
 		};
 
 		var total = probabilities.Sum();
@@ -274,7 +276,9 @@ public sealed class DfeTransitionMatrix
 			return bundled;
 		}
 
-		var starts = new[] { Directory.GetCurrentDirectory(), AppContext.BaseDirectory };
+		var starts = new[] {
+			Directory.GetCurrentDirectory(), AppContext.BaseDirectory,
+		};
 		foreach (var start in starts) {
 			for (var dir = new DirectoryInfo(start); dir is not null; dir = dir.Parent) {
 				var candidate = Path.Combine(dir.FullName, DefaultRelativePath);

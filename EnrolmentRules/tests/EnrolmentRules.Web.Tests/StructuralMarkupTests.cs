@@ -92,7 +92,9 @@ public sealed partial class StructuralMarkupTests : IClassFixture<WebAppFactory>
 	/// <summary>Saves a known-eligible student first, so the results section (and its choose/remove forms) actually renders.</summary>
 	private async Task<string> GetIndexHtmlWithResultsAsync()
 	{
-		using var client = factory.CreateClient(new() { AllowAutoRedirect = false });
+		using var client = factory.CreateClient(new() {
+			AllowAutoRedirect = false,
+		});
 
 		using var getResponse = await client.GetAsync(new Uri("/razor", UriKind.Relative));
 		var token = await ExtractAntiForgeryTokenAsync(getResponse);
@@ -104,8 +106,7 @@ public sealed partial class StructuralMarkupTests : IClassFixture<WebAppFactory>
 			["Hobbies[0]"] = "chess_club",
 		};
 		var gcses = new (string Subject, int Grade)[] {
-			("maths", 8), ("english_language", 8), ("english_literature", 8), ("physics", 8), ("chemistry", 8), ("biology", 8), ("french", 8),
-			("german", 8), ("physical_education", 8), ("computer_studies", 8), ("history", 8), ("music", 8), ("art", 8),
+			("maths", 8), ("english_language", 8), ("english_literature", 8), ("physics", 8), ("chemistry", 8), ("biology", 8), ("french", 8), ("german", 8), ("physical_education", 8), ("computer_studies", 8), ("history", 8), ("music", 8), ("art", 8),
 		};
 		for (var i = 0; i < gcses.Length; ++i) {
 			form[$"Gcses[{i}].Subject"] = gcses[i].Subject;

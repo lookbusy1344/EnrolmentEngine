@@ -50,7 +50,7 @@ public sealed class ConstraintPassIntegrationTests
 			Ratings((Subject.Maths, Rating.Amber), (Subject.FurtherMaths, Rating.Green)), Profile(), Harness.Catalogue);
 
 		adjustments.Should().ContainSingle(a => a.Subject == Subject.FurtherMaths)
-			.Which.To.Should().Be(Rating.Red);
+				   .Which.To.Should().Be(Rating.Red);
 	}
 
 	[Fact]
@@ -59,7 +59,9 @@ public sealed class ConstraintPassIntegrationTests
 		// Maths is red in this run's ratings, but the student has already committed to Maths as an
 		// A-level — a committed prerequisite is at least as strong as a qualifying one, so Further Maths
 		// keeps the green its own entry table earned.
-		var profile = Profile() with { ChosenALevels = [Subject.Maths] };
+		var profile = Profile() with {
+			ChosenALevels = [Subject.Maths],
+		};
 		var adjustments = ConstraintPass.Evaluate(Ratings((Subject.FurtherMaths, Rating.Green)), profile, Harness.Catalogue);
 
 		adjustments.Should().NotContain(a => a.Subject == Subject.FurtherMaths);
@@ -70,7 +72,9 @@ public sealed class ConstraintPassIntegrationTests
 	{
 		// The catalogue declares an entry_equivalent on further_maths for a prior a_level maths at grade
 		// d or above — a held qualification is at least as strong as choosing to (re-)study Maths this run.
-		var profile = Profile() with { PriorQualifications = [new("maths", QualificationType.ALevel, "d")] };
+		var profile = Profile() with {
+			PriorQualifications = [new("maths", QualificationType.ALevel, "d")],
+		};
 		var adjustments = ConstraintPass.Evaluate(Ratings((Subject.FurtherMaths, Rating.Green)), profile, Harness.Catalogue, Harness.Scale);
 
 		adjustments.Should().NotContain(a => a.Subject == Subject.FurtherMaths);
@@ -79,22 +83,26 @@ public sealed class ConstraintPassIntegrationTests
 	[Fact]
 	public void further_maths_prerequisite_is_unmet_by_a_prior_maths_a_level_below_grade_d()
 	{
-		var profile = Profile() with { PriorQualifications = [new("maths", QualificationType.ALevel, "e")] };
+		var profile = Profile() with {
+			PriorQualifications = [new("maths", QualificationType.ALevel, "e")],
+		};
 		var adjustments = ConstraintPass.Evaluate(Ratings((Subject.FurtherMaths, Rating.Green)), profile, Harness.Catalogue, Harness.Scale);
 
 		adjustments.Should().ContainSingle(a => a.Subject == Subject.FurtherMaths)
-			.Which.To.Should().Be(Rating.Red);
+				   .Which.To.Should().Be(Rating.Red);
 	}
 
 	[Fact]
 	public void further_maths_is_forced_red_when_a_different_subject_is_committed()
 	{
 		// A committed A-level that isn't Maths does not satisfy Further Maths's prerequisite.
-		var profile = Profile() with { ChosenALevels = [Subject.Physics] };
+		var profile = Profile() with {
+			ChosenALevels = [Subject.Physics],
+		};
 		var adjustments = ConstraintPass.Evaluate(Ratings((Subject.FurtherMaths, Rating.Green)), profile, Harness.Catalogue);
 
 		adjustments.Should().ContainSingle(a => a.Subject == Subject.FurtherMaths)
-			.Which.To.Should().Be(Rating.Red);
+				   .Which.To.Should().Be(Rating.Red);
 	}
 
 	[Fact]
@@ -202,7 +210,9 @@ public sealed class ConstraintPassIntegrationTests
 	public void chosen_subject_activates_an_amber_exclusion_against_the_other_side()
 	{
 		var ratings = Ratings((Subject.History, Rating.Green), (Subject.Art, Rating.Green));
-		var profile = Profile() with { ChosenALevels = [Subject.History] };
+		var profile = Profile() with {
+			ChosenALevels = [Subject.History],
+		};
 
 		var adjustments = ConstraintPass.Evaluate(ratings, profile, Harness.Catalogue);
 
@@ -218,7 +228,9 @@ public sealed class ConstraintPassIntegrationTests
 	public void chosen_a_level_can_force_a_red_exclusion()
 	{
 		var ratings = Ratings((Subject.French, Rating.Green), (Subject.German, Rating.Red));
-		var profile = Profile() with { ChosenALevels = [Subject.German] };
+		var profile = Profile() with {
+			ChosenALevels = [Subject.German],
+		};
 
 		var adjustments = ConstraintPass.Evaluate(ratings, profile, Harness.Catalogue);
 
@@ -233,7 +245,9 @@ public sealed class ConstraintPassIntegrationTests
 	public void chosen_a_level_can_force_an_amber_exclusion()
 	{
 		var ratings = Ratings((Subject.History, Rating.Green), (Subject.Art, Rating.Red));
-		var profile = Profile() with { ChosenALevels = [Subject.Art] };
+		var profile = Profile() with {
+			ChosenALevels = [Subject.Art],
+		};
 
 		var adjustments = ConstraintPass.Evaluate(ratings, profile, Harness.Catalogue);
 
@@ -260,7 +274,9 @@ public sealed class ConstraintPassIntegrationTests
 			(Subject.French, Rating.Green), (Subject.Maths, Rating.Green),
 			(Subject.Physics, Rating.Green), (Subject.Chemistry, Rating.Green),
 			(Subject.Biology, Rating.Green), (Subject.History, Rating.Green));
-		var profile = Profile() with { ChosenALevels = [Subject.French] };
+		var profile = Profile() with {
+			ChosenALevels = [Subject.French],
+		};
 
 		var final = ConstraintPass.Apply(ratings, ConstraintPass.Evaluate(ratings, profile, Harness.Catalogue));
 
@@ -296,7 +312,7 @@ public sealed class ConstraintPassIntegrationTests
 	public void own_time_requirement_is_satisfied_by_a_matching_hobby()
 	{
 		ConstraintPass.Evaluate(Ratings((Subject.Music, Rating.Green)), Profile("plays_piano"), Harness.Catalogue)
-			.Should().BeEmpty();
+					  .Should().BeEmpty();
 	}
 
 	[Fact]
@@ -319,7 +335,9 @@ public sealed class ConstraintPassIntegrationTests
 		var ratings = Ratings(
 			(Subject.Maths, Rating.Green), (Subject.FurtherMaths, Rating.Green),
 			(Subject.History, Rating.Green), (Subject.Music, Rating.Green));
-		var profile = Profile("plays_guitar") with { ChosenALevels = [Subject.Maths] };
+		var profile = Profile("plays_guitar") with {
+			ChosenALevels = [Subject.Maths],
+		};
 
 		ConstraintPass.Evaluate(ratings, profile, Harness.Catalogue).Should().BeEmpty();
 	}
@@ -331,7 +349,9 @@ public sealed class ConstraintPassIntegrationTests
 		var ratings = Ratings(
 			(Subject.Maths, Rating.Green), (Subject.History, Rating.Green),
 			(Subject.Art, Rating.Green), (Subject.Music, Rating.Green));
-		var adjustments = ConstraintPass.Evaluate(ratings, Profile() with { ChosenALevels = [Subject.History] }, Harness.Catalogue);
+		var adjustments = ConstraintPass.Evaluate(ratings, Profile() with {
+			ChosenALevels = [Subject.History],
+		}, Harness.Catalogue);
 
 		var forward = ConstraintPass.Apply(ratings, adjustments);
 		var reversed = ConstraintPass.Apply(ratings, [.. adjustments.Reverse()]);

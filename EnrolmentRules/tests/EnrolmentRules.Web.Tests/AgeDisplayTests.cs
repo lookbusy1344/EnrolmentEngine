@@ -13,7 +13,9 @@ public sealed class AgeDisplayTests : IClassFixture<WebAppFactory>
 	[Fact]
 	public async Task Displays_the_calculated_age_for_the_saved_date_of_birth()
 	{
-		using var client = factory.CreateClient(new() { AllowAutoRedirect = false });
+		using var client = factory.CreateClient(new() {
+			AllowAutoRedirect = false,
+		});
 
 		using var getResponse = await client.GetAsync(new Uri("/razor", UriKind.Relative));
 		var token = await ExtractAntiForgeryTokenAsync(getResponse);

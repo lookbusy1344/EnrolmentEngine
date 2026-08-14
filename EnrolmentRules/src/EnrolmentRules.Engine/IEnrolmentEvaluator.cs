@@ -29,4 +29,11 @@ public interface IEnrolmentEvaluator
 
 	/// <inheritdoc cref="EnrolmentEngine.StaleChoices" />
 	IReadOnlyList<Subject> StaleChoices(StudentInput student, CancellationToken cancellationToken = default);
+
+	/// <inheritdoc cref="EnrolmentEngine.ValidateFinalProgramme(StudentInput, CancellationToken)" />
+	ValidatedEvaluation<FinalProgramme> ValidateFinalProgramme(StudentInput student, CancellationToken cancellationToken = default);
+
+	/// <inheritdoc cref="EnrolmentEngine.ValidateFinalProgramme(StudentInput, DateOnly, CancellationToken)" />
+	ValidatedEvaluation<FinalProgramme> ValidateFinalProgramme(
+		StudentInput student, DateOnly asOf, CancellationToken cancellationToken = default);
 }

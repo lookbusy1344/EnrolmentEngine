@@ -26,7 +26,9 @@ public sealed class EngineFactoryTests
 				["chemistry"] = 6,
 				["biology"] = 6,
 			},
-			[]) { DateOfBirth = new(2009, 9, 1) };
+			[]) {
+			DateOfBirth = new(2009, 9, 1),
+		};
 
 	[Fact]
 	public void reload_picks_up_threshold_changes_from_disk()
@@ -57,7 +59,7 @@ public sealed class EngineFactoryTests
 			var afterMinPassesReload = factory.Current.EvaluateValidated(StudentForPassGradeBoundary()).Value!;
 			afterMinPassesReload.Eligible.Should().BeFalse();
 			afterMinPassesReload.EligibilityReasons.Should().ContainSingle()
-				.Which.Should().Be("Fewer than the required number of GCSE passes (6 at grade 7 or above)");
+								.Which.Should().Be("Fewer than the required number of GCSE passes (6 at grade 7 or above)");
 		}
 		finally {
 			Directory.Delete(fixture, true);
@@ -111,17 +113,17 @@ public sealed class EngineFactoryTests
 		});
 
 		var evaluationThreads = Enumerable.Range(0, 50)
-			.Select(_ => new Thread(() => {
-				try {
-					WaitForSignal(startGate, "evaluation start gate");
-					source.WaitForFirstReloadBlocked();
-					validationResults.Enqueue(factory.Current.EvaluateValidated(student).Validation.IsValid);
-				}
-				catch (Exception exception) {
-					errors.Enqueue(exception);
-				}
-			}))
-			.ToArray();
+										  .Select(_ => new Thread(() => {
+											  try {
+												  WaitForSignal(startGate, "evaluation start gate");
+												  source.WaitForFirstReloadBlocked();
+												  validationResults.Enqueue(factory.Current.EvaluateValidated(student).Validation.IsValid);
+											  }
+											  catch (Exception exception) {
+												  errors.Enqueue(exception);
+											  }
+										  }))
+										  .ToArray();
 
 		reloadThread.Start();
 		foreach (var thread in evaluationThreads) {
@@ -140,7 +142,7 @@ public sealed class EngineFactoryTests
 
 		errors.Should().BeEmpty();
 		validationResults.Should().HaveCount(evaluationThreads.Length)
-			.And.OnlyContain(static isValid => isValid);
+						 .And.OnlyContain(static isValid => isValid);
 	}
 
 	[Fact]
@@ -202,8 +204,8 @@ public sealed class EngineFactoryTests
 		const int groupTimeoutMilliseconds = 100;
 		using var release = new ManualResetEventSlim(false);
 		var threads = Enumerable.Range(0, 3)
-			.Select(_ => new Thread(release.Wait))
-			.ToArray();
+								.Select(_ => new Thread(release.Wait))
+								.ToArray();
 		foreach (var thread in threads) {
 			thread.Start();
 		}
@@ -256,7 +258,9 @@ public sealed class EngineFactoryTests
 				["chemistry"] = 7,
 				["biology"] = 7,
 			},
-			[]) { DateOfBirth = new(2009, 9, 1) };
+			[]) {
+			DateOfBirth = new(2009, 9, 1),
+		};
 
 	private static string CopyShippedLayout()
 	{
@@ -452,10 +456,10 @@ public sealed class EngineFactoryTests
 			params byte[][] reloadThresholds)
 		{
 			var workflows = Directory.EnumerateFiles(workflowsDirectory)
-				.Where(file => file != Path.Combine(workflowsDirectory, WorkflowStore.SchemaFileName))
-				.OrderBy(static file => file, StringComparer.Ordinal)
-				.Select(static file => (Path.GetFileName(file), File.ReadAllBytes(file)))
-				.ToArray();
+									 .Where(file => file != Path.Combine(workflowsDirectory, WorkflowStore.SchemaFileName))
+									 .OrderBy(static file => file, StringComparer.Ordinal)
+									 .Select(static file => (Path.GetFileName(file), File.ReadAllBytes(file)))
+									 .ToArray();
 
 			return new(
 				workflows,

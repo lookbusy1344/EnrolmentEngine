@@ -18,8 +18,8 @@ public sealed class DataExceptionTests
 			"malformed-thresholds.yaml");
 
 		act.Should().Throw<PolicyThresholdsException>()
-			.WithMessage("*malformed-thresholds.yaml*")
-			.Which.InnerException.Should().BeOfType<FormatException>();
+		   .WithMessage("*malformed-thresholds.yaml*")
+		   .Which.InnerException.Should().BeOfType<FormatException>();
 	}
 
 	[Fact]

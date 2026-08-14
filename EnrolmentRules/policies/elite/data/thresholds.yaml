@@ -1,0 +1,30 @@
+# Elite auxiliary policy thresholds. pass_grade carries the published English/Maths grade-7 bar;
+# min_passes is unused by this policy's eligibility.yaml (Elite replaces Standard's pass-count rule
+# entirely with the explicit count/total/average rules below) but is a required field, so it is set to
+# the schema minimum. standard_entry (grade 8) is the shared entry bar every offered subject reads
+# except Further Mathematics, which reads exceptional_entry (grade 9); top_entry is unused by this
+# policy's rating tiers and set equal to standard_entry.
+pass_grade: 7
+min_passes: 1
+top_entry: 8
+standard_entry: 8
+exceptional_entry: 9
+min_dfe_green_probability_at_or_above: 0.60
+min_dfe_amber_probability_at_or_above: 0.50
+# The published final programme is three or four distinct offered subjects, with no stated
+# high-attainment uplift, so the high-attainment cap equals the normal cap and never distinctly triggers.
+max_chosen_a_levels: 4
+high_attainment_max_chosen_a_levels: 4
+high_attainment_average_gcse: 9.0
+min_chosen_a_levels: 3
+amber_score_factor: 0.5
+# The gate-clearing and per-subject searches span up to eight GCSEs (the best-eight-total/top-seven-
+# average rules) rather than Standard's narrower English/Maths/pass-count shape, so both budgets are
+# widened over the Standard defaults (12 / 3); advice_max_pipeline_evaluations bounds worst-case runtime.
+advice_max_grade_cost: 24
+advice_max_subjects_changed: 6
+advice_max_pipeline_evaluations: 5000
+best_gcse_count: 8
+min_best_gcse_points: 60
+top_gcse_average_count: 7
+min_top_gcse_average: 7.0

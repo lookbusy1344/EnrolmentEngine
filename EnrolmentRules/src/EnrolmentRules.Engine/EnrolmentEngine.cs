@@ -24,9 +24,7 @@ public sealed class EnrolmentEngine : IEnrolmentEngine
 		DateOnly asOf,
 		DfeTransitionMatrix? matrix = null,
 		IReadOnlyList<Workflow>? workflows = null)
-		: this(evaluator, catalogue, () => asOf, matrix, workflows)
-	{
-	}
+		: this(evaluator, catalogue, () => asOf, matrix, workflows) { }
 
 	/// <summary>
 	///     Bind a live reference-date source: the parameterless <see cref="Evaluate(StudentInput, CancellationToken)" />,
@@ -54,14 +52,10 @@ public sealed class EnrolmentEngine : IEnrolmentEngine
 	}
 
 	internal EnrolmentEngine(IRulesEngine engine, PolicyThresholds thresholds, DateOnly asOf)
-		: this(engine, thresholds, Domain.Catalogue.Default, asOf, QualificationScale.Default)
-	{
-	}
+		: this(engine, thresholds, Domain.Catalogue.Default, asOf, QualificationScale.Default) { }
 
 	internal EnrolmentEngine(IRulesEngine engine, PolicyThresholds thresholds, CatalogueData catalogue, DateOnly asOf)
-		: this(engine, thresholds, catalogue, asOf, QualificationScale.Default)
-	{
-	}
+		: this(engine, thresholds, catalogue, asOf, QualificationScale.Default) { }
 
 	internal EnrolmentEngine(
 		IRulesEngine engine,
@@ -70,9 +64,11 @@ public sealed class EnrolmentEngine : IEnrolmentEngine
 		DateOnly asOf,
 		QualificationScale scale,
 		IReadOnlyList<Workflow>? workflows = null)
-		: this(new(engine, thresholds, catalogue, scale), catalogue, asOf, null, workflows)
-	{
-	}
+		: this(new(engine, thresholds, catalogue, scale), catalogue, asOf, null, workflows) { }
+
+	/// <summary>The per-call default: the loaded <see cref="PolicyThresholds.AdviceConsidersUnsatGcses" /> knob, as a scope.</summary>
+	private UnsatGcseAdvice DefaultUnsatGcseAdvice =>
+		evaluator.Thresholds.AdviceConsidersUnsatGcses ? UnsatGcseAdvice.IncludeUnsat : UnsatGcseAdvice.HeldOnly;
 
 	/// <summary>
 	///     The catalogue this engine evaluates against. Exposed so callers validating student input at the
@@ -193,6 +189,50 @@ public sealed class EnrolmentEngine : IEnrolmentEngine
 			: [.. StaleChoiceRatings(Run(student, asOf(), cancellationToken)).Select(static rating => rating.Subject)];
 	}
 
+	/// <summary>
+	///     The final-programme boundary (§1.5): distinct from <see cref="StudentValidator" />'s incremental
+	///     basket checks, which must accept a partially-built or empty selection while a student is still
+	///     editing it. This is the explicit "is this a submittable programme" gate a caller invokes only when
+	///     finalising, checking — in addition to the structural facts validation every <c>*Validated</c> call
+	///     applies — that the choice count sits within <see cref="PolicyThresholds.MinChosenALevels" /> and
+	///     the effective high-attainment-aware maximum (<see cref="Aggregator.EffectiveMaxChosenALevels(StudentProfile, PolicyThresholds)" />),
+	///     and that no chosen subject has gone red (the same stale-choice guard <see cref="EvaluateValidated(StudentInput, CancellationToken)" />
+	///     applies). Amber remains permitted, matching the existing Choose gate. Duplicate and not-offered
+	///     chosen subjects are already rejected by the structural facts validation.
+	/// </summary>
+	public ValidatedEvaluation<FinalProgramme> ValidateFinalProgramme(
+		StudentInput student, CancellationToken cancellationToken = default) =>
+		ValidateFinalProgramme(student, asOf(), cancellationToken);
+
+	/// <inheritdoc cref="ValidateFinalProgramme(StudentInput, CancellationToken)" />
+	public ValidatedEvaluation<FinalProgramme> ValidateFinalProgramme(
+		StudentInput student, DateOnly asOf, CancellationToken cancellationToken = default)
+	{
+		ArgumentNullException.ThrowIfNull(student);
+		var validation = ValidateInput(student);
+		if (!validation.IsValid) {
+			return new(validation, null);
+		}
+
+		var evaluation = Run(student, asOf, cancellationToken);
+		var min = evaluator.Thresholds.MinChosenALevels;
+		var max = Aggregator.EffectiveMaxChosenALevels(evaluation.Profile, evaluator.Thresholds);
+		var count = student.ChosenALevels.Count;
+
+		List<string> errors = [.. RejectedChoices(evaluation)];
+		if (count < min) {
+			errors.Add($"final programme requires at least {min} distinct A-level choice(s); {count} were made");
+		}
+
+		if (count > max) {
+			errors.Add($"final programme allows at most {max} distinct A-level choice(s); {count} were made");
+		}
+
+		return errors.Count > 0
+			? new(new([.. errors]), null)
+			: new(validation, new(student.ChosenALevels, min, max));
+	}
+
 	/// <inheritdoc cref="IEnrolmentEvaluator.EvaluateValidated(StudentInput, CancellationToken)" />
 	public ValidatedEvaluation<EnrolmentResult> EvaluateValidated(StudentInput student, CancellationToken cancellationToken = default) =>
 		RunValidated(student, asOf(), ToResult, cancellationToken);
@@ -256,10 +296,6 @@ public sealed class EnrolmentEngine : IEnrolmentEngine
 			? new(validation, Advise(student, asOf, unsatGcses, cancellationToken))
 			: new(validation, null);
 	}
-
-	/// <summary>The per-call default: the loaded <see cref="PolicyThresholds.AdviceConsidersUnsatGcses" /> knob, as a scope.</summary>
-	private UnsatGcseAdvice DefaultUnsatGcseAdvice =>
-		evaluator.Thresholds.AdviceConsidersUnsatGcses ? UnsatGcseAdvice.IncludeUnsat : UnsatGcseAdvice.HeldOnly;
 
 	private static void ValidateUnsatGcseAdvice(UnsatGcseAdvice unsatGcses)
 	{
@@ -430,8 +466,8 @@ public sealed class EnrolmentEngine : IEnrolmentEngine
 		var finalBySubject = evaluation.FinalRatings.ToDictionary(static r => r.Subject);
 		return [
 			.. evaluation.Profile.ChosenALevels
-				.Select(subject => finalBySubject[subject])
-				.Where(static rating => rating.Rating == Rating.Red),
+						 .Select(subject => finalBySubject[subject])
+						 .Where(static rating => rating.Rating == Rating.Red),
 		];
 	}
 
@@ -473,7 +509,9 @@ public sealed class EnrolmentEngine : IEnrolmentEngine
 						r.Subject, r.Rating, r.Reason,
 						@base.Rating, Rule(@base), @base.Reason,
 						predicted.GetValueOrDefault(r.Subject, ALevelGrade.Min),
-						[.. overridesBySubject[r.Subject]]) { EntryEquivalentReason = EntryEquivalentReason(e.Profile, r.Subject, Catalogue) };
+						[.. overridesBySubject[r.Subject]]) {
+						EntryEquivalentReason = EntryEquivalentReason(e.Profile, r.Subject, Catalogue),
+					};
 				}),
 			],
 			e.Summary);
