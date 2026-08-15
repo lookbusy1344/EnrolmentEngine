@@ -37,6 +37,15 @@ internal sealed class RatingEvaluator(
 	public const string MathsPassRule = "MathsPass";
 	public const string EnoughPassesRule = "EnoughPasses";
 
+	/// <summary>
+	///     The two top-N GCSE aggregate eligibility rules an auxiliary policy may declare (best-total and
+	///     top-average). They keep their generic SuccessEvent-derived reason but, when the policy configures
+	///     the matching knobs, have the required and actual values appended — see
+	///     <see cref="EligibilityFailureReason" />.
+	/// </summary>
+	public const string BestGcseTotalRule = "BestEightTotal";
+	public const string TopGcseAverageRule = "TopSevenAverage";
+
 	/// <summary>Separator between the subject and rating segments of a subject-rating rule name.</summary>
 	public const char RuleNameSeparator = ':';
 
@@ -79,14 +88,14 @@ internal sealed class RatingEvaluator(
 		cancellationToken.ThrowIfCancellationRequested();
 		var lookup = new GcseFacts(gcses);
 		var results = ExecuteAllRules(EligibilityWorkflow, EligibilityParameters(gcses, lookup, policy));
-		return EvaluateEligibility(results);
+		return EvaluateEligibility(results, lookup);
 	}
 
-	private EligibilityGate EvaluateEligibility(IReadOnlyList<RuleResultTree> results)
+	private EligibilityGate EvaluateEligibility(IReadOnlyList<RuleResultTree> results, GcseFacts lookup)
 	{
 		var reasons = results
 					  .Where(static r => !r.IsSuccess)
-					  .Select(result => EligibilityFailureReason(result))
+					  .Select(result => EligibilityFailureReason(result, lookup))
 					  .ToList();
 
 		return new(reasons.Count == 0, EquatableArray.CopyOf(reasons));
@@ -129,7 +138,7 @@ internal sealed class RatingEvaluator(
 	{
 		cancellationToken.ThrowIfCancellationRequested();
 		var results = ExecuteAllRules(EligibilityWorkflow, EligibilityParameters(gcses, lookup, policy));
-		return EvaluateEligibility(results);
+		return EvaluateEligibility(results, lookup);
 	}
 
 	/// <summary>
@@ -241,12 +250,22 @@ internal sealed class RatingEvaluator(
 	internal static bool IsSpecialisedEligibilityRule(string? ruleName) =>
 		ruleName is EnglishLanguagePassRule or MathsPassRule or EnoughPassesRule;
 
-	private string EligibilityFailureReason(RuleResultTree result) =>
+	private string EligibilityFailureReason(RuleResultTree result, GcseFacts lookup) =>
 		result.Rule.RuleName switch {
 			EnglishLanguagePassRule => $"GCSE English Language below the pass grade ({Thresholds.PassGrade})",
 			MathsPassRule => $"GCSE Maths below the pass grade ({Thresholds.PassGrade})",
 			EnoughPassesRule => $"Fewer than the required number of GCSE passes ({Thresholds.MinPasses} at grade {Thresholds.PassGrade} or above)",
-			_ when !string.IsNullOrWhiteSpace(result.Rule.SuccessEvent) => $"Not met: {result.Rule.SuccessEvent}",
+			// The top-N aggregate rules keep their SuccessEvent wording as the criterion's plain label and
+			// state the required and actual values directly ("needs X, actual Y") rather than negating a
+			// success sentence, so an ineligible student sees the gap without a double negative. Guarded on
+			// the knobs being configured: a policy without them never declares these rules, and the generic
+			// fallback still applies if it somehow does.
+			BestGcseTotalRule when Thresholds is { BestGcseCount: int count, MinBestGcsePoints: int min } =>
+				$"{result.Rule.SuccessEvent} needs {min} points, actual {lookup.BestTotal(count)}",
+			TopGcseAverageRule when Thresholds is { TopGcseAverageCount: int count, MinTopGcseAverage: double min } =>
+				FormattableString.Invariant(
+					$"{result.Rule.SuccessEvent} needs {min:0.0}, actual {lookup.BestAverage(count):0.0}"),
+			_ when !string.IsNullOrWhiteSpace(result.Rule.SuccessEvent) => result.Rule.SuccessEvent,
 			_ => throw new WorkflowProbeException(
 				EligibilityWorkflow,
 				$"eligibility rule '{result.Rule.RuleName}' has no SuccessEvent to project into a failure reason"),

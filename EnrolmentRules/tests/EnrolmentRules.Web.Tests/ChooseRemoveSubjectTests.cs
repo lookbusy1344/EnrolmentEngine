@@ -145,7 +145,7 @@ public sealed class ChooseRemoveSubjectTests : IClassFixture<WebAppFactory>
 
 		using var afterSave = await client.GetAsync(currentLocation);
 		var htmlAfterThreeChoices = await afterSave.Content.ReadAsStringAsync();
-		htmlAfterThreeChoices.Should().Contain("exceeds chosen subject cap");
+		htmlAfterThreeChoices.Should().Contain("at chosen subject cap");
 		htmlAfterThreeChoices.Should().NotContain("name=\"subject\" value=\"french\"");
 
 		// The remaining subjects are blocked by the choice count alone, so the page has to say so once,
@@ -274,6 +274,51 @@ public sealed class ChooseRemoveSubjectTests : IClassFixture<WebAppFactory>
 
 		html.Should().Contain("list-inline-item badge text-bg-primary rounded-pill\">French");
 		html.Should().NotContain("borderline-notice");
+	}
+
+	[Fact]
+	public async Task Emptying_the_basket_removes_every_choice_but_keeps_the_facts()
+	{
+		using var client = factory.CreateClient(new() {
+			AllowAutoRedirect = false,
+		});
+
+		using var getResponse = await client.GetAsync(new Uri("/razor", UriKind.Relative));
+		var token = await ExtractAntiForgeryTokenAsync(getResponse);
+		using var saveContent = new FormUrlEncodedContent(EligibleStudentForm(token));
+		using var saveResponse = await client.PostAsync(new Uri("/razor?handler=SaveFacts", UriKind.Relative), saveContent);
+		var currentLocation = saveResponse.Headers.Location;
+
+		foreach (var subject in new[] {
+					 "chemistry", "biology",
+				 }) {
+			using var currentPage = await client.GetAsync(currentLocation);
+			var chooseToken = await ExtractAntiForgeryTokenAsync(currentPage);
+			using var chooseContent = new FormUrlEncodedContent(new Dictionary<string, string> {
+				["__RequestVerificationToken"] = chooseToken,
+				["subject"] = subject,
+			});
+			using var chooseResponse = await client.PostAsync(new Uri("/razor?handler=ChooseSubject", UriKind.Relative), chooseContent);
+			currentLocation = chooseResponse.Headers.Location;
+		}
+
+		using var afterChoose = await client.GetAsync(currentLocation);
+		var htmlAfterChoose = await afterChoose.Content.ReadAsStringAsync();
+		htmlAfterChoose.Should().Contain("rounded-pill\">Chemistry").And.Contain("rounded-pill\">Biology");
+
+		var emptyToken = await ExtractAntiForgeryTokenAsync(afterChoose);
+		using var emptyContent = new FormUrlEncodedContent(new Dictionary<string, string> {
+			["__RequestVerificationToken"] = emptyToken,
+		});
+		using var emptyResponse = await client.PostAsync(new Uri("/razor?handler=EmptyBasket", UriKind.Relative), emptyContent);
+		using var afterEmpty = await client.GetAsync(emptyResponse.Headers.Location);
+		var html = await afterEmpty.Content.ReadAsStringAsync();
+
+		html.Should().Contain("None chosen yet.");
+		html.Should().NotContain("rounded-pill\">Chemistry");
+		html.Should().NotContain("rounded-pill\">Biology");
+		// Facts survive: the GCSE scoreboard still totals the 13 entered grades.
+		html.Should().Contain("data-testid=\"scoreboard-count\">13<");
 	}
 
 	/// <summary>The same facts as <see cref="EligibleStudentForm" /> with every grade dropped to a 1.</summary>

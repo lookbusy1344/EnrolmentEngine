@@ -385,7 +385,7 @@ public sealed class CliTests
 		// execution boundary (SynchronousTestSuiteTests) forbids Task/async in test sources outside
 		// approved infrastructure.
 		using var reader = new BlockingLineReader([EligibleLine("S-A"), EligibleLine("S-B"), EligibleLine("S-C")], 2);
-		using var stdout = new StringWriter();
+		using var stdout = new SynchronizedStringWriter();
 		var worker = new Thread(() => CliRunner.EvaluateBatch(reader, stdout, Harness.ShippedEngine()));
 
 		worker.Start();
@@ -704,6 +704,45 @@ public sealed class CliTests
 
 			Volatile.Write(ref index, current + 1);
 			return lines[current];
+		}
+	}
+
+	/// <summary>
+	///     A <see cref="StringWriter" /> safe to read via <see cref="ToString" /> from one thread while another
+	///     thread writes: the base <see cref="StringBuilder" /> is not thread-safe, so a concurrent
+	///     <c>ToString()</c> mid-<c>Write</c> can throw <see cref="ArgumentOutOfRangeException" /> on its
+	///     internal chunk state.
+	/// </summary>
+	private sealed class SynchronizedStringWriter : StringWriter
+	{
+		private readonly Lock sync = new();
+
+		public override void Write(char value)
+		{
+			using (sync.EnterScope()) {
+				base.Write(value);
+			}
+		}
+
+		public override void Write(string? value)
+		{
+			using (sync.EnterScope()) {
+				base.Write(value);
+			}
+		}
+
+		public override void WriteLine(string? value)
+		{
+			using (sync.EnterScope()) {
+				base.WriteLine(value);
+			}
+		}
+
+		public override string ToString()
+		{
+			using (sync.EnterScope()) {
+				return base.ToString();
+			}
 		}
 	}
 }

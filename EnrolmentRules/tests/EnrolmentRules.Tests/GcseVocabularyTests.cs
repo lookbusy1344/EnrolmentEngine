@@ -47,6 +47,38 @@ public sealed class GcseVocabularyTests
 	}
 
 	[Fact]
+	public void an_empty_gcse_key_reads_as_empty_rather_than_unknown()
+	{
+		// An empty key is a distinct failure mode from a misspelled subject name — worth its own
+		// wording rather than the generic "unknown GCSE subject ''", which reads as a stray quote pair.
+		var errors = StudentValidator.Validate(
+			new("S", new Dictionary<string, int> {
+				[""] = 7,
+			}, []) {
+				DateOfBirth = new(2009, 9, 1),
+			},
+			Harness.Catalogue,
+			Harness.Scale);
+
+		errors.Should().Contain("Empty GCSE subject");
+	}
+
+	[Fact]
+	public void a_misspelled_gcse_key_still_reads_as_unknown()
+	{
+		var errors = StudentValidator.Validate(
+			new("S", new Dictionary<string, int> {
+				["mathz"] = 7,
+			}, []) {
+				DateOfBirth = new(2009, 9, 1),
+			},
+			Harness.Catalogue,
+			Harness.Scale);
+
+		errors.Should().Contain("unknown GCSE subject 'mathz'");
+	}
+
+	[Fact]
 	public void example_student_documents_use_recognised_gcse_keys()
 	{
 		var unknownKeys = new List<string>();

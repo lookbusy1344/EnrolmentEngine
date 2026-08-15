@@ -32,6 +32,27 @@ export function isEmptyGcseRow(row: GcseRow): boolean {
   return row.subject.trim().length === 0 && row.grade === null
 }
 
+/** The live basket tally over the student's graded GCSEs: count, summed points and mean on the 1-9 scale. */
+export interface GcseScoreboard {
+  readonly count: number
+  readonly total: number
+  readonly average: number
+}
+
+/**
+ * Mirrors EnrolmentRules.Domain.GcseScoreboard.From — the same average as the enrolment decision uses, so
+ * the scoreboard and the result never disagree. Grades are normalised onto the whole 1-9 scale first, and
+ * only rows carrying both a subject and a grade score: a half-filled row is "not entered yet", not a zero.
+ */
+export function gcseScoreboard(gcses: readonly GcseRow[]): GcseScoreboard {
+  const grades = gcses
+    .filter((row) => row.subject.trim().length > 0)
+    .map((row) => normalizeGcseGrade(row.grade))
+    .filter((grade): grade is number => grade !== null)
+  const total = grades.reduce((sum, grade) => sum + grade, 0)
+  return { count: grades.length, total, average: grades.length === 0 ? 0 : total / grades.length }
+}
+
 export function isEmptyPriorQualificationRow(row: PriorQualificationRow): boolean {
   return row.subject.trim().length === 0 && row.type.trim().length === 0 && row.grade.trim().length === 0
 }

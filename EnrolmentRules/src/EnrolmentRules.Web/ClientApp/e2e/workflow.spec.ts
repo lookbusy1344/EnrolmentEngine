@@ -25,6 +25,44 @@ test.describe('Vue workflow', () => {
     await expect(page.locator('.chosen-summary')).toContainText('None chosen yet.')
   })
 
+  test('a basket pill x removes just that choice, and Empty clears the lot after confirming', async ({ page }) => {
+    await page.goto('/app')
+    await fillGoldenFacts(page)
+
+    const basket = page.locator('.chosen-summary')
+    // Choose two subjects (the first available card each time, since choosing removes its Choose button).
+    const chooseFirstAvailable = () =>
+      page.locator('article.card').getByRole('button', { name: 'Choose' }).first().click()
+    await chooseFirstAvailable()
+    await chooseFirstAvailable()
+    await expect(basket.locator('li.badge')).toHaveCount(2)
+
+    // The per-pill x removes only its own choice.
+    await basket.locator('li.badge button.basket-remove').first().click()
+    await expect(basket.locator('li.badge')).toHaveCount(1)
+
+    // Empty is a two-step confirm — no native dialog. The confirm is hidden until asked for.
+    await expect(basket.locator('#basket-empty-confirm')).toBeHidden()
+    await basket.locator('#basket-empty').click()
+    await basket.locator('#basket-empty-confirm').getByRole('button', { name: 'Confirm empty basket' }).click()
+    await expect(basket).toContainText('None chosen yet.')
+  })
+
+  test('the basket shows a live GCSE scoreboard as facts are entered', async ({ page }) => {
+    await page.goto('/app')
+
+    // No graded GCSE yet, so no scoreboard.
+    await expect(page.locator('#gcse-scoreboard')).toHaveCount(0)
+
+    await fillGoldenFacts(page)
+
+    // GOLDEN_GCSES: five grade-8 GCSEs — count 5, total 40, average 8.0.
+    const scoreboard = page.locator('#gcse-scoreboard')
+    await expect(scoreboard.locator('[data-testid="scoreboard-count"]')).toHaveText('5')
+    await expect(scoreboard.locator('[data-testid="scoreboard-total"]')).toHaveText('40')
+    await expect(scoreboard.locator('[data-testid="scoreboard-average"]')).toHaveText('8.0')
+  })
+
   test('an amber choice is flagged borderline in the basket, a green one is not', async ({ page }) => {
     await page.goto('/app')
     await fillBorderlineFacts(page)

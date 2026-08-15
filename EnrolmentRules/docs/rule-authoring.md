@@ -592,8 +592,9 @@ The mistakes that pass a casual review — worth a deliberate check.
   student who should be amber. The linter enforces the shape but not the *semantics* of the loosening —
   check that with `--explain-text`.
 - **Reason strings are user-facing.** A winning subject rule's `SuccessEvent` surfaces verbatim in
-  `--explain-text`; a failed generic eligibility rule appears as `Not met: <SuccessEvent>`. Write it
-  as a positive condition an admin can understand in either context.
+  `--explain-text`; a failed generic eligibility rule surfaces the same `SuccessEvent` text as-is (a
+  top-N aggregate rule additionally appends "needs X, actual Y"). Write it as a positive condition —
+  what success looks like — an admin can understand in either context.
 - **Don't reach across rules in YAML.** If a rating rule seems to need another subject's outcome, it
   is handled by the engine's constraint pass, not a YAML rule. There is no `facts.RatingOf(...)`.
 

@@ -22,6 +22,8 @@
     --ink: #12271b; /* deep evergreen, warmer than black          */
     --moss: #4a5d50; /* secondary text                             */
     --line: #d6e0cc; /* soft sage hairlines                        */
+    --grey: #5b625d; /* neutral wayfinding chips — outside the green palette on purpose, 6.3:1 on white */
+    --grey-soft: #e4e6e2; /* grey chip tint fill                        */
 
     /* --- Growth accent -------------------------------------------------- */
     --shoot: #24a45c; /* primary action / brand                     */
@@ -103,8 +105,13 @@ a {
     text-decoration-thickness: 2px;
 }
 
-a:hover {
-    color: var(--ink);
+/* Hover styling only where a real pointer can hover — touch devices (phones, tablets) report
+   (hover: none) and would otherwise keep a "stuck" hover highlight after a tap. Keyboard
+   :focus-visible styles stay outside these guards. */
+@media (hover: hover) {
+    a:hover {
+        color: var(--ink);
+    }
 }
 
 :focus-visible {
@@ -175,9 +182,14 @@ a:hover {
     transition: color .15s ease;
 }
 
-.repo-link:hover,
 .repo-link:focus-visible {
     color: var(--ink);
+}
+
+@media (hover: hover) {
+    .repo-link:hover {
+        color: var(--ink);
+    }
 }
 
 .repo-mark {
@@ -229,6 +241,11 @@ a:hover {
 }
 
 .hero-eyebrow {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    column-gap: .5rem;
+    row-gap: .35rem;
     font-family: var(--display);
     font-weight: 700;
     font-size: .8rem;
@@ -238,42 +255,55 @@ a:hover {
     margin: 0 0 .6rem;
 }
 
-/* Which of the two front-ends you're looking at — a footnote to the eyebrow, not a heading. */
-.mode-tag,
-.mode-switch {
-    font-size: .72rem;
-    letter-spacing: .1em;
-    color: var(--moss);
+/* Two-state pill toggle, shared by the front-end mode switch (eyebrow) and the policy switch
+   below it: a filled pill for the current state, an outlined pill for the switch action. Using
+   one shared look for both makes it obvious they're the same kind of control. */
+.pill {
+    display: inline-flex;
+    align-items: center;
+    padding: .2rem .7rem;
+    border-radius: 999px;
+    font-family: var(--display);
+    font-weight: 700;
+    font-size: .68rem;
+    letter-spacing: .08em;
+    line-height: 1.4;
 }
 
-/* Separators live in CSS, not the markup: Vue's compiler condenses the newline between these
-   elements away, so source whitespace cannot be relied on to keep them apart. */
-.mode-tag::before {
-    content: "·";
-    margin: 0 .45em;
+/* Neutral grey, not brand green: these are wayfinding controls (which build, which policy), not
+   calls to action, so they sit apart from the --shoot green used for buttons and status. The
+   active pill is a solid filled chip; the link pill is its outlined, lower-emphasis counterpart —
+   the fill is what makes the two states read as clearly different, not just the border. */
+.pill--active {
+    background: var(--grey);
+    color: #fff;
 }
 
-/* The link is the lighter, bracketed sibling of the tag — the tag says where you are, the link
-   says where you could go. The leading non-breaking space is load-bearing: Vue's compiler
-   condenses the newline between the two elements away, so source whitespace cannot separate them. */
-.mode-switch {
-    font-weight: 400;
+.pill--link {
+    border: 1px solid var(--grey);
+    color: var(--grey);
     text-decoration: none;
 }
 
-.mode-switch::before {
-    content: "\00a0(";
+.pill--link:focus-visible {
+    background: var(--grey-soft);
+    outline: none;
+    box-shadow: var(--ring);
 }
 
-.mode-switch::after {
-    content: ")";
+@media (hover: hover) {
+    .pill--link:hover {
+        background: var(--grey-soft);
+    }
 }
 
-.mode-switch:hover,
-.mode-switch:focus-visible {
-    color: var(--shoot-deep);
-    text-decoration: underline;
-    text-underline-offset: .25em;
+/* Inline within .hero-eyebrow's flex row — its own gap gets the two policy pills onto the same
+   line as the mode-switch pills, sharing one row instead of a second line beneath. */
+.policy-switch {
+    display: inline-flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: .5rem;
 }
 
 .hero h1 {
@@ -399,12 +429,14 @@ section[aria-labelledby="results-heading"] > h2 {
 }
 
 /* the chosen pills — markup is test-pinned (list-inline-item badge
-   text-bg-primary|text-bg-warning rounded-pill); we only restyle it */
-/* a borderline (amber) choice keeps the amber pill of its rating, so the basket does not read as
-   if every entry were equally settled; its colours come from the shared .badge.text-bg-warning
-   rule further down, only the pill's shape is shared with the settled pill here */
+   text-bg-primary|text-bg-warning|text-bg-danger rounded-pill); we only restyle it */
+/* a borderline (amber) choice keeps the amber pill of its rating, and an unavailable/not-offered
+   choice a red one, so the basket does not read as if every entry were equally settled; their
+   colours come from the shared .badge.text-bg-warning/.text-bg-danger rules further down — only the
+   pill's shape and size are shared here, so all three sit at the same height */
 .chosen-summary .badge.text-bg-primary,
-.chosen-summary .badge.text-bg-warning {
+.chosen-summary .badge.text-bg-warning,
+.chosen-summary .badge.text-bg-danger {
     font-family: var(--body);
     font-weight: 600;
     font-size: .9rem;
@@ -432,6 +464,50 @@ section[aria-labelledby="results-heading"] > h2 {
 .chosen-summary .list-inline-item {
     margin-right: .4rem;
     margin-bottom: .3rem;
+}
+
+/* per-pill delete: a plain "×" that inherits the pill's own text colour, so it reads on the dark
+   primary/danger pills and the light amber one alike */
+.basket-remove {
+    margin-left: .5em;
+    padding: 0 .15em;
+    border: 0;
+    background: transparent;
+    color: inherit;
+    font-size: 1.1em;
+    line-height: 1;
+    opacity: .75;
+    cursor: pointer;
+}
+
+.basket-remove:focus-visible {
+    opacity: 1;
+}
+
+@media (hover: hover) {
+    .basket-remove:hover {
+        opacity: 1;
+    }
+}
+
+/* Razor's JS-free "Empty basket" confirm: a <details> whose <summary> is styled as a button. Hide the
+   default disclosure triangle so it reads as a plain button; opening it reveals the confirm, closing it
+   cancels. The Vue front end does the same two-step with a local flag. */
+.basket-empty > summary {
+    list-style: none;
+    display: inline-block;
+}
+
+.basket-empty > summary::-webkit-details-marker {
+    display: none;
+}
+
+/* the empty-basket trigger is a square-cornered icon button — a different shape from the rounded
+   subject pills, so it never reads as another choice */
+.basket-empty-btn {
+    display: inline-flex;
+    align-items: center;
+    line-height: 1;
 }
 
 /* ---------------------------------------------------------------------------
@@ -480,8 +556,10 @@ legend {
     transition: border-color .15s ease, box-shadow .15s ease, background-color .15s ease;
 }
 
-.form-control:hover, .form-select:hover {
-    border-color: #b9c9aa;
+@media (hover: hover) {
+    .form-control:hover, .form-select:hover {
+        border-color: #b9c9aa;
+    }
 }
 
 .form-control:focus, .form-select:focus {
@@ -598,10 +676,12 @@ section[aria-labelledby="results-heading"] .card {
     transition: transform .16s ease, box-shadow .16s ease, border-color .16s ease;
 }
 
-section[aria-labelledby="results-heading"] .card:hover {
-    transform: translateY(-3px);
-    box-shadow: 0 1px 2px rgba(18, 39, 27, .06), 0 22px 40px -22px rgba(18, 39, 27, .5);
-    border-color: #c3d3b4;
+@media (hover: hover) {
+    section[aria-labelledby="results-heading"] .card:hover {
+        transform: translateY(-3px);
+        box-shadow: 0 1px 2px rgba(18, 39, 27, .06), 0 22px 40px -22px rgba(18, 39, 27, .5);
+        border-color: #c3d3b4;
+    }
 }
 
 /* a coloured stripe up the spine of each card echoes its verdict */
@@ -830,6 +910,19 @@ form[action*="Reset"], .facts-form + form {
     }
     to {
         transform: skewX(-12deg) scaleX(1);
+    }
+}
+
+/* Bootstrap's own component hover states are not gated by (hover: hover), so on a touch device a
+   tapped button would keep its highlighted look until the next interaction. Neutralise the button
+   hover by pointing Bootstrap's hover CSS variables at their base values — this covers every .btn
+   variant (Choose, Remove, Empty, the policy switch, Start over) without editing the vendored
+   stylesheet or hard-coding per-variant colours. */
+@media (hover: none) {
+    .btn:hover {
+        --bs-btn-hover-color: var(--bs-btn-color);
+        --bs-btn-hover-bg: var(--bs-btn-bg);
+        --bs-btn-hover-border-color: var(--bs-btn-border-color);
     }
 }
 

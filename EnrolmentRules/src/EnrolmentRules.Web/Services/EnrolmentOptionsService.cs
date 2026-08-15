@@ -65,8 +65,19 @@ public sealed class EnrolmentOptionsService(EnrolmentPolicy policy, TimeProvider
 	/// <summary>The authoritative A-level list, in catalogue order — the web layer keeps no parallel subject list.</summary>
 	public IReadOnlyList<Subject> ALevelSubjects => Evaluator.Catalogue.Subjects;
 
-	/// <summary>The recognised GCSE subject keys <see cref="Domain.StudentValidator" /> accepts.</summary>
-	public IReadOnlyList<string> GcseSubjectOptions { get; } = [.. GcseSubjects.Known.Order(StringComparer.Ordinal)];
+	/// <summary>
+	///     The GCSE keys that lead <see cref="GcseSubjectOptions" /> ahead of the alphabet, in display
+	///     order — English Language and Maths gate eligibility (§ Accessible tier policy), so the picker
+	///     surfaces them first rather than wherever "e" and "m" happen to sort.
+	/// </summary>
+	private static readonly string[] PinnedGcseSubjects = ["english_language", "maths"];
+
+	/// <summary>
+	///     The recognised GCSE subject keys <see cref="Domain.StudentValidator" /> accepts, with
+	///     <see cref="PinnedGcseSubjects" /> first and the remainder alphabetical.
+	/// </summary>
+	public IReadOnlyList<string> GcseSubjectOptions { get; } =
+		[.. PinnedGcseSubjects, .. GcseSubjects.Known.Except(PinnedGcseSubjects).Order(StringComparer.Ordinal)];
 
 	public IReadOnlyList<QualificationType> QualificationTypeOptions => CachedQualificationTypeOptions;
 

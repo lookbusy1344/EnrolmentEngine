@@ -45,6 +45,40 @@ public sealed class RenderExplanationsTests : IClassFixture<WebAppFactory>
 		html.Should().Contain("Entry met"); // a deciding reason from ExplainValidated
 	}
 
+	[Fact]
+	public async Task Saving_facts_renders_the_gcse_scoreboard_with_count_total_and_average()
+	{
+		using var client = factory.CreateClient(new() {
+			AllowAutoRedirect = false,
+		});
+
+		using var getResponse = await client.GetAsync(new Uri("/razor", UriKind.Relative));
+		var token = await ExtractAntiForgeryTokenAsync(getResponse);
+
+		var form = new Dictionary<string, string> {
+			["__RequestVerificationToken"] = token,
+			["DateOfBirth"] = "2009-09-01",
+		};
+		var gcses = new (string Subject, int Grade)[] {
+			("maths", 8), ("english_language", 7), ("physics", 6),
+		};
+		for (var i = 0; i < gcses.Length; ++i) {
+			form[$"Gcses[{i}].Subject"] = gcses[i].Subject;
+			form[$"Gcses[{i}].Grade"] = gcses[i].Grade.ToString(CultureInfo.InvariantCulture);
+		}
+
+		using var content = new FormUrlEncodedContent(form);
+		using var postResponse = await client.PostAsync(new Uri("/razor?handler=SaveFacts", UriKind.Relative), content);
+		using var followUp = await client.GetAsync(postResponse.Headers.Location);
+		var html = await followUp.Content.ReadAsStringAsync();
+
+		// 3 GCSEs, total 21, mean 7.0 — the same average the enrolment decision reads.
+		html.Should().Contain("id=\"gcse-scoreboard\"");
+		html.Should().Contain("data-testid=\"scoreboard-count\">3<");
+		html.Should().Contain("data-testid=\"scoreboard-total\">21<");
+		html.Should().Contain("data-testid=\"scoreboard-average\">7.0<");
+	}
+
 	private static async Task<string> ExtractAntiForgeryTokenAsync(HttpResponseMessage response)
 	{
 		var html = await response.Content.ReadAsStringAsync();

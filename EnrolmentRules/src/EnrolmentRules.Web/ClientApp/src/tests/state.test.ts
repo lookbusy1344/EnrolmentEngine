@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest'
 import {
   type EnrolmentSnapshot,
+  gcseScoreboard,
   isEmptyGcseRow,
   isEmptyPriorQualificationRow,
   isGcseSubjectChosenElsewhere,
@@ -44,6 +45,42 @@ describe('isGcseSubjectChosenElsewhere', () => {
 
   it('is false for a subject named nowhere', () => {
     expect(isGcseSubjectChosenElsewhere(rows, 0, 'chemistry')).toBe(false)
+  })
+})
+
+describe('gcseScoreboard', () => {
+  it('is all zero with no graded rows', () => {
+    expect(gcseScoreboard([])).toEqual({ count: 0, total: 0, average: 0 })
+  })
+
+  it('sums and averages the graded rows', () => {
+    const board = gcseScoreboard([
+      { subject: 'maths', grade: 8 },
+      { subject: 'physics', grade: 7 },
+      { subject: 'chemistry', grade: 6 },
+    ])
+
+    expect(board).toEqual({ count: 3, total: 21, average: 7 })
+  })
+
+  it('normalises raw grades onto the 1-9 scale before scoring', () => {
+    const board = gcseScoreboard([
+      { subject: 'maths', grade: 8.6 },
+      { subject: 'physics', grade: 12 },
+    ])
+
+    // 8.6 rounds to 9, 12 clamps to 9.
+    expect(board).toEqual({ count: 2, total: 18, average: 9 })
+  })
+
+  it('ignores half-filled rows: no subject, or no grade', () => {
+    const board = gcseScoreboard([
+      { subject: 'maths', grade: 8 },
+      { subject: '', grade: 7 },
+      { subject: 'physics', grade: null },
+    ])
+
+    expect(board).toEqual({ count: 1, total: 8, average: 8 })
   })
 })
 

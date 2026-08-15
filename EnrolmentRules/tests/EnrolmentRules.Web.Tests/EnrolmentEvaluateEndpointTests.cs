@@ -166,6 +166,26 @@ public sealed class EnrolmentEvaluateEndpointTests : IClassFixture<WebAppFactory
 	}
 
 	[Fact]
+	public async Task Unavailable_and_not_offered_choices_do_not_count_towards_the_choice_limit()
+	{
+		using var client = factory.CreateClient();
+		// Three placed choices, plus a red-but-offered choice (Politics rates red for this student) and
+		// a not-offered key. Only the three that hold a place count against the four-subject cap, so no
+		// limit is reported — the unavailable/not-offered pair must not fill the basket.
+		var request = KnownRequest() with {
+			ChosenALevels = ["psychology", "sociology", "media_studies", "politics", "not_a_real_subject_key"],
+		};
+
+		var response = await PostAsync(client, request);
+		var body = await ReadBodyAsync(response);
+
+		body.Result.Should().NotBeNull();
+		body.Result!.ChoiceStatuses.Should().Contain(s => s.Subject.Value == "politics" && s.Status == "Unavailable");
+		body.Result.ChoiceStatuses.Should().Contain(s => s.Subject.Value == "not_a_real_subject_key" && s.Status == "NotOffered");
+		body.Result.ChoiceLimitReason.Should().BeNull();
+	}
+
+	[Fact]
 	public async Task Too_many_gcse_rows_returns_200_with_a_validation_error()
 	{
 		using var client = factory.CreateClient();

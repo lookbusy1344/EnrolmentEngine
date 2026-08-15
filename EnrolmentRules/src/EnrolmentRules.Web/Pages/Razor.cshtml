@@ -1,4 +1,5 @@
 @page "/razor"
+@using System.Globalization
 @using EnrolmentRules.Web.Models
 @model RazorModel
 @{
@@ -14,14 +15,14 @@
 
 <section class="hero" aria-labelledby="hero-heading">
 	<p class="hero-eyebrow">GCSEs in → A-Levels out
-		<span class="mode-tag">Server rendered</span>
-		<a class="mode-switch" href="/app?policy=@Model.SelectedPolicy.Id.Value">Dynamic version</a>
-	</p>
-	<p class="policy-switch" aria-label="Selected enrolment policy">
-		<strong>@Model.SelectedPolicy.DisplayName</strong>
-		@if (otherPolicy is not null) {
-			<a href="/razor?policy=@otherPolicy.Id.Value">Switch to @otherPolicy.DisplayName</a>
-		}
+		<span class="mode-tag pill pill--active">Server rendered</span>
+		<a class="mode-switch pill pill--link" href="/app?policy=@Model.SelectedPolicy.Id.Value">Dynamic version</a>
+		<span class="policy-switch" aria-label="Selected enrolment policy">
+			<strong class="pill pill--active">@Model.SelectedPolicy.DisplayName</strong>
+			@if (otherPolicy is not null) {
+				<a class="pill pill--link" href="/razor?policy=@otherPolicy.Id.Value">Switch to @otherPolicy.DisplayName</a>
+			}
+		</span>
 	</p>
 	<h1 id="hero-heading">See how your skills can <span class="grow">grow</span>.</h1>
 	<p class="hero-lede">Add your grades and interests. We'll show which A-Levels are wide open, worth a look, or not a fit yet — so you can plant the
@@ -39,26 +40,65 @@
 <section
 	class="chosen-summary sticky-top bg-body border-bottom py-2 mb-4 @(exceedsChoiceLimit ? "bg-danger-subtle border border-danger rounded px-3" : null)"
 	aria-labelledby="chosen-heading">
-	<h2 id="chosen-heading" class="h5">Your basket</h2>
+	<div class="d-flex align-items-baseline justify-content-between gap-3 flex-wrap mb-2">
+		<h2 id="chosen-heading" class="h5 mb-0">Your basket</h2>
+		@if (Model.Scoreboard.Count > 0) {
+			<dl id="gcse-scoreboard" class="d-flex gap-3 mb-0 small" aria-label="GCSE scoreboard">
+				<div>
+					<dt class="d-inline text-body-secondary">GCSEs</dt>
+					<dd class="d-inline fw-bold ms-1 text-success" data-testid="scoreboard-count">@Model.Scoreboard.Count</dd>
+				</div>
+				<div>
+					<dt class="d-inline text-body-secondary">Pts</dt>
+					<dd class="d-inline fw-bold ms-1 text-success" data-testid="scoreboard-total">@Model.Scoreboard.Total</dd>
+				</div>
+				<div>
+					<dt class="d-inline text-body-secondary">Avg</dt>
+					<dd class="d-inline fw-bold ms-1 text-success" data-testid="scoreboard-average">@Model.Scoreboard.Average.ToString("0.0", CultureInfo.InvariantCulture)</dd>
+				</div>
+			</dl>
+		}
+	</div>
 	@if (Model.Basket.Count == 0) {
 		<p class="mb-0 text-body-secondary">None chosen yet.</p>
 	} else {
-		<ul class="list-inline mb-0">
-			@* An amber choice keeps its amber pill and carries the word "Borderline"; an unavailable (red) or
-			   not-offered choice keeps its own status tag instead of being ejected — the flag survives for
-			   anyone who cannot use the colour, and switching policies never silently drops a selection. *@
-			@foreach (var entry in Model.Basket) {
-				<li class="list-inline-item badge @entry.CssClass rounded-pill">@TextFormatting.Prettify(entry.Subject.Value)
-					@if (entry.IsBorderline) {
-						<span class="basket-borderline-tag"> - Borderline</span>
-					} else if (entry.Status == ChoiceStatus.Unavailable) {
-						<span class="basket-status-tag"> - Unavailable</span>
-					} else if (entry.Status == ChoiceStatus.NotOffered) {
-						<span class="basket-status-tag"> - Not offered by @Model.SelectedPolicy.DisplayName</span>
-					}
-				</li>
-			}
-		</ul>
+		<div class="d-flex justify-content-between align-items-start gap-2">
+			<ul class="list-inline mb-0">
+				@* An amber choice keeps its amber pill and carries the word "Borderline"; an unavailable (red) or
+				   not-offered choice keeps its own status tag instead of being ejected — the flag survives for
+				   anyone who cannot use the colour, and switching policies never silently drops a selection. *@
+				@foreach (var entry in Model.Basket) {
+					var subjectLabel = TextFormatting.Prettify(entry.Subject.Value);
+					<li class="list-inline-item badge @entry.CssClass rounded-pill">@subjectLabel
+						@if (entry.IsBorderline) {
+							<span class="basket-borderline-tag"> - Borderline</span>
+						} else if (entry.Status == ChoiceStatus.Unavailable) {
+							<span class="basket-status-tag"> - Unavailable</span>
+						} else if (entry.Status == ChoiceStatus.NotOffered) {
+							<span class="basket-status-tag"> - Not offered by @Model.SelectedPolicy.DisplayName</span>
+						}
+						<form method="post" asp-page-handler="RemoveSubject" class="d-inline">
+							<input type="hidden" name="subject" value="@entry.Subject.Value"/>
+							<button type="submit" class="basket-remove" aria-label="Remove @subjectLabel"><span aria-hidden="true">&times;</span></button>
+						</form>
+					</li>
+				}
+			</ul>
+			<details class="basket-empty flex-shrink-0">
+				<summary id="basket-empty" class="btn btn-sm btn-outline-danger basket-empty-btn" aria-label="Empty basket" title="Empty basket">
+					<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" viewBox="0 0 16 16" aria-hidden="true">
+						<path d="M5.5 5.5A.5.5 0 0 1 6 6v6a.5.5 0 0 1-1 0V6a.5.5 0 0 1 .5-.5m2.5 0a.5.5 0 0 1 .5.5v6a.5.5 0 0 1-1 0V6a.5.5 0 0 1 .5-.5m3 .5a.5.5 0 0 0-1 0v6a.5.5 0 0 0 1 0z"/>
+						<path d="M14.5 3a1 1 0 0 1-1 1H13v9a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V4h-.5a1 1 0 0 1-1-1V2a1 1 0 0 1 1-1H6a1 1 0 0 1 1-1h2a1 1 0 0 1 1 1h3.5a1 1 0 0 1 1 1zM4.118 4 4 4.059V13a1 1 0 0 0 1 1h6a1 1 0 0 0 1-1V4.059L11.882 4zM2.5 3h11V2h-11z"/>
+					</svg>
+				</summary>
+				<div id="basket-empty-confirm" class="d-inline-flex align-items-center gap-2 mt-2">
+					<span class="small">Empty the whole basket?</span>
+					<form method="post" asp-page-handler="EmptyBasket" class="d-inline">
+						<button type="submit" class="btn btn-sm btn-danger">Yes, empty</button>
+					</form>
+				</div>
+			</details>
+		</div>
 		@if (Model.HasBorderlineChoices) {
 			<p id="borderline-notice" class="mb-0 mt-2 small text-body-secondary">
 				Borderline choices stay in your basket, but need additional authorisation before you can enrol on them.
@@ -66,7 +106,7 @@
 		}
 		@if (exceedsChoiceLimit) {
 			<p id="basket-choice-limit-error" class="alert alert-danger mb-0 mt-2 py-2" role="alert">
-				Too many available choices: this policy allows at most @maxChoices, but your basket contains @availableChoiceCount. Remove a choice.
+				Too many subjects chosen: this policy allows at most @maxChoices, but your basket contains @availableChoiceCount. Remove a choice.
 			</p>
 		}
 	}

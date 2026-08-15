@@ -122,7 +122,9 @@ public static class StudentValidator
 
 	private static IEnumerable<string> ValidateGcse(KeyValuePair<string, int> gcse)
 	{
-		if (!GcseSubjects.IsKnown(gcse.Key)) {
+		if (string.IsNullOrWhiteSpace(gcse.Key)) {
+			yield return "Empty GCSE subject";
+		} else if (!GcseSubjects.IsKnown(gcse.Key)) {
 			yield return $"unknown GCSE subject '{gcse.Key}'";
 		}
 

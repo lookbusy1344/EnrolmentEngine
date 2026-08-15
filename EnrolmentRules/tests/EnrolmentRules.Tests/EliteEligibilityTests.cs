@@ -15,8 +15,8 @@ using Domain;
 public sealed class EliteEligibilityTests
 {
 
-	private const string BestEightTotalReason = "Best eight GCSE total at or above the minimum";
-	private const string TopSevenAverageReason = "Top seven GCSE average at or above the minimum";
+	private const string BestEightTotalReason = "Best eight GCSE total";
+	private const string TopSevenAverageReason = "Top seven GCSE average";
 	private static StudentInput Student(Dictionary<string, int> gcses) =>
 		new("S-ELITE", gcses, []) {
 			DateOfBirth = new(2009, 9, 1),
@@ -59,7 +59,10 @@ public sealed class EliteEligibilityTests
 		var result = engine.Explain(student);
 
 		result.Eligible.Should().BeFalse();
-		result.EligibilityReasons.Should().Contain(r => r.Contains("Not met: " + BestEightTotalReason, StringComparison.Ordinal));
+		result.EligibilityReasons.Should().Contain(r => r.Contains(BestEightTotalReason, StringComparison.Ordinal));
+		// The reason spells out the gap: the 60-point minimum against the student's actual 56.
+		result.EligibilityReasons.Should().Contain(
+			r => r.Contains("needs 60", StringComparison.Ordinal) && r.Contains("actual 56", StringComparison.Ordinal));
 	}
 
 	[Fact]
@@ -77,7 +80,7 @@ public sealed class EliteEligibilityTests
 		sixty["french"] = 4;
 		var sixtyResult = engine.Explain(Student(sixty));
 
-		fiftyNineResult.EligibilityReasons.Should().Contain(r => r.Contains("Not met: " + BestEightTotalReason, StringComparison.Ordinal));
+		fiftyNineResult.EligibilityReasons.Should().Contain(r => r.Contains(BestEightTotalReason, StringComparison.Ordinal));
 		sixtyResult.EligibilityReasons.Should().NotContain(r => r.Contains(BestEightTotalReason, StringComparison.Ordinal));
 		sixtyResult.Eligible.Should().BeTrue();
 	}
@@ -132,7 +135,10 @@ public sealed class EliteEligibilityTests
 		var belowResult = engine.Explain(belowAverage);
 		var atResult = engine.Explain(atAverage);
 
-		belowResult.EligibilityReasons.Should().Contain(r => r.Contains("Not met: " + TopSevenAverageReason, StringComparison.Ordinal));
+		belowResult.EligibilityReasons.Should().Contain(r => r.Contains(TopSevenAverageReason, StringComparison.Ordinal));
+		// The reason spells out the gap: the 7.0 average minimum against the student's actual 6.9 (48 ÷ 7).
+		belowResult.EligibilityReasons.Should().Contain(
+			r => r.Contains("needs 7.0", StringComparison.Ordinal) && r.Contains("actual 6.9", StringComparison.Ordinal));
 		atResult.EligibilityReasons.Should().NotContain(r => r.Contains(TopSevenAverageReason, StringComparison.Ordinal));
 	}
 

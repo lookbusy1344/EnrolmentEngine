@@ -16,7 +16,8 @@
     "build:watch": "vite build --watch",
     "preview": "vite preview",
     "e2e": "playwright test",
-    "verify": "pnpm lint && pnpm format:check && pnpm check:no-js-source && pnpm typecheck && pnpm test && pnpm build"
+    "verify:checks": "pnpm lint && pnpm check:no-js-source && pnpm typecheck && pnpm test && pnpm build",
+    "verify": "pnpm format:check && pnpm verify:checks"
   },
   "dependencies": {
     "vue": "^3.5.41"

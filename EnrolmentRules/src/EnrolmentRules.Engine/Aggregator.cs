@@ -14,7 +14,11 @@ using Domain;
 internal static class Aggregator
 {
 	public const string ExceedsCapReason = "exceeds auto-enrol cap";
-	public const string ExceedsChosenSubjectCapReason = "exceeds chosen subject cap";
+
+	// "At", not "exceeds": this fires once placedChosen.Count reaches cap, which is the common case
+	// (a student choosing exactly up to their limit) — "exceeds" would be wrong for that case, even
+	// though a student who chose past the cap before any went red is still covered by the same reason.
+	public const string AtChosenSubjectCapReason = "at chosen subject cap";
 
 	/// <summary>The clause marking a limit already lifted by the high-attainment threshold.</summary>
 	public const string RaisedLimitNote = "already raised for a high GCSE average";
@@ -48,11 +52,20 @@ internal static class Aggregator
 	{
 		var highAttainment = profile.AverageGcseScore >= thresholds.HighAttainmentAverageGcse;
 		var cap = EffectiveMaxChosenALevels(profile, thresholds);
-		if (profile.ChosenALevels.Count < cap) {
+
+		// Only chosen subjects that actually hold a place count against the cap. A chosen subject that
+		// has gone red — an unmet prerequisite, a mutual exclusion, a veto, or one absent from this
+		// policy's catalogue and so never rated — is not consuming a place, so it must not inflate the
+		// count or trip the cap for the subjects the student really can take.
+		var ratingBySubject = ratings.ToDictionary(static r => r.Subject, static r => r.Rating);
+		var placedChosen = profile.ChosenALevels
+								  .Where(s => ratingBySubject.TryGetValue(s, out var rating) && rating != Rating.Red)
+								  .ToList();
+		if (placedChosen.Count < cap) {
 			return [];
 		}
 
-		var reason = ChosenSubjectCapReason(profile, thresholds, cap, highAttainment);
+		var reason = ChosenSubjectCapReason(placedChosen, profile, thresholds, cap, highAttainment);
 		return [
 			.. ratings
 			   .Where(r => r.Rating != Rating.Red && !profile.ChosenALevels.Contains(r.Subject))
@@ -64,21 +77,31 @@ internal static class Aggregator
 	///     The self-contained explanation for a chosen-subject-cap downgrade: the block is the student's own
 	///     choice count, not anything about the barred subject, so the reason has to say which limit was hit,
 	///     how it was reached, and what would move it — otherwise the bare
-	///     <see cref="ExceedsChosenSubjectCapReason" /> reads as a property of the subject.
+	///     <see cref="AtChosenSubjectCapReason" /> reads as a property of the subject.
 	/// </summary>
 	private static string ChosenSubjectCapReason(
-		StudentProfile profile, PolicyThresholds thresholds, int cap, bool highAttainment)
+		List<Subject> placedChosen, StudentProfile profile, PolicyThresholds thresholds, int cap, bool highAttainment)
 	{
-		var chosen = string.Join(", ", profile.ChosenALevels.Select(static s => EnumNames.NameOf(s)));
-		var limitNote = highAttainment
-			? RaisedLimitNote
-			: string.Create(
+		var chosen = string.Join(", ", placedChosen.Select(static s => EnumNames.NameOf(s)));
+
+		// The high-attainment note only makes sense when that threshold actually raises the cap above
+		// what applies here; a policy where both caps coincide (e.g. Elite's max_chosen_a_levels ==
+		// high_attainment_max_chosen_a_levels) makes "rising to N" read as a limit rising to itself, so
+		// the parenthetical is dropped entirely rather than stated with no effect.
+		string limitNote;
+		if (highAttainment) {
+			limitNote = $" ({RaisedLimitNote})";
+		} else if (thresholds.HighAttainmentMaxChosenALevels > cap) {
+			limitNote = string.Create(
 				CultureInfo.InvariantCulture,
-				$"rising to {thresholds.HighAttainmentMaxChosenALevels} at a GCSE average of {thresholds.HighAttainmentAverageGcse:0.0} or above, and yours is {profile.AverageGcseScore:0.0}");
+				$" (rising to {thresholds.HighAttainmentMaxChosenALevels} at a GCSE average of {thresholds.HighAttainmentAverageGcse:0.0} or above, and yours is {profile.AverageGcseScore:0.0})");
+		} else {
+			limitNote = "";
+		}
 
 		return string.Create(
 			CultureInfo.InvariantCulture,
-			$"{ExceedsChosenSubjectCapReason}: {profile.ChosenALevels.Count} of {cap} permitted A-level choices already made ({chosen}) — the limit is {cap} ({limitNote}). Remove a choice to free a place.");
+			$"{AtChosenSubjectCapReason}: {placedChosen.Count} of {cap} permitted A-level choices already made ({chosen}) — the limit is {cap}{limitNote}. Remove a choice to free a place.");
 	}
 
 	/// <summary>

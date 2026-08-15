@@ -81,6 +81,13 @@ public sealed class RazorModel(
 	/// <summary>Whether any committed choice is amber, and so needs additional authorisation before enrolment.</summary>
 	public bool HasBorderlineChoices => Basket.Any(static entry => entry.IsBorderline);
 
+	/// <summary>
+	///     The live GCSE tally (count, total, average) over the entered grades, shown as a scoreboard in the
+	///     basket. Its average is the same one the enrolment decision reads. Zeroed until <see cref="OnGetAsync" />
+	///     has run; the POST handlers redirect, so no rendered page sees it unpopulated.
+	/// </summary>
+	public GcseScoreboard Scoreboard { get; private set; }
+
 	/// <summary>Whether another GCSE row (not <paramref name="excludingIndex" />) already names <paramref name="subjectKey" />.</summary>
 	public bool IsGcseSubjectChosenElsewhere(int excludingIndex, string subjectKey) =>
 		Gcses.Where((_, idx) => idx != excludingIndex).Any(g => g.Subject == subjectKey);
@@ -93,9 +100,11 @@ public sealed class RazorModel(
 
 		var session = await sessionStore.LoadAsync(HttpContext.Session, HttpContext.RequestAborted);
 		Bind(session);
-		var comparison = registry.Compare(SelectedPolicy.Id, EnrolmentFormMapper.ToStudentInput(session), HttpContext.RequestAborted);
+		var student = EnrolmentFormMapper.ToStudentInput(session);
+		var comparison = registry.Compare(SelectedPolicy.Id, student, HttpContext.RequestAborted);
 		Results = EnrolmentResultsViewModel.From(comparison);
 		Basket = BasketEntry.From(Results.Comparison);
+		Scoreboard = GcseScoreboard.From(student.ToGcseResults());
 		return Page();
 	}
 
@@ -171,6 +180,29 @@ public sealed class RazorModel(
 				HttpContext.Session,
 				session with {
 					ChosenALevels = EquatableArray.CopyOf(session.ChosenALevels.Where(s => s != parsed)),
+				},
+				HttpContext.RequestAborted);
+		}
+
+		return RedirectToPage(null, null, new
+		{
+			policy = SelectedPolicy.Id.Value,
+		}, "results-heading");
+	}
+
+	/// <summary>Clears every committed choice from the basket (facts are untouched), then redirects.</summary>
+	public async Task<IActionResult> OnPostEmptyBasketAsync(string? policy)
+	{
+		if (!ResolvePolicy(policy, out var redirect)) {
+			return redirect!;
+		}
+
+		var session = await sessionStore.LoadAsync(HttpContext.Session, HttpContext.RequestAborted);
+		if (session.ChosenALevels.Count > 0) {
+			await sessionStore.SaveAsync(
+				HttpContext.Session,
+				session with {
+					ChosenALevels = [],
 				},
 				HttpContext.RequestAborted);
 		}

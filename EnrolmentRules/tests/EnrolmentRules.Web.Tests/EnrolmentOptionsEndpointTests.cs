@@ -83,4 +83,22 @@ public sealed class EnrolmentOptionsEndpointTests : IClassFixture<WebAppFactory>
 
 		groups["Nvq"].Should().BeEquivalentTo("construction", "business_administration", "hospitality_and_catering");
 	}
+
+	/// <summary>
+	///     English Language and Maths are the key GCSEs (gating eligibility): they lead the picker rather
+	///     than sit wherever the alphabet puts them. Everything else stays alphabetical behind them.
+	/// </summary>
+	[Fact]
+	public async Task Lists_english_language_then_maths_first_in_gcse_subjects_then_the_rest_alphabetically()
+	{
+		using var client = factory.CreateClient();
+
+		var body = await client.GetFromJsonAsync("/api/enrolment/options", EnrolmentApiJsonContext.Default.EnrolmentOptionsResponse);
+
+		body.Should().NotBeNull();
+		var subjects = body!.GcseSubjects.Select(o => o.Value).ToArray();
+
+		subjects.Take(2).Should().Equal("english_language", "maths");
+		subjects.Skip(2).Should().BeInAscendingOrder(StringComparer.Ordinal);
+	}
 }

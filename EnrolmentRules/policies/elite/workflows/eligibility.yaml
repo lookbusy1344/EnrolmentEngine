@@ -23,10 +23,10 @@ Rules:
     Expression: >-
       lookup.Count >= policy.BestGcseCount
   - RuleName: 'BestEightTotal'
-    SuccessEvent: 'Best eight GCSE total at or above the minimum'
+    SuccessEvent: 'Best eight GCSE total'
     Expression: >-
       lookup.BestTotal(policy.BestGcseCount) >= policy.MinBestGcsePoints
   - RuleName: 'TopSevenAverage'
-    SuccessEvent: 'Top seven GCSE average at or above the minimum'
+    SuccessEvent: 'Top seven GCSE average'
     Expression: >-
       lookup.BestAverage(policy.TopGcseAverageCount) >= policy.MinTopGcseAverage

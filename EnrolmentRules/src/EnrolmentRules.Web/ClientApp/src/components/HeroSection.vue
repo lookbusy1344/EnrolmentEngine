@@ -24,15 +24,16 @@ const razorHref = computed(() =>
   <section aria-labelledby="hero-heading" class="hero">
     <p class="hero-eyebrow">
       GCSEs in → A-Levels out
-      <span class="mode-tag">Dynamic</span>
-      <a :href="razorHref" class="mode-switch">Server-rendered version</a>
-    </p>
-    <p v-if="selectedPolicy !== null" aria-label="Selected enrolment policy" class="policy-switch">
-      <strong>{{ selectedPolicy.displayName }}</strong>
-      <template v-if="otherPolicy !== null">
-        —
-        <a href="#" @click.prevent="emit('switch-policy', otherPolicy.id)">Switch to {{ otherPolicy.displayName }}</a>
-      </template>
+      <span class="mode-tag pill pill--active">Dynamic</span>
+      <a :href="razorHref" class="mode-switch pill pill--link">Server-rendered version</a>
+      <span v-if="selectedPolicy !== null" aria-label="Selected enrolment policy" class="policy-switch">
+        <strong class="pill pill--active">{{ selectedPolicy.displayName }}</strong>
+        <template v-if="otherPolicy !== null">
+          <a class="pill pill--link" href="#" @click.prevent="emit('switch-policy', otherPolicy.id)"
+            >Switch to {{ otherPolicy.displayName }}</a
+          >
+        </template>
+      </span>
     </p>
     <h1 id="hero-heading">See how your skills can <span class="grow">grow</span>.</h1>
     <p class="hero-lede">

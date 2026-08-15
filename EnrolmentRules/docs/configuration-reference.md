@@ -310,7 +310,7 @@ Rule object fields used here:
 | Field | Type | Required | Meaning |
 | --- | --- | --- | --- |
 | `RuleName` | string | yes | Unique, stable identifier within the workflow. `EnglishLanguagePass`, `MathsPass`, and `EnoughPasses` select specialised threshold-aware failure wording and therefore must retain their canonical expressions. Any other name denotes a generic eligibility rule. |
-| `SuccessEvent` | string | conditionally | Human-readable statement of what success means. It is required by the linter for every generic eligibility rule and is inverted as `Not met: <SuccessEvent>` when that rule fails. It remains optional metadata for the three specialised rules. |
+| `SuccessEvent` | string | conditionally | Human-readable statement of what success means. It is required by the linter for every generic eligibility rule and is surfaced as-is when that rule fails (a top-N aggregate rule appends "needs X, actual Y"). It remains optional metadata for the three specialised rules. |
 | `ErrorMessage` | string | no | Permitted by the RulesEngine schema but unused by this project. Eligibility failure reasons come from specialised threshold-aware projections or the generic rule's `SuccessEvent`. |
 | `Expression` | string | yes | C#-style lambda body compiled and evaluated by RulesEngine against the workflow inputs. It must return Boolean; startup probe-evaluation catches syntax/member errors but cannot prove that the policy comparison is logically correct. |
 | `LocalParams` | array | no | Rule-local named expressions evaluated for this rule and made available to its main `Expression`. Use them to name or reuse intermediate calculations; names must be unique within the rule. |
@@ -364,7 +364,7 @@ How to read that example:
 - `policy.PassGrade` comes from `data/thresholds.yaml`,
 - `LocalParams` lets the workflow compute `passCount` once and reuse it in the rule.
 - The rules carry no `ErrorMessage`: specialised failures are projected from loaded thresholds;
-  generic failures use `Not met: <SuccessEvent>`.
+  generic failures surface `SuccessEvent` as-is.
 
 ### `workflows/subject-ratings.yaml`
 
@@ -500,7 +500,7 @@ Relevant rule fields:
 | `RuleName` | yes | Identifier unique within the workflow. Project code parses eligibility names and subject-rating `<subject>:<tier>` names, so those conventions are contractual. |
 | `Enabled` | no | RulesEngine execution toggle. A disabled rule cannot succeed; disabling a shipped tier also violates the project's expected complete three-tier policy even if the generic schema accepts it. |
 | `ErrorMessage` | no | Permitted by the schema but unused by project evaluation. |
-| `SuccessEvent` | no at schema level | Subject-rating results expose it as their base explanation. The project linter requires it for a generic eligibility rule, whose failed reason becomes `Not met: <SuccessEvent>`. |
+| `SuccessEvent` | no at schema level | Subject-rating results expose it as their base explanation. The project linter requires it for a generic eligibility rule, whose failed reason surfaces `SuccessEvent` as-is. |
 | `Operator` | no | RulesEngine composite operator applied to child `Rules`, for example `And` or `Or`. The schema accepts any string and therefore does not validate the operator vocabulary; shipped workflows use flat lambda expressions instead. |
 | `RuleExpressionType` | no | Expression dialect selector. The only schema-supported value is `LambdaExpression`; normalization supplies it for rules with an `Expression`. |
 | `Expression` | conditional | Boolean lambda expression for a leaf rule. Required when the rule does not contain child `Rules`; project startup probe-evaluates it to force compilation. |

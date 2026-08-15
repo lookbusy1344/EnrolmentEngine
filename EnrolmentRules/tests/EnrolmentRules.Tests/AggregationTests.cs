@@ -291,15 +291,17 @@ public sealed class AggregationTests
 	[Fact]
 	public void normal_attainment_student_with_two_choices_leaves_another_qualifying_subject_selectable()
 	{
+		// A 6.0-average student only rates Maths/Physics red (they need Maths GCSE at the exceptional
+		// grade), so cap fixtures pick subjects that actually hold a place: Chemistry, Biology, History.
 		var engine = Harness.ShippedEngine();
 		var student = StrongStudent() with {
-			ChosenALevels = [Subject.Maths, Subject.Physics],
+			ChosenALevels = [Subject.Chemistry, Subject.Biology],
 		};
 
 		var result = engine.Evaluate(student);
 
 		result.Eligible.Should().BeTrue();
-		result.Recommendations.Single(r => r.Subject == Subject.Chemistry).Rating.Should().NotBe(Rating.Red);
+		result.Recommendations.Single(r => r.Subject == Subject.History).Rating.Should().NotBe(Rating.Red);
 		result.Adjustments.Should().NotContain(a => a.Kind == AdjustmentKind.ChosenSubjectCap);
 	}
 
@@ -308,22 +310,65 @@ public sealed class AggregationTests
 	{
 		var engine = Harness.ShippedEngine();
 		var student = StrongStudent() with {
-			ChosenALevels = [Subject.Maths, Subject.Physics, Subject.Chemistry],
+			ChosenALevels = [Subject.Chemistry, Subject.Biology, Subject.History],
 		};
 
 		var result = engine.Evaluate(student);
 
 		result.Eligible.Should().BeTrue();
-		var biology = result.Recommendations.Single(r => r.Subject == Subject.Biology);
-		biology.Rating.Should().Be(Rating.Red);
-		biology.Reason.Should().StartWith(Aggregator.ExceedsChosenSubjectCapReason);
+		var blocked = result.Recommendations.Single(r => r.Subject == Subject.ComputerStudies);
+		blocked.Rating.Should().Be(Rating.Red);
+		blocked.Reason.Should().StartWith(Aggregator.AtChosenSubjectCapReason);
 		result.Adjustments.Should().Contain(a =>
-			a.Subject == Subject.Biology
+			a.Subject == Subject.ComputerStudies
 			&& a.Kind == AdjustmentKind.ChosenSubjectCap
 			&& a.To == Rating.Red
-			&& a.Reason == biology.Reason);
+			&& a.Reason == blocked.Reason);
 		result.Recommendations.Where(r => student.ChosenALevels.Contains(r.Subject))
-			  .Should().NotContain(r => r.Reason.StartsWith(Aggregator.ExceedsChosenSubjectCapReason, StringComparison.Ordinal));
+			  .Should().NotContain(r => r.Reason.StartsWith(Aggregator.AtChosenSubjectCapReason, StringComparison.Ordinal));
+	}
+
+	[Fact]
+	public void red_chosen_subjects_do_not_count_against_the_chosen_subject_cap()
+	{
+		// French + German are mutually exclusive, so choosing both drives both red. Only Chemistry and
+		// Biology hold a place — the red pair must not inflate the count, otherwise four chosen would
+		// trip the three-subject cap and wrongly block every remaining subject.
+		var engine = Harness.ShippedEngine();
+		var student = StrongStudent() with {
+			ChosenALevels = [Subject.Chemistry, Subject.Biology, Subject.French, Subject.German],
+		};
+
+		var result = engine.Evaluate(student);
+
+		result.Eligible.Should().BeTrue();
+		result.Recommendations.Single(r => r.Subject == Subject.French).Rating.Should().Be(Rating.Red);
+		result.Recommendations.Single(r => r.Subject == Subject.German).Rating.Should().Be(Rating.Red);
+
+		// Two placed choices sit under the three-subject cap, so no cap downgrade fires.
+		result.Adjustments.Should().NotContain(a => a.Kind == AdjustmentKind.ChosenSubjectCap);
+		result.Recommendations.Single(r => r.Subject == Subject.History).Rating.Should().NotBe(Rating.Red);
+	}
+
+	[Fact]
+	public void chosen_subject_cap_reason_names_only_the_subjects_holding_a_place()
+	{
+		// Three placed choices fill a three-subject cap while a red fourth (FurtherMaths, whose
+		// `chosen`-mode Maths prerequisite is unmet) is dropped from the count. The reason must read
+		// "3 of 3" and never name the red subject.
+		var engine = Harness.ShippedEngine();
+		var student = StrongStudent() with {
+			ChosenALevels = [Subject.Chemistry, Subject.Biology, Subject.History, Subject.FurtherMaths],
+		};
+
+		var result = engine.Evaluate(student);
+
+		result.Recommendations.Single(r => r.Subject == Subject.FurtherMaths).Rating.Should().Be(Rating.Red);
+
+		var reason = result.Recommendations.Single(r => r.Subject == Subject.ComputerStudies).Reason;
+		reason.Should().StartWith(Aggregator.AtChosenSubjectCapReason);
+		reason.Should().Contain($"3 of {Harness.Thresholds.MaxChosenALevels}");
+		reason.Should().NotContain(EnumNames.NameOf(Subject.FurtherMaths));
 	}
 
 	[Fact]
@@ -331,12 +376,12 @@ public sealed class AggregationTests
 	{
 		var engine = Harness.ShippedEngine();
 		var student = StrongStudent() with {
-			ChosenALevels = [Subject.Maths, Subject.Physics, Subject.Chemistry],
+			ChosenALevels = [Subject.Chemistry, Subject.Biology, Subject.History],
 		};
 
 		var result = engine.Evaluate(student);
 
-		var reason = result.Recommendations.Single(r => r.Subject == Subject.Biology).Reason;
+		var reason = result.Recommendations.Single(r => r.Subject == Subject.ComputerStudies).Reason;
 		reason.Should().Contain($"3 of {Harness.Thresholds.MaxChosenALevels}");
 		foreach (var chosen in student.ChosenALevels) {
 			reason.Should().Contain(EnumNames.NameOf(chosen));
@@ -388,10 +433,33 @@ public sealed class AggregationTests
 		var result = engine.Evaluate(student);
 
 		result.Eligible.Should().BeTrue();
-		result.Recommendations.Single(r => r.Subject == Subject.History).Reason.Should().StartWith(Aggregator.ExceedsChosenSubjectCapReason);
+		result.Recommendations.Single(r => r.Subject == Subject.History).Reason.Should().StartWith(Aggregator.AtChosenSubjectCapReason);
 		result.Adjustments.Should().Contain(a =>
 			a.Subject == Subject.History
 			&& a.Kind == AdjustmentKind.ChosenSubjectCap
 			&& a.To == Rating.Red);
+	}
+
+	[Fact]
+	public void chosen_subject_cap_reason_omits_the_raise_clause_when_the_high_attainment_cap_would_not_raise_it()
+	{
+		// Mirrors policies/elite's thresholds.yaml, where max_chosen_a_levels and
+		// high_attainment_max_chosen_a_levels are both 4: a normal-attainment student is already at the
+		// "raised" ceiling, so "rising to 4 ... and yours is 6.0" would be nonsensical against a limit
+		// that already reads 4.
+		var thresholds = Harness.Thresholds with { MaxChosenALevels = 4 };
+		var (workflows, rulesEngine) = Harness.BuildFromShippedWorkflows();
+		var engine = new EnrolmentEngine(rulesEngine, thresholds, Harness.Catalogue, Harness.AsOf, Harness.Scale, workflows);
+		var student = StrongStudent() with {
+			ChosenALevels = [Subject.Chemistry, Subject.Biology, Subject.History, Subject.ReligiousStudies],
+		};
+
+		var result = engine.Evaluate(student);
+
+		var reason = result.Recommendations.Single(r => r.Subject == Subject.ComputerStudies).Reason;
+		reason.Should().StartWith(Aggregator.AtChosenSubjectCapReason);
+		reason.Should().Contain("4 of 4");
+		reason.Should().NotContain("rising to");
+		reason.Should().NotContain(Aggregator.RaisedLimitNote);
 	}
 }

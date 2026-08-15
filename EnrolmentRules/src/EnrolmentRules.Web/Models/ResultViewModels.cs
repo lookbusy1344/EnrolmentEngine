@@ -34,13 +34,19 @@ public sealed record BasketEntry(Subject Subject, ChoiceStatus Status, Rating? R
 {
 	public bool IsBorderline => Status == ChoiceStatus.Available && RatingDisplay.IsBorderline(Rating);
 
+	public bool IsInvalid => Status is ChoiceStatus.Unavailable or ChoiceStatus.NotOffered;
+
 	public string CssClass => Status switch {
 		ChoiceStatus.Unavailable => "text-bg-danger",
 		ChoiceStatus.NotOffered => "text-bg-danger",
 		_ => RatingDisplay.BasketCssClass(Rating),
 	};
 
-	/// <summary>Project every <see cref="PolicyComparisonResult.ChoiceStatuses" /> entry into a basket row, in the shared basket's own order.</summary>
+	/// <summary>
+	///     Project every <see cref="PolicyComparisonResult.ChoiceStatuses" /> entry into a basket row: valid
+	///     choices (available or unrated) before invalid ones (<see cref="IsInvalid" />), each group
+	///     alphabetical by its displayed label rather than choice order.
+	/// </summary>
 	public static IReadOnlyList<BasketEntry> From(PolicyComparisonResult? comparison)
 	{
 		if (comparison is null) {
@@ -49,12 +55,15 @@ public sealed record BasketEntry(Subject Subject, ChoiceStatus Status, Rating? R
 
 		var ratings = comparison.Explanation.Explanations.ToDictionary(static e => e.Subject, static e => e.Rating);
 		return [
-			.. comparison.ChoiceStatuses.Select(status =>
-				new BasketEntry(
-					status.Subject,
-					status.Status,
-					ratings.TryGetValue(status.Subject, out var rating) ? rating : null,
-					status.Reason)),
+			.. comparison.ChoiceStatuses
+							  .Select(status =>
+								  new BasketEntry(
+									  status.Subject,
+									  status.Status,
+									  ratings.TryGetValue(status.Subject, out var rating) ? rating : null,
+									  status.Reason))
+							  .OrderBy(static entry => entry.IsInvalid)
+							  .ThenBy(static entry => TextFormatting.Prettify(entry.Subject.Value), StringComparer.Ordinal),
 		];
 	}
 }

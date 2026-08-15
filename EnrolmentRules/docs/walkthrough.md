@@ -319,7 +319,8 @@ The engine reports each rule's pass/fail. The internal rating evaluator then *as
 in host code*. Standard's three canonical rule names have threshold-aware failure text projected
 from `PolicyThresholds`, keeping explanations in step with `pass_grade` / `min_passes`. An auxiliary
 policy can replace the gate with any number of rules: each non-canonical rule supplies a
-`SuccessEvent`, and a failure is reported as `Not met: <SuccessEvent>` in declared order. The
+`SuccessEvent`, and a failure is reported using that same text (a top-N aggregate rule appends
+"needs X, actual Y") in declared order. The
 canonical names are reserved for their shipped expression shapes so an author cannot accidentally
 attach Standard's specialised explanation to different logic. This assembly is host code precisely
 because the engine cannot aggregate sibling rules.

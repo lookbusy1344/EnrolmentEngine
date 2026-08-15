@@ -159,6 +159,15 @@ function removeSubject(subject: string): void {
   evaluateImmediately()
 }
 
+function clearBasket(): void {
+  if (snapshot.chosenALevels.length === 0) {
+    return
+  }
+
+  snapshot.chosenALevels = []
+  evaluateImmediately()
+}
+
 function startOver(): void {
   evaluateDebounced.cancel()
   saveDebounced.cancel()
@@ -267,7 +276,10 @@ onMounted(() => {
     :choice-statuses="basketComparison?.choiceStatuses ?? []"
     :chosen-a-levels="snapshot.chosenALevels"
     :explanations="basketComparison?.explanations ?? []"
+    :gcses="snapshot.gcses"
     :max-choices="basketComparison?.maxChoices ?? null"
+    @clear="clearBasket"
+    @remove="removeSubject"
   />
 
   <div v-if="optionsError !== null" class="alert alert-danger" role="alert">

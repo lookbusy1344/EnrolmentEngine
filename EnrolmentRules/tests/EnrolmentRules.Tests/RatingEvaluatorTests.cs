@@ -15,7 +15,7 @@ public sealed class RatingEvaluatorTests
 		var gate = evaluator.EvaluateEligibility([]);
 
 		gate.Eligible.Should().BeFalse();
-		gate.Reasons.Should().Equal("Not met: Best eight GCSE total at or above the minimum");
+		gate.Reasons.Should().Equal("Best eight GCSE total at or above the minimum");
 	}
 
 	[Fact]
