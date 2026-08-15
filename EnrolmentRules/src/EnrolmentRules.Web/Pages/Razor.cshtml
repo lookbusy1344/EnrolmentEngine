@@ -13,6 +13,22 @@
 	var exceedsChoiceLimit = maxChoices is int limit && availableChoiceCount > limit;
 }
 
+<!--
+	razor-sync.ts reads the three items below on load: the just-rendered snapshot (kept in sync
+	with the same localStorage key/shape /app owns), and enough context (data-empty/data-cleared)
+	to tell a true cold visit — worth rehydrating from localStorage — apart from an explicit
+	"Start over", which should clear localStorage instead. #hydrate-form is submitted only by that
+	script, never by a visible control; the tag helper still gives it a real antiforgery token.
+-->
+<script type="application/json" id="enrolment-snapshot">@Html.Raw(Model.SnapshotJson)</script>
+<div id="enrolment-sync-flags" hidden data-selected-policy="@Model.SelectedPolicy.Id.Value"
+     data-empty="@(Model.IsSnapshotEmpty ? "true" : "false")" data-cleared="@(Model.JustCleared ? "true" : "false")"></div>
+<form id="hydrate-form" method="post" asp-page-handler="Hydrate" hidden></form>
+@foreach (var stylesheet in Model.SyncScriptAssets.StylesheetPaths) {
+	<link rel="stylesheet" href="@stylesheet"/>
+}
+<script type="module" src="@Model.SyncScriptAssets.ScriptPath"></script>
+
 <section class="hero" aria-labelledby="hero-heading">
 	<p class="hero-eyebrow">GCSEs in → A-Levels out
 		<span class="mode-tag pill pill--active">Server rendered</span>

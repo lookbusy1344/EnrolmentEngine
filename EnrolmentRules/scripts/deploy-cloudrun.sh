@@ -63,13 +63,16 @@ fi
 
 echo "==> deploying $service to $region, stamped $commit"
 
-# --max-instances 1 and --session-affinity are not optional decoration: sessions are
-# in-memory and per-instance. See docs/deployment.md "Session state and scaling".
+# No --max-instances pin: facts state lives in a self-contained cookie and the browser's
+# localStorage (see CLAUDE.md "Client-side persistence"), not server memory, so any
+# instance can serve any request for it. --session-affinity stays, though: Razor Pages'
+# antiforgery token is still DataProtection-protected with no shared key ring configured,
+# so a GET's token only validates on the instance that issued it — see docs/deployment.md
+# "Multi-instance scaling".
 gcloud run deploy "$service" \
 	--source . \
 	--region "$region" \
 	--allow-unauthenticated \
-	--max-instances 1 \
 	--session-affinity \
 	--service-account "$demo_service_account"
 

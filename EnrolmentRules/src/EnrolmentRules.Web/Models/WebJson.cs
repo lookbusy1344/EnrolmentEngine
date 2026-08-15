@@ -4,8 +4,8 @@ using System.Text.Json.Serialization;
 using Domain;
 
 /// <summary>
-///     Source-generated (reflection-free) <see cref="System.Text.Json" /> contract for the session
-///     snapshot serialised by <see cref="Services.EnrolmentSessionStore" />. The web-local
+///     Source-generated (reflection-free) <see cref="System.Text.Json" /> contract for the facts
+///     snapshot serialised by <see cref="Services.EnrolmentStateCookieStore" />. The web-local
 ///     <c>EquatableArray{T}</c> converter lives in this assembly (unlike <c>EnrolmentRules.Domain</c>'s
 ///     internal one), so this context can see it and stay source-generated.
 /// </summary>

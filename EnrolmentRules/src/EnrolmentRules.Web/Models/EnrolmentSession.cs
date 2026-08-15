@@ -4,10 +4,10 @@ using Infrastructure;
 using Subject = Domain.Subject;
 
 /// <summary>
-///     The editable input snapshot held in the ASP.NET session for one anonymous browsing session —
-///     never the engine's derived output (see <see cref="Services.EnrolmentSessionStore" />). Rows may be
-///     blank (<see cref="GcseRow.IsEmpty" />, <see cref="PriorQualificationRow.IsEmpty" />); the mapper,
-///     not this record, is responsible for filtering them before building a <c>StudentInput</c>.
+///     The editable input snapshot carried across one browsing session — never the engine's derived
+///     output (see <see cref="Services.EnrolmentStateCookieStore" />). Rows may be blank
+///     (<see cref="GcseRow.IsEmpty" />, <see cref="PriorQualificationRow.IsEmpty" />); the mapper, not
+///     this record, is responsible for filtering them before building a <c>StudentInput</c>.
 /// </summary>
 public sealed record EnrolmentSession(
 	string StudentId,

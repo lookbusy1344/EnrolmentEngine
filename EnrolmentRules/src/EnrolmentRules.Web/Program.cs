@@ -25,10 +25,8 @@ public sealed class Program
 		_ = builder.Services.ConfigureHttpJsonOptions(options =>
 			options.SerializerOptions.TypeInfoResolverChain.Insert(0, EnrolmentApiJsonContext.Default));
 		_ = builder.Services.AddRazorPages();
-		_ = builder.Services.AddDistributedMemoryCache();
-		_ = builder.Services.AddSession();
 		_ = builder.Services.AddSingleton(TimeProvider.System);
-		_ = builder.Services.AddSingleton<IEnrolmentSessionStore, EnrolmentSessionStore>();
+		_ = builder.Services.AddSingleton<IEnrolmentStateStore, EnrolmentStateCookieStore>();
 		_ = builder.Services.AddSingleton<IViteManifestReader, ViteManifestReader>();
 		_ = builder.Services.AddEnrolmentPolicies(options => options
 															 .UseDefault(
@@ -61,7 +59,6 @@ public sealed class Program
 		_ = app.UseStaticFiles();
 		_ = app.UseRouting();
 		_ = app.UseEnrolmentEvaluateRequestSizeLimit();
-		_ = app.UseSession();
 		_ = app.MapRazorPages();
 		_ = app.MapEnrolmentApi();
 
@@ -72,7 +69,7 @@ public sealed class Program
 	// (message, stack trace, inner exception), so a runtime failure — however it happened — never
 	// re-executes a route or serves the framework's default HTML error page. Self-contained: it reads
 	// only the request path and writes the response, so it cannot itself throw when the failure that
-	// triggered it was, say, a missing Vite manifest or a session-storage fault.
+	// triggered it was, say, a missing Vite manifest or a malformed state cookie.
 	private static async Task HandleUnhandledExceptionAsync(HttpContext context)
 	{
 		context.Response.StatusCode = StatusCodes.Status500InternalServerError;

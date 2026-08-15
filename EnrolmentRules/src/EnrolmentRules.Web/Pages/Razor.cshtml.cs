@@ -12,11 +12,12 @@ using EquatableArray = Infrastructure.EquatableArray;
 using Subject = Domain.Subject;
 
 public sealed class RazorModel(
-	IEnrolmentSessionStore sessionStore,
+	IEnrolmentStateStore stateStore,
 	IEnrolmentPolicyRegistry registry,
+	IViteManifestReader manifestReader,
 	TimeProvider timeProvider) : PageModel
 {
-	private const string PolicySessionKey = "enrolment.policy";
+	private const string RazorSyncEntrySourcePath = "src/razor-sync.ts";
 
 	private EnrolmentOptionsService options = null!;
 
@@ -33,7 +34,7 @@ public sealed class RazorModel(
 
 	public EnrolmentResultsViewModel? Results { get; private set; }
 
-	/// <summary>The policy this request resolved to — the URL query value when valid, else the session's last choice, else the registry default.</summary>
+	/// <summary>The policy this request resolved to — the URL query value when valid, else the policy cookie's last choice, else the registry default.</summary>
 	public EnrolmentPolicyDescriptor SelectedPolicy { get; private set; } = null!;
 
 	/// <summary>Every registered policy's descriptor, in registration order — the source for the top switch link, never a hard-coded second list.</summary>
@@ -92,13 +93,41 @@ public sealed class RazorModel(
 	public bool IsGcseSubjectChosenElsewhere(int excludingIndex, string subjectKey) =>
 		Gcses.Where((_, idx) => idx != excludingIndex).Any(g => g.Subject == subjectKey);
 
-	public async Task<IActionResult> OnGetAsync(string? policy)
+	/// <summary>
+	///     The script/stylesheet paths for <c>razor-sync.ts</c> — the small bundle that mirrors the
+	///     rendered snapshot into the same <c>localStorage</c> key <c>/app</c> owns, and rehydrates from it
+	///     on a cold visit (see <see cref="IsSnapshotEmpty" />).
+	/// </summary>
+	public ViteAssetPaths SyncScriptAssets { get; private set; } = null!;
+
+	/// <summary>
+	///     Whether this response reflects a genuinely empty stored snapshot (no state cookie, or one that
+	///     decoded to nothing) — the signal <c>razor-sync.ts</c> uses to decide whether to rehydrate from
+	///     <c>localStorage</c> instead of trusting this render as authoritative.
+	/// </summary>
+	public bool IsSnapshotEmpty { get; private set; }
+
+	/// <summary>
+	///     Whether this GET followed a "Start over" redirect — <c>razor-sync.ts</c> treats this as an
+	///     explicit clear rather than a candidate for rehydration, even though the render is empty exactly
+	///     like a true cold visit.
+	/// </summary>
+	public bool JustCleared { get; private set; }
+
+	/// <summary>The currently bound facts snapshot, serialised the same way <c>/app</c> posts to the stateless API — <c>razor-sync.ts</c>'s sync target.</summary>
+	public string SnapshotJson =>
+		JsonSerializer.Serialize(BuildEvaluateRequest(), EnrolmentApiJsonContext.Default.EnrolmentEvaluateRequest);
+
+	public async Task<IActionResult> OnGetAsync(string? policy, bool cleared = false)
 	{
 		if (!ResolvePolicy(policy, out var redirect)) {
 			return redirect!;
 		}
 
-		var session = await sessionStore.LoadAsync(HttpContext.Session, HttpContext.RequestAborted);
+		JustCleared = cleared;
+		SyncScriptAssets = manifestReader.GetEntryAssets(RazorSyncEntrySourcePath);
+		var session = await stateStore.LoadAsync(HttpContext, HttpContext.RequestAborted);
+		IsSnapshotEmpty = IsEmpty(session);
 		Bind(session);
 		var student = EnrolmentFormMapper.ToStudentInput(session);
 		var comparison = registry.Compare(SelectedPolicy.Id, student, HttpContext.RequestAborted);
@@ -108,13 +137,31 @@ public sealed class RazorModel(
 		return Page();
 	}
 
+	private static bool IsEmpty(EnrolmentSession session) =>
+		session.DateOfBirth is null
+		&& session.Gcses.Count == 0
+		&& session.PriorQualifications.Count == 0
+		&& session.Hobbies.Count == 0
+		&& session.ChosenALevels.Count == 0;
+
+	private EnrolmentEvaluateRequest BuildEvaluateRequest() => new(
+		DateOfBirth,
+		EquatableArray.CopyOf(
+			Gcses.Select(static row => row.ToRow()).Where(static row => !row.IsEmpty).Select(static row => new EvaluateGcseRow(row.Subject, row.Grade))),
+		EquatableArray.CopyOf(
+			PriorQualifications.Select(static row => row.ToRow())
+							  .Where(static row => !row.IsEmpty)
+							  .Select(static row => new EvaluatePriorQualificationRow(row.Subject, row.Type?.ToString(), row.Grade))),
+		EquatableArray.CopyOf(Hobbies.Where(static hobby => !string.IsNullOrWhiteSpace(hobby))),
+		EquatableArray.CopyOf(ChosenALevels.Select(static subject => subject.Value)));
+
 	/// <summary>
 	///     Resolve the policy this request uses: the <paramref name="requested" /> URL query value when it
-	///     names a registered policy, else the session's last selection, else the registry default. Stores
-	///     the resolved id back into the session as a convenience for the next request without one. An
-	///     invalid/unknown URL value never falls back silently — it redirects to the canonical URL for the
-	///     resolved policy instead, so a bad link is visibly corrected rather than quietly served as if the
-	///     mistyped policy had been honoured.
+	///     names a registered policy, else the last policy cookie's selection, else the registry default.
+	///     Writes the resolved id back into that cookie as a convenience for the next request without one.
+	///     An invalid/unknown URL value never falls back silently — it redirects to the canonical URL for
+	///     the resolved policy instead, so a bad link is visibly corrected rather than quietly served as if
+	///     the mistyped policy had been honoured.
 	/// </summary>
 	private bool ResolvePolicy(string? requested, out IActionResult? redirect)
 	{
@@ -122,7 +169,7 @@ public sealed class RazorModel(
 			if (EnrolmentPolicySelector.TryResolve(registry, requested, out var fromUrl)) {
 				SelectedPolicy = fromUrl.Descriptor;
 				options = new(fromUrl, timeProvider);
-				HttpContext.Session.SetString(PolicySessionKey, SelectedPolicy.Id.Value);
+				EnrolmentPolicyCookie.Write(HttpContext, SelectedPolicy.Id.Value);
 				redirect = null;
 				return true;
 			}
@@ -134,8 +181,8 @@ public sealed class RazorModel(
 			return false;
 		}
 
-		var sessionPolicy = HttpContext.Session.GetString(PolicySessionKey);
-		var resolved = EnrolmentPolicySelector.TryResolve(registry, sessionPolicy, out var policy)
+		var cookiePolicy = EnrolmentPolicyCookie.Read(HttpContext);
+		var resolved = EnrolmentPolicySelector.TryResolve(registry, cookiePolicy, out var policy)
 			? policy
 			: registry.GetPolicy(registry.DefaultPolicyId);
 		SelectedPolicy = resolved.Descriptor;
@@ -151,10 +198,10 @@ public sealed class RazorModel(
 		}
 
 		if (Subject.TryParse(subject, out var parsed)) {
-			var session = await sessionStore.LoadAsync(HttpContext.Session, HttpContext.RequestAborted);
+			var session = await stateStore.LoadAsync(HttpContext, HttpContext.RequestAborted);
 			if (!session.ChosenALevels.Contains(parsed) && CanChoose(parsed, session)) {
-				await sessionStore.SaveAsync(
-					HttpContext.Session,
+				await stateStore.SaveAsync(
+					HttpContext,
 					session with {
 						ChosenALevels = EquatableArray.CopyOf([.. session.ChosenALevels, parsed]),
 					},
@@ -175,9 +222,9 @@ public sealed class RazorModel(
 		}
 
 		if (Subject.TryParse(subject, out var parsed)) {
-			var session = await sessionStore.LoadAsync(HttpContext.Session, HttpContext.RequestAborted);
-			await sessionStore.SaveAsync(
-				HttpContext.Session,
+			var session = await stateStore.LoadAsync(HttpContext, HttpContext.RequestAborted);
+			await stateStore.SaveAsync(
+				HttpContext,
 				session with {
 					ChosenALevels = EquatableArray.CopyOf(session.ChosenALevels.Where(s => s != parsed)),
 				},
@@ -197,10 +244,10 @@ public sealed class RazorModel(
 			return redirect!;
 		}
 
-		var session = await sessionStore.LoadAsync(HttpContext.Session, HttpContext.RequestAborted);
+		var session = await stateStore.LoadAsync(HttpContext, HttpContext.RequestAborted);
 		if (session.ChosenALevels.Count > 0) {
-			await sessionStore.SaveAsync(
-				HttpContext.Session,
+			await stateStore.SaveAsync(
+				HttpContext,
 				session with {
 					ChosenALevels = [],
 				},
@@ -268,17 +315,54 @@ public sealed class RazorModel(
 		return await SaveCurrentFactsAsync("hobbies-section");
 	}
 
+	/// <summary>
+	///     Clears the stored snapshot and redirects with <c>cleared=true</c>, so <c>razor-sync.ts</c> knows
+	///     this empty render is an explicit reset — not a cold visit to rehydrate from <c>localStorage</c>.
+	/// </summary>
 	public async Task<IActionResult> OnPostResetAsync(string? policy)
 	{
 		if (!ResolvePolicy(policy, out var redirect)) {
 			return redirect!;
 		}
 
-		await sessionStore.ResetAsync(HttpContext.Session, HttpContext.RequestAborted);
+		await stateStore.ResetAsync(HttpContext, HttpContext.RequestAborted);
 		return RedirectToPage(new
 		{
 			policy = SelectedPolicy.Id.Value,
+			cleared = true,
 		});
+	}
+
+	/// <summary>
+	///     Restores a full snapshot — including <see cref="ChosenALevels" />, which
+	///     <see cref="OnPostSaveFactsAsync" />/<see cref="EnrolmentFormMapper.Apply" /> deliberately leave
+	///     untouched — in one round trip. Posted only by <c>razor-sync.ts</c>'s cold-visit rehydration from
+	///     <c>localStorage</c>, never by a visible form, so unlike <see cref="OnPostChooseSubjectAsync" />
+	///     it skips <see cref="CanChoose" />'s eligibility gate: the restored basket already passed that
+	///     gate whenever it was first chosen, and re-deriving it here would just recompute what
+	///     <see cref="OnGetAsync" /> is about to compute anyway for the redirect target.
+	/// </summary>
+	public async Task<IActionResult> OnPostHydrateAsync(List<string> chosenALevels, string? policy)
+	{
+		if (!ResolvePolicy(policy, out var redirect)) {
+			return redirect!;
+		}
+
+		var current = await stateStore.LoadAsync(HttpContext, HttpContext.RequestAborted);
+		var input = new SaveFactsInput(
+			DateOfBirth,
+			EquatableArray.CopyOf(Gcses.Where(static row => row is not null).Select(static row => row.ToRow())),
+			EquatableArray.CopyOf(PriorQualifications.Where(static row => row is not null).Select(static row => row.ToRow())),
+			EquatableArray.CopyOf(Hobbies.Where(static hobby => hobby is not null)));
+
+		var restored = EnrolmentFormMapper.Apply(input, current) with {
+			ChosenALevels = EquatableArray.CopyOf(chosenALevels.Where(static value => Subject.TryParse(value, out _)).Select(Subject.Parse)),
+		};
+		await stateStore.SaveAsync(HttpContext, restored, HttpContext.RequestAborted);
+		return RedirectToPage(null, null, new
+		{
+			policy = SelectedPolicy.Id.Value,
+		}, "results-heading");
 	}
 
 	/// <summary>Project a session snapshot onto the form's bound properties for rendering.</summary>
@@ -322,14 +406,14 @@ public sealed class RazorModel(
 	/// <param name="fragment">Anchor id to redirect to, so the reload lands back near the row the user was editing instead of the page top.</param>
 	private async Task<IActionResult> SaveCurrentFactsAsync(string fragment)
 	{
-		var current = await sessionStore.LoadAsync(HttpContext.Session, HttpContext.RequestAborted);
+		var current = await stateStore.LoadAsync(HttpContext, HttpContext.RequestAborted);
 		var input = new SaveFactsInput(
 			DateOfBirth,
 			EquatableArray.CopyOf(Gcses.Where(static row => row is not null).Select(static row => row.ToRow())),
 			EquatableArray.CopyOf(PriorQualifications.Where(static row => row is not null).Select(static row => row.ToRow())),
 			EquatableArray.CopyOf(Hobbies.Where(static hobby => hobby is not null)));
 
-		await sessionStore.SaveAsync(HttpContext.Session, EnrolmentFormMapper.Apply(input, current), HttpContext.RequestAborted);
+		await stateStore.SaveAsync(HttpContext, EnrolmentFormMapper.Apply(input, current), HttpContext.RequestAborted);
 		return RedirectToPage(null, null, new
 		{
 			policy = SelectedPolicy.Id.Value,

@@ -11,9 +11,10 @@ container host.
 - **Listens on:** `8080` (`ASPNETCORE_HTTP_PORTS=8080`, the .NET image default). Plain HTTP —
   terminate TLS at a proxy or the platform's ingress.
 - **User:** non-root (`$APP_UID` from the runtime image).
-- **State:** in-memory session only (anonymous facts editing). No database, no volumes.
-  Sessions are per-instance and do not survive a restart — this constrains your scaling policy,
-  so read [Session state and scaling](#session-state-and-scaling) before deploying.
+- **State:** anonymous facts editing lives in the browser (a self-contained cookie plus
+  `localStorage`, not server memory) — no database, no volumes, and no server-side state to lose
+  on restart or scale-out. One caveat remains: Razor Pages' antiforgery token, so read
+  [Multi-instance scaling](#multi-instance-scaling) before deploying more than one instance.
 
 The `Dockerfile`, `.dockerignore`, and `compose.yaml` live in the `EnrolmentRules/` folder.
 **The build context must be that folder** — the Web project pulls in sibling projects, the
@@ -173,35 +174,41 @@ their ingress. Free tiers and UIs change — confirm current details. Overview, 
 | **DigitalOcean App Platform** | Connect repo, Dockerfile detected | Set source dir `EnrolmentRules`, HTTP port `8080`. Managed TLS + domain. |
 | **Azure Container Apps** | `az containerapp up` or a pushed image | Monthly free grant, scales to zero. Set target port `8080`. |
 
-### Session state and scaling
+### Multi-instance scaling
 
-**Read this before choosing a host or a scaling policy.** The web front-end keeps its
-anonymous facts editing in an **in-memory session, per instance, with no database**, and the
-DataProtection keys that encrypt the session cookie are ephemeral (hence the
+**Read this before choosing a host or a scaling policy.** Anonymous facts editing keeps no
+server-side state at all: `/razor` and `/app` both read/write the same browser `localStorage`
+entry (see `CLAUDE.md`'s "Client-side persistence" section), and `/razor`'s own per-request
+carrier across its POST → redirect → GET hop is a plain, self-contained cookie — the snapshot's
+own bytes, not a lookup key into server memory. Any instance can decode it, so **scaling out or
+to zero no longer drops a part-filled form or a chosen basket**, and no distributed cache or
+shared store is needed for that part.
+
+One thing this does *not* cover: Razor Pages' built-in antiforgery token (the hidden
+`__RequestVerificationToken` field every form posts back). It is still protected by ASP.NET
+Core's default `IDataProtectionProvider`, and this app configures no shared key ring — hence the
 `Storing keys in a directory ... may not be persisted outside of the container` warning in the
-container logs). Two consequences follow, and neither is a bug to be fixed in the app as it
-stands:
+container logs. A token issued by the instance that served a GET only validates on that same
+instance; a POST landing on a different instance fails antiforgery validation. Two ways to keep
+this safe without adding infrastructure:
 
-- **Scaling out loses sessions.** A user's next request can land on an instance that has never
-  seen their session, discarding a part-filled form. Pin to a single instance
-  (`--max-instances 1` on Cloud Run, one replica elsewhere) and/or enable sticky sessions
-  (`--session-affinity`, best-effort).
-- **Scaling to zero loses sessions.** When the last instance is destroyed on idle, in-memory
-  sessions die *and* the DataProtection keys regenerate, so cookies issued before the shutdown
-  can no longer be decrypted. Users who idle out start over. Instance pinning cannot fix this —
-  it is inherent to scale-to-zero plus in-memory state.
+- **Sticky routing** (`--session-affinity` on Cloud Run, best-effort; one replica elsewhere) so a
+  given browser's GET and follow-up POST keep landing on the same instance. This is what the
+  deploy script still sets — it is no longer needed for facts state, but is needed for antiforgery.
+- **A shared DataProtection key ring** (e.g. persist keys to a bucket or Redis) removes the
+  constraint entirely, letting any instance validate any other instance's tokens — real
+  infrastructure, not done here because sticky routing is free and sufficient for a demo.
 
-This trades against cold start, and the trade is worth making deliberately:
+`--max-instances` is otherwise unconstrained: nothing in this app needs a single-instance pin
+anymore. Scale-to-zero (`--min-instances 0`, the default) is safe too — a fresh instance has no
+facts state to lose, since none of it ever lived there.
 
 | Goal | Setting | Cost |
 |---|---|---|
-| Cheapest; demo/low traffic | scale to zero (`--min-instances 0`) | ~1-2 s first hit after idle; sessions dropped on scale-down. |
-| No cold starts, sessions survive idle | `--min-instances 1` | Billed continuously; leaves the always-free tier. |
+| Cheapest; demo/low traffic | scale to zero (`--min-instances 0`) | ~1-2 s first hit after idle. |
+| No cold starts | `--min-instances 1` | Billed continuously; leaves the always-free tier. |
 
-The cheapest way to have no cold start is to never go cold. If the app ever needs sessions to
-survive restarts and scale-out, the fix is upstream of hosting: back `ISession` and
-DataProtection with a shared store (e.g. Redis), after which both constraints disappear and
-multi-instance scaling becomes safe.
+The cheapest way to have no cold start is to never go cold.
 
 > **Cold start expectations.** The image is tuned for it (see [Base image / OS](#base-image--os)),
 > but a platform's cold start is *its* scheduling and image pull **plus** the app's ~0.5 s
@@ -234,15 +241,15 @@ gcloud run deploy enrolment-web \
   --source . \
   --region europe-west1 \
   --allow-unauthenticated \
-  --max-instances 1 \
   --session-affinity
 ```
 
 `--source .` builds the Dockerfile with Cloud Build, pushes to Artifact Registry, and deploys.
 Cloud Run routes to `8080` by default, so no port flag is needed. The command prints the public
-HTTPS URL. `--max-instances 1` and `--session-affinity` are not optional decoration — see
-[Session state and scaling](#session-state-and-scaling). `--allow-unauthenticated` makes the
-service **public to anyone with the URL**; drop it for a private service.
+HTTPS URL. `--session-affinity` is not optional decoration, even though facts state no longer
+needs it — antiforgery token validation still does, see
+[Multi-instance scaling](#multi-instance-scaling). `--allow-unauthenticated` makes the service
+**public to anyone with the URL**; drop it for a private service.
 
 `--source .` builds on Cloud Build, which does not set BuildKit's `TARGETARCH`. The
 `Dockerfile`'s `${TARGETARCH:-amd64}` default resolves the R2R RID to `linux-x64` there, which
@@ -531,8 +538,8 @@ docker image prune -f      # reclaim old layers
 ```
 
 For hands-off updates, a scheduled `docker compose pull && up -d` (cron) or a tool like
-Watchtower works; keep the single-replica caveat in mind, since a redeploy drops active
-sessions.
+Watchtower works — a redeploy no longer drops anyone's facts, since none of it lives in the
+container.
 
 ---
 

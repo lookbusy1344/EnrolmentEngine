@@ -49,7 +49,7 @@ public sealed partial class SaveFactsPostTests : IClassFixture<WebAppFactory>
 	[InlineData("-3", "1")]
 	[InlineData("7.6", "8")]
 	[InlineData("7.4", "7")]
-	public async Task Posting_a_grade_off_the_scale_normalises_it_before_it_reaches_the_session(string posted, string expected)
+	public async Task Posting_a_grade_off_the_scale_normalises_it_before_it_reaches_the_stored_snapshot(string posted, string expected)
 	{
 		using var client = factory.CreateClient(new() {
 			AllowAutoRedirect = false,
