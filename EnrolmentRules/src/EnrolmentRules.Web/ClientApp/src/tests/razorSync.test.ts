@@ -1,6 +1,6 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import type { EnrolmentSnapshot } from '../state/enrolmentState'
-import { loadSnapshot, saveSnapshot } from '../state/localStorageSnapshot'
+import { loadSnapshot, mirrorServerSnapshot, saveSnapshot } from '../state/localStorageSnapshot'
 
 const emptySnapshot: EnrolmentSnapshot = {
   dateOfBirth: null,
@@ -16,6 +16,15 @@ const sampleSnapshot: EnrolmentSnapshot = {
   priorQualifications: [{ subject: 'applied_science', type: 'BtecDiploma', grade: 'Merit' }],
   hobbies: ['chess_club'],
   chosenALevels: ['french'],
+}
+
+/** What a still-live `enrolment.state` cookie renders after /app has since added subjects. */
+const staleSnapshot: EnrolmentSnapshot = {
+  dateOfBirth: '2009-09-01',
+  gcses: [{ subject: 'biology', grade: 5 }],
+  priorQualifications: [],
+  hobbies: [],
+  chosenALevels: [],
 }
 
 function createFakeStorage(): Storage {
@@ -101,7 +110,67 @@ describe('razor-sync', () => {
 
     await loadRazorSync()
 
-    expect(loadSnapshot(localStorage)).toEqual({ snapshot: sampleSnapshot, selectedPolicyId: 'elite' })
+    expect(loadSnapshot(localStorage)).toEqual({
+      snapshot: sampleSnapshot,
+      selectedPolicyId: 'elite',
+      pendingSync: false,
+    })
+    expect(submitMock).not.toHaveBeenCalled()
+  })
+
+  // The bug this guards: a still-live enrolment.state cookie makes the render non-empty, so an
+  // emptiness check alone concludes the render is authoritative — silently dropping every fact
+  // /app added since that cookie was written, and overwriting localStorage with the stale copy.
+  it('rehydrates when localStorage carries /app edits a still-live state cookie predates', async () => {
+    saveSnapshot(sampleSnapshot, 'elite', localStorage)
+    renderDom({ snapshot: staleSnapshot, selectedPolicyId: 'elite', empty: false, cleared: false })
+
+    await loadRazorSync()
+
+    const form = document.getElementById('hydrate-form') as HTMLFormElement
+    expect(submitMock).toHaveBeenCalledOnce()
+    expect(form.querySelector('input[name="Gcses[0].Subject"]')).toHaveProperty('value', 'maths')
+    expect(form.querySelector('input[name="chosenALevels[0]"]')).toHaveProperty('value', 'french')
+    expect(loadSnapshot(localStorage).snapshot).toEqual(sampleSnapshot)
+  })
+
+  // Without this the hydrate POST's own redirect would still look pending and hydrate again, forever.
+  it('stops looking pending once hydration has been posted, so the redirect settles', async () => {
+    saveSnapshot(sampleSnapshot, 'elite', localStorage)
+    renderDom({ snapshot: staleSnapshot, selectedPolicyId: 'elite', empty: false, cleared: false })
+    await loadRazorSync()
+    expect(submitMock).toHaveBeenCalledOnce()
+
+    // The redirect that follows: the server now renders exactly what was hydrated.
+    submitMock.mockClear()
+    renderDom({ snapshot: sampleSnapshot, selectedPolicyId: 'elite', empty: false, cleared: false })
+    await loadRazorSync()
+
+    expect(submitMock).not.toHaveBeenCalled()
+    expect(loadSnapshot(localStorage)).toEqual({
+      snapshot: sampleSnapshot,
+      selectedPolicyId: 'elite',
+      pendingSync: false,
+    })
+  })
+
+  // "Start over" on /app empties localStorage while the /razor cookie still holds the old facts.
+  it('propagates an /app Start over instead of letting the stale cookie restore the old facts', async () => {
+    saveSnapshot(emptySnapshot, 'elite', localStorage)
+    renderDom({ snapshot: staleSnapshot, selectedPolicyId: 'elite', empty: false, cleared: false })
+
+    await loadRazorSync()
+
+    expect(submitMock).toHaveBeenCalledOnce()
+    expect(loadSnapshot(localStorage).snapshot).toEqual(emptySnapshot)
+  })
+
+  it('treats a mirrored render as settled, never as pending edits to post back', async () => {
+    mirrorServerSnapshot(sampleSnapshot, 'elite', localStorage)
+    renderDom({ snapshot: sampleSnapshot, selectedPolicyId: 'elite', empty: false, cleared: false })
+
+    await loadRazorSync()
+
     expect(submitMock).not.toHaveBeenCalled()
   })
 
@@ -111,7 +180,11 @@ describe('razor-sync', () => {
 
     await loadRazorSync()
 
-    expect(loadSnapshot(localStorage)).toEqual({ snapshot: emptySnapshot, selectedPolicyId: 'elite' })
+    expect(loadSnapshot(localStorage)).toEqual({
+      snapshot: emptySnapshot,
+      selectedPolicyId: 'elite',
+      pendingSync: false,
+    })
     expect(submitMock).not.toHaveBeenCalled()
   })
 
@@ -121,6 +194,10 @@ describe('razor-sync', () => {
     await loadRazorSync()
 
     expect(submitMock).not.toHaveBeenCalled()
-    expect(loadSnapshot(localStorage)).toEqual({ snapshot: emptySnapshot, selectedPolicyId: null })
+    expect(loadSnapshot(localStorage)).toEqual({
+      snapshot: emptySnapshot,
+      selectedPolicyId: null,
+      pendingSync: false,
+    })
   })
 })

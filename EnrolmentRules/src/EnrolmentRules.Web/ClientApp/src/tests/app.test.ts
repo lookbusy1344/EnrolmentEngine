@@ -3,7 +3,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import type { EnrolmentApiResult, EnrolmentEvaluateResponse, EnrolmentOptionsResponse } from '../api/contracts'
 import App from '../App.vue'
 import { emptySnapshot } from '../state/enrolmentState'
-import { saveSnapshot } from '../state/localStorageSnapshot'
+import { loadSnapshot, saveSnapshot } from '../state/localStorageSnapshot'
 
 const standardPolicy = { id: 'standard', displayName: 'Standard' }
 const elitePolicy = { id: 'elite', displayName: 'Elite' }
@@ -149,6 +149,27 @@ describe('App', () => {
     await flushPromises()
 
     expect(wrapper.text()).toContain('Elite')
+  })
+
+  // Facts must be durable the moment they change. Deferring the write behind the evaluate debounce
+  // left a window where navigating to /razor (a plain <a>, so a full page load) dropped the edit.
+  it('persists a fact edit immediately, without waiting on the evaluate debounce', async () => {
+    const fetch = stubFetch()
+
+    const wrapper = mount(App)
+    await flushPromises()
+    const evaluateCallsBefore = fetch.mock.calls.filter(([url]) =>
+      requestUrl(url).startsWith('/api/enrolment/evaluate'),
+    ).length
+
+    await wrapper.get('#date-of-birth').setValue('2009-09-01')
+    await flushPromises()
+
+    expect(loadSnapshot(localStorage).snapshot.dateOfBirth).toBe('2009-09-01')
+    // ...while the network call it shares a watcher with is still coalescing.
+    expect(fetch.mock.calls.filter(([url]) => requestUrl(url).startsWith('/api/enrolment/evaluate')).length).toBe(
+      evaluateCallsBefore,
+    )
   })
 
   it('switching policy re-evaluates the same basket under the new policy without clearing it', async () => {

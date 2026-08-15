@@ -491,15 +491,49 @@ section[aria-labelledby="results-heading"] > h2 {
 }
 
 /* Razor's JS-free "Empty basket" confirm: a <details> whose <summary> is styled as a button. Hide the
-   default disclosure triangle so it reads as a plain button; opening it reveals the confirm, closing it
-   cancels. The Vue front end does the same two-step with a local flag. */
+   default disclosure triangle so it reads as a plain button. Closed, the summary is the trash trigger;
+   open, it becomes the cross (cancel) in that same spot while the confirm reveals the tick to its left.
+   The Vue front end does the same two-step with a local flag. */
 .basket-empty > summary {
     list-style: none;
-    display: inline-block;
+    display: inline-flex;
 }
 
 .basket-empty > summary::-webkit-details-marker {
     display: none;
+}
+
+/* Confirming: lay the tick (confirm) and the summary-as-cross (cancel) in one row. row-reverse keeps
+   the summary — the trash icon's former slot — on the right, so a bounced double-tap lands on cancel. */
+.basket-empty[open] {
+    display: inline-flex;
+    flex-direction: row-reverse;
+    align-items: center;
+    gap: .5rem;
+}
+
+/* icon + accessible-name swap between the closed (trash) and open (cross) states */
+.basket-empty > summary .basket-empty-icon-cross,
+.basket-empty > summary .basket-empty-label-cross,
+.basket-empty[open] > summary .basket-empty-icon-bin,
+.basket-empty[open] > summary .basket-empty-label-bin {
+    display: none;
+}
+
+.basket-empty[open] > summary .basket-empty-icon-cross {
+    display: inline-block;
+}
+
+/* the open cross reads as a neutral cancel, not a second destructive control (Bootstrap secondary) */
+.basket-empty[open] > summary {
+    --bs-btn-color: var(--bs-secondary);
+    --bs-btn-border-color: var(--bs-secondary);
+    --bs-btn-hover-color: #fff;
+    --bs-btn-hover-bg: var(--bs-secondary);
+    --bs-btn-hover-border-color: var(--bs-secondary);
+    --bs-btn-active-color: #fff;
+    --bs-btn-active-bg: var(--bs-secondary);
+    --bs-btn-active-border-color: var(--bs-secondary);
 }
 
 /* the empty-basket trigger is a square-cornered icon button — a different shape from the rounded

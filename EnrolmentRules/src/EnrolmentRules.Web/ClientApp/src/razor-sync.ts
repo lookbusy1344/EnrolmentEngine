@@ -1,5 +1,5 @@
-import { clearSnapshot, loadSnapshot, saveSnapshot } from './state/localStorageSnapshot'
-import type { EnrolmentSnapshot } from './state/enrolmentState'
+import { loadSnapshot, mirrorServerSnapshot } from './state/localStorageSnapshot'
+import { emptySnapshot, type EnrolmentSnapshot } from './state/enrolmentState'
 
 /**
  * Keeps /razor's server-rendered facts in the same localStorage key/shape /app owns
@@ -27,19 +27,29 @@ function main(): void {
   const justCleared = flags.dataset.cleared === 'true'
 
   if (isEmpty && justCleared) {
-    clearSnapshot(selectedPolicyId, window.localStorage)
+    mirrorServerSnapshot(emptySnapshot, selectedPolicyId, window.localStorage)
     return
   }
 
-  if (isEmpty) {
-    const stored = loadSnapshot(localStorage)
-    if (!isEmptySnapshot(stored.snapshot)) {
-      submitHydrateForm(hydrateForm, stored.snapshot, stored.selectedPolicyId)
-      return
-    }
+  const stored = loadSnapshot(window.localStorage)
+
+  // Nothing either side can contribute.
+  if (isEmpty && isEmptySnapshot(stored.snapshot)) {
+    mirrorServerSnapshot(rendered, selectedPolicyId, window.localStorage)
+    return
   }
 
-  saveSnapshot(rendered, selectedPolicyId, window.localStorage)
+  // localStorage leads the server in two cases, and only the first is visible as an empty render:
+  // a cold visit (no state cookie, but a prior visit left a snapshot), and — the case emptiness
+  // misses — a state cookie that outlived a visit to /app, whose edits it therefore predates.
+  // Treating that stale render as authoritative would drop those edits and then mirror the stale
+  // copy over localStorage, losing them in /app too.
+  if (isEmpty || stored.pendingSync) {
+    submitHydrateForm(hydrateForm, stored.snapshot, stored.selectedPolicyId)
+    return
+  }
+
+  mirrorServerSnapshot(rendered, selectedPolicyId, window.localStorage)
 }
 
 function isEmptySnapshot(snapshot: EnrolmentSnapshot): boolean {
@@ -84,6 +94,9 @@ function submitHydrateForm(form: HTMLFormElement, snapshot: EnrolmentSnapshot, s
     form.action = url.toString()
   }
 
+  // These edits are now the server's problem. Settle them before navigating away, or the redirect
+  // this POST triggers would read as pending all over again and hydrate on every load, forever.
+  mirrorServerSnapshot(snapshot, selectedPolicyId, window.localStorage)
   form.submit()
 }
 

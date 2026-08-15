@@ -8,10 +8,9 @@ import HeroSection from './components/HeroSection.vue'
 import ResultsPanel from './components/ResultsPanel.vue'
 import { wholeYears } from './display/formatting'
 import { debounce } from './state/debounce'
-import { type GcseRow, type PriorQualificationRow, toEvaluateRequest } from './state/enrolmentState'
-import { clearSnapshot, loadSnapshot, saveSnapshot } from './state/localStorageSnapshot'
+import { emptySnapshot, type GcseRow, type PriorQualificationRow, toEvaluateRequest } from './state/enrolmentState'
+import { loadSnapshot, saveSnapshot } from './state/localStorageSnapshot'
 
-const SAVE_DEBOUNCE_MS = 400
 const EVALUATE_DEBOUNCE_MS = 400
 const POLICY_QUERY_PARAM = 'policy'
 
@@ -111,16 +110,17 @@ async function runEvaluate(): Promise<void> {
   }
 }
 
-const saveDebounced = debounce(() => {
-  saveSnapshot(snapshot, selectedPolicyId.value, window.localStorage)
-}, SAVE_DEBOUNCE_MS)
-
 const evaluateDebounced = debounce(() => {
   void runEvaluate()
 }, EVALUATE_DEBOUNCE_MS)
 
-// Facts (date of birth, GCSEs, prior qualifications, hobbies) debounce; choosing/removing a subject
-// evaluates immediately instead (see chooseSubject/removeSubject below).
+// Facts (date of birth, GCSEs, prior qualifications, hobbies) save straight away and evaluate on a
+// debounce; choosing/removing a subject evaluates immediately (see chooseSubject/removeSubject).
+//
+// Only the network call is worth coalescing. Persisting is a synchronous stringify + setItem of a
+// small blob, driven by discrete selections rather than keystrokes, so there is nothing to batch —
+// and deferring it left facts in memory alone, which the plain <a> across to /razor (a full page
+// load, not a route change) would then discard.
 watch(
   () => [
     snapshot.dateOfBirth,
@@ -134,14 +134,13 @@ watch(
       return
     }
 
-    saveDebounced.call()
+    saveSnapshot(snapshot, selectedPolicyId.value, window.localStorage)
     evaluateDebounced.call()
   },
 )
 
 function evaluateImmediately(): void {
   evaluateDebounced.cancel()
-  saveDebounced.cancel()
   saveSnapshot(snapshot, selectedPolicyId.value, window.localStorage)
   void runEvaluate()
 }
@@ -170,8 +169,9 @@ function clearBasket(): void {
 
 function startOver(): void {
   evaluateDebounced.cancel()
-  saveDebounced.cancel()
-  clearSnapshot(selectedPolicyId.value, window.localStorage)
+  // Saved (not merely cleared) so it counts as a pending edit: /razor's state cookie can outlive
+  // this page, and must be told the facts are gone rather than rendering them back.
+  saveSnapshot(emptySnapshot, selectedPolicyId.value, window.localStorage)
   suppressSnapshotSideEffects = true
   snapshot.dateOfBirth = options.value?.defaultDateOfBirth ?? null
   snapshot.gcses = []

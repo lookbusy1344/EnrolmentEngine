@@ -101,16 +101,25 @@
 				}
 			</ul>
 			<details class="basket-empty flex-shrink-0">
-				<summary id="basket-empty" class="btn btn-sm btn-outline-danger basket-empty-btn" aria-label="Empty basket" title="Empty basket">
-					<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" viewBox="0 0 16 16" aria-hidden="true">
+				<summary id="basket-empty" class="btn btn-sm btn-outline-danger basket-empty-btn basket-empty-toggle">
+					<svg class="basket-empty-icon basket-empty-icon-bin" xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" viewBox="0 0 16 16" aria-hidden="true">
 						<path d="M5.5 5.5A.5.5 0 0 1 6 6v6a.5.5 0 0 1-1 0V6a.5.5 0 0 1 .5-.5m2.5 0a.5.5 0 0 1 .5.5v6a.5.5 0 0 1-1 0V6a.5.5 0 0 1 .5-.5m3 .5a.5.5 0 0 0-1 0v6a.5.5 0 0 0 1 0z"/>
 						<path d="M14.5 3a1 1 0 0 1-1 1H13v9a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V4h-.5a1 1 0 0 1-1-1V2a1 1 0 0 1 1-1H6a1 1 0 0 1 1-1h2a1 1 0 0 1 1 1h3.5a1 1 0 0 1 1 1zM4.118 4 4 4.059V13a1 1 0 0 0 1 1h6a1 1 0 0 0 1-1V4.059L11.882 4zM2.5 3h11V2h-11z"/>
 					</svg>
+					<svg class="basket-empty-icon basket-empty-icon-cross" xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" viewBox="0 0 16 16" aria-hidden="true">
+						<path d="M2.146 2.146a.5.5 0 0 1 .708 0L8 7.293l5.146-5.147a.5.5 0 1 1 .708.708L8.707 8l5.147 5.146a.5.5 0 0 1-.708.708L8 8.707l-5.146 5.147a.5.5 0 0 1-.708-.708L7.293 8 2.146 2.854a.5.5 0 0 1 0-.708"/>
+					</svg>
+					@* summary text is its accessible name; it swaps with the icon so the label reads "Empty basket" closed, "Cancel" open. *@
+					<span class="visually-hidden basket-empty-label-bin">Empty basket</span>
+					<span class="visually-hidden basket-empty-label-cross">Cancel</span>
 				</summary>
-				<div id="basket-empty-confirm" class="d-inline-flex align-items-center gap-2 mt-2">
-					<span class="small">Empty the whole basket?</span>
+				<div id="basket-empty-confirm" class="basket-empty-confirm">
 					<form method="post" asp-page-handler="EmptyBasket" class="d-inline">
-						<button type="submit" class="btn btn-sm btn-danger">Yes, empty</button>
+						<button type="submit" class="btn btn-sm btn-danger basket-empty-btn" aria-label="Confirm empty basket" title="Confirm empty basket">
+							<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" viewBox="0 0 16 16" aria-hidden="true">
+								<path d="M13.854 3.646a.5.5 0 0 1 0 .708l-7 7a.5.5 0 0 1-.708 0l-3-3a.5.5 0 1 1 .708-.708L6.5 10.293l6.646-6.647a.5.5 0 0 1 .708 0"/>
+							</svg>
+						</button>
 					</form>
 				</div>
 			</details>

@@ -53,6 +53,15 @@ export async function setGcseGrade(page: Page, index: number, grade: number): Pr
   await page.locator(`label[for="gcse-grade-${index.toString()}-${grade.toString()}"]`).click()
 }
 
+/** Waits until /app's localStorage write has landed (it runs on Vue's watcher tick) and mentions `expectedFact`. */
+export async function waitForStoredFacts(page: Page, expectedFact: string): Promise<void> {
+  await page.waitForFunction(
+    (fact) => (window.localStorage.getItem('enrolmentRules.vue.snapshot.v1') ?? '').includes(fact),
+    expectedFact,
+    { timeout: 10_000 },
+  )
+}
+
 /** Only the single project named `projectName` runs this test — for checks that don't depend on viewport size. */
 export function skipUnlessProject(testInfo: { project: { name: string } }, projectName: string): boolean {
   return testInfo.project.name !== projectName
