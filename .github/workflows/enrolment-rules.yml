@@ -1,7 +1,8 @@
 name: EnrolmentRules CI
 
-# Build, verify formatting and run tests whenever the EnrolmentRules .NET
-# solution changes. Mirrors scripts/pre-commit.sh.
+# Build, verify formatting and run the full test suite (.NET + ClientApp unit
+# tests + Playwright e2e) whenever the EnrolmentRules solution changes.
+# Mirrors scripts/all-test.sh.
 on:
   push:
     paths:
@@ -30,7 +31,7 @@ jobs:
   build-test:
     name: Build, format & test
     runs-on: ubuntu-latest
-    timeout-minutes: 15
+    timeout-minutes: 25
     steps:
       - uses: actions/checkout@v7
 
@@ -51,14 +52,16 @@ jobs:
         with:
           dotnet-version: '10.0.x'
 
-      - name: Restore
-        run: dotnet restore "$SOLUTION"
+      - name: Install ClientApp dependencies
+        working-directory: EnrolmentRules/src/EnrolmentRules.Web/ClientApp
+        run: pnpm install --frozen-lockfile
 
-      - name: Build
-        run: dotnet build "$SOLUTION" --no-restore
+      - name: Install Playwright browsers
+        working-directory: EnrolmentRules/src/EnrolmentRules.Web/ClientApp
+        run: pnpm exec playwright install --with-deps chromium
 
       - name: Verify formatting
         run: dotnet format "$SOLUTION" --verify-no-changes
 
-      - name: Test
-        run: dotnet test "$SOLUTION" --no-build
+      - name: Run full test suite
+        run: ./EnrolmentRules/scripts/all-test.sh
