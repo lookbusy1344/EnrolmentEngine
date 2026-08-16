@@ -2,7 +2,7 @@
 import { computed, ref, watch } from 'vue'
 import type { ChoiceStatus, ExplanationResponse } from '../api/contracts'
 import { prettify } from '../display/formatting'
-import { gcseScoreboard, type GcseRow } from '../state/enrolmentState'
+import { type GcseRow, gcseScoreboard } from '../state/enrolmentState'
 
 /** Mirrors EnrolmentRules.Web.Models.BasketEntry — status (Available/Unavailable/NotOffered) drives the pill first; an amber Available choice keeps its own "Borderline" flag. */
 const AMBER = 'Amber'

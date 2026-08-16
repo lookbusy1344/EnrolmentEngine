@@ -57,6 +57,13 @@ public sealed class EnrolmentOptionsService(EnrolmentPolicy policy, TimeProvider
 		[QualificationType.Nvq] = "NVQ examples",
 	};
 
+	/// <summary>
+	///     The GCSE keys that lead <see cref="GcseSubjectOptions" /> ahead of the alphabet, in display
+	///     order — English Language and Maths gate eligibility (§ Accessible tier policy), so the picker
+	///     surfaces them first rather than wherever "e" and "m" happen to sort.
+	/// </summary>
+	private static readonly string[] PinnedGcseSubjects = ["english_language", "maths"];
+
 	private IEnrolmentEvaluator Evaluator => policy.Engine;
 
 	/// <summary>The selected policy's descriptor and the caller's registry snapshot, so the response can name both.</summary>
@@ -64,13 +71,6 @@ public sealed class EnrolmentOptionsService(EnrolmentPolicy policy, TimeProvider
 
 	/// <summary>The authoritative A-level list, in catalogue order — the web layer keeps no parallel subject list.</summary>
 	public IReadOnlyList<Subject> ALevelSubjects => Evaluator.Catalogue.Subjects;
-
-	/// <summary>
-	///     The GCSE keys that lead <see cref="GcseSubjectOptions" /> ahead of the alphabet, in display
-	///     order — English Language and Maths gate eligibility (§ Accessible tier policy), so the picker
-	///     surfaces them first rather than wherever "e" and "m" happen to sort.
-	/// </summary>
-	private static readonly string[] PinnedGcseSubjects = ["english_language", "maths"];
 
 	/// <summary>
 	///     The recognised GCSE subject keys <see cref="Domain.StudentValidator" /> accepts, with

@@ -44,6 +44,7 @@ internal sealed class RatingEvaluator(
 	///     <see cref="EligibilityFailureReason" />.
 	/// </summary>
 	public const string BestGcseTotalRule = "BestEightTotal";
+
 	public const string TopGcseAverageRule = "TopSevenAverage";
 
 	/// <summary>Separator between the subject and rating segments of a subject-rating rule name.</summary>

@@ -61,8 +61,7 @@ public sealed class EliteEligibilityTests
 		result.Eligible.Should().BeFalse();
 		result.EligibilityReasons.Should().Contain(r => r.Contains(BestEightTotalReason, StringComparison.Ordinal));
 		// The reason spells out the gap: the 60-point minimum against the student's actual 56.
-		result.EligibilityReasons.Should().Contain(
-			r => r.Contains("needs 60", StringComparison.Ordinal) && r.Contains("actual 56", StringComparison.Ordinal));
+		result.EligibilityReasons.Should().Contain(r => r.Contains("needs 60", StringComparison.Ordinal) && r.Contains("actual 56", StringComparison.Ordinal));
 	}
 
 	[Fact]
@@ -137,8 +136,7 @@ public sealed class EliteEligibilityTests
 
 		belowResult.EligibilityReasons.Should().Contain(r => r.Contains(TopSevenAverageReason, StringComparison.Ordinal));
 		// The reason spells out the gap: the 7.0 average minimum against the student's actual 6.9 (48 ÷ 7).
-		belowResult.EligibilityReasons.Should().Contain(
-			r => r.Contains("needs 7.0", StringComparison.Ordinal) && r.Contains("actual 6.9", StringComparison.Ordinal));
+		belowResult.EligibilityReasons.Should().Contain(r => r.Contains("needs 7.0", StringComparison.Ordinal) && r.Contains("actual 6.9", StringComparison.Ordinal));
 		atResult.EligibilityReasons.Should().NotContain(r => r.Contains(TopSevenAverageReason, StringComparison.Ordinal));
 	}
 

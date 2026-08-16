@@ -447,7 +447,9 @@ public sealed class AggregationTests
 		// high_attainment_max_chosen_a_levels are both 4: a normal-attainment student is already at the
 		// "raised" ceiling, so "rising to 4 ... and yours is 6.0" would be nonsensical against a limit
 		// that already reads 4.
-		var thresholds = Harness.Thresholds with { MaxChosenALevels = 4 };
+		var thresholds = Harness.Thresholds with {
+			MaxChosenALevels = 4,
+		};
 		var (workflows, rulesEngine) = Harness.BuildFromShippedWorkflows();
 		var engine = new EnrolmentEngine(rulesEngine, thresholds, Harness.Catalogue, Harness.AsOf, Harness.Scale, workflows);
 		var student = StrongStudent() with {

@@ -1,7 +1,6 @@
 namespace EnrolmentRules.Web.Services;
 
 using System.Text.Json;
-using Microsoft.AspNetCore.Http;
 using Models;
 
 /// <summary>Loads and saves the <see cref="EnrolmentSession" /> snapshot held in a plain, self-contained cookie.</summary>

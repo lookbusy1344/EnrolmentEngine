@@ -2,7 +2,6 @@ namespace EnrolmentRules.Web.Tests;
 
 using AwesomeAssertions;
 using Domain;
-using Microsoft.AspNetCore.Http;
 using Microsoft.Net.Http.Headers;
 using Models;
 using Services;

@@ -1,7 +1,5 @@
 namespace EnrolmentRules.Web.Services;
 
-using Microsoft.AspNetCore.Http;
-
 /// <summary>
 ///     The last policy id a request resolved to, carried the same way <see cref="IEnrolmentStateStore" />
 ///     carries the facts snapshot — a small, self-contained cookie, not server-side state.

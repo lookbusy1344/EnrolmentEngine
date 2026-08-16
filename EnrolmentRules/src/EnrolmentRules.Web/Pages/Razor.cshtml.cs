@@ -89,10 +89,6 @@ public sealed class RazorModel(
 	/// </summary>
 	public GcseScoreboard Scoreboard { get; private set; }
 
-	/// <summary>Whether another GCSE row (not <paramref name="excludingIndex" />) already names <paramref name="subjectKey" />.</summary>
-	public bool IsGcseSubjectChosenElsewhere(int excludingIndex, string subjectKey) =>
-		Gcses.Where((_, idx) => idx != excludingIndex).Any(g => g.Subject == subjectKey);
-
 	/// <summary>
 	///     The script/stylesheet paths for <c>razor-sync.ts</c> — the small bundle that mirrors the
 	///     rendered snapshot into the same <c>localStorage</c> key <c>/app</c> owns, and rehydrates from it
@@ -117,6 +113,10 @@ public sealed class RazorModel(
 	/// <summary>The currently bound facts snapshot, serialised the same way <c>/app</c> posts to the stateless API — <c>razor-sync.ts</c>'s sync target.</summary>
 	public string SnapshotJson =>
 		JsonSerializer.Serialize(BuildEvaluateRequest(), EnrolmentApiJsonContext.Default.EnrolmentEvaluateRequest);
+
+	/// <summary>Whether another GCSE row (not <paramref name="excludingIndex" />) already names <paramref name="subjectKey" />.</summary>
+	public bool IsGcseSubjectChosenElsewhere(int excludingIndex, string subjectKey) =>
+		Gcses.Where((_, idx) => idx != excludingIndex).Any(g => g.Subject == subjectKey);
 
 	public async Task<IActionResult> OnGetAsync(string? policy, bool cleared = false)
 	{
@@ -150,8 +150,8 @@ public sealed class RazorModel(
 			Gcses.Select(static row => row.ToRow()).Where(static row => !row.IsEmpty).Select(static row => new EvaluateGcseRow(row.Subject, row.Grade))),
 		EquatableArray.CopyOf(
 			PriorQualifications.Select(static row => row.ToRow())
-							  .Where(static row => !row.IsEmpty)
-							  .Select(static row => new EvaluatePriorQualificationRow(row.Subject, row.Type?.ToString(), row.Grade))),
+							   .Where(static row => !row.IsEmpty)
+							   .Select(static row => new EvaluatePriorQualificationRow(row.Subject, row.Type?.ToString(), row.Grade))),
 		EquatableArray.CopyOf(Hobbies.Where(static hobby => !string.IsNullOrWhiteSpace(hobby))),
 		EquatableArray.CopyOf(ChosenALevels.Select(static subject => subject.Value)));
 

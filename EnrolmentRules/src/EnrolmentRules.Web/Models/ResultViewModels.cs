@@ -56,14 +56,14 @@ public sealed record BasketEntry(Subject Subject, ChoiceStatus Status, Rating? R
 		var ratings = comparison.Explanation.Explanations.ToDictionary(static e => e.Subject, static e => e.Rating);
 		return [
 			.. comparison.ChoiceStatuses
-							  .Select(status =>
-								  new BasketEntry(
-									  status.Subject,
-									  status.Status,
-									  ratings.TryGetValue(status.Subject, out var rating) ? rating : null,
-									  status.Reason))
-							  .OrderBy(static entry => entry.IsInvalid)
-							  .ThenBy(static entry => TextFormatting.Prettify(entry.Subject.Value), StringComparer.Ordinal),
+						 .Select(status =>
+							 new BasketEntry(
+								 status.Subject,
+								 status.Status,
+								 ratings.TryGetValue(status.Subject, out var rating) ? rating : null,
+								 status.Reason))
+						 .OrderBy(static entry => entry.IsInvalid)
+						 .ThenBy(static entry => TextFormatting.Prettify(entry.Subject.Value), StringComparer.Ordinal),
 		];
 	}
 }

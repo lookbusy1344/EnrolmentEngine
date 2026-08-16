@@ -2,6 +2,7 @@ namespace EnrolmentRules.Tests;
 
 using AwesomeAssertions;
 using Domain;
+using Prediction;
 
 /// <summary>
 ///     The GCSE scoreboard is the live basket tally: count, summed points and mean over a student's graded
@@ -51,6 +52,6 @@ public sealed class GcseScoreboardTests
 	{
 		IReadOnlyList<GcseResult> gcses = [new("maths", 6), new("physics", 4), new("chemistry", 5)];
 
-		GcseScoreboard.From(gcses).Average.Should().Be(Prediction.GradePredictor.AverageGcseScore(gcses));
+		GcseScoreboard.From(gcses).Average.Should().Be(GradePredictor.AverageGcseScore(gcses));
 	}
 }
