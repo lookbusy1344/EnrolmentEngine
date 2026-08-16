@@ -58,7 +58,7 @@ describe('GcseRows', () => {
     ])
   })
 
-  // site.css's .gcse-grade-picker gives each button a fixed fifth of the row below Bootstrap's md
+  // site.css's .gcse-grade-picker gives each button a fixed fifth of the row below Bootstrap's sm
   // breakpoint; without it the group wraps ragged on a phone. /razor carries the same class.
   it('marks the grade group with the shared phone-layout class', () => {
     const wrapper = mount(GcseRows, { props: { rows: [], subjectOptions, 'onUpdate:rows': () => undefined } })

@@ -65,7 +65,7 @@ public sealed partial class StructuralMarkupTests : IClassFixture<WebAppFactory>
 		var html = await GetIndexHtmlAsync();
 
 		// site.css's .gcse-grade-picker gives each of the 1-9 buttons a fixed fifth of the row below
-		// Bootstrap's md breakpoint; without it the group wraps ragged on a phone (see Razor.cshtml
+		// Bootstrap's sm breakpoint; without it the group wraps ragged on a phone (see Razor.cshtml
 		// and the Vue GcseRows component, which must stay in step).
 		html.Should().Contain("btn-group btn-group-sm flex-wrap gcse-grade-picker");
 	}

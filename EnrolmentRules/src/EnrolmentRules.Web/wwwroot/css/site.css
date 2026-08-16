@@ -681,17 +681,18 @@ legend {
     opacity: 1;
 }
 
-/* The GCSE 1-9 toggle group. Below Bootstrap's md breakpoint the group is full width and has to
-   wrap — nine buttons never fit on a phone row. Bootstrap's own `flex: 1 1 auto` wraps it ragged
-   (1-6 on one row, then three much wider buttons), which no utility class can pin down, so each
-   button gets a fixed fifth of the row: 1-5 then 6-9, all the same width. Growth is off on purpose
-   — grow:1 would stretch the short second row back out of step. Above md the group is
-   content-width on one row and Bootstrap's sizing is restored untouched. */
+/* The GCSE 1-9 toggle group. Below Bootstrap's sm breakpoint (phone portrait) the group is full
+   width and has to wrap — nine buttons never fit on a phone-portrait row. Bootstrap's own
+   `flex: 1 1 auto` wraps it ragged (1-6 on one row, then three much wider buttons), which no
+   utility class can pin down, so each button gets a fixed fifth of the row: 1-5 then 6-9, all the
+   same width. Growth is off on purpose — grow:1 would stretch the short second row back out of
+   step. From sm up — phone landscape included, not just tablet/desktop — the group fits nine
+   buttons on one row and Bootstrap's sizing is restored untouched. */
 .gcse-grade-picker > .btn {
     flex: 0 0 20%;
 }
 
-@media (min-width: 768px) {
+@media (min-width: 576px) {
     .gcse-grade-picker > .btn {
         flex: 1 1 auto;
     }
