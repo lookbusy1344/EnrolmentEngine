@@ -1,6 +1,5 @@
 namespace EnrolmentRules.Tests;
 
-using System.Text.RegularExpressions;
 using AwesomeAssertions;
 using Microsoft.CodeAnalysis;
 using Microsoft.CodeAnalysis.CSharp;
@@ -12,14 +11,15 @@ using Microsoft.CodeAnalysis.CSharp.Syntax;
 ///     both mean exactly what <c>++count</c> / <c>++i</c> mean, so the prefix form is used consistently and
 ///     the postfix form is reserved for the cases that genuinely read the pre-increment value
 ///     (<c>var b = a++;</c>, <c>buffer[i++] = x;</c>, <c>return count--;</c>), where it stays untouched.
-///     Scans the tracked <c>.cs</c> and <c>.cshtml</c> sources under <c>src</c> and <c>tests</c>.
+///     Scans the tracked <c>.cs</c> and <c>.cshtml</c> sources under <c>src</c>, <c>tests</c>, and
+///     <c>samples</c>.
 /// </summary>
 public sealed class CodeStyle_PostfixIncrement
 {
 	[Fact]
-	public void repository_sources_do_not_discard_a_postfix_increment_result()
+	public void Repository_sources_do_not_discard_a_postfix_increment_result()
 	{
-		var violations = SourceFiles()
+		var violations = RepositorySourceFiles.CSharpAndRazor()
 						 .SelectMany(static file => PostfixIncrementGuard.FindViolations(file, File.ReadAllText(file)))
 						 .ToArray();
 
@@ -40,7 +40,7 @@ public sealed class CodeStyle_PostfixIncrement
 	[InlineData("while (count < 10) { count++; }")]
 	[InlineData("while (count < 10) count++;")] // no braces — still an expression statement
 	[InlineData("do { count++; } while (count < 10);")]
-	public void discarded_postfix_result_is_a_violation(string statement)
+	public void Discarded_postfix_result_is_a_violation(string statement)
 	{
 		var source = $"class Example {{ int count; void M(int[] values) {{ {statement} }} }}";
 
@@ -56,7 +56,7 @@ public sealed class CodeStyle_PostfixIncrement
 	[InlineData("if (count++ > 0) { }")] // result used as a condition
 	[InlineData("while (count++ < 10) { }")] // result used as a loop condition
 	[InlineData("do { } while (count-- > 0);")] // result used as a loop condition
-	public void used_or_prefix_forms_are_not_violations(string statement)
+	public void Used_or_prefix_forms_are_not_violations(string statement)
 	{
 		var source = $"class Example {{ int count; void M(int[] values) {{ {statement} }} static void M2(int v) {{ }} }}";
 
@@ -68,50 +68,27 @@ public sealed class CodeStyle_PostfixIncrement
 	[InlineData("@{ counter++; }")]
 	[InlineData("@while (counter < 10) { counter++; <p>@counter</p> }")]
 	[InlineData("@do { counter++; } while (counter < 10)")]
-	public void razor_discarded_postfix_result_is_a_violation(string source) =>
+	[InlineData("@{ values[index]++; }")]
+	[InlineData("@for (var i = 0, j = 0; i < Model.Rows.Count; i++, j++) { <p>@i @j</p> }")]
+	public void Razor_discarded_postfix_result_is_a_violation(string source) =>
 		PostfixIncrementGuard.FindViolations("Example.cshtml", source).Should().NotBeEmpty();
 
 	[Theory]
-	[InlineData("<div class=\"card card--narrow\"></div>")]
+	[InlineData("<div class=\"jt-card jt-card--narrow\"></div>")]
 	[InlineData("<option value=\"\">-- none --</option>")]
 	[InlineData("@* a comment -- with dashes *@")]
 	[InlineData("@for (var i = 0; i < Model.Rows.Count; ++i) { <p>@i</p> }")]
 	[InlineData("@{ var id = Next(counter++); }")] // result used
 	[InlineData("@while (counter++ < 10) { <p>@counter</p> }")] // result used as a loop condition
 	[InlineData("<div style=\"color: var(--bs-body-color)\"></div>")]
-	public void razor_markup_and_prefix_forms_are_not_violations(string source) =>
+	[InlineData("@* Example only: counter++; *@")]
+	[InlineData("<code>counter++;</code>")]
+	public void Razor_markup_and_prefix_forms_are_not_violations(string source) =>
 		PostfixIncrementGuard.FindViolations("Example.cshtml", source).Should().BeEmpty();
-
-	private static IEnumerable<string> SourceFiles()
-	{
-		foreach (var top in (string[])["src", "tests"]) {
-			var directory = Path.Combine(Harness.RepoRoot, top);
-			foreach (var file in Directory.EnumerateFiles(directory, "*.cs", SearchOption.AllDirectories)
-										  .Concat(Directory.EnumerateFiles(directory, "*.cshtml", SearchOption.AllDirectories))
-										  .Where(static file => !IsGeneratedOutput(file))) {
-				yield return file;
-			}
-		}
-	}
-
-	private static bool IsGeneratedOutput(string file)
-	{
-		var segments = file.Split(Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar);
-		return segments.Contains("bin") || segments.Contains("obj");
-	}
 }
 
-internal static partial class PostfixIncrementGuard
+internal static class PostfixIncrementGuard
 {
-	// The .cshtml files embed C# but Roslyn cannot parse Razor, so scan their raw text for the two discarded
-	// shapes: the `x++;` statement, and the incrementor closing a `for` header. Anchoring each alternative
-	// that tightly keeps both markup (`card--narrow`, `-- none --`, CSS `--bs-*` custom properties) and
-	// genuine value-using postfixes (`new(_nextId++)`) out of it.
-	[GeneratedRegex(
-		@"(?:[;{}\s][A-Za-z_][\w.]*(?:\+\+|--)\s*;)|(?:\bfor\s*\([^)]*;[^)]*;\s*[A-Za-z_][\w.]*(?:\+\+|--)\s*\))",
-		RegexOptions.CultureInvariant)]
-	private static partial Regex RazorDiscardedPostfix();
-
 	public static IEnumerable<string> FindViolations(string fileName, string source) =>
 		fileName.EndsWith(".cshtml", StringComparison.OrdinalIgnoreCase)
 			? RazorViolations(fileName, source)
@@ -119,10 +96,14 @@ internal static partial class PostfixIncrementGuard
 
 	private static IEnumerable<string> RazorViolations(string fileName, string source)
 	{
-		foreach (Match match in RazorDiscardedPostfix().Matches(source)) {
-			var line = source.Take(match.Index).Count(static c => c == '\n') + 1;
-			yield return Describe(fileName, line);
-		}
+		var document = RazorCSharpDocument.Parse(fileName, source);
+		return document.Root.DescendantNodes()
+					   .OfType<PostfixUnaryExpressionSyntax>()
+					   .Where(IsIncrementOrDecrement)
+					   .Where(IsResultDiscarded)
+					   .Select(document.OriginalLine)
+					   .Where(static line => line.HasValue)
+					   .Select(line => Describe(fileName, line!.Value));
 	}
 
 	private static IEnumerable<string> SyntaxViolations(string fileName, string source)

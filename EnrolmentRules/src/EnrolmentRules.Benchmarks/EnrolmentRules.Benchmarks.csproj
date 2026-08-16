@@ -13,7 +13,13 @@
     </ItemGroup>
 
     <ItemGroup>
-        <PackageReference Include="BenchmarkDotNet" Version="0.15.8"/>
+        <!-- PrivateAssets stops BenchmarkDotNet's own Roslyn dependency (used for its generated benchmark
+             runners) from flowing transitively into EnrolmentRules.Tests, which references this project
+             only so CodeStyle_StructSize can Assembly.Load it, and pins a different Microsoft.CodeAnalysis
+             version for Razor parsing. -->
+        <PackageReference Include="BenchmarkDotNet" Version="0.15.8">
+            <PrivateAssets>all</PrivateAssets>
+        </PackageReference>
     </ItemGroup>
 
 </Project>

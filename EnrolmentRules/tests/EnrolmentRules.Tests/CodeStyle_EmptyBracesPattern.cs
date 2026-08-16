@@ -1,6 +1,5 @@
 namespace EnrolmentRules.Tests;
 
-using System.Text.RegularExpressions;
 using AwesomeAssertions;
 using Microsoft.CodeAnalysis.CSharp;
 using Microsoft.CodeAnalysis.CSharp.Syntax;
@@ -9,14 +8,15 @@ using Microsoft.CodeAnalysis.CSharp.Syntax;
 ///     Architecture guard for CLAUDE.md's ban on the empty property pattern with binding
 ///     (<c>x is { } y</c> / <c>x is not { } y</c>). It hides a null test and a rebind behind empty braces;
 ///     a named type pattern (<c>x is SomeType y</c>) is real pattern matching and stays fine. This test scans
-///     the tracked <c>.cs</c> and <c>.cshtml</c> sources so the pattern cannot creep back in.
+///     the tracked <c>.cs</c> and <c>.cshtml</c> sources under <c>src</c>, <c>tests</c>, and <c>samples</c> so
+///     the pattern cannot creep back in.
 /// </summary>
 public sealed class CodeStyle_EmptyBracesPattern
 {
 	[Fact]
-	public void repository_sources_do_not_use_the_empty_braces_property_pattern()
+	public void Repository_sources_do_not_use_the_empty_braces_property_pattern()
 	{
-		var violations = SourceFiles()
+		var violations = RepositorySourceFiles.CSharpAndRazor()
 						 .SelectMany(static file => EmptyBracesPatternGuard.FindViolations(file, File.ReadAllText(file)))
 						 .ToArray();
 
@@ -28,7 +28,7 @@ public sealed class CodeStyle_EmptyBracesPattern
 	[InlineData("if (x is not { } y) { }")]
 	[InlineData("var z = x is { } y ? y : null;")]
 	[InlineData("_ = value is not {  } bound;")]
-	public void empty_braces_binding_is_a_violation(string statement)
+	public void Empty_braces_binding_is_a_violation(string statement)
 	{
 		var source = $"class Example {{ void M(object? x, object? value) {{ {statement} }} }}";
 
@@ -41,7 +41,7 @@ public sealed class CodeStyle_EmptyBracesPattern
 	[InlineData("if (x is not null) { }")] // plain null guard — no binding
 	[InlineData("if (x is { Length: 0 } y) { }")] // non-empty property pattern — real matching
 	[InlineData("if (x is (var a, var b)) { _ = a; _ = b; }")] // positional pattern — allowed
-	public void allowed_patterns_are_not_violations(string statement)
+	public void Allowed_patterns_are_not_violations(string statement)
 	{
 		var source = $"class Example {{ void M(object? x, (int, int) t) {{ {statement} }} }}";
 
@@ -49,50 +49,45 @@ public sealed class CodeStyle_EmptyBracesPattern
 	}
 
 	[Fact]
-	public void razor_empty_braces_binding_is_a_violation()
+	public void Razor_empty_braces_binding_is_a_violation()
 	{
 		const string source = "@if (Model.Results is not { } results) { <p>@results</p> }";
 
 		EmptyBracesPatternGuard.FindViolations("Example.cshtml", source).Should().NotBeEmpty();
 	}
 
-	private static IEnumerable<string> SourceFiles()
+	[Fact]
+	public void Razor_unicode_empty_braces_binding_is_a_violation()
 	{
-		foreach (var top in (string[])["src", "tests"]) {
-			var directory = Path.Combine(Harness.RepoRoot, top);
-			foreach (var file in Directory.EnumerateFiles(directory, "*.cs", SearchOption.AllDirectories)
-										  .Concat(Directory.EnumerateFiles(directory, "*.cshtml", SearchOption.AllDirectories))
-										  .Where(static file => !IsGeneratedOutput(file))) {
-				yield return file;
-			}
-		}
+		const string source = "@if (Model.Results is not { } résultats) { <p>@résultats</p> }";
+
+		EmptyBracesPatternGuard.FindViolations("Example.cshtml", source).Should().NotBeEmpty();
 	}
 
-	private static bool IsGeneratedOutput(string file)
-	{
-		var segments = file.Split(Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar);
-		return segments.Contains("bin") || segments.Contains("obj");
-	}
+	[Theory]
+	[InlineData("@* Documentation: value is { } bound. *@")]
+	[InlineData("<code>value is { } bound</code>")]
+	public void Razor_non_code_empty_braces_text_is_not_a_violation(string source) =>
+		EmptyBracesPatternGuard.FindViolations("Example.cshtml", source).Should().BeEmpty();
 }
 
-internal static partial class EmptyBracesPatternGuard
+internal static class EmptyBracesPatternGuard
 {
-	// The .cshtml files embed C# but Roslyn cannot parse Razor, so scan their raw text: `is [not] { } binder`.
-	[GeneratedRegex(@"\bis\s+(?:not\s+)?\{\s*\}\s+[A-Za-z_]\w*", RegexOptions.CultureInvariant)]
-	private static partial Regex RazorEmptyBraces();
-
 	public static IEnumerable<string> FindViolations(string fileName, string source) =>
 		fileName.EndsWith(".cshtml", StringComparison.OrdinalIgnoreCase)
 			? RazorViolations(fileName, source)
 			: SyntaxViolations(fileName, source);
 
-	private static IEnumerable<string> RazorViolations(string fileName, string source)
-	{
-		foreach (Match match in RazorEmptyBraces().Matches(source)) {
-			var line = source.Take(match.Index).Count(static c => c == '\n') + 1;
-			yield return $"{Path.GetFileName(fileName)}:{line}: forbidden empty-braces property pattern";
-		}
-	}
+	private static IEnumerable<string> RazorViolations(string fileName, string source) =>
+		RazorSyntaxViolations(fileName, RazorCSharpDocument.Parse(fileName, source));
+
+	private static IEnumerable<string> RazorSyntaxViolations(string fileName, RazorCSharpDocument document) =>
+		document.Root.DescendantNodes()
+				.OfType<RecursivePatternSyntax>()
+				.Where(IsEmptyBracesBinding)
+				.Select(document.OriginalLine)
+				.Where(static line => line.HasValue)
+				.Select(line => Describe(fileName, line!.Value));
 
 	private static IEnumerable<string> SyntaxViolations(string fileName, string source)
 	{
@@ -100,7 +95,7 @@ internal static partial class EmptyBracesPatternGuard
 		return root.DescendantNodes()
 				   .OfType<RecursivePatternSyntax>()
 				   .Where(IsEmptyBracesBinding)
-				   .Select(pattern => Describe(fileName, pattern));
+				   .Select(pattern => Describe(fileName, pattern.GetLocation().GetLineSpan().StartLinePosition.Line + 1));
 	}
 
 	// `{ } y` and — under a `not` — `not { } y`: an empty property pattern that both binds a designation and
@@ -110,9 +105,6 @@ internal static partial class EmptyBracesPatternGuard
 	private static bool IsEmptyBracesBinding(RecursivePatternSyntax pattern) =>
 		pattern is { Type: null, PositionalPatternClause: null, Designation: not null, PropertyPatternClause.Subpatterns.Count: 0 };
 
-	private static string Describe(string fileName, RecursivePatternSyntax pattern)
-	{
-		var line = pattern.GetLocation().GetLineSpan().StartLinePosition.Line + 1;
-		return $"{Path.GetFileName(fileName)}:{line}: forbidden empty-braces property pattern";
-	}
+	private static string Describe(string fileName, int line) =>
+		$"{Path.GetFileName(fileName)}:{line}: forbidden empty-braces property pattern";
 }

@@ -3,6 +3,9 @@ namespace EnrolmentRules.Tests;
 using System.CodeDom.Compiler;
 using System.Collections.Frozen;
 using System.Reflection;
+using System.Reflection.Metadata;
+using System.Reflection.Metadata.Ecma335;
+using System.Reflection.PortableExecutable;
 using System.Runtime.CompilerServices;
 using AwesomeAssertions;
 using Domain;
@@ -11,19 +14,23 @@ using Domain;
 ///     Architecture guard for the .NET performance-guideline size ceiling on value types (Framework
 ///     Design Guidelines: prefer a class once a struct's instance size passes roughly 16-24 bytes,
 ///     because every pass-by-value copies the whole thing). Uses reflection over the compiled
-///     production assemblies rather than Roslyn: instance layout — decimal is 16 bytes, a reference
-///     field is always 8 — is a runtime fact a syntax tree cannot see. Scans every non-generic
-///     struct/record struct in the production assemblies referenced by this test project; a generic
-///     struct is closed over <see cref="object" /> for measurement, since none of this repository's
-///     generic value types vary in size by their type argument (they wrap a single reference-typed
-///     field, e.g. <c>EquatableArray&lt;T&gt;</c>).
+///     production assemblies rather than Roslyn: instance layout — decimal is 16 bytes, an
+///     <c>Instant</c> is 16, a reference field is always 8 — is a runtime fact a syntax tree cannot
+///     see. Derives the production assembly set from every project under <c>src</c>, then scans every
+///     non-generic struct/record struct in those assemblies, plus every closed generic struct
+///     instantiation encoded in the compiled assemblies' ECMA-335
+///     <c>TypeSpec</c> metadata. This measures the actual runtime layout of, for example,
+///     <c>Wrapper&lt;decimal&gt;</c>, rather than pretending the open <c>Wrapper&lt;T&gt;</c> definition has
+///     the same layout as <c>Wrapper&lt;object&gt;</c>.
 ///     <para>
-///         Three exclusions. A <c>ref struct</c> (a stack-only view like <see cref="Span{T}" />) and a
-///         source-generator-emitted struct (<c>[GeneratedCode]</c>) are never copied around like an
-///         ordinary value the way the guideline means. A struct authored on purpose above the ceiling
-///         carries <see cref="LargeStructAttribute" /> (<c>EnrolmentRules.Domain</c>) with its own
-///         reviewed justification.
+///         Generated structs (<c>[GeneratedCode]</c>/<c>[CompilerGenerated]</c> — e.g. a
+///         <c>[LoggerMessage]</c> parameter carrier or an async state machine) are not authored types
+///         an engineer can redesign. A struct authored on purpose above the ceiling carries
+///         <see cref="LargeStructAttribute" /> (<c>EnrolmentRules.Domain</c>) with its own reviewed
+///         justification — attach only with explicit user permission, per that attribute's own
+///         summary.
 ///     </para>
+///     Razor-compiled types are classes, not structs, so <c>.cshtml</c> needs no separate coverage.
 /// </summary>
 public sealed class CodeStyle_StructSize
 {
@@ -62,30 +69,49 @@ public sealed class CodeStyle_StructSize
 
 	[Fact]
 	public void Enum_is_not_treated_as_a_value_type_to_measure() =>
-		ValueTypeSizeGuard.DeclaredValueTypes([typeof(ExampleEnum).Assembly.GetName().Name!])
+		ValueTypeSizeGuard.ConcreteValueTypes([typeof(ExampleEnum).Assembly.GetName().Name!])
 						  .Should().NotContain(typeof(ExampleEnum));
 
 	[Fact]
-	public void Open_generic_struct_is_closed_over_object_for_measurement()
+	public void Open_generic_struct_cannot_be_measured_as_a_concrete_runtime_layout()
 	{
-		// Backed by a single reference-typed field (`T[]?`), so its size does not depend on T -- the
-		// same shape as this repository's EquatableArray<T>/EquatableDictionary<TKey, TValue>.
-		var size = ValueTypeSizeGuard.Measure(typeof(GenericReferenceWrapper<>));
+		var measure = () => ValueTypeSizeGuard.Measure(typeof(GenericReferenceWrapper<>));
 
-		size.Should().Be(IntPtr.Size);
+		measure.Should().Throw<ArgumentException>().WithParameterName("type");
 	}
 
 	[Fact]
-	public void Ref_struct_is_excluded_from_the_scan()
+	public void Open_generic_definition_is_not_treated_as_a_concrete_value_type()
 	{
-		// A ref struct is a stack-only view (Span<T>'s own shape) that can never be boxed, stored in a
-		// field of a non-ref-struct type, or captured by a lambda -- it is never copied onto the heap or
-		// into a long-lived collection, so the "pass-by-value is expensive" rationale for the 24-byte
-		// ceiling does not apply to it.
 		var assemblyName = typeof(CodeStyle_StructSize).Assembly.GetName().Name!;
 
-		ValueTypeSizeGuard.DeclaredValueTypes([assemblyName]).Should().NotContain(typeof(LargeRefStruct));
+		ValueTypeSizeGuard.ConcreteValueTypes([assemblyName]).Should().NotContain(typeof(GenericInlineWrapper<>));
 	}
+
+	[Fact]
+	public void Closed_generic_struct_instantiation_is_measured_using_its_actual_type_arguments()
+	{
+		_ = ClosedGenericUsage();
+		var assemblyName = typeof(CodeStyle_StructSize).Assembly.GetName().Name!;
+
+		ValueTypeSizeGuard.FindViolations([assemblyName])
+						  .Should().Contain(violation =>
+							  violation.Contains(nameof(GenericInlineWrapper<ThirtyTwoByteStruct>), StringComparison.Ordinal)
+							  && violation.Contains("32 bytes", StringComparison.Ordinal));
+	}
+
+	[Fact]
+	public void Oversized_ref_struct_requires_a_reviewed_exception()
+	{
+		var assemblyName = typeof(CodeStyle_StructSize).Assembly.GetName().Name!;
+
+		ValueTypeSizeGuard.FindViolations([assemblyName])
+						  .Should().Contain(violation => violation.Contains(nameof(LargeRefStruct), StringComparison.Ordinal));
+	}
+
+	[Fact]
+	public void Every_production_assembly_is_in_the_size_scan() =>
+		ValueTypeSizeGuard.ProductionAssemblyNames.Should().Contain(["EnrolmentRules.Web", "EnrolmentRules.Benchmarks"]);
 
 	[Fact]
 	public void Struct_carrying_LargeStructAttribute_is_excluded_from_the_scan()
@@ -99,41 +125,36 @@ public sealed class CodeStyle_StructSize
 	[Fact]
 	public void Source_generator_emitted_struct_is_excluded_from_the_scan()
 	{
-		// Mirrors the shape of a source-generated parameter-carrier struct: the generator, not an
-		// author, decides its field list and size.
+		// Mirrors the shape of a [LoggerMessage] source-generated parameter-carrier struct: the
+		// generator, not an author, decides its field list and size.
 		var assemblyName = typeof(CodeStyle_StructSize).Assembly.GetName().Name!;
 
-		ValueTypeSizeGuard.DeclaredValueTypes([assemblyName]).Should().NotContain(typeof(SourceGeneratedLargeStruct));
+		ValueTypeSizeGuard.ConcreteValueTypes([assemblyName]).Should().NotContain(typeof(SourceGeneratedLargeStruct));
 	}
 
 	[Fact]
-	public void Compiler_generated_struct_is_excluded_from_the_scan()
+	public void Compiler_generated_state_machine_struct_is_excluded_from_the_scan()
 	{
-		// A real async-method state machine struct would demonstrate this too, but this test suite
-		// bans `async`/`await` outside approved test infrastructure (SynchronousTestSuiteTests), so the
-		// [CompilerGenerated] marker is applied by hand here to the same effect: the compiler, not an
-		// author, decides such a type's field list and size, so the guard must keep it out of the scan
-		// entirely -- reporting it would be a false positive no author can fix.
 		var assemblyName = typeof(CodeStyle_StructSize).Assembly.GetName().Name!;
+		var stateMachineTypes = ValueTypeSizeGuard.ConcreteValueTypes([assemblyName])
+												  .Where(static type => type.Name.Contains("AsyncMethodWithManyLocalsAsync", StringComparison.Ordinal));
 
-		ValueTypeSizeGuard.DeclaredValueTypes([assemblyName]).Should().NotContain(typeof(CompilerGeneratedLargeStruct));
+		// The compiler generates a struct holding every local below (well past the 24-byte ceiling) to
+		// drive the state machine. It is an artifact of how `async` compiles, not an authored type, so
+		// the [CompilerGenerated] filter must keep it out of the scan entirely -- reporting it would be
+		// a false positive no author can fix by hand.
+		stateMachineTypes.Should().BeEmpty();
 	}
 
-	[CompilerGenerated]
-	private struct CompilerGeneratedLargeStruct
+	private static async Task AsyncMethodWithManyLocalsAsync()
 	{
-		public long A;
-		public long B;
-		public long C;
-		public long D;
-
-		public CompilerGeneratedLargeStruct(long a, long b, long c, long d)
-		{
-			A = a;
-			B = b;
-			C = c;
-			D = d;
-		}
+		await Task.Yield();
+		var a = 1L;
+		var b = 2L;
+		var c = 3L;
+		var d = 4L;
+		var e = 5L;
+		_ = a + b + c + d + e;
 	}
 
 	private struct EightByteStruct
@@ -173,6 +194,13 @@ public sealed class CodeStyle_StructSize
 		public bool IsEmpty => items is null or [];
 	}
 
+	private readonly struct GenericInlineWrapper<T>(T value)
+	{
+		public T Value { get; } = value;
+	}
+
+	private static GenericInlineWrapper<ThirtyTwoByteStruct> ClosedGenericUsage() => default;
+
 	private readonly ref struct LargeRefStruct
 	{
 		private readonly long a;
@@ -210,7 +238,7 @@ public sealed class CodeStyle_StructSize
 		public long Sum => a + b + c + d;
 	}
 
-	[GeneratedCode("EnrolmentRules.Tests.CodeStyle_StructSize", "1.0")]
+	[GeneratedCode("JobTrack.ArchitectureTests.CodeStyle_StructSize", "1.0")]
 	private readonly struct SourceGeneratedLargeStruct
 	{
 		private readonly long a;
@@ -234,49 +262,92 @@ internal static class ValueTypeSizeGuard
 {
 	public const int MaxSizeInBytes = 24;
 
-	public static readonly FrozenSet<string> ProductionAssemblyNames = FrozenSet.ToFrozenSet(
-		[
-			"EnrolmentRules.Domain",
-			"EnrolmentRules.Prediction",
-			"EnrolmentRules.Engine",
-			"EnrolmentRules.Extensions.DependencyInjection",
-			"EnrolmentRules.Cli",
-		],
-		StringComparer.Ordinal);
+	public static readonly FrozenSet<string> ProductionAssemblyNames = Directory
+		.EnumerateFiles(Path.Combine(Harness.RepoRoot, "src"), "*.csproj", SearchOption.AllDirectories)
+		.Select(static path => Path.GetFileNameWithoutExtension(path)!)
+		.ToFrozenSet(StringComparer.Ordinal);
 
 	private static readonly MethodInfo SizeOfMethod =
 		typeof(Unsafe).GetMethod(nameof(Unsafe.SizeOf), BindingFlags.Public | BindingFlags.Static)!;
 
 	public static IEnumerable<string> FindViolations(IEnumerable<string> assemblyNames) =>
-		DeclaredValueTypes(assemblyNames)
+		ConcreteValueTypes(assemblyNames)
 			.Where(static type => !Attribute.IsDefined(type, typeof(LargeStructAttribute)))
 			.Select(type => (Type: type, Size: Measure(type)))
 			.Where(measurement => measurement.Size > MaxSizeInBytes)
 			.Select(measurement => Describe(measurement.Type, measurement.Size))
 			.Order(StringComparer.Ordinal);
 
-	public static IEnumerable<Type> DeclaredValueTypes(IEnumerable<string> assemblyNames) =>
-		assemblyNames
-			.Select(Assembly.Load)
-			.SelectMany(static assembly => assembly.GetTypes())
-			.Where(static type => type.IsValueType && !type.IsEnum && !type.IsByRefLike)
+	public static IEnumerable<Type> ConcreteValueTypes(IEnumerable<string> assemblyNames)
+	{
+		var includedAssemblyNames = assemblyNames.ToFrozenSet(StringComparer.Ordinal);
+		var assemblies = includedAssemblyNames.Select(Assembly.Load).ToArray();
+
+		return assemblies
+			.SelectMany(assembly => assembly.GetTypes()
+										 .Where(static type => !type.IsGenericTypeDefinition)
+										 .Concat(ClosedGenericTypes(assembly, includedAssemblyNames)))
+			.Distinct()
+			.Where(static type => type.IsValueType && !type.IsEnum)
 			.Where(static type => !Attribute.IsDefined(type, typeof(CompilerGeneratedAttribute)))
 			.Where(static type => !Attribute.IsDefined(type, typeof(GeneratedCodeAttribute)));
+	}
+
+	private static Type[] ClosedGenericTypes(Assembly assembly, FrozenSet<string> includedAssemblyNames)
+	{
+		using var stream = File.OpenRead(assembly.Location);
+		using var peReader = new PEReader(stream);
+		var metadataReader = peReader.GetMetadataReader();
+		var typeSpecificationCount = metadataReader.GetTableRowCount(TableIndex.TypeSpec);
+
+		return Enumerable.Range(1, typeSpecificationCount)
+			.Select(MetadataTokens.TypeSpecificationHandle)
+			.Select(handle => ResolveClosedTypeSpecification(assembly.ManifestModule, MetadataTokens.GetToken(handle)))
+			.Where(static type => type is not null)
+			.Cast<Type>()
+			.SelectMany(ContainedTypes)
+			.Where(static type => type.IsConstructedGenericType && !type.ContainsGenericParameters)
+			.Where(type => includedAssemblyNames.Contains(type.GetGenericTypeDefinition().Assembly.GetName().Name!))
+			.ToArray();
+	}
+
+	private static Type? ResolveClosedTypeSpecification(Module module, int metadataToken)
+	{
+		try {
+			return module.ResolveType(metadataToken);
+		}
+		catch (ArgumentException) {
+			// A TypeSpec containing a type-level or method-level generic parameter has no single
+			// runtime layout until its declaring generic context is itself closed.
+			return null;
+		}
+	}
+
+	private static IEnumerable<Type> ContainedTypes(Type type)
+	{
+		yield return type;
+		foreach (var argument in type.GetGenericArguments()) {
+			foreach (var contained in ContainedTypes(argument)) {
+				yield return contained;
+			}
+		}
+	}
 
 	/// <summary>
 	///     The type's runtime instance size, in bytes, via <see cref="Unsafe.SizeOf{T}" /> — unlike
 	///     <c>Marshal.SizeOf</c>, this is the true managed layout size (a <see langword="bool" /> is 1
 	///     byte, not the 4-byte marshaled default) and, unlike C#'s <c>sizeof</c> operator, it carries no
 	///     <c>unmanaged</c> constraint, so a struct holding a reference-typed field measures correctly too.
-	///     An open generic type definition is closed over <see cref="object" /> first.
+	///     Rejects an open generic because it has no single concrete runtime layout;
+	///     <see cref="ConcreteValueTypes" /> finds the closed instantiations recorded by the compiled code.
 	/// </summary>
 	public static int Measure(Type type)
 	{
-		var closed = type.IsGenericTypeDefinition
-			? type.MakeGenericType([.. type.GetGenericArguments().Select(static _ => typeof(object))])
-			: type;
+		if (type.ContainsGenericParameters) {
+			throw new ArgumentException("An open generic type has no concrete runtime layout.", nameof(type));
+		}
 
-		return (int)SizeOfMethod.MakeGenericMethod(closed).Invoke(null, null)!;
+		return (int)SizeOfMethod.MakeGenericMethod(type).Invoke(null, null)!;
 	}
 
 	private static string Describe(Type type, int size) =>

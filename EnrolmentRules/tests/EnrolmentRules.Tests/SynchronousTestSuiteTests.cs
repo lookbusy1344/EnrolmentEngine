@@ -101,6 +101,39 @@ public sealed class SynchronousTestSuiteTests
 	}
 
 	[Fact]
+	public void named_async_compiler_fixture_method_is_allowed_by_file_and_name()
+	{
+		const string source = """
+							  sealed class CodeStyle_StructSize
+							  {
+							  	private static async Task AsyncMethodWithManyLocalsAsync()
+							  	{
+							  		await Task.Yield();
+							  		var a = 1L;
+							  	}
+							  }
+							  """;
+
+		SynchronousTestSuiteGuard.FindViolations("CodeStyle_StructSize.cs", source).Should().BeEmpty();
+	}
+
+	[Fact]
+	public void async_compiler_fixture_exception_is_scoped_to_its_named_file_and_method()
+	{
+		const string source = """
+							  sealed class Example
+							  {
+							  	private static async Task AsyncMethodWithManyLocalsAsync()
+							  	{
+							  		await Task.Yield();
+							  	}
+							  }
+							  """;
+
+		SynchronousTestSuiteGuard.FindViolations("OtherFile.cs", source).Should().NotBeEmpty();
+	}
+
+	[Fact]
 	public void production_sources_remain_outside_every_test_only_exception()
 	{
 		const string source = """
@@ -177,6 +210,16 @@ internal static class SynchronousTestSuiteGuard
 		"TestProcessHost",
 	];
 
+	// A narrow, named exception distinct from the process-I/O infrastructure escape hatch above: a
+	// private helper whose only role is forcing the compiler to emit a genuine async state-machine
+	// struct as a CodeStyle_StructSize fixture (proving [CompilerGenerated] structs are excluded from
+	// the size scan against real compiler output, not a hand-rolled stand-in). It is never awaited or
+	// run — IsApprovedAsyncTestMethod's TestProcessRunner/TestProcessHost requirement assumes genuine
+	// process I/O, which this syntax-only fixture has none of.
+	private static readonly HashSet<(string File, string Method)> ApprovedAsyncFixtureMethods = [
+		("CodeStyle_StructSize.cs", "AsyncMethodWithManyLocalsAsync"),
+	];
+
 	private static readonly IReadOnlyDictionary<string, IReadOnlyDictionary<string, HashSet<string>>> AllowedExternalMembers =
 		new Dictionary<string, IReadOnlyDictionary<string, HashSet<string>>>(StringComparer.Ordinal) {
 			["EligibilityShortCircuitTests.cs"] =
@@ -212,7 +255,8 @@ internal static class SynchronousTestSuiteGuard
 			var name = method.Identifier.ValueText;
 			if (name.EndsWith("Async", StringComparison.Ordinal)
 				&& !context.IsInfrastructure
-				&& !IsAllowedMethodDeclaration(name, allowed)) {
+				&& !IsAllowedMethodDeclaration(name, allowed)
+				&& !IsApprovedAsyncFixtureMethod(context.FileName, method)) {
 				yield return Describe(context.FileName, method.Identifier, name);
 			}
 		}
@@ -232,6 +276,11 @@ internal static class SynchronousTestSuiteGuard
 		IReadOnlyDictionary<string, HashSet<string>>? allowed)
 	{
 		if (context.IsInfrastructure) {
+			return false;
+		}
+
+		var enclosingMethod = identifier.AncestorsAndSelf().OfType<MethodDeclarationSyntax>().FirstOrDefault();
+		if (enclosingMethod is not null && IsApprovedAsyncFixtureMethod(context.FileName, enclosingMethod)) {
 			return false;
 		}
 
@@ -257,8 +306,15 @@ internal static class SynchronousTestSuiteGuard
 		}
 
 		var enclosingMethod = token.Parent?.AncestorsAndSelf().OfType<MethodDeclarationSyntax>().FirstOrDefault();
-		return enclosingMethod is not null && IsApprovedAsyncTestMethod(enclosingMethod, context);
+		if (enclosingMethod is null) {
+			return false;
+		}
+
+		return IsApprovedAsyncFixtureMethod(context.FileName, enclosingMethod) || IsApprovedAsyncTestMethod(enclosingMethod, context);
 	}
+
+	private static bool IsApprovedAsyncFixtureMethod(string fileName, MethodDeclarationSyntax method) =>
+		ApprovedAsyncFixtureMethods.Contains((fileName, method.Identifier.ValueText));
 
 	private static bool IsAllowedAsyncIdentifier(
 		SimpleNameSyntax identifier,
