@@ -27,48 +27,30 @@ public sealed class PublicApiSurfaceTests
 	[Fact]
 	public void public_surface_matches_the_design_spec()
 	{
-		var assemblies = new[] {
-			(typeof(StudentInput).Assembly,
-				new[] {
-					"EnrolmentRules.Domain.AgeCalculator", "EnrolmentRules.Domain.ALevelGrade", "EnrolmentRules.Domain.AdjustmentKind", "EnrolmentRules.Domain.Adjustment", "EnrolmentRules.Domain.AdviceResult", "EnrolmentRules.Domain.BatchJsonContext", "EnrolmentRules.Domain.BuildInfo",
-					"EnrolmentRules.Domain.BatchOutcome", "EnrolmentRules.Domain.Catalogue", "EnrolmentRules.Domain.CatalogueData", "EnrolmentRules.Domain.CatalogueDataException", "EnrolmentRules.Domain.EnrolmentDataException", "EnrolmentRules.Domain.EnrolmentJsonContext", "EnrolmentRules.Domain.EnrolmentResult",
-					"EnrolmentRules.Domain.EnrolmentSummary", "EnrolmentRules.Domain.EnumNames", "EnrolmentRules.Domain.ChoiceStatus", "EnrolmentRules.Domain.ChosenSubjectStatus", "EnrolmentRules.Domain.EntryEquivalent", "EnrolmentRules.Domain.ExclusionPair", "EnrolmentRules.Domain.ExplainedResult",
-					"EnrolmentRules.Domain.Explanation", "EnrolmentRules.Domain.EquatableArray", "EnrolmentRules.Domain.EquatableArray`1", "EnrolmentRules.Domain.EquatableDictionary`2", "EnrolmentRules.Domain.EquatableDictionaryFactory", "EnrolmentRules.Domain.FinalProgramme", "EnrolmentRules.Domain.GateAdvice",
-					"EnrolmentRules.Domain.GcseResult", "EnrolmentRules.Domain.GcseScoreboard", "EnrolmentRules.Domain.GcseSubjects", "EnrolmentRules.Domain.GradeChange", "EnrolmentRules.Domain.LargeStructAttribute", "EnrolmentRules.Domain.LintFinding", "EnrolmentRules.Domain.LintSeverity",
-					"EnrolmentRules.Domain.PredictedGrade", "EnrolmentRules.Domain.PolicyFacts", "EnrolmentRules.Domain.PolicyThresholds", "EnrolmentRules.Domain.PolicyThresholdsException", "EnrolmentRules.Domain.PolicyThresholdsStore", "EnrolmentRules.Domain.PredictionModel",
-					"EnrolmentRules.Domain.PredictionModel+Coefficients", "EnrolmentRules.Domain.Prerequisite", "EnrolmentRules.Domain.PrerequisiteSatisfaction", "EnrolmentRules.Domain.Qualification", "EnrolmentRules.Domain.QualificationScale", "EnrolmentRules.Domain.QualificationScaleEntry",
-					"EnrolmentRules.Domain.QualificationScaleException", "EnrolmentRules.Domain.QualificationScaleStore", "EnrolmentRules.Domain.QualificationType", "EnrolmentRules.Domain.Rating", "EnrolmentRules.Domain.RatingExtensions", "EnrolmentRules.Domain.RatingMeaning", "EnrolmentRules.Domain.SubjectCriteria",
-					"EnrolmentRules.Domain.Recommendation", "EnrolmentRules.Domain.RestudyBar", "EnrolmentRules.Domain.StudentDocument", "EnrolmentRules.Domain.StudentInput", "EnrolmentRules.Domain.StudentProfile", "EnrolmentRules.Domain.StudentValidator", "EnrolmentRules.Domain.Subject",
-					"EnrolmentRules.Domain.SubjectAdvice", "EnrolmentRules.Domain.SubjectExclusion", "EnrolmentRules.Domain.SubjectJsonConverter", "EnrolmentRules.Domain.SubjectMeta", "EnrolmentRules.Domain.Thresholds", "EnrolmentRules.Domain.TransitionEvidence", "EnrolmentRules.Domain.UnsatGcseAdvice",
-					"EnrolmentRules.Domain.ValidationOutcome", "EnrolmentRules.Domain.ValidatedEvaluation`1", "EnrolmentRules.Domain.YamlConverter",
-				}),
-			(typeof(GradePredictor).Assembly,
-				new[] {
-					"EnrolmentRules.Prediction.DfeTransitionMatrix", "EnrolmentRules.Prediction.GradePredictor", "EnrolmentRules.Prediction.TransitionMatrixException",
-				}),
-			(typeof(IEnrolmentEngine).Assembly,
-				new[] {
-					"EnrolmentRules.Engine.Authoring.CatalogueException", "EnrolmentRules.Engine.Authoring.CatalogueStore", "EnrolmentRules.Engine.Authoring.CriteriaExplainer", "EnrolmentRules.Engine.Authoring.CriteriaNarrationException", "EnrolmentRules.Engine.Authoring.ExpressionNarrator",
-					"EnrolmentRules.Engine.IEnrolmentCriteriaExplainer", "EnrolmentRules.Engine.Authoring.WorkflowException", "EnrolmentRules.Engine.Authoring.WorkflowLintException", "EnrolmentRules.Engine.Authoring.WorkflowLinter", "EnrolmentRules.Engine.Authoring.WorkflowProbeException",
-					"EnrolmentRules.Engine.Authoring.WorkflowSchemaException", "EnrolmentRules.Engine.Authoring.WorkflowStore", "EnrolmentRules.Engine.EnrolmentEngine", "EnrolmentRules.Engine.IEnrolmentAdvisor", "EnrolmentRules.Engine.IEnrolmentEngine", "EnrolmentRules.Engine.IEnrolmentEngineFactory",
-					"EnrolmentRules.Engine.IEnrolmentEvaluator", "EnrolmentRules.Engine.Hosting.DirectoryDataSource", "EnrolmentRules.Engine.Hosting.EnrolmentEngineFactory", "EnrolmentRules.Engine.Hosting.IEnrolmentDataSource", "EnrolmentRules.Engine.Hosting.WorkflowContent",
-					"EnrolmentRules.Engine.Hosting.OverlayEnrolmentDataSource", "EnrolmentRules.Engine.EnrolmentPolicy", "EnrolmentRules.Engine.EnrolmentPolicyBuildException", "EnrolmentRules.Engine.EnrolmentPolicyConfigurationException", "EnrolmentRules.Engine.EnrolmentPolicyDefinition",
-					"EnrolmentRules.Engine.EnrolmentPolicyDescriptor", "EnrolmentRules.Engine.EnrolmentPolicyId", "EnrolmentRules.Engine.EnrolmentPolicyRegistry", "EnrolmentRules.Engine.EnrolmentPolicyRegistryException", "EnrolmentRules.Engine.IEnrolmentPolicyRegistry",
-					"EnrolmentRules.Engine.UnknownEnrolmentPolicyException", "EnrolmentRules.Engine.PolicyComparisonResult",
-				}),
-			(typeof(ServiceCollectionExtensions).Assembly,
-				new[] {
-					"EnrolmentRules.Extensions.DependencyInjection.EnrolmentEngineOptions", "EnrolmentRules.Extensions.DependencyInjection.EnrolmentPolicyOptions", "EnrolmentRules.Extensions.DependencyInjection.ServiceCollectionExtensions",
-				}),
+		var assembliesByLabel = new Dictionary<string, Assembly> {
+			["EnrolmentRules.Domain"] = typeof(StudentInput).Assembly,
+			["EnrolmentRules.Prediction"] = typeof(GradePredictor).Assembly,
+			["EnrolmentRules.Engine"] = typeof(IEnrolmentEngine).Assembly,
+			["EnrolmentRules.Extensions.DependencyInjection"] = typeof(ServiceCollectionExtensions).Assembly,
 		};
 
-		foreach (var (assembly, expected) in assemblies) {
+		var specPath = Path.Combine(Harness.RepoRoot, "docs", "design", "2026-07-03-framework-design-guidelines-api-spec.md");
+		var spec = ApiSpecInventory.Parse(File.ReadAllLines(specPath));
+
+		spec.DuplicateTypes.Should().BeEmpty("no type may be listed twice in the specification inventory");
+		spec.UnknownLabels.Should().BeEmpty("every inventory block label must match a known assembly");
+
+		var seenLabels = spec.TypesByLabel.Keys.ToArray();
+		var missingLabels = assembliesByLabel.Keys.Except(seenLabels, StringComparer.Ordinal).ToArray();
+		missingLabels.Should().BeEmpty("every known assembly must have an inventory block in the specification");
+
+		foreach (var (label, assembly) in assembliesByLabel) {
 			var actual = assembly.GetExportedTypes()
 								 .Select(static type => type.FullName)
 								 .OrderBy(static name => name, StringComparer.Ordinal)
 								 .ToArray();
 
-			var expectedSorted = expected.OrderBy(static name => name, StringComparer.Ordinal).ToArray();
+			var expectedSorted = spec.TypesByLabel[label].OrderBy(static name => name, StringComparer.Ordinal).ToArray();
 			var missing = expectedSorted.Except(actual, StringComparer.Ordinal).ToArray();
 			var extra = actual.Except(expectedSorted, StringComparer.Ordinal).ToArray();
 
@@ -81,7 +63,66 @@ public sealed class PublicApiSurfaceTests
 				parts.Add($"Extra:{Environment.NewLine}{string.Join(Environment.NewLine, extra)}");
 			}
 
-			(missing.Length, extra.Length).Should().Be((0, 0), string.Join(Environment.NewLine, parts));
+			(missing.Length, extra.Length).Should().Be((0, 0), $"{label}:{Environment.NewLine}{string.Join(Environment.NewLine, parts)}");
 		}
+	}
+}
+
+/// <summary>
+///     Parses the "Authoritative inventory" fenced code blocks (```types:&lt;assembly&gt; ... ```) out of the API
+///     specification markdown, so <see cref="PublicApiSurfaceTests" /> has one source of truth instead of a
+///     second, hand-maintained allow-list.
+/// </summary>
+internal static class ApiSpecInventory
+{
+	private const string BlockPrefix = "```types:";
+
+	public static (
+		IReadOnlyDictionary<string, IReadOnlyList<string>> TypesByLabel,
+		IReadOnlyList<string> DuplicateTypes,
+		IReadOnlyList<string> UnknownLabels) Parse(IReadOnlyList<string> lines)
+	{
+		var knownLabels = new HashSet<string>(StringComparer.Ordinal) {
+			"EnrolmentRules.Domain", "EnrolmentRules.Prediction", "EnrolmentRules.Engine", "EnrolmentRules.Extensions.DependencyInjection",
+		};
+
+		var typesByLabel = new Dictionary<string, IReadOnlyList<string>>(StringComparer.Ordinal);
+		var seenTypes = new HashSet<string>(StringComparer.Ordinal);
+		var duplicateTypes = new List<string>();
+		var unknownLabels = new List<string>();
+
+		var index = 0;
+		while (index < lines.Count) {
+			var line = lines[index];
+			if (!line.StartsWith(BlockPrefix, StringComparison.Ordinal)) {
+				++index;
+				continue;
+			}
+
+			var label = line[BlockPrefix.Length..].Trim();
+			if (!knownLabels.Contains(label)) {
+				unknownLabels.Add(label);
+			}
+
+			var blockTypes = new List<string>();
+			++index;
+			while (index < lines.Count && lines[index] != "```") {
+				var typeName = lines[index].Trim();
+				if (typeName.Length > 0) {
+					if (!seenTypes.Add(typeName)) {
+						duplicateTypes.Add(typeName);
+					}
+
+					blockTypes.Add(typeName);
+				}
+
+				++index;
+			}
+
+			typesByLabel[label] = blockTypes;
+			++index;
+		}
+
+		return (typesByLabel, duplicateTypes, unknownLabels);
 	}
 }

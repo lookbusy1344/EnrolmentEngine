@@ -9,6 +9,7 @@ public readonly record struct EnrolmentPolicyId : IComparable<EnrolmentPolicyId>
 {
 	public EnrolmentPolicyId(string value)
 	{
+		ArgumentNullException.ThrowIfNull(value);
 		if (!IsValid(value)) {
 			throw new ArgumentException(
 				$"'{value}' is not a valid policy identifier (expected a lowercase ASCII slug matching [a-z][a-z0-9-]*).",

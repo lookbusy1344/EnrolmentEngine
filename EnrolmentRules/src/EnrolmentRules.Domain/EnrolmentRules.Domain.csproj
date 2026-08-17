@@ -6,9 +6,11 @@
         <GenerateDocumentationFile>true</GenerateDocumentationFile>
         <!-- GenerateDocumentationFile ships XML docs for package consumers. CS1591 (missing doc on a
              public member) is suppressed because most of the public surface is value-equality
-             boilerplate, enum-like members, and types forced public only for RulesEngine lambda
-             binding, not consumer-facing API. Blanket enforcement would generate filler, not
-             value; genuine entry points are documented by hand. -->
+             boilerplate, enum-like members, and types forced CLR-public only for RulesEngine lambda
+             binding, source generation, or collection expressions. Those types are still exported
+             contracts (see the API specification's "Exported runtime support" section), just not
+             mainline consumer entry points; blanket enforcement would generate filler, not value.
+             Genuine entry points are documented by hand. -->
         <NoWarn>$(NoWarn);CS1591</NoWarn>
     </PropertyGroup>
 

@@ -4,6 +4,7 @@ using System.Collections.Frozen;
 using System.Text.Json;
 using System.Text.Json.Nodes;
 using System.Text.Json.Serialization;
+using Serialization;
 
 /// <summary>
 ///     One typed prior qualification on the document boundary: a free-form subject key, a typed

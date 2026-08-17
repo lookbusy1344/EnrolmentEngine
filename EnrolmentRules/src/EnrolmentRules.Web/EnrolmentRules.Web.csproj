@@ -20,38 +20,15 @@
         </PackageReference>
     </ItemGroup>
 
+    <Import Project="..\..\build\EnrolmentRules.PolicyAssets.props"/>
+
     <ItemGroup>
-        <Content Include="..\..\workflows\**\*">
+        <!-- Copies the centrally-declared policy-asset set into the build/publish output. Web's own
+             Vite/static-web-asset handling (wwwroot/**) stays separate, below. -->
+        <Content Include="@(EnrolmentPolicyAsset)">
             <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
             <CopyToPublishDirectory>PreserveNewest</CopyToPublishDirectory>
-            <TargetPath>workflows\%(RecursiveDir)%(Filename)%(Extension)</TargetPath>
-        </Content>
-        <Content Include="..\..\data\dfe-transition-matrices\**\*">
-            <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
-            <CopyToPublishDirectory>PreserveNewest</CopyToPublishDirectory>
-            <TargetPath>data\dfe-transition-matrices\%(RecursiveDir)%(Filename)%(Extension)</TargetPath>
-        </Content>
-        <Content Include="..\..\data\catalogue.yaml;..\..\data\catalogue.schema.json">
-            <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
-            <CopyToPublishDirectory>PreserveNewest</CopyToPublishDirectory>
-            <TargetPath>data\%(Filename)%(Extension)</TargetPath>
-        </Content>
-        <Content Include="..\..\data\qualifications.yaml;..\..\data\qualifications.schema.json">
-            <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
-            <CopyToPublishDirectory>PreserveNewest</CopyToPublishDirectory>
-            <TargetPath>data\%(Filename)%(Extension)</TargetPath>
-        </Content>
-        <Content Include="..\..\data\thresholds.yaml;..\..\data\thresholds.schema.json">
-            <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
-            <CopyToPublishDirectory>PreserveNewest</CopyToPublishDirectory>
-            <TargetPath>data\%(Filename)%(Extension)</TargetPath>
-        </Content>
-        <!-- The Elite auxiliary policy: only its own workflows/catalogue/thresholds — schemas, qualifications
-             and the transition matrix stay single-copy above, loaded via OverlayEnrolmentDataSource. -->
-        <Content Include="..\..\policies\elite\**\*">
-            <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
-            <CopyToPublishDirectory>PreserveNewest</CopyToPublishDirectory>
-            <TargetPath>policies\elite\%(RecursiveDir)%(Filename)%(Extension)</TargetPath>
+            <TargetPath>%(PolicyRelativePath)</TargetPath>
         </Content>
         <!-- Web SDK already globs wwwroot/**/* as Content (CopyToPublishDirectory); Update (not
              Include) adds CopyToOutputDirectory without duplicating the item. Without this, launching

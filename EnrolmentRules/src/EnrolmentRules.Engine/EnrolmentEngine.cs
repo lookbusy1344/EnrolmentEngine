@@ -96,6 +96,7 @@ public sealed class EnrolmentEngine : IEnrolmentEngine
 			: criteria.Describe(subject);
 
 	/// <summary>The whole-student §1.7 verdict (the document the golden-file suite locks), as of the bound date.</summary>
+	/// <exception cref="ArgumentNullException"><paramref name="student" /> is null.</exception>
 	public EnrolmentResult Evaluate(StudentInput student, CancellationToken cancellationToken = default)
 	{
 		ArgumentNullException.ThrowIfNull(student);
@@ -103,6 +104,7 @@ public sealed class EnrolmentEngine : IEnrolmentEngine
 	}
 
 	/// <summary>The whole-student §1.7 verdict as of an explicit reference date (per-request hosting).</summary>
+	/// <exception cref="ArgumentNullException"><paramref name="student" /> is null.</exception>
 	public EnrolmentResult Evaluate(StudentInput student, DateOnly asOf, CancellationToken cancellationToken = default)
 	{
 		ArgumentNullException.ThrowIfNull(student);
@@ -110,6 +112,7 @@ public sealed class EnrolmentEngine : IEnrolmentEngine
 	}
 
 	/// <summary>The same verdict with per-recommendation provenance attached (<c>--explain</c>).</summary>
+	/// <exception cref="ArgumentNullException"><paramref name="student" /> is null.</exception>
 	public ExplainedResult Explain(StudentInput student, CancellationToken cancellationToken = default)
 	{
 		ArgumentNullException.ThrowIfNull(student);
@@ -117,6 +120,7 @@ public sealed class EnrolmentEngine : IEnrolmentEngine
 	}
 
 	/// <summary>The explained verdict as of an explicit reference date.</summary>
+	/// <exception cref="ArgumentNullException"><paramref name="student" /> is null.</exception>
 	public ExplainedResult Explain(StudentInput student, DateOnly asOf, CancellationToken cancellationToken = default)
 	{
 		ArgumentNullException.ThrowIfNull(student);
@@ -128,6 +132,7 @@ public sealed class EnrolmentEngine : IEnrolmentEngine
 	///     GCSE grade moves that would lift each amber/red subject to the next rating; for an ineligible
 	///     student, propose the minimal bundle that clears the eligibility gate.
 	/// </summary>
+	/// <exception cref="ArgumentNullException"><paramref name="student" /> is null.</exception>
 	public AdviceResult Advise(StudentInput student, CancellationToken cancellationToken = default)
 	{
 		ArgumentNullException.ThrowIfNull(student);
@@ -135,6 +140,7 @@ public sealed class EnrolmentEngine : IEnrolmentEngine
 	}
 
 	/// <summary>Counterfactual guidance as of an explicit reference date.</summary>
+	/// <exception cref="ArgumentNullException"><paramref name="student" /> is null.</exception>
 	public AdviceResult Advise(StudentInput student, DateOnly asOf, CancellationToken cancellationToken = default)
 	{
 		ArgumentNullException.ThrowIfNull(student);
@@ -146,6 +152,7 @@ public sealed class EnrolmentEngine : IEnrolmentEngine
 	///     <see cref="PolicyThresholds.AdviceConsidersUnsatGcses" /> default — the diagnostic mode that lets the
 	///     search also propose sitting GCSEs the student never took. As of the bound reference date.
 	/// </summary>
+	/// <exception cref="ArgumentNullException"><paramref name="student" /> is null.</exception>
 	/// <exception cref="ArgumentOutOfRangeException"><paramref name="unsatGcses" /> is not a supported advice scope.</exception>
 	public AdviceResult Advise(StudentInput student, UnsatGcseAdvice unsatGcses, CancellationToken cancellationToken = default)
 	{
@@ -155,6 +162,7 @@ public sealed class EnrolmentEngine : IEnrolmentEngine
 	}
 
 	/// <summary>Counterfactual guidance with an explicit diagnostic override, as of an explicit reference date.</summary>
+	/// <exception cref="ArgumentNullException"><paramref name="student" /> is null.</exception>
 	/// <exception cref="ArgumentOutOfRangeException"><paramref name="unsatGcses" /> is not a supported advice scope.</exception>
 	public AdviceResult Advise(
 		StudentInput student,
@@ -181,6 +189,7 @@ public sealed class EnrolmentEngine : IEnrolmentEngine
 	///     from a <c>*Validated</c> call anyway. One pass suffices: dropping choices only removes downgrades, so no
 	///     surviving choice can newly turn red.
 	/// </remarks>
+	/// <exception cref="ArgumentNullException"><paramref name="student" /> is null.</exception>
 	public IReadOnlyList<Subject> StaleChoices(StudentInput student, CancellationToken cancellationToken = default)
 	{
 		ArgumentNullException.ThrowIfNull(student);
@@ -200,11 +209,13 @@ public sealed class EnrolmentEngine : IEnrolmentEngine
 	///     applies). Amber remains permitted, matching the existing Choose gate. Duplicate and not-offered
 	///     chosen subjects are already rejected by the structural facts validation.
 	/// </summary>
+	/// <exception cref="ArgumentNullException"><paramref name="student" /> is null.</exception>
 	public ValidatedEvaluation<FinalProgramme> ValidateFinalProgramme(
 		StudentInput student, CancellationToken cancellationToken = default) =>
 		ValidateFinalProgramme(student, asOf(), cancellationToken);
 
 	/// <inheritdoc cref="ValidateFinalProgramme(StudentInput, CancellationToken)" />
+	/// <exception cref="ArgumentNullException"><paramref name="student" /> is null.</exception>
 	public ValidatedEvaluation<FinalProgramme> ValidateFinalProgramme(
 		StudentInput student, DateOnly asOf, CancellationToken cancellationToken = default)
 	{
@@ -337,6 +348,8 @@ public sealed class EnrolmentEngine : IEnrolmentEngine
 	///     path for directory-backed hosts, embedded-resource hosts, and tests that want to keep the data
 	///     off disk.
 	/// </summary>
+	/// <exception cref="ArgumentNullException"><paramref name="source" /> is null.</exception>
+	/// <exception cref="InvalidOperationException"><paramref name="source" /> returned null from a stream- or workflow-opening member.</exception>
 	/// <exception cref="WorkflowException">A workflow file failed schema validation or probe compilation.</exception>
 	/// <exception cref="CatalogueException">The catalogue failed schema validation or load-time invariant checks.</exception>
 	/// <exception cref="PolicyThresholdsException">The thresholds file failed schema validation or load-time invariant checks.</exception>
@@ -351,32 +364,35 @@ public sealed class EnrolmentEngine : IEnrolmentEngine
 	///     The <paramref name="asOf" /> source is resolved per evaluation, so a singleton built this way tracks
 	///     a live clock (e.g. <c>() =&gt; DateOnly.FromDateTime(timeProvider.GetLocalNow().DateTime)</c>).
 	/// </remarks>
+	/// <exception cref="ArgumentNullException"><paramref name="asOf" /> is null.</exception>
 	public static EnrolmentEngine Create(
 		IEnrolmentDataSource source,
 		Func<DateOnly> asOf,
 		CancellationToken cancellationToken = default)
 	{
 		ArgumentNullException.ThrowIfNull(source);
+		ArgumentNullException.ThrowIfNull(asOf);
 		cancellationToken.ThrowIfCancellationRequested();
-		using var thresholdsStream = source.OpenThresholds();
-		using var thresholdsSchemaStream = source.OpenThresholdsSchema();
+		using var thresholdsStream = RequireStream(source.OpenThresholds(), nameof(IEnrolmentDataSource.OpenThresholds));
+		using var thresholdsSchemaStream = RequireStream(source.OpenThresholdsSchema(), nameof(IEnrolmentDataSource.OpenThresholdsSchema));
 		var thresholds = PolicyThresholdsStore.LoadAndValidate(thresholdsStream, thresholdsSchemaStream);
 		cancellationToken.ThrowIfCancellationRequested();
-		using var qualificationsStream = source.OpenQualifications();
-		using var qualificationsSchemaStream = source.OpenQualificationsSchema();
+		using var qualificationsStream = RequireStream(source.OpenQualifications(), nameof(IEnrolmentDataSource.OpenQualifications));
+		using var qualificationsSchemaStream =
+			RequireStream(source.OpenQualificationsSchema(), nameof(IEnrolmentDataSource.OpenQualificationsSchema));
 		var scale = QualificationScaleStore.LoadAndValidate(qualificationsStream, qualificationsSchemaStream);
 		cancellationToken.ThrowIfCancellationRequested();
-		using var catalogueStream = source.OpenCatalogue();
-		using var catalogueSchemaStream = source.OpenCatalogueSchema();
+		using var catalogueStream = RequireStream(source.OpenCatalogue(), nameof(IEnrolmentDataSource.OpenCatalogue));
+		using var catalogueSchemaStream = RequireStream(source.OpenCatalogueSchema(), nameof(IEnrolmentDataSource.OpenCatalogueSchema));
 		var catalogue = CatalogueStore.LoadAndValidate(catalogueStream, catalogueSchemaStream, scale);
 		cancellationToken.ThrowIfCancellationRequested();
-		using var matrixStream = source.OpenTransitionMatrix();
+		using var matrixStream = RequireStream(source.OpenTransitionMatrix(), nameof(IEnrolmentDataSource.OpenTransitionMatrix));
 		var matrix = DfeTransitionMatrix.Load(matrixStream);
 		matrix.ValidateCoverage(catalogue);
 		cancellationToken.ThrowIfCancellationRequested();
-		var workflowFiles = source.OpenWorkflows();
+		var workflowFiles = RequireWorkflows(source.OpenWorkflows());
 		try {
-			using var workflowSchemaStream = source.OpenWorkflowSchema();
+			using var workflowSchemaStream = RequireStream(source.OpenWorkflowSchema(), nameof(IEnrolmentDataSource.OpenWorkflowSchema));
 			var built = WorkflowStore.LoadValidateBuildAndProbe(workflowFiles, workflowSchemaStream, catalogue, thresholds, matrix, scale);
 			cancellationToken.ThrowIfCancellationRequested();
 			return new(new(built.Engine, thresholds, catalogue, scale), catalogue, asOf, matrix, built.Workflows);
@@ -387,6 +403,21 @@ public sealed class EnrolmentEngine : IEnrolmentEngine
 			}
 		}
 	}
+
+	/// <summary>
+	///     Guards against a non-conformant <see cref="IEnrolmentDataSource" /> returning <see langword="null" />
+	///     from a stream-opening member: converts what would otherwise be a downstream null dereference into an
+	///     <see cref="InvalidOperationException" /> naming the offending member.
+	/// </summary>
+	private static Stream RequireStream(Stream? stream, string memberName) =>
+		stream ?? throw new InvalidOperationException(
+			$"{nameof(IEnrolmentDataSource)}.{memberName}() returned null; a data source must always return a stream.");
+
+	/// <inheritdoc cref="RequireStream(Stream?, string)" />
+	private static IReadOnlyList<WorkflowContent> RequireWorkflows(IReadOnlyList<WorkflowContent>? workflows) =>
+		workflows ?? throw new InvalidOperationException(
+			$"{nameof(IEnrolmentDataSource)}.{nameof(IEnrolmentDataSource.OpenWorkflows)}() returned null; " +
+			"a data source must always return a workflow list.");
 
 	/// <summary>
 	///     Run the pipeline once. Order is fixed (predict → engine → constraints → chosen-subject cap →

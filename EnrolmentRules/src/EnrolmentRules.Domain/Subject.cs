@@ -1,7 +1,7 @@
 namespace EnrolmentRules.Domain;
 
-using System.Text.Json;
 using System.Text.Json.Serialization;
+using Serialization;
 
 /// <summary>
 ///     An A-level subject identifier. The shipped catalogue currently defines the built-in static members
@@ -13,6 +13,7 @@ public readonly record struct Subject : IComparable<Subject>
 {
 	public Subject(string value)
 	{
+		ArgumentNullException.ThrowIfNull(value);
 		if (!IsValid(value)) {
 			throw new ArgumentException($"'{value}' is not a valid subject name.", nameof(value));
 		}
@@ -110,18 +111,4 @@ public readonly record struct Subject : IComparable<Subject>
 
 		return !expectLetter;
 	}
-}
-
-public sealed class SubjectJsonConverter : JsonConverter<Subject>
-{
-	public override Subject Read(ref Utf8JsonReader reader, Type typeToConvert, JsonSerializerOptions options)
-	{
-		var value = reader.GetString();
-		return Subject.TryParse(value, out var subject)
-			? subject
-			: throw new JsonException($"'{value}' is not a valid subject name.");
-	}
-
-	public override void Write(Utf8JsonWriter writer, Subject value, JsonSerializerOptions options) =>
-		writer.WriteStringValue(value.Value);
 }

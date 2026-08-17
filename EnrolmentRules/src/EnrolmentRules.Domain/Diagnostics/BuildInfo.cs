@@ -1,4 +1,4 @@
-namespace EnrolmentRules.Domain;
+namespace EnrolmentRules.Domain.Diagnostics;
 
 using System.Reflection;
 

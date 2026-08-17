@@ -135,11 +135,20 @@ public sealed class EnrolmentPolicyRegistryTests
 	}
 
 	[Fact]
-	public void construction_rejects_a_blank_display_name()
+	public void constructing_a_definition_rejects_a_blank_display_name()
 	{
-		var act = () => new EnrolmentPolicyRegistry([StandardDefinition(name: " ")], new("standard"), static () => Harness.AsOf);
+		var act = static () => new EnrolmentPolicyDefinition(new("standard"), " ", StandardSource());
 
-		act.Should().Throw<EnrolmentPolicyConfigurationException>().WithMessage("*blank*");
+		act.Should().Throw<ArgumentException>().WithParameterName("displayName");
+	}
+
+	[Fact]
+	public void construction_rejects_a_null_definition_entry()
+	{
+		var act = () => new EnrolmentPolicyRegistry(
+			[StandardDefinition(), null!], new("standard"), static () => Harness.AsOf);
+
+		act.Should().Throw<EnrolmentPolicyConfigurationException>();
 	}
 
 	[Fact]

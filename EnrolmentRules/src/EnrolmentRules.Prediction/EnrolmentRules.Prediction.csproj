@@ -7,8 +7,10 @@
         <!-- GenerateDocumentationFile ships XML docs for package consumers. This project's public
              members are currently all documented, so CS1591 (missing doc on a public member) fires
              nothing today; the suppression is a forward-guard kept consistent with the sibling
-             packages, where the bulk of the public surface is value-equality boilerplate and
-             types forced public only for RulesEngine lambda binding. -->
+             packages, where the bulk of the public surface is value-equality boilerplate and types
+             forced CLR-public only for RulesEngine lambda binding, source generation, or collection
+             expressions — still exported contracts (see the API specification's "Exported runtime
+             support" section), just not mainline consumer entry points. -->
         <NoWarn>$(NoWarn);CS1591</NoWarn>
     </PropertyGroup>
 

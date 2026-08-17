@@ -6,24 +6,17 @@
         <GenerateDocumentationFile>true</GenerateDocumentationFile>
         <!-- GenerateDocumentationFile ships XML docs for package consumers. CS1591 (missing doc on a
              public member) is suppressed because most of the public surface is value-equality
-             boilerplate, enum-like members, and types forced public only for RulesEngine lambda
-             binding, not consumer-facing API. Blanket enforcement would generate filler, not
-             value; genuine entry points are documented by hand. -->
+             boilerplate, enum-like members, and types forced CLR-public only for RulesEngine lambda
+             binding, source generation, or collection expressions. Those types are still exported
+             contracts (see the API specification's "Exported runtime support" section), just not
+             mainline consumer entry points; blanket enforcement would generate filler, not value.
+             Genuine entry points are documented by hand. -->
         <NoWarn>$(NoWarn);CS1591</NoWarn>
     </PropertyGroup>
 
     <ItemGroup>
         <ProjectReference Include="..\EnrolmentRules.Domain\EnrolmentRules.Domain.csproj"/>
         <ProjectReference Include="..\EnrolmentRules.Prediction\EnrolmentRules.Prediction.csproj"/>
-    </ItemGroup>
-
-    <ItemGroup>
-        <None Include="..\..\workflows\**\*" Pack="true" PackagePath="contentFiles/any/any/enrolment-reference/workflows/%(RecursiveDir)%(Filename)%(Extension)"/>
-        <None Include="..\..\data\catalogue.yaml;..\..\data\catalogue.schema.json;..\..\data\qualifications.yaml;..\..\data\qualifications.schema.json;..\..\data\thresholds.yaml;..\..\data\thresholds.schema.json" Pack="true" PackagePath="contentFiles/any/any/enrolment-reference/data/%(Filename)%(Extension)"/>
-        <None Include="..\..\data\dfe-transition-matrices\**\*" Pack="true" PackagePath="contentFiles/any/any/enrolment-reference/data/dfe-transition-matrices/%(RecursiveDir)%(Filename)%(Extension)"/>
-        <!-- The Elite auxiliary policy: only its own workflows/catalogue/thresholds, mirroring the CLI/Web
-             publish layout above — schemas, qualifications and the matrix stay single-copy. -->
-        <None Include="..\..\policies\elite\**\*" Pack="true" PackagePath="contentFiles/any/any/enrolment-reference/policies/elite/%(RecursiveDir)%(Filename)%(Extension)"/>
     </ItemGroup>
 
     <ItemGroup>

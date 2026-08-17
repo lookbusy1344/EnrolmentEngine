@@ -60,6 +60,7 @@ public sealed class EnrolmentEngineFactory : IEnrolmentEngineFactory, IDisposabl
 		=> Create(source, () => asOf, cancellationToken);
 
 	/// <summary>Bootstrap a factory from a stream-backed data source and a reference-date source.</summary>
+	/// <exception cref="ArgumentNullException"><paramref name="source" /> or <paramref name="asOf" /> is null.</exception>
 	public static EnrolmentEngineFactory Create(
 		IEnrolmentDataSource source,
 		Func<DateOnly> asOf,

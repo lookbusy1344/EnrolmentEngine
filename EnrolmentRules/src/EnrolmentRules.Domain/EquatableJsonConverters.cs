@@ -8,7 +8,7 @@ using System.Text.Json.Serialization.Metadata;
 /// <summary>
 ///     Serialises <see cref="EquatableArray{T}" /> as a plain JSON array. Each element is (de)serialised
 ///     through the ambient <see cref="JsonSerializerOptions" /> — i.e. the source-generated
-///     <see cref="EnrolmentJsonContext" /> — so the wrapper stays reflection-free: it adds no metadata of
+///     <see cref="Serialization.EnrolmentJsonContext" /> — so the wrapper stays reflection-free: it adds no metadata of
 ///     its own, it just borrows the element's generated <see cref="JsonTypeInfo{T}" />.
 /// </summary>
 internal sealed class EquatableArrayJsonConverterFactory : JsonConverterFactory

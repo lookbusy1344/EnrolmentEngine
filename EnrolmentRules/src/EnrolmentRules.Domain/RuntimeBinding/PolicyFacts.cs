@@ -1,4 +1,4 @@
-namespace EnrolmentRules.Domain;
+namespace EnrolmentRules.Domain.RuntimeBinding;
 
 /// <summary>
 ///     The policy object exposed to RulesEngine lambdas. It wraps the loaded

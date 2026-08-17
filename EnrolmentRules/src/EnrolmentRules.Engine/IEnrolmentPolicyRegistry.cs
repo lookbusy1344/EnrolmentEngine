@@ -3,17 +3,46 @@ namespace EnrolmentRules.Engine;
 using Domain;
 
 /// <summary>Display metadata for one registered policy — the identifier plus the label front ends render.</summary>
-public sealed record EnrolmentPolicyDescriptor(EnrolmentPolicyId Id, string DisplayName);
+public sealed record EnrolmentPolicyDescriptor
+{
+	/// <summary>Construct a descriptor for a registered policy's identifier and display label.</summary>
+	/// <exception cref="ArgumentNullException"><paramref name="displayName" /> is null.</exception>
+	/// <exception cref="ArgumentException"><paramref name="id" /> is the default value, or <paramref name="displayName" /> is empty/blank.</exception>
+	public EnrolmentPolicyDescriptor(EnrolmentPolicyId id, string displayName)
+	{
+		if (id.Value is null) {
+			throw new ArgumentException("Id must be a constructed EnrolmentPolicyId, not the default value.", nameof(id));
+		}
+
+		ArgumentException.ThrowIfNullOrWhiteSpace(displayName);
+		Id = id;
+		DisplayName = displayName;
+	}
+
+	public EnrolmentPolicyId Id { get; }
+
+	public string DisplayName { get; }
+}
 
 /// <summary>
 ///     One registered policy: its descriptor plus the immutable, already-bootstrapped engine it owns. A
 ///     <c>class</c> rather than a <c>record</c> because <see cref="Engine" /> is not value-equatable (JSV01).
 /// </summary>
-public sealed class EnrolmentPolicy(EnrolmentPolicyDescriptor descriptor, IEnrolmentEngine engine)
+public sealed class EnrolmentPolicy
 {
-	public EnrolmentPolicyDescriptor Descriptor { get; } = descriptor;
+	/// <summary>Pair a descriptor with the already-bootstrapped engine it owns.</summary>
+	/// <exception cref="ArgumentNullException"><paramref name="descriptor" /> or <paramref name="engine" /> is null.</exception>
+	public EnrolmentPolicy(EnrolmentPolicyDescriptor descriptor, IEnrolmentEngine engine)
+	{
+		ArgumentNullException.ThrowIfNull(descriptor);
+		ArgumentNullException.ThrowIfNull(engine);
+		Descriptor = descriptor;
+		Engine = engine;
+	}
 
-	public IEnrolmentEngine Engine { get; } = engine;
+	public EnrolmentPolicyDescriptor Descriptor { get; }
+
+	public IEnrolmentEngine Engine { get; }
 }
 
 /// <summary>
@@ -22,13 +51,29 @@ public sealed class EnrolmentPolicy(EnrolmentPolicyDescriptor descriptor, IEnrol
 ///     source the registry builds it from. A <c>class</c> rather than a <c>record</c> because
 ///     <see cref="Source" /> is not value-equatable (JSV01).
 /// </summary>
-public sealed class EnrolmentPolicyDefinition(EnrolmentPolicyId id, string displayName, IEnrolmentDataSource source)
+public sealed class EnrolmentPolicyDefinition
 {
-	public EnrolmentPolicyId Id { get; } = id;
+	/// <summary>Declare one policy's identifier, display label, and the data source the registry builds it from.</summary>
+	/// <exception cref="ArgumentNullException"><paramref name="displayName" /> or <paramref name="source" /> is null.</exception>
+	/// <exception cref="ArgumentException"><paramref name="id" /> is the default value, or <paramref name="displayName" /> is empty/blank.</exception>
+	public EnrolmentPolicyDefinition(EnrolmentPolicyId id, string displayName, IEnrolmentDataSource source)
+	{
+		if (id.Value is null) {
+			throw new ArgumentException("Id must be a constructed EnrolmentPolicyId, not the default value.", nameof(id));
+		}
 
-	public string DisplayName { get; } = displayName;
+		ArgumentException.ThrowIfNullOrWhiteSpace(displayName);
+		ArgumentNullException.ThrowIfNull(source);
+		Id = id;
+		DisplayName = displayName;
+		Source = source;
+	}
 
-	public IEnrolmentDataSource Source { get; } = source;
+	public EnrolmentPolicyId Id { get; }
+
+	public string DisplayName { get; }
+
+	public IEnrolmentDataSource Source { get; }
 }
 
 /// <summary>
@@ -77,6 +122,7 @@ public interface IEnrolmentPolicyRegistry
 	///     points. A chosen subject absent from the selected policy's catalogue is <em>not</em> a validation
 	///     failure here — it is classified <see cref="ChoiceStatus.NotOffered" /> in the result.
 	/// </summary>
+	/// <exception cref="ArgumentNullException"><paramref name="student" /> is null.</exception>
 	/// <exception cref="UnknownEnrolmentPolicyException"><paramref name="id" /> is not registered.</exception>
 	ValidatedEvaluation<PolicyComparisonResult> Compare(
 		EnrolmentPolicyId id, StudentInput student, CancellationToken cancellationToken = default);

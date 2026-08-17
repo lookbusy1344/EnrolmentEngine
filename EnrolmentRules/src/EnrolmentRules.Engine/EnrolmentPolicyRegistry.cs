@@ -15,6 +15,11 @@ public sealed class EnrolmentPolicyRegistry : IEnrolmentPolicyRegistry
 {
 	private readonly IReadOnlyDictionary<EnrolmentPolicyId, EnrolmentPolicy> byId;
 
+	/// <summary>Validate and eagerly build an immutable registry from the supplied policy definitions.</summary>
+	/// <exception cref="ArgumentNullException"><paramref name="definitions" /> or <paramref name="asOf" /> is null.</exception>
+	/// <exception cref="EnrolmentPolicyConfigurationException">The definition set or default policy identifier is invalid.</exception>
+	/// <exception cref="EnrolmentPolicyBuildException">A policy's engine could not be built from its data source.</exception>
+	/// <exception cref="OperationCanceledException"><paramref name="cancellationToken" /> requested cancellation.</exception>
 	public EnrolmentPolicyRegistry(
 		IReadOnlyList<EnrolmentPolicyDefinition> definitions,
 		EnrolmentPolicyId defaultPolicyId,
@@ -23,11 +28,12 @@ public sealed class EnrolmentPolicyRegistry : IEnrolmentPolicyRegistry
 	{
 		ArgumentNullException.ThrowIfNull(definitions);
 		ArgumentNullException.ThrowIfNull(asOf);
-		ValidateDefinitions(definitions, defaultPolicyId);
+		var snapshot = definitions.ToArray();
+		ValidateDefinitions(snapshot, defaultPolicyId);
 
 		var built = new Dictionary<EnrolmentPolicyId, EnrolmentPolicy>();
 		var descriptors = new List<EnrolmentPolicyDescriptor>();
-		foreach (var definition in definitions) {
+		foreach (var definition in snapshot) {
 			cancellationToken.ThrowIfCancellationRequested();
 			var engine = Build(definition, asOf, cancellationToken);
 			var descriptor = new EnrolmentPolicyDescriptor(definition.Id, definition.DisplayName);
@@ -124,28 +130,26 @@ public sealed class EnrolmentPolicyRegistry : IEnrolmentPolicyRegistry
 		}
 	}
 
-	private static void ValidateDefinitions(IReadOnlyList<EnrolmentPolicyDefinition> definitions, EnrolmentPolicyId defaultPolicyId)
+	private static void ValidateDefinitions(EnrolmentPolicyDefinition[] definitions, EnrolmentPolicyId defaultPolicyId)
 	{
-		if (definitions.Count == 0) {
+		if (definitions.Length == 0) {
 			throw new EnrolmentPolicyConfigurationException("At least one policy definition is required.");
 		}
 
 		var ids = new HashSet<EnrolmentPolicyId>();
 		var names = new HashSet<string>(StringComparer.Ordinal);
 		foreach (var definition in definitions) {
-			if (!ids.Add(definition.Id)) {
-				throw new EnrolmentPolicyConfigurationException($"Duplicate policy identifier '{definition.Id}'.");
+			if (definition is null) {
+				throw new EnrolmentPolicyConfigurationException("Policy definitions must not contain a null entry.");
 			}
 
-			if (string.IsNullOrWhiteSpace(definition.DisplayName)) {
-				throw new EnrolmentPolicyConfigurationException($"Policy '{definition.Id}' has a blank display name.");
+			if (!ids.Add(definition.Id)) {
+				throw new EnrolmentPolicyConfigurationException($"Duplicate policy identifier '{definition.Id}'.");
 			}
 
 			if (!names.Add(definition.DisplayName)) {
 				throw new EnrolmentPolicyConfigurationException($"Duplicate policy display name '{definition.DisplayName}'.");
 			}
-
-			ArgumentNullException.ThrowIfNull(definition.Source);
 		}
 
 		if (!ids.Contains(defaultPolicyId)) {

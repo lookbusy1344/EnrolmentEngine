@@ -61,6 +61,8 @@ public sealed class EnrolmentPolicyDependencyInjectionTests
 
 		provider.GetService<IEnrolmentEngine>().Should().BeNull();
 		provider.GetService<IEnrolmentEvaluator>().Should().BeNull();
+		provider.GetService<IEnrolmentAdvisor>().Should().BeNull();
+		provider.GetService<IEnrolmentCriteriaExplainer>().Should().BeNull();
 	}
 
 	[Fact]

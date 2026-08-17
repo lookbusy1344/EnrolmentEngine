@@ -1,4 +1,4 @@
-namespace EnrolmentRules.Domain;
+namespace EnrolmentRules.Domain.Serialization;
 
 using System.Globalization;
 using System.Text.Json.Nodes;

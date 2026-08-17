@@ -23,19 +23,32 @@ policy change ships.
 | [`data/dfe-transition-matrices/`](../data/dfe-transition-matrices) | Historical GCSE→A-level transition data feeding the regression in step 2. |
 | [`policies/<id>/`](../policies) | Auxiliary-policy workflow, catalogue, and threshold overrides. `OverlayEnrolmentDataSource` falls through to the base tree for shared schemas, qualifications, and DfE evidence; `policies/elite/` is the shipped example. |
 
+The item set above — every base file and every `policies/**` auxiliary policy — is declared exactly
+once, in [`build/EnrolmentRules.PolicyAssets.props`](../build/EnrolmentRules.PolicyAssets.props),
+and imported by CLI and Web for their build/publish output. The Engine library does not embed
+runtime policy data: hosts select and supply it through `IEnrolmentDataSource`. A new file under an
+existing base-data or policy directory reaches both executable hosts without a project-file edit;
+`PolicyAssetOwnershipTests` fails the build if a host re-adds its own glob
+against `workflows/`, `data/`, or `policies/` instead of importing that file. Web's own
+Vite/static-web-asset handling (`wwwroot/`) is unrelated and stays declared in
+[`EnrolmentRules.Web.csproj`](../src/EnrolmentRules.Web/EnrolmentRules.Web.csproj) directly.
+
 ## 1. Domain — [`src/EnrolmentRules.Domain`](../src/EnrolmentRules.Domain)
 
 Shared vocabulary and the loaders that turn the YAML above into validated, immutable snapshots. No
 RulesEngine dependency — this project defines the shapes everything else operates on.
 
-- **Inputs/outputs:** [`Inputs.cs`](../src/EnrolmentRules.Domain/Inputs.cs),
+Namespaced by role, per the [API surface specification](design/2026-07-03-framework-design-guidelines-api-spec.md#exported-runtime-support):
+`EnrolmentRules.Domain` for mainline vocabulary, `.Serialization`/`.Authoring`/`.RuntimeBinding`/
+`.Diagnostics` for plumbing a consumer opts into explicitly.
+
+- **Inputs/outputs (`EnrolmentRules.Domain`):** [`Inputs.cs`](../src/EnrolmentRules.Domain/Inputs.cs),
   [`Results.cs`](../src/EnrolmentRules.Domain/Results.cs),
   [`Criteria.cs`](../src/EnrolmentRules.Domain/Criteria.cs),
-  [`PolicyFacts.cs`](../src/EnrolmentRules.Domain/PolicyFacts.cs),
   [`PrerequisiteSatisfaction.cs`](../src/EnrolmentRules.Domain/PrerequisiteSatisfaction.cs),
   [`Validation.cs`](../src/EnrolmentRules.Domain/Validation.cs),
   [`Linting.cs`](../src/EnrolmentRules.Domain/Linting.cs)
-- **Enums/scales:** [`Rating.cs`](../src/EnrolmentRules.Domain/Rating.cs),
+- **Enums/scales (`EnrolmentRules.Domain`):** [`Rating.cs`](../src/EnrolmentRules.Domain/Rating.cs),
   [`Subject.cs`](../src/EnrolmentRules.Domain/Subject.cs),
   [`ALevelGrade.cs`](../src/EnrolmentRules.Domain/ALevelGrade.cs),
   [`AdjustmentKind.cs`](../src/EnrolmentRules.Domain/AdjustmentKind.cs),
@@ -43,25 +56,35 @@ RulesEngine dependency — this project defines the shapes everything else opera
   [`EnumNames.cs`](../src/EnrolmentRules.Domain/EnumNames.cs),
   [`Thresholds.cs`](../src/EnrolmentRules.Domain/Thresholds.cs) (the compiled GCSE 1–9 scale
   invariants — the one numeric constant set that isn't policy data)
-- **Data loaders/validators:** [`Catalogue.cs`](../src/EnrolmentRules.Domain/Catalogue.cs) +
+- **Data snapshots (`EnrolmentRules.Domain`):** [`Catalogue.cs`](../src/EnrolmentRules.Domain/Catalogue.cs) +
   [`CatalogueFile.cs`](../src/EnrolmentRules.Domain/CatalogueFile.cs) +
   [`CatalogueDataException.cs`](../src/EnrolmentRules.Domain/CatalogueDataException.cs)
-  (`data/catalogue.yaml`), [`PolicyThresholds.cs`](../src/EnrolmentRules.Domain/PolicyThresholds.cs) +
-  [`PolicyThresholdsStore.cs`](../src/EnrolmentRules.Domain/PolicyThresholdsStore.cs)
-  (`data/thresholds.yaml`), [`QualificationScale.cs`](../src/EnrolmentRules.Domain/QualificationScale.cs) +
-  [`QualificationScaleStore.cs`](../src/EnrolmentRules.Domain/QualificationScaleStore.cs)
+  (`data/catalogue.yaml`; the exception is a runtime invariant of the built snapshot, raised by
+  `Catalogue.Load*` itself, so it stays here rather than in `.Authoring`),
+  [`PolicyThresholds.cs`](../src/EnrolmentRules.Domain/PolicyThresholds.cs)
+  (`data/thresholds.yaml`), [`QualificationScale.cs`](../src/EnrolmentRules.Domain/QualificationScale.cs)
   (`data/qualifications.yaml`)
-- **Plumbing:** [`PredictionModel.cs`](../src/EnrolmentRules.Domain/PredictionModel.cs),
+- **Plumbing (`EnrolmentRules.Domain`):** [`PredictionModel.cs`](../src/EnrolmentRules.Domain/PredictionModel.cs),
   [`AgeCalculator.cs`](../src/EnrolmentRules.Domain/AgeCalculator.cs),
-  [`EnrolmentJson.cs`](../src/EnrolmentRules.Domain/EnrolmentJson.cs) +
-  [`YamlConverter.cs`](../src/EnrolmentRules.Domain/YamlConverter.cs) +
   [`EquatableArray.cs`](../src/EnrolmentRules.Domain/EquatableArray.cs) /
   [`EquatableDictionary.cs`](../src/EnrolmentRules.Domain/EquatableDictionary.cs) /
   [`EquatableJsonConverters.cs`](../src/EnrolmentRules.Domain/EquatableJsonConverters.cs)
-  (source-generated JSON and value-equality helpers),
+  (value-equality helpers, public so any assembly's collection expressions can target them),
   [`EnrolmentDataException.cs`](../src/EnrolmentRules.Domain/EnrolmentDataException.cs),
-  [`BuildInfo.cs`](../src/EnrolmentRules.Domain/BuildInfo.cs),
   [`AssemblyInfo.cs`](../src/EnrolmentRules.Domain/AssemblyInfo.cs)
+- **`EnrolmentRules.Domain.Serialization`** (source-generated JSON contexts and converters, YAML
+  normalisation — exported only because source generation and custom converters require it):
+  [`EnrolmentJson.cs`](../src/EnrolmentRules.Domain/Serialization/EnrolmentJson.cs),
+  [`SubjectJsonConverter.cs`](../src/EnrolmentRules.Domain/Serialization/SubjectJsonConverter.cs),
+  [`YamlConverter.cs`](../src/EnrolmentRules.Domain/Serialization/YamlConverter.cs)
+- **`EnrolmentRules.Domain.Authoring`** (schema-backed stores and their load/validation exceptions —
+  the Domain-level counterpart to `EnrolmentRules.Engine.Authoring` one layer down):
+  [`PolicyThresholdsStore.cs`](../src/EnrolmentRules.Domain/Authoring/PolicyThresholdsStore.cs),
+  [`QualificationScaleStore.cs`](../src/EnrolmentRules.Domain/Authoring/QualificationScaleStore.cs)
+- **`EnrolmentRules.Domain.RuntimeBinding`** (public solely because RulesEngine binds workflow
+  lambdas to it by reflection): [`PolicyFacts.cs`](../src/EnrolmentRules.Domain/RuntimeBinding/PolicyFacts.cs)
+- **`EnrolmentRules.Domain.Diagnostics`** (diagnostic-only metadata, not a mainline scenario type):
+  [`BuildInfo.cs`](../src/EnrolmentRules.Domain/Diagnostics/BuildInfo.cs)
 
 ## 2. Prediction — [`src/EnrolmentRules.Prediction`](../src/EnrolmentRules.Prediction)
 
@@ -149,15 +172,33 @@ Thin shim: parses arguments, calls the engine, renders.
 
 ### Web — [`src/EnrolmentRules.Web`](../src/EnrolmentRules.Web)
 
-Session-backed, no database. Two UIs over the same API: a server-rendered Razor Pages flow and a
-Vue single-page app.
+No database and no server-side session. Two UIs over the same API — a server-rendered Razor Pages
+flow and a Vue single-page app — that share one client-side store: browser `localStorage` is the
+editable-facts store for both (`enrolmentRules.vue.snapshot.v1`, read/written by
+[`state/localStorageSnapshot.ts`](../src/EnrolmentRules.Web/ClientApp/src/state/localStorageSnapshot.ts)).
+Razor's POST → redirect → GET request cycle cannot read `localStorage` server-side, so a small,
+self-contained `enrolment.state` cookie (not DataProtection-protected, decodable by any instance
+with no shared key ring) carries the current snapshot across that one hop; `enrolment.policy`
+carries the last-resolved policy id the same way. See
+[Web Interface](technical-reference.md#web-interface) for the full mirroring protocol and
+[`docs/deployment.md`](deployment.md#multi-instance-scaling) for why Razor Pages' own antiforgery
+token — still DataProtection-protected, with no shared key ring configured — is the one piece that
+still requires sticky routing when scaling beyond one instance.
 
 - **Host/bootstrap:** [`Program.cs`](../src/EnrolmentRules.Web/Program.cs),
   [`Configuration/EnrolmentWebOptions.cs`](../src/EnrolmentRules.Web/Configuration/EnrolmentWebOptions.cs),
   [`Configuration/EnrolmentWebConfigurationException.cs`](../src/EnrolmentRules.Web/Configuration/EnrolmentWebConfigurationException.cs),
   [`Configuration/ExperienceKind.cs`](../src/EnrolmentRules.Web/Configuration/ExperienceKind.cs)
-- **Session state:** [`Services/EnrolmentSessionStore.cs`](../src/EnrolmentRules.Web/Services/EnrolmentSessionStore.cs),
-  [`Models/EnrolmentSession.cs`](../src/EnrolmentRules.Web/Models/EnrolmentSession.cs)
+- **Facts state — the editable snapshot, shared by both UIs:**
+  [`Models/EnrolmentSession.cs`](../src/EnrolmentRules.Web/Models/EnrolmentSession.cs) (the snapshot
+  record — despite the name, not server-side session state, just the editable-facts shape),
+  [`Services/EnrolmentStateCookieStore.cs`](../src/EnrolmentRules.Web/Services/EnrolmentStateCookieStore.cs)
+  (the `enrolment.state` PRG-transport cookie),
+  [`Services/EnrolmentPolicyCookie.cs`](../src/EnrolmentRules.Web/Services/EnrolmentPolicyCookie.cs)
+  (the `enrolment.policy` cookie),
+  [`ClientApp/src/razor-sync.ts`](../src/EnrolmentRules.Web/ClientApp/src/razor-sync.ts) (mirrors a
+  server render into `localStorage`, and pulls the other way via `?handler=Hydrate` when
+  `localStorage` leads the server — see the Web Interface section linked above for when each direction wins)
 - **Policy selection, shared by both UIs:** [`Services/EnrolmentPolicySelector.cs`](../src/EnrolmentRules.Web/Services/EnrolmentPolicySelector.cs)
   resolves a `?policy=` value against `IEnrolmentPolicyRegistry`, no silent fallback on an unknown id.
 - **Razor Pages UI (`/razor`):** [`Pages/Index.cshtml`](../src/EnrolmentRules.Web/Pages/Index.cshtml)

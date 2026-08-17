@@ -106,11 +106,11 @@ Start with the [guided walk-through](walkthrough.md).
 | `src/EnrolmentRules.Engine`                         | The `EnrolmentEngine` facade and the mainline evaluation contracts (`IEnrolmentEngine`, `IEnrolmentEvaluator`, `IEnrolmentAdvisor`). Supporting bootstrap and authoring APIs live in explicit `Hosting` / `Authoring` namespaces. |
 | `src/EnrolmentRules.Extensions.DependencyInjection` | `AddEnrolmentEngineFactory` / `AddEnrolmentEngine` / `AddEnrolmentPolicies` registration helpers for `Microsoft.Extensions.DependencyInjection` hosts.                                |
 | `src/EnrolmentRules.Cli`                            | `enrolment` executable and table/JSON/batch command line modes.                                                                                                                         |
-| `src/EnrolmentRules.Web`                            | Razor Pages reference web front-end: session-backed anonymous facts editing, live re-explanation, no database. See [Web Interface](#web-interface) below.                              |
+| `src/EnrolmentRules.Web`                            | Razor Pages and Vue reference web front-ends: `localStorage`-backed anonymous facts editing, live re-explanation, no database, no server-side session. See [Web Interface](#web-interface) below. |
 | `src/EnrolmentRules.Benchmarks`                     | BenchmarkDotNet harness for engine throughput.                                                                                                                                          |
 | `tests/EnrolmentRules.Tests`                        | xUnit and Awesome Assertions coverage, including engine-driven rule tests, invariants, and golden files.                                                                                |
 | `tests/EnrolmentRules.TestProcessHost`              | Out-of-process fixture exercised by the CLI/process tests.                                                                                                                              |
-| `tests/EnrolmentRules.Web.Tests`                    | `WebApplicationFactory`-driven integration tests for the web front-end (session round-trip, form posts, rendered explanations).                                                        |
+| `tests/EnrolmentRules.Web.Tests`                    | `WebApplicationFactory`-driven integration tests for the web front-end (cookie/localStorage round-trip, form posts, rendered explanations).                                            |
 | `workflows`                                         | Standard policy's RulesEngine workflow YAML and its schema.                                                                                                                             |
 | `policies/<id>/workflows`, `policies/<id>/data`     | An auxiliary policy's own workflows/catalogue/thresholds, layered over the shared `data/` schemas and qualification scale by `OverlayEnrolmentDataSource`. `policies/elite/` ships as the worked example — see [Policy registry](#policy-registry). |
 | `examples`                                          | Single-student JSON, JSONL batch input, and golden-file fixtures.                                                                                                                       |
@@ -474,18 +474,29 @@ It serves both the original Razor Pages workflow at `/razor` and a Vue 3 workflo
 redirects to the configured default experience. It is a reference host, not a packable library
 project:
 
-- **No accounts, no database, no durable persistence.** The Razor workflow stores the current
-  anonymous facts in ASP.NET Core session, keyed by a browser cookie. The Vue workflow calls a
-  stateless JSON API and posts the full editable snapshot on every evaluation; browser
-  `localStorage` is used only as a refresh convenience. Its versioned snapshot preserves facts and
-  choices when migrating the pre-policy v1 format, then resolves the saved policy against the
-  server-provided registry rather than trusting stale client data.
-- Razor GETs re-run `IEnrolmentPolicyRegistry.Compare` against the session snapshot, so the rendered
-  page is always a fresh comparison, never a cached one. Vue evaluations do the same through
-  `POST /api/enrolment/evaluate`.
+- **No accounts, no database, no server-side session.** Browser `localStorage` is the one editable-
+  facts store for both UIs (key `enrolmentRules.vue.snapshot.v1`, read/written by
+  `ClientApp/src/state/localStorageSnapshot.ts`); its versioned snapshot preserves facts and choices
+  when migrating the pre-policy v1 format, then resolves the saved policy against the
+  server-provided registry rather than trusting stale client data. Vue reads/writes it directly.
+  Razor cannot — its forms POST → redirect → GET per request, and a GET has no access to
+  `localStorage` server-side — so a small, self-contained `enrolment.state` cookie (the snapshot's
+  own bytes, not a server-side session key, and not DataProtection-protected, so any instance can
+  decode it with no shared key ring) carries the current snapshot across that one PRG hop.
+  `ClientApp/src/razor-sync.ts` mirrors every Razor render back into `localStorage`, and pulls the
+  other way via a client-driven `?handler=Hydrate` POST whenever `localStorage` leads the server
+  in either of two cases: a cold visit with no state cookie, or a state cookie that outlived a
+  `/app` edit. Emptiness identifies only the cold visit, so the stored record also carries
+  `pendingSync`: `saveSnapshot` sets it after a client-side edit, `mirrorServerSnapshot` clears it
+  after a server render, and `razor-sync.ts` clears it before posting the hydrate request so the
+  redirect settles instead of hydrating repeatedly. `enrolment.policy` carries the last-resolved
+  policy id through the same request cycle.
+- Razor GETs re-run `IEnrolmentPolicyRegistry.Compare` against the cookie-carried snapshot, so the
+  rendered page is always a fresh comparison, never a cached one. Vue evaluations do the same
+  through `POST /api/enrolment/evaluate`.
 - Red unchosen subjects are rendered as unavailable and the `ChooseSubject` POST handler rechecks
-  the current final rating before mutating the session. A chosen subject still renders `Remove`, even
-  if it is now red, so a counsellor can unwind a conflicting combination.
+  the current final rating before mutating the stored snapshot. A chosen subject still renders
+  `Remove`, even if it is now red, so a counsellor can unwind a conflicting combination.
 - Client-side vocabulary (GCSE subject keys, prior-qualification subjects/types, hobby tags) comes
   from the same catalogue/scale the engine is bound to (`GcseSubjects.Known`,
   `IEnrolmentEngine.Catalogue`) — the web layer holds no parallel copy of policy data.
@@ -780,10 +791,10 @@ falling back to the registry's own default, never a silent substitution on an *i
   which ids exist — never hard-code them. The client rejects malformed or contradictory registry
   metadata rather than guessing a policy.
 - **Razor** (`/razor?policy=<id>`): `RazorModel.ResolvePolicy` tries the URL value, then the
-  session's last-viewed policy, then the registry default; an invalid *URL* value redirects to the
-  canonical policy-stripped URL rather than rendering with a silent fallback. The page shows the
-  current policy's display name and a "Switch to *Other*" link next to the hero, and switching
-  re-runs `Compare` against the same session facts and basket — nothing is cleared.
+  `enrolment.policy` cookie's last-viewed policy, then the registry default; an invalid *URL* value
+  redirects to the canonical policy-stripped URL rather than rendering with a silent fallback. The
+  page shows the current policy's display name and a "Switch to *Other*" link next to the hero, and
+  switching re-runs `Compare` against the same cookie-carried facts and basket — nothing is cleared.
 - **Vue** (`/app?policy=<id>`): the same precedence (URL, then the policy id last saved to
   `localStorage`, then the server default), resolved client-side by retrying
   `GET /api/enrolment/options` down that candidate list until one is accepted — a `400` for a bad id
@@ -856,7 +867,10 @@ dotnet run -c Release --project src/EnrolmentRules.Benchmarks
 The public API surface is designed to follow the
 [Framework Design Guidelines — Essentials](../../Framework_Design_Guidelines_Essentials.md) (a distilled
 reference to Cwalina & Abrams, *Framework Design Guidelines*, 4th ed.): scenario-driven shapes,
-consistent naming, the exception model, and the standard collection/async/dispose patterns.
+consistent naming, the exception model, and the standard collection/async/dispose patterns. The
+[API surface specification](design/2026-07-03-framework-design-guidelines-api-spec.md) is the
+single authoritative inventory of every exported type, reflection-locked by
+`PublicApiSurfaceTests`; this document does not repeat it.
 
 These conventions are backed by three analyzer packages, run as part of the build (warnings are
 errors), so drift is caught mechanically rather than by review alone:

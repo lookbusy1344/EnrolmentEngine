@@ -298,6 +298,8 @@ public sealed class DfeTransitionMatrix
 /// </summary>
 public sealed class TransitionMatrixException : EnrolmentDataException
 {
+	public TransitionMatrixException() { }
+
 	public TransitionMatrixException(string message) : base(message) { }
 
 	public TransitionMatrixException(string message, Exception innerException) : base(message, innerException) { }

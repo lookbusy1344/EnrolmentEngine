@@ -178,7 +178,7 @@ public static class ExpressionNarrator
 			"<=" => "or below",
 			"<" => "or below (lower than this)",
 			"==" => "exactly",
-			_ => throw new CriteriaNarrationException($"comparison operator '{@operator}' has no plain-English form"),
+			_ => throw new CriteriaNarrationException($"comparison operator '{@operator}' has no plain-English form."),
 		};
 
 	private static string Number(Node node, NarrationContext context) =>
@@ -193,7 +193,7 @@ public static class ExpressionNarrator
 		return ALevelGrades.TryGetValue(points, out var grade)
 			? grade
 			: throw new CriteriaNarrationException(
-				$"{points.ToString("0.##", CultureInfo.InvariantCulture)} is not a point on the A-level grade scale");
+				$"{points.ToString("0.##", CultureInfo.InvariantCulture)} is not a point on the A-level grade scale.");
 	}
 
 	private static double Value(Node node, NarrationContext context) =>
@@ -204,17 +204,17 @@ public static class ExpressionNarrator
 			MemberNode member when PolicyMembers.TryGetValue(member.Name, out var property) =>
 				property.GetValue(context.Thresholds) is object boxed
 					? Convert.ToDouble(boxed, CultureInfo.InvariantCulture)
-					: throw new CriteriaNarrationException($"policy member '{member.Name}' is not configured for this policy"),
+					: throw new CriteriaNarrationException($"policy member '{member.Name}' is not configured for this policy."),
 			_ => throw Unexplainable(node),
 		};
 
 	private static double Constant(Type owner, string name) =>
 		owner.GetField(name, BindingFlags.Public | BindingFlags.Static)?.GetRawConstantValue() is object value
 			? Convert.ToDouble(value, CultureInfo.InvariantCulture)
-			: throw new CriteriaNarrationException($"'{owner.Name}.{name}' is not a known constant");
+			: throw new CriteriaNarrationException($"'{owner.Name}.{name}' is not a known constant.");
 
 	private static CriteriaNarrationException Unexplainable(Node node) =>
-		new($"cannot explain '{node.Describe()}' in plain English; teach {nameof(ExpressionNarrator)} this rule shape");
+		new($"cannot explain '{node.Describe()}' in plain English; teach {nameof(ExpressionNarrator)} this rule shape.");
 
 	private sealed class NarrationContext(PolicyThresholds thresholds, IReadOnlyDictionary<string, string> localParams)
 	{
@@ -224,7 +224,7 @@ public static class ExpressionNarrator
 		public Node Local(string name) =>
 			localParams.TryGetValue(name, out var expression)
 				? Parser.Parse(expression)
-				: throw new CriteriaNarrationException($"expression references unknown local parameter '{name}'");
+				: throw new CriteriaNarrationException($"expression references unknown local parameter '{name}'.");
 	}
 }
 
@@ -233,4 +233,11 @@ public static class ExpressionNarrator
 ///     unexplainable rule silently missing from a student's criteria is the failure this whole feature
 ///     exists to avoid.
 /// </summary>
-public sealed class CriteriaNarrationException(string message) : Exception(message);
+public sealed class CriteriaNarrationException : Exception
+{
+	public CriteriaNarrationException() { }
+
+	public CriteriaNarrationException(string message) : base(message) { }
+
+	public CriteriaNarrationException(string message, Exception innerException) : base(message, innerException) { }
+}

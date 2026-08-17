@@ -1,10 +1,11 @@
-namespace EnrolmentRules.Domain;
+namespace EnrolmentRules.Domain.Authoring;
 
 using System.Collections.Concurrent;
 using System.Security.Cryptography;
 using System.Text;
 using System.Text.Json;
 using Json.Schema;
+using Serialization;
 
 /// <summary>
 ///     Startup loader for the qualification scale: reads <c>qualifications.yaml</c>, validates it against

@@ -113,6 +113,24 @@ public sealed class DependencyInjectionTests
 	}
 
 	[Fact]
+	public void registers_the_criteria_explainer_against_the_same_singleton()
+	{
+		var services = new ServiceCollection();
+		_ = services.AddEnrolmentEngine(options => {
+			options.UseWorkflowsDirectory(Harness.WorkflowsDir)
+				   .UseDataDirectory(Harness.DataDir)
+				   .UseFixedAsOf(Harness.AsOf);
+		});
+
+		using var provider = services.BuildServiceProvider();
+
+		var asExplainer = provider.GetRequiredService<IEnrolmentCriteriaExplainer>();
+		var asConcrete = provider.GetRequiredService<EnrolmentEngine>();
+
+		asExplainer.Should().BeSameAs(asConcrete);
+	}
+
+	[Fact]
 	public void interface_can_be_substituted_by_a_consumer_fake()
 	{
 		// The seam exists so consumer code can depend on IEnrolmentEngine and inject a stub in their own tests.
@@ -135,6 +153,9 @@ public sealed class DependencyInjectionTests
 
 		provider.GetRequiredService<EnrolmentEngine>().Should().BeSameAs(engine);
 		provider.GetRequiredService<IEnrolmentEngine>().Should().BeSameAs(engine);
+		provider.GetRequiredService<IEnrolmentEvaluator>().Should().BeSameAs(engine);
+		provider.GetRequiredService<IEnrolmentAdvisor>().Should().BeSameAs(engine);
+		provider.GetRequiredService<IEnrolmentCriteriaExplainer>().Should().BeSameAs(engine);
 	}
 
 	[Fact]
@@ -196,10 +217,15 @@ public sealed class DependencyInjectionTests
 		using var provider = services.BuildServiceProvider();
 		var factory = provider.GetRequiredService<IEnrolmentEngineFactory>();
 		var resolved = provider.GetRequiredService<IEnrolmentEngine>();
-		var evaluator = (IEnrolmentEvaluator)resolved;
+		var evaluator = provider.GetRequiredService<IEnrolmentEvaluator>();
+		var advisor = provider.GetRequiredService<IEnrolmentAdvisor>();
+		var explainer = provider.GetRequiredService<IEnrolmentCriteriaExplainer>();
 		var currentEvaluator = (IEnrolmentEvaluator)factory.Current;
 
 		resolved.Should().NotBeSameAs(factory.Current);
+		evaluator.Should().BeSameAs(resolved);
+		advisor.Should().BeSameAs(resolved);
+		explainer.Should().BeSameAs(resolved);
 		evaluator.Catalogue.Should().BeSameAs(currentEvaluator.Catalogue);
 		evaluator.Scale.Should().BeSameAs(currentEvaluator.Scale);
 	}
@@ -227,6 +253,55 @@ public sealed class DependencyInjectionTests
 			factory.Reload();
 
 			engine.EvaluateValidated(student).Value!.Eligible.Should().BeFalse();
+		}
+		finally {
+			Directory.Delete(fixture, true);
+		}
+	}
+
+	[Fact]
+	public void add_enrolment_engine_factory_registers_a_live_criteria_explainer_proxy()
+	{
+		var services = new ServiceCollection();
+		_ = services.AddEnrolmentEngineFactory(options => {
+			options.UseWorkflowsDirectory(Harness.WorkflowsDir)
+				   .UseDataDirectory(Harness.DataDir)
+				   .UseFixedAsOf(Harness.AsOf);
+		});
+
+		using var provider = services.BuildServiceProvider();
+
+		var explainer = provider.GetRequiredService<IEnrolmentCriteriaExplainer>();
+
+		explainer.Describe(Subject.Art).Eligibility.Should().NotBeEmpty();
+	}
+
+	[Fact]
+	public void add_enrolment_engine_factory_keeps_criteria_explainer_resolution_live_across_reload()
+	{
+		var fixture = CopyShippedLayout();
+		try {
+			var services = new ServiceCollection();
+			_ = services.AddEnrolmentEngineFactory(options => {
+				options.UseWorkflowsDirectory(Path.Combine(fixture, "workflows"))
+					   .UseDataDirectory(Path.Combine(fixture, "data"))
+					   .UseFixedAsOf(Harness.AsOf);
+			});
+
+			using var provider = services.BuildServiceProvider();
+			var explainer = provider.GetRequiredService<IEnrolmentCriteriaExplainer>();
+			var factory = provider.GetRequiredService<IEnrolmentEngineFactory>();
+
+			var before = explainer.Describe(Subject.Art);
+			before.Eligibility.Should().Contain(bullet => bullet.Contains("grade 4", StringComparison.Ordinal));
+			before.Eligibility.Should().NotContain(bullet => bullet.Contains("grade 7", StringComparison.Ordinal));
+
+			RaisePassGrade(Path.Combine(fixture, "data", "thresholds.yaml"), 7);
+			factory.Reload();
+
+			var after = explainer.Describe(Subject.Art);
+			after.Eligibility.Should().Contain(bullet => bullet.Contains("grade 7", StringComparison.Ordinal));
+			after.Eligibility.Should().NotContain(bullet => bullet.Contains("grade 4", StringComparison.Ordinal));
 		}
 		finally {
 			Directory.Delete(fixture, true);

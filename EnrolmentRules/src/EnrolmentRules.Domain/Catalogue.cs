@@ -2,6 +2,7 @@ namespace EnrolmentRules.Domain;
 
 using System.Collections.Frozen;
 using System.Text.Json.Nodes;
+using Serialization;
 
 /// <summary>
 ///     Per-subject metadata that drives the host-code constraint pass and aggregation (§1.5–1.6):
