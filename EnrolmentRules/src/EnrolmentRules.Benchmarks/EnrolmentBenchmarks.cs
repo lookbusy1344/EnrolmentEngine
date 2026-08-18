@@ -2,7 +2,6 @@ namespace EnrolmentRules.Benchmarks;
 
 using BenchmarkDotNet.Attributes;
 using Domain;
-using RulesEngine.Models;
 
 /// <summary>
 ///     Phase 9 perf baseline: engine construction versus warm single-student evaluation versus a shared
@@ -20,7 +19,7 @@ public class EnrolmentBenchmarks
 	private StudentInput eliteGateNearMissStudent = null!;
 	private EnrolmentEngine engine = null!;
 	private StudentInput student = null!;
-	private IReadOnlyList<Workflow> workflows = [];
+	private ReusableWorkflowSet workflows = null!;
 	private static string RepoRoot { get; } = FindRepoRoot();
 	private static string DataDir => Path.Combine(RepoRoot, "data");
 	private static string WorkflowsDir => Path.Combine(RepoRoot, "workflows");
@@ -29,12 +28,11 @@ public class EnrolmentBenchmarks
 	[GlobalSetup]
 	public void Setup()
 	{
-		workflows = WorkflowStore.LoadAndValidate(WorkflowsDir, SchemaPath);
-		var rulesEngine = WorkflowStore.BuildEngine(workflows);
+		workflows = WorkflowStore.LoadReusable(WorkflowsDir, SchemaPath);
 		var thresholds = PolicyThresholdsStore.LoadAndValidate(DataDir);
 		var catalogue = CatalogueStore.LoadAndValidate(DataDir);
 		var scale = QualificationScaleStore.LoadAndValidate(DataDir);
-		engine = new(new(rulesEngine, thresholds, catalogue, scale), catalogue, DateOnly.FromDateTime(DateTime.Today));
+		engine = workflows.BuildEnrolmentEngine(thresholds, catalogue, scale, DateOnly.FromDateTime(DateTime.Today));
 		student = StrongStudent("S-BENCH-1", "plays_piano");
 		eliteEngine = EnrolmentEngine.Create(
 			new OverlayEnrolmentDataSource(
@@ -91,7 +89,7 @@ public class EnrolmentBenchmarks
 	[Benchmark(Baseline = true)]
 	public void ConstructEngine()
 	{
-		var candidate = WorkflowStore.BuildEngine(workflows);
+		var candidate = workflows.BuildEngineForBenchmark();
 		GC.KeepAlive(candidate);
 	}
 

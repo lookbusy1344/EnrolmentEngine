@@ -38,7 +38,7 @@ public static partial class WorkflowLinter
 	private static readonly string AmberDfeFloor = nameof(RatingFacts.MinDfeAmberProbabilityAtOrAbove);
 
 	/// <summary>Lint loaded workflows against an explicit catalogue snapshot.</summary>
-	public static IReadOnlyList<LintFinding> Lint(IReadOnlyList<Workflow> workflows, CatalogueData catalogue)
+	internal static IReadOnlyList<LintFinding> Lint(IReadOnlyList<Workflow> workflows, CatalogueData catalogue)
 	{
 		var findings = new List<LintFinding>();
 		foreach (var workflow in workflows) {
@@ -47,6 +47,25 @@ public static partial class WorkflowLinter
 
 		return findings;
 	}
+
+	/// <summary>
+	///     Load and schema-validate the workflow files in <paramref name="directory" />, then lint them against
+	///     <paramref name="catalogue" />. Keeps the untyped RulesEngine workflow type inside the engine boundary so
+	///     lint callers deal only in <see cref="LintFinding" />.
+	/// </summary>
+	public static IReadOnlyList<LintFinding> Lint(string directory, CatalogueData catalogue, string? schemaPath = null)
+		=> Lint(WorkflowStore.LoadAndValidate(directory, schemaPath), catalogue);
+
+	/// <summary>
+	///     Load and schema-validate the stream-backed workflow <paramref name="files" /> against
+	///     <paramref name="schemaStream" />, then lint them against <paramref name="catalogue" />. The caller retains
+	///     ownership of the streams and disposes them.
+	/// </summary>
+	public static IReadOnlyList<LintFinding> Lint(
+		IReadOnlyList<WorkflowContent> files,
+		Stream schemaStream,
+		CatalogueData catalogue)
+		=> Lint(WorkflowStore.LoadAndValidate(files, schemaStream), catalogue);
 
 	private static IEnumerable<LintFinding> LintWorkflow(Workflow workflow, CatalogueData catalogue)
 	{

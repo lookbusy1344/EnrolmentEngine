@@ -18,10 +18,9 @@ using RulesEngine.Models;
 ///     (reusable, stateless) RulesEngine. All three guards run at startup so a bad workflow — structural
 ///     or lambda-level — fails loud at boot rather than silently mis-enrolling a student (Reservation 1).
 /// </summary>
-[CLSCompliant(false)]
-public static class WorkflowStore
+internal static class WorkflowStore
 {
-	public const string SchemaFileName = "workflow.schema.json";
+	internal const string SchemaFileName = "workflow.schema.json";
 
 	private static readonly JsonSerializerOptions WorkflowSerializerOptions = new() {
 		PropertyNameCaseInsensitive = true,
@@ -44,7 +43,7 @@ public static class WorkflowStore
 	///     <c>workflow.schema.json</c>, and deserialize to RulesEngine workflows.
 	///     Throws <see cref="WorkflowSchemaException" /> on the first structural violation.
 	/// </summary>
-	public static IReadOnlyList<Workflow> LoadAndValidate(string directory, string? schemaPath = null)
+	internal static IReadOnlyList<Workflow> LoadAndValidate(string directory, string? schemaPath = null)
 	{
 		schemaPath ??= Path.Combine(directory, SchemaFileName);
 
@@ -72,7 +71,7 @@ public static class WorkflowStore
 	/// <summary>
 	///     Read, schema-validate and deserialize workflow files from arbitrary text readers.
 	/// </summary>
-	public static IReadOnlyList<Workflow> LoadAndValidate(
+	internal static IReadOnlyList<Workflow> LoadAndValidate(
 		IReadOnlyList<(string FileName, TextReader Content)> files,
 		TextReader schemaReader)
 	{
@@ -104,7 +103,7 @@ public static class WorkflowStore
 	/// <summary>
 	///     Read, schema-validate and deserialize workflow files from arbitrary streams.
 	/// </summary>
-	public static IReadOnlyList<Workflow> LoadAndValidate(
+	internal static IReadOnlyList<Workflow> LoadAndValidate(
 		IReadOnlyList<WorkflowContent> files,
 		Stream schemaStream)
 	{
@@ -137,8 +136,17 @@ public static class WorkflowStore
 	///     Uses <see cref="RuleSettings.Default" /> so the workflow lambdas may call the registered host
 	///     accessor types; callers may override the settings for fixtures that need none.
 	/// </summary>
-	public static IRulesEngine BuildEngine(IReadOnlyList<Workflow> workflows, ReSettings? settings = null) =>
+	internal static IRulesEngine BuildEngine(IReadOnlyList<Workflow> workflows, ReSettings? settings = null) =>
 		new RulesEngine([.. workflows], settings ?? RuleSettings.Default);
+
+	/// <summary>
+	///     Load and schema-validate the workflow files in <paramref name="directory" /> once, returning a
+	///     reusable handle that builds the engine on demand. Keeps the untyped RulesEngine workflow type inside
+	///     the engine boundary for callers that want to rebuild the engine repeatedly (e.g. a benchmark that
+	///     isolates build cost from load).
+	/// </summary>
+	internal static ReusableWorkflowSet LoadReusable(string directory, string? schemaPath = null) =>
+		new(LoadAndValidate(directory, schemaPath));
 
 	/// <summary>
 	///     The production startup path with an explicit catalogue: load, schema-validate, build the
@@ -148,7 +156,7 @@ public static class WorkflowStore
 	///     <see cref="LoadValidateBuildAndProbe(string, CatalogueData, PolicyThresholds, DfeTransitionMatrix?, QualificationScale?, string?)" />
 	///     overload so the probe and the engine agree on one source.
 	/// </summary>
-	public static (IRulesEngine Engine, IReadOnlyList<Workflow> Workflows) LoadValidateBuildAndProbe(
+	internal static (IRulesEngine Engine, IReadOnlyList<Workflow> Workflows) LoadValidateBuildAndProbe(
 		string directory,
 		CatalogueData catalogue,
 		string? schemaPath = null)
@@ -162,7 +170,7 @@ public static class WorkflowStore
 	///     siblings. The matrix only feeds the probe's transition evidence (irrelevant to lambda compilation),
 	///     so it defaults to the shipped extract.
 	/// </summary>
-	public static (IRulesEngine Engine, IReadOnlyList<Workflow> Workflows) LoadValidateBuildAndProbe(
+	internal static (IRulesEngine Engine, IReadOnlyList<Workflow> Workflows) LoadValidateBuildAndProbe(
 		string directory,
 		CatalogueData catalogue,
 		PolicyThresholds thresholds,
@@ -183,7 +191,7 @@ public static class WorkflowStore
 	///     build the reusable engine, then probe-compile every workflow against a canonical fully-populated input
 	///     built from the supplied policy and scale.
 	/// </summary>
-	public static (IRulesEngine Engine, IReadOnlyList<Workflow> Workflows) LoadValidateBuildAndProbe(
+	internal static (IRulesEngine Engine, IReadOnlyList<Workflow> Workflows) LoadValidateBuildAndProbe(
 		IReadOnlyList<WorkflowContent> files,
 		Stream schemaStream,
 		CatalogueData catalogue,
@@ -205,7 +213,7 @@ public static class WorkflowStore
 	///     <see cref="RuleResultTree.ExceptionMessage" />; we turn that into a loud
 	///     <see cref="WorkflowProbeException" /> at startup.
 	/// </summary>
-	public static void ProbeCompile(
+	internal static void ProbeCompile(
 		IRulesEngine engine,
 		IEnumerable<Workflow> workflows,
 		params RuleParameter[] probeInputs)

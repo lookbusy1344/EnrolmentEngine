@@ -11,8 +11,7 @@ using RulesEngine.Models;
 ///     authored prose about a rule — every bullet is derived, so retuning a threshold or editing an entry
 ///     rule moves the wording with it.
 /// </summary>
-[CLSCompliant(false)]
-public sealed class CriteriaExplainer(
+internal sealed class CriteriaExplainer(
 	IReadOnlyList<Workflow> workflows,
 	PolicyThresholds thresholds,
 	CatalogueData catalogue)

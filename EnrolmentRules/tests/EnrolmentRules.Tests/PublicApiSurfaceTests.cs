@@ -8,6 +8,40 @@ using Prediction;
 
 public sealed class PublicApiSurfaceTests
 {
+	private const string RulesEngineAssemblyName = "RulesEngine";
+	private const string RulesEngineNamespace = "RulesEngine";
+	private const string EngineAssemblyName = "EnrolmentRules.Engine";
+
+	[Fact]
+	public void only_engine_assembly_references_rules_engine()
+	{
+		var references = ValueTypeSizeGuard.ProductionAssemblyNames
+			.Where(static assemblyName => assemblyName != EngineAssemblyName)
+			.Select(Assembly.Load)
+			.Where(static assembly => assembly.GetReferencedAssemblies()
+				.Any(reference => reference.Name == RulesEngineAssemblyName))
+			.Select(static assembly => assembly.GetName().Name)
+			.ToArray();
+
+		references.Should().BeEmpty("RulesEngine is an implementation detail of EnrolmentRules.Engine");
+	}
+
+	[Fact]
+	public void engine_public_signatures_do_not_expose_rules_engine_types()
+	{
+		var leaks = typeof(IEnrolmentEngine).Assembly
+			.GetExportedTypes()
+			.SelectMany(static type => type.GetMembers(BindingFlags.Public | BindingFlags.Instance | BindingFlags.Static))
+			.SelectMany(MemberSignatureTypes)
+			.Where(IsRulesEngineType)
+			.Select(static type => type.FullName)
+			.Distinct(StringComparer.Ordinal)
+			.Order(StringComparer.Ordinal)
+			.ToArray();
+
+		leaks.Should().BeEmpty("RulesEngine types must remain behind the Engine public boundary");
+	}
+
 	[Fact]
 	public void equatable_collections_expose_no_implicit_conversion_operators()
 	{
@@ -65,6 +99,31 @@ public sealed class PublicApiSurfaceTests
 
 			(missing.Length, extra.Length).Should().Be((0, 0), $"{label}:{Environment.NewLine}{string.Join(Environment.NewLine, parts)}");
 		}
+	}
+
+	private static IEnumerable<Type> MemberSignatureTypes(MemberInfo member) =>
+		member switch {
+			MethodInfo method => [method.ReturnType, .. method.GetParameters().Select(static parameter => parameter.ParameterType)],
+			ConstructorInfo constructor => constructor.GetParameters().Select(static parameter => parameter.ParameterType),
+			PropertyInfo property => [property.PropertyType],
+			FieldInfo field => [field.FieldType],
+			EventInfo eventInfo when eventInfo.EventHandlerType is not null => [eventInfo.EventHandlerType],
+			_ => [],
+		};
+
+	private static bool IsRulesEngineType(Type type)
+	{
+		if (type.IsByRef || type.IsArray || type.IsPointer) {
+			return IsRulesEngineType(type.GetElementType()!);
+		}
+
+		if (type.Namespace is not null
+			&& (type.Namespace == RulesEngineNamespace
+				|| type.Namespace.StartsWith(RulesEngineNamespace + '.', StringComparison.Ordinal))) {
+			return true;
+		}
+
+		return type.IsGenericType && type.GetGenericArguments().Any(IsRulesEngineType);
 	}
 }
 

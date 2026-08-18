@@ -238,15 +238,13 @@ Consumer shape:
 
 ```csharp
 var scale = QualificationScaleStore.LoadAndValidate(dataDirectory);
-var workflows = WorkflowStore.LoadAndValidate(workflowsDirectory);
 var catalogue = CatalogueStore.LoadAndValidate(dataDirectory, scale);
 var thresholds = PolicyThresholdsStore.LoadAndValidate(dataDirectory);
-var findings = WorkflowLinter.Lint(workflows, catalogue);
+var findings = WorkflowLinter.Lint(workflowsDirectory, catalogue);
 ```
 
 Required types:
 
-- `EnrolmentRules.Engine.Authoring.WorkflowStore`
 - `EnrolmentRules.Engine.Authoring.CatalogueStore`
 - `EnrolmentRules.Engine.Authoring.WorkflowLinter`
 - `EnrolmentRules.Engine.Authoring.WorkflowException`
@@ -254,7 +252,6 @@ Required types:
 - `EnrolmentRules.Engine.Authoring.WorkflowProbeException`
 - `EnrolmentRules.Engine.Authoring.WorkflowLintException`
 - `EnrolmentRules.Engine.Authoring.CatalogueException`
-- `EnrolmentRules.Engine.Authoring.CriteriaExplainer`
 - `EnrolmentRules.Engine.Authoring.ExpressionNarrator`
 - `EnrolmentRules.Engine.Authoring.CriteriaNarrationException`
 - `EnrolmentRules.Domain.Authoring.QualificationScaleStore`
@@ -412,7 +409,6 @@ EnrolmentRules.Prediction.TransitionMatrixException
 ```types:EnrolmentRules.Engine
 EnrolmentRules.Engine.Authoring.CatalogueException
 EnrolmentRules.Engine.Authoring.CatalogueStore
-EnrolmentRules.Engine.Authoring.CriteriaExplainer
 EnrolmentRules.Engine.Authoring.CriteriaNarrationException
 EnrolmentRules.Engine.Authoring.ExpressionNarrator
 EnrolmentRules.Engine.IEnrolmentCriteriaExplainer
@@ -421,7 +417,6 @@ EnrolmentRules.Engine.Authoring.WorkflowLintException
 EnrolmentRules.Engine.Authoring.WorkflowLinter
 EnrolmentRules.Engine.Authoring.WorkflowProbeException
 EnrolmentRules.Engine.Authoring.WorkflowSchemaException
-EnrolmentRules.Engine.Authoring.WorkflowStore
 EnrolmentRules.Engine.EnrolmentEngine
 EnrolmentRules.Engine.IEnrolmentAdvisor
 EnrolmentRules.Engine.IEnrolmentEngine

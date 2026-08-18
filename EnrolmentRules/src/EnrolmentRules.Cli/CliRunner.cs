@@ -4,7 +4,6 @@ using System.Collections.Concurrent;
 using System.Text.Json;
 using Domain;
 using Prediction;
-using RulesEngine.Models;
 
 /// <summary>
 ///     The in-process CLI runner, driven directly by tests (the <see cref="Program" /> entry point is a
@@ -167,16 +166,15 @@ public static class CliRunner
 		Func<string> workflowsDirectory,
 		Func<string> dataDirectory)
 	{
-		IReadOnlyList<Workflow> workflows;
-		CatalogueData catalogue;
+		IReadOnlyList<LintFinding> findings;
 		try {
 			if (directory is not null) {
 				var loadedDataDirectory = CatalogueDirectoryForLint(directory);
 				var scale = QualificationScaleStore.LoadAndValidate(QualificationScaleDirectoryForLint(loadedDataDirectory));
-				workflows = WorkflowStore.LoadAndValidate(directory);
-				catalogue = CatalogueStore.LoadAndValidate(loadedDataDirectory, scale);
+				var catalogue = CatalogueStore.LoadAndValidate(loadedDataDirectory, scale);
+				findings = WorkflowLinter.Lint(directory, catalogue);
 			} else {
-				(workflows, catalogue) = LoadForLint(ResolveSource(policyId, workflowsDirectory, dataDirectory));
+				findings = LoadForLint(ResolveSource(policyId, workflowsDirectory, dataDirectory));
 			}
 		}
 		catch (Exception ex) when (ex is WorkflowException or CatalogueException or QualificationScaleException
@@ -185,7 +183,6 @@ public static class CliRunner
 			return ExitInput;
 		}
 
-		var findings = WorkflowLinter.Lint(workflows, catalogue);
 		foreach (var finding in findings) {
 			stdout.WriteLine($"{finding.Severity}: {finding.Workflow}/{finding.Rule ?? "-"}: {finding.Message}");
 		}
@@ -204,8 +201,8 @@ public static class CliRunner
 			? catalogueDirectory
 			: DataDirectory();
 
-	/// <summary>Load a selected policy's workflows/catalogue through its complete <see cref="IEnrolmentDataSource" />, for lint.</summary>
-	private static (IReadOnlyList<Workflow> Workflows, CatalogueData Catalogue) LoadForLint(IEnrolmentDataSource source)
+	/// <summary>Lint a selected policy's workflows against its catalogue, loaded through its complete <see cref="IEnrolmentDataSource" />.</summary>
+	private static IReadOnlyList<LintFinding> LoadForLint(IEnrolmentDataSource source)
 	{
 		using var qualifications = source.OpenQualifications();
 		using var qualificationsSchema = source.OpenQualificationsSchema();
@@ -218,7 +215,7 @@ public static class CliRunner
 		var workflowFiles = source.OpenWorkflows();
 		try {
 			using var workflowSchemaStream = source.OpenWorkflowSchema();
-			return (WorkflowStore.LoadAndValidate(workflowFiles, workflowSchemaStream), catalogue);
+			return WorkflowLinter.Lint(workflowFiles, workflowSchemaStream, catalogue);
 		}
 		finally {
 			foreach (var workflow in workflowFiles) {
