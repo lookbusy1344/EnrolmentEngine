@@ -364,7 +364,7 @@
 		}
 
 		<div class="row row-cols-1 row-cols-md-2 row-cols-lg-3 g-3">
-			@foreach (var explanation in results.Comparison.Explanation.Explanations) {
+			@foreach (var explanation in RatingDisplay.OrderForCards(results.Comparison.Explanation.Explanations)) {
 				var chosen = Model.ChosenALevels.Contains(explanation.Subject);
 				var canChoose = explanation.Rating != Rating.Red;
 				var reasonId = $"reason-{explanation.Subject.Value}";

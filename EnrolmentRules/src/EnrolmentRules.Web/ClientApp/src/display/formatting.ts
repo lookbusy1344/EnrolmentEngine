@@ -1,6 +1,8 @@
 // Mirrors EnrolmentRules.Web.Models.TextFormatting.Prettify — used for a raw subject/hobby key the
 // options payload hasn't labelled yet (e.g. a chosen A-level echoed before options finish loading).
 
+import type { ExplanationResponse } from '../api/contracts'
+
 export function prettify(key: string): string {
   if (key.length === 0) {
     return key
@@ -29,4 +31,15 @@ export function wholeYears(dateOfBirth: string, today: Date): number {
   }
 
   return age
+}
+
+/** Ascending severity, matching Domain.Rating's declaration order (Green=0, Amber=1, Red=2). */
+const RATING_SEVERITY: Readonly<Record<string, number>> = { Green: 0, Amber: 1, Red: 2 }
+
+/** Mirrors EnrolmentRules.Web.Models.RatingDisplay.OrderForCards — colour first, then alphabetically by label. */
+export function orderForCards(explanations: readonly ExplanationResponse[]): ExplanationResponse[] {
+  return [...explanations].sort((a, b) => {
+    const severityDiff = RATING_SEVERITY[a.rating] - RATING_SEVERITY[b.rating]
+    return severityDiff !== 0 ? severityDiff : a.subject.label.localeCompare(b.subject.label)
+  })
 }

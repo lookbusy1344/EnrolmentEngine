@@ -16,8 +16,6 @@ It is a companion to the other project docs:
   policy YAML safely.
 - [`docs/engine-choice.md`](engine-choice.md) — why this project uses Microsoft RulesEngine rather
   than NRules/RETE.
-- [`docs/plans/rulesengine-csharp-enrolment-plan.md`](plans/rulesengine-csharp-enrolment-plan.md) —
-  the original phased design rationale.
 
 This walk-through sits in the middle: enough conceptual grounding to read the code with
 confidence.

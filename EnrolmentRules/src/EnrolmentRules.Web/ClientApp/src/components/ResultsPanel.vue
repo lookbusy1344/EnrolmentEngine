@@ -1,5 +1,7 @@
 <script lang="ts" setup>
+import { computed } from 'vue'
 import type { EnrolmentEvaluateResponse } from '../api/contracts'
+import { orderForCards } from '../display/formatting'
 import SubjectCard from './SubjectCard.vue'
 
 const props = defineProps<{
@@ -16,6 +18,8 @@ const emit = defineEmits<{
 function isChosen(subject: string): boolean {
   return props.chosenALevels.includes(subject)
 }
+
+const sortedExplanations = computed(() => orderForCards(props.evaluation?.result?.explanations ?? []))
 </script>
 
 <template>
@@ -60,7 +64,7 @@ function isChosen(subject: string): boolean {
 
       <div class="row row-cols-1 row-cols-md-2 row-cols-lg-3 g-3">
         <SubjectCard
-          v-for="explanation in evaluation.result.explanations"
+          v-for="explanation in sortedExplanations"
           :key="explanation.subject.value"
           :chosen="isChosen(explanation.subject.value)"
           :explanation="explanation"

@@ -43,9 +43,20 @@ public sealed record BasketEntry(Subject Subject, ChoiceStatus Status, Rating? R
 	};
 
 	/// <summary>
-	///     Project every <see cref="PolicyComparisonResult.ChoiceStatuses" /> entry into a basket row: valid
-	///     choices (available or unrated) before invalid ones (<see cref="IsInvalid" />), each group
-	///     alphabetical by its displayed label rather than choice order.
+	///     Card-order severity matching <see cref="RatingDisplay.OrderForCards" />: green (0) before amber (1)
+	///     before red (2). <see cref="IsInvalid" /> (unavailable/not-offered) is always red — the only case with
+	///     no <see cref="Rating" /> at all (a not-offered subject) has nothing else to sort it by.
+	/// </summary>
+	public int ColourSeverity => this switch {
+		{ IsInvalid: true } => 2,
+		{ IsBorderline: true } => 1,
+		_ => 0,
+	};
+
+	/// <summary>
+	///     Project every <see cref="PolicyComparisonResult.ChoiceStatuses" /> entry into a basket row: colour
+	///     first (<see cref="ColourSeverity" /> — green, amber, red, matching the "What's open to you" cards),
+	///     each group alphabetical by its displayed label rather than choice order.
 	/// </summary>
 	public static IReadOnlyList<BasketEntry> From(PolicyComparisonResult? comparison)
 	{
@@ -62,7 +73,7 @@ public sealed record BasketEntry(Subject Subject, ChoiceStatus Status, Rating? R
 								 status.Status,
 								 ratings.TryGetValue(status.Subject, out var rating) ? rating : null,
 								 status.Reason))
-						 .OrderBy(static entry => entry.IsInvalid)
+						 .OrderBy(static entry => entry.ColourSeverity)
 						 .ThenBy(static entry => TextFormatting.Prettify(entry.Subject.Value), StringComparer.Ordinal),
 		];
 	}

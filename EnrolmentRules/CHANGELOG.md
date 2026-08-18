@@ -1,5 +1,11 @@
 # Changelog
 
+## 1.1.2 — 2026-08-18
+
+- "What's open to you" cards and basket pills now both sort green, then amber, then red,
+  alphabetical within each colour (previously engine priority-weight order for the cards, and a
+  plain valid/invalid split for the basket).
+
 ## 1.1.1 — 2026-08-16
 
 - `/razor` and `/app` now share one `localStorage`-backed facts store, so edits in either front

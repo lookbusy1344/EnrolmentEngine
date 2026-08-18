@@ -45,6 +45,15 @@ function confirmEmpty(): void {
 
 const scoreboard = computed(() => gcseScoreboard(props.gcses))
 
+/** Card-order severity: green (0) before amber (1) before red (2). Mirrors BasketEntry.ColourSeverity. */
+function colourSeverity(entry: { borderline: boolean; invalid: boolean }): number {
+  if (entry.invalid) {
+    return 2
+  }
+
+  return entry.borderline ? 1 : 0
+}
+
 /**
  * Every committed choice, kept in the basket regardless of status — a red or not-offered choice is never
  * dropped here, only flagged. Rating (for the amber "Borderline" pill) comes from `explanations`, which
@@ -81,9 +90,9 @@ const basket = computed(() => {
           cssClass,
         }
       })
-      // Valid choices (available or unrated) before invalid ones (unavailable/not-offered), each group
-      // alphabetical by label.
-      .sort((a, b) => Number(a.invalid) - Number(b.invalid) || a.label.localeCompare(b.label))
+      // Colour first — green, amber, red, matching the "What's open to you" cards — then alphabetical by
+      // label within each colour. Mirrors EnrolmentRules.Web.Models.BasketEntry.ColourSeverity.
+      .sort((a, b) => colourSeverity(a) - colourSeverity(b) || a.label.localeCompare(b.label))
   )
 })
 

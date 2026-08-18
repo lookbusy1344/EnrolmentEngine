@@ -165,6 +165,32 @@ describe('ChosenBasket', () => {
     expect(labels[3]).toContain('Sociology')
   })
 
+  it('lists green choices, then amber, then red, alphabetical within each colour', () => {
+    const wrapper = mount(ChosenBasket, {
+      props: {
+        chosenALevels: ['sociology', 'art', 'music', 'biology'],
+        explanations: [
+          explanation('sociology', 'Sociology', 'Green'),
+          explanation('art', 'Art', 'Amber'),
+          explanation('music', 'Music', 'Amber'),
+          explanation('biology', 'Biology', 'Green'),
+        ],
+        choiceStatuses: [
+          available('sociology', 'Sociology'),
+          available('art', 'Art'),
+          available('music', 'Music'),
+          available('biology', 'Biology'),
+        ],
+      },
+    })
+
+    const labels = wrapper.findAll('li').map((li) => li.text())
+    expect(labels[0]).toContain('Biology')
+    expect(labels[1]).toContain('Sociology')
+    expect(labels[2]).toContain('Art')
+    expect(labels[3]).toContain('Music')
+  })
+
   it('emits remove with the subject when a pill x is clicked', async () => {
     const wrapper = mount(ChosenBasket, {
       props: {

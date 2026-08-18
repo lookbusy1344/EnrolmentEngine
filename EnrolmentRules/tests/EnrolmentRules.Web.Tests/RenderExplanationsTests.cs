@@ -43,6 +43,13 @@ public sealed class RenderExplanationsTests : IClassFixture<WebAppFactory>
 		html.Should().Contain("art").And.Contain("Amber");
 		html.Should().Contain("further_maths").And.Contain("Red");
 		html.Should().Contain("Entry met"); // a deciding reason from ExplainValidated
+
+		// Cards are ordered by colour (green, amber, red) - a green card must precede the amber and red ones.
+		var physicsCardIndex = html.IndexOf("Physics", StringComparison.Ordinal);
+		var artCardIndex = html.IndexOf("Art", StringComparison.Ordinal);
+		var furtherMathsCardIndex = html.IndexOf("Further Maths", StringComparison.Ordinal);
+		physicsCardIndex.Should().BePositive().And.BeLessThan(artCardIndex);
+		artCardIndex.Should().BeLessThan(furtherMathsCardIndex);
 	}
 
 	[Fact]

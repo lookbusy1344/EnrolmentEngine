@@ -25,4 +25,15 @@ public static class RatingDisplay
 
 	/// <summary>Whether a committed choice needs additional authorisation before it can be enrolled.</summary>
 	public static bool IsBorderline(Rating? rating) => rating == Rating.Amber;
+
+	/// <summary>
+	///     "What's open to you" card order: colour first (green, amber, red — <see cref="Rating" />'s own
+	///     ascending-severity declaration order), then alphabetically by the prettified subject label. Display
+	///     only — distinct from <c>Aggregator.Rank</c>, which ties break by descending priority weight for the
+	///     shortlist/recommendation ordering instead.
+	/// </summary>
+	public static IOrderedEnumerable<Explanation> OrderForCards(IEnumerable<Explanation> explanations) =>
+		explanations
+			.OrderBy(static e => e.Rating)
+			.ThenBy(static e => TextFormatting.Prettify(e.Subject.Value), StringComparer.Ordinal);
 }
