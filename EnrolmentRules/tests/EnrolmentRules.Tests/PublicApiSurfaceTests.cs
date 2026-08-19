@@ -16,12 +16,12 @@ public sealed class PublicApiSurfaceTests
 	public void only_engine_assembly_references_rules_engine()
 	{
 		var references = ValueTypeSizeGuard.ProductionAssemblyNames
-			.Where(static assemblyName => assemblyName != EngineAssemblyName)
-			.Select(Assembly.Load)
-			.Where(static assembly => assembly.GetReferencedAssemblies()
-				.Any(reference => reference.Name == RulesEngineAssemblyName))
-			.Select(static assembly => assembly.GetName().Name)
-			.ToArray();
+										   .Where(static assemblyName => assemblyName != EngineAssemblyName)
+										   .Select(Assembly.Load)
+										   .Where(static assembly => assembly.GetReferencedAssemblies()
+																			 .Any(reference => reference.Name == RulesEngineAssemblyName))
+										   .Select(static assembly => assembly.GetName().Name)
+										   .ToArray();
 
 		references.Should().BeEmpty("RulesEngine is an implementation detail of EnrolmentRules.Engine");
 	}
@@ -30,14 +30,14 @@ public sealed class PublicApiSurfaceTests
 	public void engine_public_signatures_do_not_expose_rules_engine_types()
 	{
 		var leaks = typeof(IEnrolmentEngine).Assembly
-			.GetExportedTypes()
-			.SelectMany(static type => type.GetMembers(BindingFlags.Public | BindingFlags.Instance | BindingFlags.Static))
-			.SelectMany(MemberSignatureTypes)
-			.Where(IsRulesEngineType)
-			.Select(static type => type.FullName)
-			.Distinct(StringComparer.Ordinal)
-			.Order(StringComparer.Ordinal)
-			.ToArray();
+											.GetExportedTypes()
+											.SelectMany(static type => type.GetMembers(BindingFlags.Public | BindingFlags.Instance | BindingFlags.Static))
+											.SelectMany(MemberSignatureTypes)
+											.Where(IsRulesEngineType)
+											.Select(static type => type.FullName)
+											.Distinct(StringComparer.Ordinal)
+											.Order(StringComparer.Ordinal)
+											.ToArray();
 
 		leaks.Should().BeEmpty("RulesEngine types must remain behind the Engine public boundary");
 	}

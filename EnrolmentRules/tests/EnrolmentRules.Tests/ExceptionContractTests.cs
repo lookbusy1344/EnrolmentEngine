@@ -19,8 +19,7 @@ public sealed class ExceptionContractTests
 	public void every_concrete_exported_exception_type_has_the_standard_public_triad()
 	{
 		var assemblies = new[] {
-			typeof(StudentInput).Assembly, typeof(GradePredictor).Assembly, typeof(IEnrolmentEngine).Assembly,
-			typeof(ServiceCollectionExtensions).Assembly, typeof(EnrolmentWebConfigurationException).Assembly,
+			typeof(StudentInput).Assembly, typeof(GradePredictor).Assembly, typeof(IEnrolmentEngine).Assembly, typeof(ServiceCollectionExtensions).Assembly, typeof(EnrolmentWebConfigurationException).Assembly,
 		};
 
 		var exceptionTypes = assemblies
@@ -31,9 +30,9 @@ public sealed class ExceptionContractTests
 		exceptionTypes.Should().NotBeEmpty("this test should exercise real exception types, not vacuously pass");
 
 		var missing = exceptionTypes
-					 .Where(type => !HasStandardTriad(type))
-					 .Select(static type => type.FullName)
-					 .ToArray();
+					  .Where(type => !HasStandardTriad(type))
+					  .Select(static type => type.FullName)
+					  .ToArray();
 
 		missing.Should().BeEmpty(
 			$"every concrete exported exception must expose public (), (string), and (string, Exception) constructors:{Environment.NewLine}"
@@ -42,7 +41,7 @@ public sealed class ExceptionContractTests
 
 	private static bool HasStandardTriad(Type type) =>
 		HasPublicConstructor(type, []) && HasPublicConstructor(type, [typeof(string)])
-										&& HasPublicConstructor(type, [typeof(string), typeof(Exception)]);
+									   && HasPublicConstructor(type, [typeof(string), typeof(Exception)]);
 
 	private static bool HasPublicConstructor(Type type, Type[] parameterTypes) =>
 		type.GetConstructor(BindingFlags.Public | BindingFlags.Instance, null, parameterTypes, null) is not null;
@@ -52,15 +51,17 @@ public sealed class ExceptionContractTests
 	{
 		var document = XDocument.Load(Path.ChangeExtension(typeof(IEnrolmentEngine).Assembly.Location, ".xml"));
 		var members = document.Descendants("member").ToDictionary(static member => (string)member.Attribute("name")!);
-		var methods = new[] { typeof(IEnrolmentEvaluator), typeof(IEnrolmentAdvisor), typeof(IEnrolmentPolicyRegistry) }
-			.SelectMany(static type => type.GetMethods())
-			.Where(static method => method.GetParameters().Any(static parameter => parameter.Name == "student"))
-			.Where(static method => !method.Name.EndsWith("Validated", StringComparison.Ordinal));
+		var methods = new[] {
+						  typeof(IEnrolmentEvaluator), typeof(IEnrolmentAdvisor), typeof(IEnrolmentPolicyRegistry),
+					  }
+					  .SelectMany(static type => type.GetMethods())
+					  .Where(static method => method.GetParameters().Any(static parameter => parameter.Name == "student"))
+					  .Where(static method => !method.Name.EndsWith("Validated", StringComparison.Ordinal));
 
 		var missing = methods
-			.Where(method => !DocumentsException(members, method, typeof(ArgumentNullException)))
-			.Select(static method => DocumentationId(method))
-			.ToArray();
+					  .Where(method => !DocumentsException(members, method, typeof(ArgumentNullException)))
+					  .Select(static method => DocumentationId(method))
+					  .ToArray();
 
 		missing.Should().BeEmpty(
 			$"every public student boundary must document null as a programmer error:{Environment.NewLine}" +

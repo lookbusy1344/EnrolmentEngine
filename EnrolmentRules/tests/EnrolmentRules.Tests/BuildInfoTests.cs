@@ -3,7 +3,6 @@ namespace EnrolmentRules.Tests;
 using System.Reflection;
 using System.Text.RegularExpressions;
 using AwesomeAssertions;
-using Domain;
 
 /// <summary>
 ///     The build stamp surfaced by the CLI and the web front-end. The commit comes from

@@ -17,7 +17,7 @@ public sealed class ConstructionContractTests
 	[Fact]
 	public void create_rejects_a_null_data_source()
 	{
-		var act = static () => EnrolmentEngine.Create((IEnrolmentDataSource)null!, static () => Harness.AsOf);
+		var act = static () => EnrolmentEngine.Create(null!, static () => Harness.AsOf);
 
 		act.Should().Throw<ArgumentNullException>().WithParameterName("source");
 	}
@@ -25,7 +25,7 @@ public sealed class ConstructionContractTests
 	[Fact]
 	public void create_rejects_a_null_as_of_source()
 	{
-		var act = () => EnrolmentEngine.Create(ShippedSource(), (Func<DateOnly>)null!);
+		var act = () => EnrolmentEngine.Create(ShippedSource(), null!);
 
 		act.Should().Throw<ArgumentNullException>().WithParameterName("asOf");
 	}
@@ -33,7 +33,7 @@ public sealed class ConstructionContractTests
 	[Fact]
 	public void directory_create_rejects_a_null_as_of_source()
 	{
-		var act = () => EnrolmentEngine.Create(Harness.WorkflowsDir, Harness.DataDir, (Func<DateOnly>)null!);
+		var act = () => EnrolmentEngine.Create(Harness.WorkflowsDir, Harness.DataDir, null!);
 
 		act.Should().Throw<ArgumentNullException>().WithParameterName("asOf");
 	}
@@ -43,7 +43,7 @@ public sealed class ConstructionContractTests
 	{
 		var source = new CallTrackingDataSource();
 
-		var act = () => EnrolmentEngine.Create(source, (Func<DateOnly>)null!);
+		var act = () => EnrolmentEngine.Create(source, null!);
 
 		act.Should().Throw<ArgumentNullException>().WithParameterName("asOf");
 		source.OpenCalls.Should().Be(0, "invalid arguments must be rejected before policy I/O starts");
@@ -52,7 +52,7 @@ public sealed class ConstructionContractTests
 	[Fact]
 	public void create_rejects_a_data_source_that_returns_a_null_workflow_list()
 	{
-		var act = () => EnrolmentEngine.Create(new NullReturningDataSource(nullWorkflows: true), static () => Harness.AsOf);
+		var act = () => EnrolmentEngine.Create(new NullReturningDataSource(true), static () => Harness.AsOf);
 
 		act.Should().Throw<InvalidOperationException>().WithMessage($"*{nameof(IEnrolmentDataSource.OpenWorkflows)}*");
 	}
@@ -73,42 +73,12 @@ public sealed class ConstructionContractTests
 		act.Should().Throw<InvalidOperationException>().WithMessage($"*{nullMember}*");
 	}
 
-	/// <summary>A conformance double: every member delegates to the real shipped source except the one under test.</summary>
-	private sealed class NullReturningDataSource(bool nullWorkflows = false, string? nullStreamMember = null) : IEnrolmentDataSource
-	{
-		private readonly DirectoryDataSource inner = new(Harness.WorkflowsDir, Harness.DataDir);
-
-		public IReadOnlyList<WorkflowContent> OpenWorkflows() => nullWorkflows ? null! : inner.OpenWorkflows();
-
-		public Stream OpenWorkflowSchema() =>
-			nullStreamMember == nameof(IEnrolmentDataSource.OpenWorkflowSchema) ? null! : inner.OpenWorkflowSchema();
-
-		public Stream OpenCatalogue() => nullStreamMember == nameof(IEnrolmentDataSource.OpenCatalogue) ? null! : inner.OpenCatalogue();
-
-		public Stream OpenCatalogueSchema() =>
-			nullStreamMember == nameof(IEnrolmentDataSource.OpenCatalogueSchema) ? null! : inner.OpenCatalogueSchema();
-
-		public Stream OpenQualifications() =>
-			nullStreamMember == nameof(IEnrolmentDataSource.OpenQualifications) ? null! : inner.OpenQualifications();
-
-		public Stream OpenQualificationsSchema() =>
-			nullStreamMember == nameof(IEnrolmentDataSource.OpenQualificationsSchema) ? null! : inner.OpenQualificationsSchema();
-
-		public Stream OpenThresholds() => nullStreamMember == nameof(IEnrolmentDataSource.OpenThresholds) ? null! : inner.OpenThresholds();
-
-		public Stream OpenThresholdsSchema() =>
-			nullStreamMember == nameof(IEnrolmentDataSource.OpenThresholdsSchema) ? null! : inner.OpenThresholdsSchema();
-
-		public Stream OpenTransitionMatrix() =>
-			nullStreamMember == nameof(IEnrolmentDataSource.OpenTransitionMatrix) ? null! : inner.OpenTransitionMatrix();
-	}
-
 	// --- EnrolmentEngineFactory.Create ---
 
 	[Fact]
 	public void factory_create_rejects_a_null_data_source()
 	{
-		var act = static () => EnrolmentEngineFactory.Create((IEnrolmentDataSource)null!, static () => Harness.AsOf);
+		var act = static () => EnrolmentEngineFactory.Create(null!, static () => Harness.AsOf);
 
 		act.Should().Throw<ArgumentNullException>().WithParameterName("source");
 	}
@@ -116,7 +86,7 @@ public sealed class ConstructionContractTests
 	[Fact]
 	public void factory_create_rejects_a_null_as_of_source()
 	{
-		var act = () => EnrolmentEngineFactory.Create(ShippedSource(), (Func<DateOnly>)null!);
+		var act = () => EnrolmentEngineFactory.Create(ShippedSource(), null!);
 
 		act.Should().Throw<ArgumentNullException>().WithParameterName("asOf");
 	}
@@ -124,7 +94,7 @@ public sealed class ConstructionContractTests
 	[Fact]
 	public void factory_directory_create_rejects_a_null_as_of_source()
 	{
-		var act = () => EnrolmentEngineFactory.Create(Harness.WorkflowsDir, Harness.DataDir, (Func<DateOnly>)null!);
+		var act = () => EnrolmentEngineFactory.Create(Harness.WorkflowsDir, Harness.DataDir, null!);
 
 		act.Should().Throw<ArgumentNullException>().WithParameterName("asOf");
 	}
@@ -134,39 +104,10 @@ public sealed class ConstructionContractTests
 	{
 		var source = new CallTrackingDataSource();
 
-		var act = () => EnrolmentEngineFactory.Create(source, (Func<DateOnly>)null!);
+		var act = () => EnrolmentEngineFactory.Create(source, null!);
 
 		act.Should().Throw<ArgumentNullException>().WithParameterName("asOf");
 		source.OpenCalls.Should().Be(0, "invalid arguments must be rejected before policy I/O starts");
-	}
-
-	private sealed class CallTrackingDataSource : IEnrolmentDataSource
-	{
-		public int OpenCalls { get; private set; }
-
-		public IReadOnlyList<WorkflowContent> OpenWorkflows() => Open<IReadOnlyList<WorkflowContent>>();
-
-		public Stream OpenWorkflowSchema() => Open<Stream>();
-
-		public Stream OpenCatalogue() => Open<Stream>();
-
-		public Stream OpenCatalogueSchema() => Open<Stream>();
-
-		public Stream OpenQualifications() => Open<Stream>();
-
-		public Stream OpenQualificationsSchema() => Open<Stream>();
-
-		public Stream OpenThresholds() => Open<Stream>();
-
-		public Stream OpenThresholdsSchema() => Open<Stream>();
-
-		public Stream OpenTransitionMatrix() => Open<Stream>();
-
-		private T Open<T>()
-		{
-			++OpenCalls;
-			throw new InvalidOperationException("Policy data must not be opened for an invalid factory call.");
-		}
 	}
 
 	// --- EnrolmentPolicy / EnrolmentPolicyDescriptor / EnrolmentPolicyDefinition ---
@@ -251,5 +192,64 @@ public sealed class ConstructionContractTests
 		var act = static () => new EnrolmentPolicyId("Not Valid!");
 
 		act.Should().Throw<ArgumentException>().WithParameterName("value");
+	}
+
+	/// <summary>A conformance double: every member delegates to the real shipped source except the one under test.</summary>
+	private sealed class NullReturningDataSource(bool nullWorkflows = false, string? nullStreamMember = null) : IEnrolmentDataSource
+	{
+		private readonly DirectoryDataSource inner = new(Harness.WorkflowsDir, Harness.DataDir);
+
+		public IReadOnlyList<WorkflowContent> OpenWorkflows() => nullWorkflows ? null! : inner.OpenWorkflows();
+
+		public Stream OpenWorkflowSchema() =>
+			nullStreamMember == nameof(IEnrolmentDataSource.OpenWorkflowSchema) ? null! : inner.OpenWorkflowSchema();
+
+		public Stream OpenCatalogue() => nullStreamMember == nameof(IEnrolmentDataSource.OpenCatalogue) ? null! : inner.OpenCatalogue();
+
+		public Stream OpenCatalogueSchema() =>
+			nullStreamMember == nameof(IEnrolmentDataSource.OpenCatalogueSchema) ? null! : inner.OpenCatalogueSchema();
+
+		public Stream OpenQualifications() =>
+			nullStreamMember == nameof(IEnrolmentDataSource.OpenQualifications) ? null! : inner.OpenQualifications();
+
+		public Stream OpenQualificationsSchema() =>
+			nullStreamMember == nameof(IEnrolmentDataSource.OpenQualificationsSchema) ? null! : inner.OpenQualificationsSchema();
+
+		public Stream OpenThresholds() => nullStreamMember == nameof(IEnrolmentDataSource.OpenThresholds) ? null! : inner.OpenThresholds();
+
+		public Stream OpenThresholdsSchema() =>
+			nullStreamMember == nameof(IEnrolmentDataSource.OpenThresholdsSchema) ? null! : inner.OpenThresholdsSchema();
+
+		public Stream OpenTransitionMatrix() =>
+			nullStreamMember == nameof(IEnrolmentDataSource.OpenTransitionMatrix) ? null! : inner.OpenTransitionMatrix();
+	}
+
+	private sealed class CallTrackingDataSource : IEnrolmentDataSource
+	{
+		public int OpenCalls { get; private set; }
+
+		public IReadOnlyList<WorkflowContent> OpenWorkflows() => Open<IReadOnlyList<WorkflowContent>>();
+
+		public Stream OpenWorkflowSchema() => Open<Stream>();
+
+		public Stream OpenCatalogue() => Open<Stream>();
+
+		public Stream OpenCatalogueSchema() => Open<Stream>();
+
+		public Stream OpenQualifications() => Open<Stream>();
+
+		public Stream OpenQualificationsSchema() => Open<Stream>();
+
+		public Stream OpenThresholds() => Open<Stream>();
+
+		public Stream OpenThresholdsSchema() => Open<Stream>();
+
+		public Stream OpenTransitionMatrix() => Open<Stream>();
+
+		private T Open<T>()
+		{
+			++OpenCalls;
+			throw new InvalidOperationException("Policy data must not be opened for an invalid factory call.");
+		}
 	}
 }

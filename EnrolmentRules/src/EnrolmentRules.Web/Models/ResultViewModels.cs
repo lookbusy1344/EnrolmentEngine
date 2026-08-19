@@ -48,8 +48,8 @@ public sealed record BasketEntry(Subject Subject, ChoiceStatus Status, Rating? R
 	///     no <see cref="Rating" /> at all (a not-offered subject) has nothing else to sort it by.
 	/// </summary>
 	public int ColourSeverity => this switch {
-		{ IsInvalid: true } => 2,
-		{ IsBorderline: true } => 1,
+									 { IsInvalid: true } => 2,
+									 { IsBorderline: true } => 1,
 		_ => 0,
 	};
 

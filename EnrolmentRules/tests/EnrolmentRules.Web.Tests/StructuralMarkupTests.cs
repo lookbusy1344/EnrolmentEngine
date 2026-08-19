@@ -4,7 +4,6 @@ using System.Globalization;
 using System.Text.Encodings.Web;
 using System.Text.RegularExpressions;
 using AwesomeAssertions;
-using Domain;
 using Domain.Diagnostics;
 
 public sealed partial class StructuralMarkupTests : IClassFixture<WebAppFactory>

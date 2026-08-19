@@ -1,6 +1,5 @@
 namespace EnrolmentRules.Engine.Hosting;
 
-using Domain;
 using Prediction;
 
 /// <summary>
