@@ -1,5 +1,6 @@
 namespace EnrolmentRules.Tests;
 
+using System.Collections.Immutable;
 using AwesomeAssertions;
 using Domain;
 
@@ -16,7 +17,7 @@ using Domain;
 /// </summary>
 public sealed class AccessibleSubjectsTests
 {
-	private static readonly Subject[] Accessible = [Subject.Psychology, Subject.Sociology, Subject.MediaStudies];
+	private static readonly ImmutableArray<Subject> Accessible = [Subject.Psychology, Subject.Sociology, Subject.MediaStudies];
 
 	// Borderline-minimum students: exactly min_passes GCSEs, every one at pass_grade, so the average sits
 	// on pass_grade (4.0) and every entry term is tested at its floor. English language and maths appear in

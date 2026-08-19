@@ -1,5 +1,6 @@
 namespace EnrolmentRules.Engine.Authoring;
 
+using System.Collections.Frozen;
 using System.Globalization;
 using System.Text;
 
@@ -119,7 +120,8 @@ internal sealed class BooleanNode(bool value) : Node
 /// </summary>
 internal static class Parser
 {
-	private static readonly string[] Operators = [">=", "<=", "==", "!=", ">", "<"];
+	private static readonly FrozenSet<string> Operators =
+		FrozenSet.ToFrozenSet([">=", "<=", "==", "!=", ">", "<"], StringComparer.Ordinal);
 
 	public static Node Parse(string expression)
 	{

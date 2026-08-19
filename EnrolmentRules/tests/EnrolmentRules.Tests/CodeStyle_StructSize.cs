@@ -8,7 +8,7 @@ using System.Reflection.Metadata.Ecma335;
 using System.Reflection.PortableExecutable;
 using System.Runtime.CompilerServices;
 using AwesomeAssertions;
-using Domain;
+using Domain.CodeStyle;
 
 /// <summary>
 ///     Architecture guard for the .NET performance-guideline size ceiling on value types (Framework
@@ -26,8 +26,8 @@ using Domain;
 ///         Generated structs (<c>[GeneratedCode]</c>/<c>[CompilerGenerated]</c> — e.g. a
 ///         <c>[LoggerMessage]</c> parameter carrier or an async state machine) are not authored types
 ///         an engineer can redesign. A struct authored on purpose above the ceiling carries
-///         <see cref="LargeStructAttribute" /> (<c>EnrolmentRules.Domain</c>) with its own reviewed
-///         justification — attach only with explicit user permission, per that attribute's own
+///         <see cref="LargeStructAttribute" /> (<c>EnrolmentRules.Domain.CodeStyle</c>) with its own
+///         reviewed reason — attach only with explicit user permission, per that attribute's own
 ///         summary.
 ///     </para>
 ///     Razor-compiled types are classes, not structs, so <c>.cshtml</c> needs no separate coverage.

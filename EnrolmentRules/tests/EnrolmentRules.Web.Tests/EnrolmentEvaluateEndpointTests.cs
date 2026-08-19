@@ -1,5 +1,6 @@
 namespace EnrolmentRules.Web.Tests;
 
+using System.Collections.Immutable;
 using System.Globalization;
 using System.Net;
 using Api;
@@ -10,7 +11,7 @@ public sealed class EnrolmentEvaluateEndpointTests : IClassFixture<WebAppFactory
 {
 	// examples/golden/strong-constraints.json — a known-eligible student with a stable mix of ratings
 	// (see RenderExplanationsTests, which drives the same facts through the Razor form).
-	private static readonly EvaluateGcseRow[] KnownGcses = [
+	private static readonly ImmutableArray<EvaluateGcseRow> KnownGcses = [
 		new("maths", 8), new("english_language", 8), new("english_literature", 8), new("physics", 8), new("chemistry", 8),
 		new("biology", 8), new("french", 8), new("german", 8), new("physical_education", 8), new("computer_studies", 8),
 		new("history", 8), new("music", 8), new("art", 8),

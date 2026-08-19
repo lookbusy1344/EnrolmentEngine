@@ -1,5 +1,6 @@
 namespace EnrolmentRules.Web.Tests;
 
+using System.Collections.Immutable;
 using System.Globalization;
 using System.Net;
 using System.Text.Json;
@@ -12,7 +13,7 @@ using AwesomeAssertions;
 /// </summary>
 public sealed class PolicySelectionTests : IClassFixture<WebAppFactory>
 {
-	private static readonly EvaluateGcseRow[] EliteEligibleGcses = [
+	private static readonly ImmutableArray<EvaluateGcseRow> EliteEligibleGcses = [
 		new("english_language", 8), new("maths", 8), new("biology", 8), new("chemistry", 8),
 		new("history", 8), new("physics", 8), new("psychology", 8), new("french", 8),
 	];

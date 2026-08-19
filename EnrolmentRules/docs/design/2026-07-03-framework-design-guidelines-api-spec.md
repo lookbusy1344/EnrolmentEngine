@@ -292,7 +292,9 @@ needs to import them.
   expressions and record equality can target them, and kept in mainline `EnrolmentRules.Domain`
   because they are shared value-collection vocabulary, not plumbing a consumer opts into:
   `EquatableArray`, `EquatableArray`1`, `EquatableDictionary`2`, `EquatableDictionaryFactory`.
-- **Attributes read by source generators or analyzers at the call site**: `LargeStructAttribute`.
+- **Build-hygiene markers**, isolated in `EnrolmentRules.Domain.CodeStyle`: `LargeStructAttribute`,
+  `LongMethodAttribute`. Reviewed exceptions to the architecture guards, applied at the declaration
+  they exempt, so they must be referencable from every production project.
 - **Enum-name lookup used by rendering front ends** outside this repository's own CLI/Web
   projects: `EnumNames`.
 
@@ -356,7 +358,6 @@ EnrolmentRules.Domain.GcseResult
 EnrolmentRules.Domain.GcseScoreboard
 EnrolmentRules.Domain.GcseSubjects
 EnrolmentRules.Domain.GradeChange
-EnrolmentRules.Domain.LargeStructAttribute
 EnrolmentRules.Domain.LintFinding
 EnrolmentRules.Domain.LintSeverity
 EnrolmentRules.Domain.PredictedGrade
@@ -398,6 +399,8 @@ EnrolmentRules.Domain.Authoring.QualificationScaleException
 EnrolmentRules.Domain.Authoring.QualificationScaleStore
 EnrolmentRules.Domain.RuntimeBinding.PolicyFacts
 EnrolmentRules.Domain.Diagnostics.BuildInfo
+EnrolmentRules.Domain.CodeStyle.LargeStructAttribute
+EnrolmentRules.Domain.CodeStyle.LongMethodAttribute
 ```
 
 ```types:EnrolmentRules.Prediction

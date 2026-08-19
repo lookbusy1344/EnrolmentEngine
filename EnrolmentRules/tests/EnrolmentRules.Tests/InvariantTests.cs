@@ -1,5 +1,6 @@
 namespace EnrolmentRules.Tests;
 
+using System.Collections.Immutable;
 using System.Text.Json;
 using System.Text.RegularExpressions;
 using AwesomeAssertions;
@@ -236,9 +237,9 @@ public sealed partial class InvariantTests
 
 	public static class StudentArbitraries
 	{
-		private static readonly string[] GcseKeys = [.. GcseSubjects.Known.OrderBy(static key => key, StringComparer.Ordinal)];
+		private static readonly ImmutableArray<string> GcseKeys = [.. GcseSubjects.Known.OrderBy(static key => key, StringComparer.Ordinal)];
 
-		private static readonly string[] Hobbies = [
+		private static readonly ImmutableArray<string> Hobbies = [
 			"plays_piano",
 			"plays_guitar",
 			"plays_violin",
@@ -252,9 +253,9 @@ public sealed partial class InvariantTests
 		public static Arbitrary<StudentInput> StudentInput() =>
 			Arb.From(
 				from id in Gen.Choose(1, int.MaxValue).Select(static value => $"S-{value}")
-				from gcseKeys in Gen.SubListOf(GcseKeys)
+				from gcseKeys in Gen.SubListOf(GcseKeys.ToArray())
 				from grades in Gen.Choose(Thresholds.MinGcseGrade, Thresholds.MaxGcseGrade).ListOf(gcseKeys.Count)
-				from hobbies in Gen.SubListOf(Hobbies)
+				from hobbies in Gen.SubListOf(Hobbies.ToArray())
 				from birthYear in Gen.Choose(1990, 2010)
 				from birthMonth in Gen.Choose(1, 12)
 				from birthDay in Gen.Choose(1, 28)

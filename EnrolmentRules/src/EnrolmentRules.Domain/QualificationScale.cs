@@ -27,7 +27,7 @@ public sealed class QualificationScale
 	public const string DefaultRelativePath = "data/qualifications.yaml";
 
 	private static readonly Lazy<QualificationScale> Shipped = new(static () => LoadFromFile(FindDefaultPath()));
-	private static readonly QualificationType[] KnownTypes = Enum.GetValues<QualificationType>();
+	private static readonly FrozenSet<QualificationType> KnownTypes = Enum.GetValues<QualificationType>().ToFrozenSet();
 
 	private readonly FrozenDictionary<QualificationType, FrozenDictionary<string, QualificationScaleEntry>> byType;
 
@@ -61,7 +61,7 @@ public sealed class QualificationScale
 	/// </summary>
 	public static QualificationScale Default => Shipped.Value;
 
-	internal static IReadOnlyList<QualificationType> AllTypes => KnownTypes;
+	internal static IReadOnlySet<QualificationType> AllTypes => KnownTypes;
 
 	/// <summary>Parse a YAML qualification scale document into the runtime table.</summary>
 	public static QualificationScale Load(string yaml) => Build(YamlConverter.ToJsonNode(yaml));
