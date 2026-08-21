@@ -194,9 +194,6 @@ export function createWheelController(
   let dragStartScroll = 0
 
   function onPointerdown(event: PointerEvent): void {
-    if (event.pointerType === 'touch') {
-      return
-    }
     dragging = true
     dragged = false
     programmatic = true
@@ -221,6 +218,17 @@ export function createWheelController(
     }
   }
 
+  // A vertical touch gesture belongs to the page (site.css advertises pan-y), so the browser can
+  // cancel this pointer after a little diagonal travel. Put back the existing choice rather than
+  // leaving that incidental horizontal movement between grades.
+  function onPointercancel(): void {
+    if (dragging) {
+      dragging = false
+      programmatic = false
+      glideTo(currentIndex, false)
+    }
+  }
+
   // A width change re-lays the cells under a scroll position that no longer means the same thing;
   // ride the current one back under the lens. Silent, and any pending snap is dropped — a resize
   // chooses nothing.
@@ -236,6 +244,7 @@ export function createWheelController(
   track.addEventListener('pointerdown', onPointerdown)
   track.addEventListener('pointermove', onPointermove)
   track.addEventListener('pointerup', onPointerup)
+  track.addEventListener('pointercancel', onPointercancel)
 
   return {
     setIndex(index, smooth) {
@@ -250,6 +259,7 @@ export function createWheelController(
       track.removeEventListener('pointerdown', onPointerdown)
       track.removeEventListener('pointermove', onPointermove)
       track.removeEventListener('pointerup', onPointerup)
+      track.removeEventListener('pointercancel', onPointercancel)
       cells.forEach((cell, i) => {
         cell.removeEventListener('click', clickHandlers[i])
       })

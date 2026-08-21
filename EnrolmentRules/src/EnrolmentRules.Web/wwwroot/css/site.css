@@ -743,7 +743,9 @@ legend {
     overflow: hidden;
     perspective: 300px;
     perspective-origin: center;
-    touch-action: pan-x;
+    /* Horizontal travel spins the drum directly in the controller; vertical travel remains the
+       page's, so starting a scroll over the control does not trap the gesture. */
+    touch-action: pan-y;
     user-select: none;
 }
 
@@ -861,7 +863,9 @@ legend {
            makes it, and a short answer clips grades out of sight. */
         --gwheel-visible: 10;
         perspective: none;
-        touch-action: auto;
+        /* Every grade is already visible: suppress the delayed double-tap gesture while retaining
+           ordinary page panning and pinch zoom. */
+        touch-action: manipulation;
     }
 
     .gwheel__track {
@@ -888,6 +892,15 @@ legend {
 
     .gwheel:focus-within .gwheel__cell[data-selected="true"] {
         box-shadow: inset 0 0 0 2px var(--shoot), var(--ring);
+    }
+}
+
+/* Hover only makes sense on the flattened button row (every grade is its own target) and only on
+   devices with a real pointer — a touch tap fires :hover too, which would flash the wrong cell. */
+@media (min-width: 992px) and (hover: hover) {
+    .gwheel__cell:not([data-selected="true"]):hover {
+        background: var(--grey-soft);
+        box-shadow: inset 0 0 0 2px rgba(91, 98, 93, .45);
     }
 }
 

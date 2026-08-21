@@ -56,8 +56,10 @@ function relayout(rig: Rig, cellWidth: number): void {
   })
 }
 
-function press(track: HTMLElement, type: string, clientX: number): void {
-  track.dispatchEvent(new MouseEvent(type, { clientX, bubbles: true }))
+function press(track: HTMLElement, type: string, clientX: number, pointerType = 'mouse'): void {
+  const event = new MouseEvent(type, { clientX, bubbles: true })
+  Object.defineProperty(event, 'pointerType', { value: pointerType })
+  track.dispatchEvent(event)
 }
 
 describe('wheel controller pointer handling', () => {
@@ -103,6 +105,18 @@ describe('wheel controller pointer handling', () => {
     press(rig.track, 'pointerdown', 180)
     press(rig.track, 'pointermove', 110)
     press(rig.track, 'pointerup', 110)
+
+    expect(rig.track.scrollLeft).toBe(110)
+    expect(rig.selected).toEqual([5])
+  })
+
+  it('tracks a touch drag directly and snaps as soon as the finger lifts', () => {
+    const rig = buildRig(40)
+    createWheelController(rig.track, rig.cells, (index) => rig.selected.push(index))
+
+    press(rig.track, 'pointerdown', 180, 'touch')
+    press(rig.track, 'pointermove', 110, 'touch')
+    press(rig.track, 'pointerup', 110, 'touch')
 
     expect(rig.track.scrollLeft).toBe(110)
     expect(rig.selected).toEqual([5])

@@ -145,6 +145,16 @@ test.describe('grade wheel', () => {
     expect(row).toEqual({ overflow: 0, curved: 0, visible: 10 })
   })
 
+  test('keeps taps low-latency on the wide button row', async ({ page }, testInfo) => {
+    test.skip(isDrumProject(testInfo), 'Narrower viewports spin the drum instead.')
+    await page.goto('/app')
+    await page.selectOption('#gcse-subject-0', 'maths')
+
+    const touchAction = await page.locator('.gwheel').first().evaluate((el) => getComputedStyle(el).touchAction)
+
+    expect(touchAction).toBe('manipulation')
+  })
+
   // One tab stop and the same keys at every width — these screens are desktops, so the row has to
   // take the keyboard exactly as the drum does.
   test('takes the same keys on the button row as on the drum', async ({ page }, testInfo) => {
