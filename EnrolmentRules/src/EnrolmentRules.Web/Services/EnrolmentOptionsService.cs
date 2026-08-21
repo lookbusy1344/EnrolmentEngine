@@ -133,8 +133,16 @@ public sealed class EnrolmentOptionsService(EnrolmentPolicy policy, TimeProvider
 			[.. realSubjects.Concat(illustrativeSubjects).Distinct(StringComparer.OrdinalIgnoreCase).Order(StringComparer.Ordinal)]);
 	}
 
+	/// <summary>
+	///     A catalogue own-time tag is matched with <c>StartsWith</c> (<see cref="Engine.ConstraintPass" />),
+	///     so a tag ending in "_" (e.g. Music's "plays_") is a bare wildcard prefix — "any instrument" —
+	///     not a real, selectable hobby in its own right. Offering it verbatim would let a student satisfy
+	///     the requirement without naming one; <see cref="IllustrativeHobbies" />'s concrete "plays_*"
+	///     examples are the real way to satisfy it.
+	/// </summary>
 	private static IEnumerable<string> BuildHobbyOptions(CatalogueData catalogue) =>
 		catalogue.Subjects
 				 .SelectMany(subject => catalogue.Meta(subject).RequiredActivities.Concat(catalogue.Meta(subject).BlockingActivities))
+				 .Where(static tag => !tag.EndsWith('_'))
 				 .Distinct(StringComparer.Ordinal);
 }

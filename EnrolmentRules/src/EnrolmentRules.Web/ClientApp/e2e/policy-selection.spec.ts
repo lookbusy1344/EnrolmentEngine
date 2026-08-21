@@ -1,5 +1,5 @@
 import { expect, test } from '@playwright/test'
-import { fillGoldenFacts, skipUnlessProject } from './support.ts'
+import { fillGoldenFacts, setRazorGcseGrade, skipUnlessProject } from './support.ts'
 
 test.describe('Policy selection across responsive layouts', () => {
   test.beforeEach(({}, testInfo) => {
@@ -92,7 +92,7 @@ test.describe('Policy selection behaviour', () => {
     await page.goto('/razor')
     await page.fill('#DateOfBirth', '2009-09-01')
     await page.selectOption('#Gcses_0__Subject', 'maths')
-    await page.locator('label[for="Gcses_0__Grade_8"]').click()
+    await setRazorGcseGrade(page, 0, 8)
     await page.getByRole('button', { name: 'Save & see options' }).click()
 
     await expect(page.locator('.policy-switch')).toContainText('Standard')

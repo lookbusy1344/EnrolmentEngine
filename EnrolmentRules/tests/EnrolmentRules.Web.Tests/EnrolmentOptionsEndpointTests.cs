@@ -85,6 +85,24 @@ public sealed class EnrolmentOptionsEndpointTests : IClassFixture<WebAppFactory>
 	}
 
 	/// <summary>
+	///     The catalogue's own-time <c>required_activities</c>/<c>blocking_activities</c> are prefixes
+	///     matched with <c>StartsWith</c> (<see cref="Engine.ConstraintPass" />), so Music's bare
+	///     <c>plays_</c> entry means "any instrument", not a literal hobby. Offering it verbatim in the
+	///     picker as "Plays" let a student satisfy Music's own-time requirement without naming one — the
+	///     concrete <c>plays_*</c> examples already in the illustrative list are the real way to satisfy it.
+	/// </summary>
+	[Fact]
+	public async Task Excludes_bare_own_time_prefixes_from_hobby_options()
+	{
+		using var client = factory.CreateClient();
+
+		var body = await client.GetFromJsonAsync("/api/enrolment/options", EnrolmentApiJsonContext.Default.EnrolmentOptionsResponse);
+
+		body.Should().NotBeNull();
+		body!.Hobbies.Select(o => o.Value).Should().NotContain("plays_");
+	}
+
+	/// <summary>
 	///     English Language and Maths are the key GCSEs (gating eligibility): they lead the picker rather
 	///     than sit wherever the alphabet puts them. Everything else stays alphabetical behind them.
 	/// </summary>

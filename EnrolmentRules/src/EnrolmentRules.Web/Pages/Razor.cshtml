@@ -32,6 +32,12 @@
 	<link rel="stylesheet" href="@stylesheet"/>
 }
 <script type="module" src="@Model.SyncScriptAssets.ScriptPath"></script>
+@* Upgrades the GCSE grade button groups below into the spin wheel; as a module it runs after the
+   form is parsed. Without it the button groups still post a grade (their no-JS state). *@
+@foreach (var stylesheet in Model.GradeWheelAssets.StylesheetPaths) {
+	<link rel="stylesheet" href="@stylesheet"/>
+}
+<script type="module" src="@Model.GradeWheelAssets.ScriptPath"></script>
 
 <section class="hero" aria-labelledby="hero-heading">
 	<p class="hero-eyebrow">GCSEs in → A-Levels out
@@ -170,7 +176,9 @@
 			<legend class="h6">GCSEs</legend>
 			@for (var i = 0; i < Model.Gcses.Count; ++i) {
 				<div class="row g-2 mb-2 align-items-end">
-					<div class="col-12 col-md-3">
+					<!-- Three columns: the grade control and its Remove button take exactly the width they need,
+					     and the subject select absorbs whatever the row has left. -->
+					<div class="col-12 col-md">
 						<label for="Gcses_@(i)__Subject" class="form-label">Subject</label>
 						<select id="Gcses_@(i)__Subject" name="Gcses[@i].Subject" class="form-select">
 							<option value="">-- select --</option>
@@ -182,12 +190,15 @@
 							}
 						</select>
 					</div>
-					<div class="col-12 col-md-auto">
-						<span class="form-label d-block" id="Gcses_@(i)__GradeLabel">Grade</span>
-						<!-- Grade is a discrete 1-9 scale, not a free-typed number: a toggle-button group is a
-						     single click, is unambiguous on a phone keypad, and cannot carry an out-of-range or
-						     decimal value the server would otherwise have to normalise (Thresholds.NormalizeGcseGrade
-						     still runs, but only ever sees an unset or exact 1-9 value from this control). -->
+					<div class="col-auto">
+						<span class="form-label d-block" id="Gcses_@(i)__GradeLabel">Grade
+							<span class="gwheel-readout@(Model.Gcses[i].ToRow().Grade is null ? " gwheel-readout--unset" : null)" data-grade-readout aria-hidden="true">@(Model.Gcses[i].ToRow().Grade?.ToString() ?? "Not set")</span>
+						</span>
+						<!-- Grade is a discrete 1-9 scale, not a free-typed number. This radio button group is
+						     the no-JS state; razorGradeWheel.ts upgrades it into the spin wheel (the same one
+						     /app renders) on load. Either way it cannot carry an out-of-range or decimal value
+						     the server would have to normalise (Thresholds.NormalizeGcseGrade still runs, but
+						     only ever sees an unset or exact 1-9 value from this control). -->
 						<div class="btn-group btn-group-sm flex-wrap gcse-grade-picker" role="group" aria-labelledby="Gcses_@(i)__GradeLabel">
 							@for (var grade = 1; grade <= 9; ++grade) {
 								<input type="radio" class="btn-check" name="Gcses[@i].Grade" id="Gcses_@(i)__Grade_@grade" value="@grade"
@@ -196,13 +207,16 @@
 							}
 						</div>
 					</div>
-					@if (!Model.Gcses[i].ToRow().IsEmpty) {
-						<div class="col-12 col-md-auto">
-							<button type="submit" formaction="?handler=RemoveGcseRow&amp;index=@i" formmethod="post" formnovalidate
-							        class="btn btn-sm btn-outline-danger">Remove
-							</button>
-						</div>
-					}
+					@* The blank trailing row has nothing to remove, but it still holds this column open, so its
+					   grade control lines up with the rows above rather than being pushed along by a subject
+					   select that grew into the gap. *@
+					@{ var gcseRowIsEmpty = Model.Gcses[i].ToRow().IsEmpty; }
+					<div class="col-auto">
+						<button type="submit" formaction="?handler=RemoveGcseRow&amp;index=@i" formmethod="post" formnovalidate
+						        class="btn btn-sm btn-outline-danger row-remove-btn@(gcseRowIsEmpty ? " invisible d-none d-md-inline-block" : null)"
+						        disabled="@gcseRowIsEmpty" tabindex="@(gcseRowIsEmpty ? "-1" : null)">Remove
+						</button>
+					</div>
 				</div>
 			}
 			<button type="submit" formaction="?handler=SaveFacts&amp;fragment=gcse-section" formmethod="post" formnovalidate
@@ -247,7 +261,7 @@
 					@if (!row.ToRow().IsEmpty) {
 						<div class="col-sm-2">
 							<button type="submit" formaction="?handler=RemoveQualificationRow&amp;index=@i" formmethod="post" formnovalidate
-							        class="btn btn-sm btn-outline-danger">Remove
+							        class="btn btn-sm btn-outline-danger row-remove-btn">Remove
 							</button>
 						</div>
 					}
@@ -316,7 +330,7 @@
 					@if (!string.IsNullOrWhiteSpace(Model.Hobbies[i])) {
 						<div class="col-sm-3">
 							<button type="submit" formaction="?handler=RemoveHobbyRow&amp;index=@i" formmethod="post" formnovalidate
-							        class="btn btn-sm btn-outline-danger">Remove
+							        class="btn btn-sm btn-outline-danger row-remove-btn">Remove
 							</button>
 						</div>
 					}

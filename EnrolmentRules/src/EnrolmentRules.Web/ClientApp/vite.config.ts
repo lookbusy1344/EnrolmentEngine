@@ -13,12 +13,14 @@ export default defineConfig({
     outDir: '../wwwroot/app',
     emptyOutDir: true,
     rollupOptions: {
-      // Two independent entries in one manifest: main.ts is the /app Vue SPA; razor-sync.ts is
-      // the small bundle /razor loads to mirror its server-rendered snapshot into the same
-      // localStorage key/shape main.ts's state module owns (see ViteManifestReader).
+      // Independent entries in one manifest: main.ts is the /app Vue SPA; razor-sync.ts mirrors
+      // /razor's server-rendered snapshot into the same localStorage key/shape main.ts's state
+      // module owns; razorGradeWheel.ts upgrades /razor's server-rendered grade button groups into
+      // the spin wheel /app renders natively (see ViteManifestReader).
       input: {
         main: 'src/main.ts',
         razorSync: 'src/razor-sync.ts',
+        razorGradeWheel: 'src/gradeWheel/razorGradeWheel.ts',
       },
     },
   },

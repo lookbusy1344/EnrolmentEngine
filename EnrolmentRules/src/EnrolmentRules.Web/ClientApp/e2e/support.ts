@@ -1,4 +1,4 @@
-import type { Page } from '@playwright/test'
+import { expect, type Page } from '@playwright/test'
 
 // Lets page.evaluate() callbacks read/write window.__e2eMarker without a cast — the property only
 // ever exists inside the browser context these callbacks run in, never in this file's own Node context.
@@ -48,9 +48,27 @@ async function fillFacts(page: Page, gcses: readonly { subject: string; grade: n
   await page.locator('.card').first().waitFor({ state: 'visible', timeout: 10_000 })
 }
 
-/** Picks a grade on the Vue facts form by clicking its toggle button — the radio itself is visually hidden. */
+/**
+ * Keys a grade into the grade wheel identified by its label element id: focus the row's slider and
+ * press the digit. The digit keys map straight to a grade and centre it exactly, so this is stable
+ * across viewports and both front ends — unlike clicking a cell that may be rotated off-centre and
+ * faded under the drum, where the scroll track intercepts the click.
+ */
+export async function keyGradeWheel(page: Page, gradeLabelId: string, grade: number): Promise<void> {
+  const track = page.locator(`[role="slider"][aria-labelledby="${gradeLabelId}"]`)
+  await track.focus()
+  await track.press(grade.toString())
+  await expect(track).toHaveAttribute('aria-valuenow', grade.toString())
+}
+
+/** Sets a grade on the Vue (/app) facts form. */
 export async function setGcseGrade(page: Page, index: number, grade: number): Promise<void> {
-  await page.locator(`label[for="gcse-grade-${index.toString()}-${grade.toString()}"]`).click()
+  await keyGradeWheel(page, `gcse-grade-label-${index.toString()}`, grade)
+}
+
+/** Sets a grade on the server-rendered (/razor) facts form. */
+export async function setRazorGcseGrade(page: Page, index: number, grade: number): Promise<void> {
+  await keyGradeWheel(page, `Gcses_${index.toString()}__GradeLabel`, grade)
 }
 
 /** Waits until /app's localStorage write has landed (it runs on Vue's watcher tick) and mentions `expectedFact`. */

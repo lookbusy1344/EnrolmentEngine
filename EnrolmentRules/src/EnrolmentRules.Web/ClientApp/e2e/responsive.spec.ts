@@ -1,9 +1,6 @@
 import { expect, test } from '@playwright/test'
 import { fillGoldenFacts } from './support.ts'
 
-/** Bootstrap's `md` breakpoint — below it the facts row stacks and the grade group goes full width. */
-const BOOTSTRAP_MD = 768
-
 test.describe('responsive /app', () => {
   test('has no horizontal page scroll', async ({ page }) => {
     await page.goto('/app')
@@ -24,40 +21,37 @@ test.describe('responsive /app', () => {
     const viewportWidth = testInfo.project.use.viewport?.width
     expect(viewportWidth).toBeTruthy()
 
+    // The grade wheel is a horizontal scroller: its off-screen cells sit past the viewport by
+    // design, clipped by the drum's overflow:hidden (so they never widen the page — the scroll test
+    // above still holds). Exclude the track's own contents; every laid-out element is checked.
     const overflowingCount = await page.evaluate((width) => {
-      const elements = Array.from(document.querySelectorAll('body *'))
+      const elements = Array.from(document.querySelectorAll('body *')).filter(
+        (element) => element.closest('.gwheel__track') === null,
+      )
       return elements.filter((element) => element.getBoundingClientRect().right > width + 1).length
     }, viewportWidth ?? 0)
 
     expect(overflowingCount).toBe(0)
   })
 
-  // The 1-9 toggle group is the one control that has to wrap on a phone: nine buttons never fit on
-  // a 360px row. Left to Bootstrap's own `flex: 1 1 auto` it wraps ragged (six wide buttons, then
-  // three wider ones), so the geometry is asserted rather than the class name. Above md the group
-  // is content-width and never wraps, so only the row count is checked there.
-  test('every GCSE grade button is the same width and the group wraps to at most two rows', async ({
-    page,
-  }, testInfo) => {
+  // The grade wheel lays all nine grades on one fixed-cell drum that fits the viewport at every
+  // width. Cell bounding widths vary with the curvature transform, so the fixed cell size is checked
+  // via offsetWidth (layout, transform-independent), not the rendered rect.
+  test('the grade wheel keeps nine equal-width cells within the viewport', async ({ page }, testInfo) => {
     await page.goto('/app')
 
     const viewportWidth = testInfo.project.use.viewport?.width ?? 0
     expect(viewportWidth).toBeTruthy()
 
-    const boxes = await page.locator('label[for^="gcse-grade-0-"]').evaluateAll((labels) =>
-      labels.map((label) => {
-        const { width, top } = label.getBoundingClientRect()
-        return { width: Math.round(width), top: Math.round(top) }
-      }),
-    )
+    const wheel = page.locator('.gwheel').first()
+    const cells = wheel.locator('label.gwheel__cell')
+    await expect(cells).toHaveCount(9)
 
-    expect(boxes).toHaveLength(9)
-    expect(new Set(boxes.map((box) => box.top)).size).toBeLessThanOrEqual(2)
+    const wheelRight = await wheel.evaluate((el) => el.getBoundingClientRect().right)
+    expect(wheelRight).toBeLessThanOrEqual(viewportWidth + 1)
 
-    if (viewportWidth < BOOTSTRAP_MD) {
-      const widths = boxes.map((box) => box.width)
-      expect(Math.max(...widths) - Math.min(...widths)).toBeLessThanOrEqual(1)
-    }
+    const widths = await cells.evaluateAll((labels) => labels.map((label) => (label as HTMLElement).offsetWidth))
+    expect(new Set(widths).size).toBe(1)
   })
 
   test('the chosen basket and facts heading are both reachable', async ({ page }) => {

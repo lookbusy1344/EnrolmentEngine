@@ -10,7 +10,7 @@
         <AnalysisLevel>latest-recommended</AnalysisLevel>
         <EnforceCodeStyleInBuild>true</EnforceCodeStyleInBuild>
         <GenerateDocumentationFile>true</GenerateDocumentationFile>
-        <Version>1.1.2</Version>
+        <Version>1.2.0</Version>
         <Authors>lookbusy1344</Authors>
         <PackageLicenseFile>LICENSE</PackageLicenseFile>
         <RepositoryUrl>https://github.com/lookbusy1344/EnrolmentEngine.git</RepositoryUrl>

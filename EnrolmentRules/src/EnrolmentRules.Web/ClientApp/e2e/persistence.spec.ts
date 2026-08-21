@@ -1,5 +1,5 @@
 import { expect, test } from '@playwright/test'
-import { fillGoldenFacts, setGcseGrade, skipUnlessProject, waitForStoredFacts } from './support.ts'
+import { fillGoldenFacts, setGcseGrade, setRazorGcseGrade, skipUnlessProject, waitForStoredFacts } from './support.ts'
 
 /**
  * /razor and /app persist facts in the same browser localStorage key/shape (see CLAUDE.md's
@@ -37,7 +37,7 @@ test.describe('cross-page persistence', () => {
     await page.goto('/razor')
     await page.fill('#DateOfBirth', '2009-09-01')
     await page.selectOption('#Gcses_0__Subject', 'maths')
-    await page.locator('label[for="Gcses_0__Grade_8"]').click()
+    await setRazorGcseGrade(page, 0, 8)
     await page.getByRole('button', { name: 'Save & see options' }).click()
     await expect(page.locator('#DateOfBirth')).toHaveValue('2009-09-01')
 
@@ -57,7 +57,7 @@ test.describe('cross-page persistence', () => {
     await page.goto('/razor')
     await page.fill('#DateOfBirth', '2009-09-01')
     await page.selectOption('#Gcses_0__Subject', 'physics')
-    await page.locator('label[for="Gcses_0__Grade_8"]').click()
+    await setRazorGcseGrade(page, 0, 8)
     await page.getByRole('button', { name: 'Save & see options' }).click()
     await expect(page.locator('#Gcses_0__Subject')).toHaveValue('physics')
 

@@ -46,7 +46,7 @@ function setHobby(index: number, value: string): void {
         </select>
       </div>
       <div v-if="row.trim() !== ''" class="col-sm-3">
-        <button class="btn btn-sm btn-outline-danger" type="button" @click="removeRow(index)">Remove</button>
+        <button class="btn btn-sm btn-outline-danger row-remove-btn" type="button" @click="removeRow(index)">Remove</button>
       </div>
     </div>
   </fieldset>

@@ -1,5 +1,13 @@
 # Changelog
 
+## 1.2.0 — 2026-08-21
+
+- GCSE grades are now picked from a spin wheel instead of a row of grade buttons, with the
+  Remove button laid out alongside it across phone, tablet, and desktop breakpoints.
+- Hardened the `CodeStyle_*` file-length and method-length architecture guards (measured in
+  code lines, not physical lines), and completed RulesEngine's isolation within the Engine
+  project.
+
 ## 1.1.2 — 2026-08-18
 
 - "What's open to you" cards and basket pills now both sort green, then amber, then red,

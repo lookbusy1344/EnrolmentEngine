@@ -18,6 +18,7 @@ public sealed class RazorModel(
 	TimeProvider timeProvider) : PageModel
 {
 	private const string RazorSyncEntrySourcePath = "src/razor-sync.ts";
+	private const string GradeWheelEntrySourcePath = "src/gradeWheel/razorGradeWheel.ts";
 
 	private EnrolmentOptionsService options = null!;
 
@@ -97,6 +98,13 @@ public sealed class RazorModel(
 	public ViteAssetPaths SyncScriptAssets { get; private set; } = null!;
 
 	/// <summary>
+	///     The script/stylesheet paths for <c>razorGradeWheel.ts</c> — the small bundle that upgrades the
+	///     server-rendered GCSE grade button groups into the spin wheel <c>/app</c> renders natively. Absent
+	///     it, the button groups still post a grade with no script (their no-JS state).
+	/// </summary>
+	public ViteAssetPaths GradeWheelAssets { get; private set; } = null!;
+
+	/// <summary>
 	///     Whether this response reflects a genuinely empty stored snapshot (no state cookie, or one that
 	///     decoded to nothing) — the signal <c>razor-sync.ts</c> uses to decide whether to rehydrate from
 	///     <c>localStorage</c> instead of trusting this render as authoritative.
@@ -126,6 +134,7 @@ public sealed class RazorModel(
 
 		JustCleared = cleared;
 		SyncScriptAssets = manifestReader.GetEntryAssets(RazorSyncEntrySourcePath);
+		GradeWheelAssets = manifestReader.GetEntryAssets(GradeWheelEntrySourcePath);
 		var session = await stateStore.LoadAsync(HttpContext, HttpContext.RequestAborted);
 		IsSnapshotEmpty = IsEmpty(session);
 		Bind(session);

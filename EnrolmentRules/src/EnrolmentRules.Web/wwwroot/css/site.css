@@ -49,6 +49,10 @@
     --shadow: 0 1px 2px rgba(18, 39, 27, .06), 0 10px 30px -18px rgba(18, 39, 27, .35);
     --ring: 0 0 0 3px rgba(36, 164, 92, .35);
 
+    /* matches Bootstrap's form-select height; shared by the grade wheel and the GCSE row's
+       Remove button so the two line up and Remove is as easy to hit as the wheel itself */
+    --gwheel-height: 45px;
+
     /* --- Retheme Bootstrap primitives ---------------------------------- */
     --bs-primary: var(--shoot);
     --bs-primary-rgb: 36, 164, 92;
@@ -681,20 +685,236 @@ legend {
     opacity: 1;
 }
 
-/* The GCSE 1-9 toggle group. Below Bootstrap's sm breakpoint (phone portrait) the group is full
-   width and has to wrap — nine buttons never fit on a phone-portrait row. Bootstrap's own
-   `flex: 1 1 auto` wraps it ragged (1-6 on one row, then three much wider buttons), which no
-   utility class can pin down, so each button gets a fixed fifth of the row: 1-5 then 6-9, all the
-   same width. Growth is off on purpose — grow:1 would stretch the short second row back out of
-   step. From sm up — phone landscape included, not just tablet/desktop — the group fits nine
-   buttons on one row and Bootstrap's sizing is restored untouched. */
-.gcse-grade-picker > .btn {
+/* The GCSE 1-9 toggle group — the no-JS / pre-enhancement state. It is a plain Bootstrap button
+   group that posts a grade without any script; /razor renders exactly this, and the wheel script
+   below upgrades it in place. /app (Vue) renders the wheel directly and never shows this form.
+   Below Bootstrap's sm breakpoint (phone portrait) the nine buttons cannot fit one row: Bootstrap's
+   own `flex: 1 1 auto` wraps them ragged (1-6, then three much wider), which no utility can pin, so
+   each takes a fixed fifth (1-5 then 6-9, equal width). Growth is off on purpose — grow:1 would
+   stretch the short second row back out of step. From sm up the row fits nine and Bootstrap's
+   sizing is restored. */
+.gcse-grade-picker:not(.gwheel) > .btn {
     flex: 0 0 20%;
 }
 
 @media (min-width: 576px) {
-    .gcse-grade-picker > .btn {
+    .gcse-grade-picker:not(.gwheel) > .btn {
         flex: 1 1 auto;
+    }
+}
+
+/* ---------------------------------------------------------------------------
+   Grade wheel — the GCSE grade control at every width. A horizontal drum you
+   spin: swipe/scroll, drag, tap any of the five visible numbers, or use the keyboard (arrows, Home/End,
+   digits 1-9, Backspace to clear). The flat number row is dressed as the curved
+   edge of a spinning wheel — a recessed track, a cylindrical sheen, a green
+   "lens" window over the selected grade, and numbers that yaw and fade as they
+   curve off the rim (the yaw/fade is applied per-frame from
+   gradeWheel/curvature.ts). The far-left "Not set" cell is the real rest state:
+   a grade is null until entered, and a plain slider cannot express "no grade
+   yet".
+
+   The height matches Bootstrap's form-select so the wheel and the subject
+   dropdown line up in the desktop row. One radio group sits underneath, so the
+   grade posts (/razor) and `label[for]` stays clickable. The controller
+   (gradeWheel/controller.ts) does the snapping in JS — CSS scroll-snap is not
+   used, because scroll-snap: mandatory overrides a programmatic scrollTo and
+   drifts keyed/typed grades off centre.
+   Shared by /app (Vue GradeWheel.vue) and /razor (razorGradeWheel.ts).
+   --------------------------------------------------------------------------- */
+.gwheel {
+    /* Five fixed-width cells make the drum, so five grades stand under the unmasked band: the one
+       under the lens plus two either side. One width at every viewport - the Remove button has a
+       column of its own and drops below the control on a phone, so nothing crowds it. Fixed, not a
+       fraction of the row: cells sized off the drum's width shift under the lens whenever the row
+       is re-laid (a window resize, a Remove button appearing), carrying the chosen grade off
+       centre. */
+    --gwheel-cell: 55px;
+    --gwheel-visible: 5;
+    position: relative;
+    /* its own fixed size, whatever the column around it does */
+    flex: 0 0 auto;
+    width: calc(var(--gwheel-cell) * var(--gwheel-visible));
+    max-width: 100%;
+    height: var(--gwheel-height);
+    border-radius: var(--radius-sm);
+    background: linear-gradient(var(--paper-deep), #dbe5cf);
+    box-shadow: inset 0 1px 3px rgba(18, 39, 27, .14), inset 0 -1px 2px rgba(255, 255, 255, .5);
+    overflow: hidden;
+    perspective: 300px;
+    perspective-origin: center;
+    touch-action: pan-x;
+    user-select: none;
+}
+
+.gwheel__track {
+    position: relative;
+    display: flex;
+    align-items: center;
+    height: 100%;
+    overflow-x: auto;
+    overflow-y: hidden;
+    scrollbar-width: none;
+    -ms-overflow-style: none;
+    transform-style: preserve-3d;
+    z-index: 1;
+    /* the far edges dissolve, selling the curve away from the viewer */
+    -webkit-mask-image: linear-gradient(90deg, transparent, #000 3%, #000 97%, transparent);
+    mask-image: linear-gradient(90deg, transparent, #000 3%, #000 97%, transparent);
+}
+
+.gwheel__track::-webkit-scrollbar {
+    display: none;
+}
+
+.gwheel__track:focus-visible {
+    outline: none;
+}
+
+/* half-viewport spacers let the first and last cells reach dead centre */
+.gwheel__pad {
+    flex: 0 0 calc(50% - var(--gwheel-cell) / 2);
+}
+
+.gwheel__cell {
+    flex: 0 0 var(--gwheel-cell);
+    height: 100%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    margin: 0;
+    padding: 0;
+    font-family: var(--display);
+    font-weight: 700;
+    font-size: 1.35rem;
+    line-height: 1;
+    color: var(--moss);
+    background: none;
+    border: 0;
+    cursor: pointer;
+    will-change: transform, opacity;
+}
+
+.gwheel__cell--unset {
+    font-size: 1.1rem;
+}
+
+.gwheel__cell[data-selected="true"] {
+    color: var(--shoot-deep);
+}
+
+/* keep the real radios in the DOM for posting + a11y, but never visible */
+.gwheel__radio {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    opacity: 0;
+    pointer-events: none;
+}
+
+/* the fixed centre window — marks the chosen grade */
+.gwheel__lens {
+    position: absolute;
+    top: 4px;
+    bottom: 4px;
+    left: 50%;
+    width: calc(var(--gwheel-cell) + 4px);
+    transform: translateX(-50%);
+    border-radius: var(--radius-sm);
+    background: linear-gradient(var(--shoot-soft), #d3ecd6);
+    box-shadow: inset 0 0 0 2px var(--shoot), 0 2px 6px -2px rgba(18, 39, 27, .3);
+    pointer-events: none;
+    z-index: 0;
+}
+
+/* cylindrical sheen: light across the middle, darkening top and bottom */
+.gwheel__shade {
+    position: absolute;
+    inset: 0;
+    z-index: 2;
+    pointer-events: none;
+    border-radius: inherit;
+    mix-blend-mode: soft-light;
+    background: linear-gradient(180deg,
+        rgba(18, 39, 27, .18) 0%,
+        rgba(18, 39, 27, .02) 26%,
+        rgba(255, 255, 255, .55) 50%,
+        rgba(18, 39, 27, .02) 74%,
+        rgba(18, 39, 27, .20) 100%);
+}
+
+.gwheel:focus-within .gwheel__lens {
+    box-shadow: inset 0 0 0 2px var(--shoot), var(--ring);
+}
+
+/* From Bootstrap's lg breakpoint up the grade column has room for the whole 1-9 scale, so the drum
+   flattens into a segmented button row: every grade visible, one click away, and the chosen one
+   marked where the lens used to sit. Same markup, same radios, same keyboard — presentation only,
+   with --gwheel-flat telling the controller to drop the curve and the snapping (gradeWheel/
+   controller.ts). */
+@media (min-width: 992px) {
+    .gwheel {
+        --gwheel-flat: 1;
+        --gwheel-cell: 40px;
+        /* every cell stands in the row: "Not set" plus the nine grades. Declared, not left to the
+           track's intrinsic width - engines disagree about how wide a scroll container's content
+           makes it, and a short answer clips grades out of sight. */
+        --gwheel-visible: 10;
+        perspective: none;
+        touch-action: auto;
+    }
+
+    .gwheel__track {
+        overflow-x: hidden;
+        transform-style: flat;
+        -webkit-mask-image: none;
+        mask-image: none;
+    }
+
+    .gwheel__pad,
+    .gwheel__lens,
+    .gwheel__shade {
+        display: none;
+    }
+
+    .gwheel__cell {
+        border-radius: var(--radius-sm);
+    }
+
+    .gwheel__cell[data-selected="true"] {
+        background: linear-gradient(var(--shoot-soft), #d3ecd6);
+        box-shadow: inset 0 0 0 2px var(--shoot), 0 2px 6px -2px rgba(18, 39, 27, .3);
+    }
+
+    .gwheel:focus-within .gwheel__cell[data-selected="true"] {
+        box-shadow: inset 0 0 0 2px var(--shoot), var(--ring);
+    }
+}
+
+/* The chosen grade, shown beside the "Grade" label so the selection reads at a glance. */
+.gwheel-readout {
+    margin-left: .35rem;
+    font-weight: 700;
+    color: var(--shoot-deep);
+}
+
+.gwheel-readout--unset {
+    font-weight: 600;
+    color: var(--moss);
+}
+
+/* A facts-editing row's Remove button (GCSEs, other qualifications, hobbies): fixed to the grade
+   wheel's height so every Remove is the same easy-to-hit target, rather than each row's sibling
+   control (the wheel, a taller form-select) leaving its own Remove a different height. */
+.row-remove-btn {
+    display: flex;
+    align-items: center;
+    height: var(--gwheel-height);
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .gwheel__track {
+        scroll-behavior: auto;
     }
 }
 
