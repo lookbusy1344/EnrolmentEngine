@@ -31,6 +31,20 @@ none of the black-box guesswork that comes with a purely statistical model.
 
 Managers have full control over rule application. They can be written as simple logical expressions.
 
+### Walkthrough
+
+This 30 second video shows the engine in action for music enrolment at an imaginary college with some quirky rules.
+
+![Music enrolment walkthrough](images/Music_enrolment.gif)
+
+1. We start with 4x GCSE at grade 4, insufficient for an A-Level programme at this college.
+2. We add Music at grade 4, crossing the eligibility threshold for a basic programme (5x grade 4), but not sufficient to study music. 3 other A-levels become green but Music is red.
+3. We change the Music GCSE grade to 5, and Music A-level now becomes amber. This means borderline, the department wants music students to play an instrument in their own time.
+4. We add ‘Plays piano’ as a hobby, and Music now becomes green! The course criteria are met, and the student can proceed.
+5. With tongue in cheek, our head of music really hates the trombone. If we add a second hobby ‘Plays trombone’ the subject becomes red. No trombone players are allowed in his class.
+
+This demonstrates some of the complex rules that can be quickly configured using this decision engine, including on student attributes like age, entry subject combinations, selections for A-Level and hobbies. All rules are fully customisable. For more details see [rule-authoring.md](EnrolmentRules/docs/rule-authoring.md)
+
 ## License
 
 AGPLv3. See [LICENSE](LICENSE) and [THIRD-PARTY-NOTICES.md](THIRD-PARTY-NOTICES.md).
