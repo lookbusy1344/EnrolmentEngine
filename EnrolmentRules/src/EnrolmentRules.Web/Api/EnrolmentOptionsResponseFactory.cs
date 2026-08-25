@@ -5,7 +5,7 @@ using Engine;
 using Models;
 using Services;
 
-/// <summary>Builds an <see cref="EnrolmentOptionsResponse" /> from the same <see cref="EnrolmentOptionsService" /> the Razor page uses.</summary>
+/// <summary>Builds an <see cref="EnrolmentOptionsResponse" /> from <see cref="EnrolmentOptionsService" />.</summary>
 public static class EnrolmentOptionsResponseFactory
 {
 	public static EnrolmentOptionsResponse Create(EnrolmentOptionsService options, IReadOnlyList<EnrolmentPolicyDescriptor> availablePolicies)

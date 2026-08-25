@@ -1,5 +1,22 @@
 # Changelog
 
+## 1.3.0 — 2026-08-25
+
+- The masthead is now a full-bleed soil band: a deep-evergreen ground with the brand mark and
+  wordmark scaled up and locked together over an A-Level decision engine tagline, so the header
+  reads as the shoot growing out of the earth rather than sitting loose on the paper page.
+- Behind it, a canopy of the brand mark's own leaf blows across the band. The arrangement is
+  scattered afresh on every page load, and each leaf drifts, tumbles and fades on its own slow
+  cycle in one of three parallax depths. Held quieter below Bootstrap's 768px breakpoint, where
+  the band is barely wider than the wordmark, and still under `prefers-reduced-motion`.
+- Removed the Razor Pages front end entirely — `EnrolmentRules.Web` now serves the Vue app at
+  both `/` and `/app`, with no server-rendered form flow, PRG cookies, or dynamic/server-rendered
+  mode switch. Multi-instance deploys no longer need sticky routing either.
+- Grade picker: hover feedback on the flattened button row at wide breakpoints, tighter touch
+  snapping on the drum and the wide row, and Remove buttons now match the grade wheel's height
+  across every facts row.
+- Hobby picker no longer offers a bare catalogue prefix (e.g. "Plays") as if it were a hobby.
+
 ## 1.2.0 — 2026-08-21
 
 - GCSE grades are now picked from a spin wheel instead of a row of grade buttons, with the

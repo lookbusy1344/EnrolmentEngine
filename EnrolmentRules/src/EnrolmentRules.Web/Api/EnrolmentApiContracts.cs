@@ -34,7 +34,7 @@ public sealed record EnrolmentOptionsResponse(
 	int MinChoices,
 	int ChoiceLimit);
 
-/// <summary>One posted GCSE row. A row with a blank <see cref="Subject" /> is dropped by the mapper, matching the Razor form's blank-row behaviour.</summary>
+/// <summary>One posted GCSE row. A row with a blank <see cref="Subject" /> is dropped by the mapper.</summary>
 public sealed record EvaluateGcseRow(string? Subject, int? Grade);
 
 /// <summary>

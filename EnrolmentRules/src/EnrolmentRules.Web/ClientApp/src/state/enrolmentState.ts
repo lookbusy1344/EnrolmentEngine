@@ -57,7 +57,7 @@ export function isEmptyPriorQualificationRow(row: PriorQualificationRow): boolea
   return row.subject.trim().length === 0 && row.type.trim().length === 0 && row.grade.trim().length === 0
 }
 
-/** Whether another GCSE row (not `excludingIndex`) already names `subjectKey` — mirrors RazorModel.IsGcseSubjectChosenElsewhere. */
+/** Whether another GCSE row (not `excludingIndex`) already names `subjectKey`. */
 export function isGcseSubjectChosenElsewhere(
   rows: readonly GcseRow[],
   excludingIndex: number,

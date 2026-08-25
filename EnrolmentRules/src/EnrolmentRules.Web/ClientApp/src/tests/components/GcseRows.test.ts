@@ -69,8 +69,8 @@ describe('GcseRows', () => {
     expect(columns.map((column) => column?.classList.contains('invisible'))).toEqual([false, true])
   })
 
-  // The grade control is the shared wheel (site.css .gwheel), driven through the same hidden radio
-  // group /razor renders; the wheel container carries both classes. /razor carries them too.
+  // The grade control is the shared wheel (site.css .gwheel), driven through a hidden radio group;
+  // the wheel container carries both classes.
   it('renders the grade as a wheel over the shared radio group', () => {
     const wrapper = mount(GcseRows, { props: { rows: [], subjectOptions, 'onUpdate:rows': () => undefined } })
 

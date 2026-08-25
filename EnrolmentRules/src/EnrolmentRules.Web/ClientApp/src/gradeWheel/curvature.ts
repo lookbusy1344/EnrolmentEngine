@@ -1,10 +1,8 @@
-// Pure geometry for the GCSE grade wheel — no DOM. The two front ends (the Vue component and the
-// /razor progressive-enhancement script) share this so the drum curves and snaps identically in
-// both. Everything here is a pure function of numbers, and is unit-tested in curvature.test.ts.
+// Pure geometry for the GCSE grade wheel — no DOM, used by the Vue component. Everything here is
+// a pure function of numbers, and is unit-tested in curvature.test.ts.
 
 /** Tunables for the drum's curved edge — pitched so the two cells either side of the lens stay
-    readable and tappable, since five grades stand under the drum's unmasked band. One place so both
-    front ends read the same feel. */
+    readable and tappable, since five grades stand under the drum's unmasked band. */
 export const CURVE = {
   /** Degrees a cell yaws away per cell-width of distance from centre. */
   rotateDegPerCell: 22,

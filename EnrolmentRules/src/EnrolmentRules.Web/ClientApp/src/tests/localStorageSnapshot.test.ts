@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import type { EnrolmentSnapshot } from '../state/enrolmentState'
-import { loadSnapshot, mirrorServerSnapshot, saveSnapshot } from '../state/localStorageSnapshot'
+import { loadSnapshot, saveSnapshot } from '../state/localStorageSnapshot'
 
 function createFakeStorage(): Storage {
   const store = new Map<string, string>()
@@ -36,7 +36,7 @@ describe('localStorageSnapshot', () => {
 
     saveSnapshot(sampleSnapshot, 'elite', storage)
 
-    expect(loadSnapshot(storage)).toEqual({ snapshot: sampleSnapshot, selectedPolicyId: 'elite', pendingSync: true })
+    expect(loadSnapshot(storage)).toEqual({ snapshot: sampleSnapshot, selectedPolicyId: 'elite' })
   })
 
   it('round-trips a null selected policy id', () => {
@@ -53,7 +53,6 @@ describe('localStorageSnapshot', () => {
     expect(loadSnapshot(storage)).toEqual({
       snapshot: { dateOfBirth: null, gcses: [], priorQualifications: [], hobbies: [], chosenALevels: [] },
       selectedPolicyId: null,
-      pendingSync: false,
     })
   })
 
@@ -71,7 +70,7 @@ describe('localStorageSnapshot', () => {
       JSON.stringify({ schemaVersion: 1, savedAt: new Date().toISOString(), snapshot: sampleSnapshot }),
     )
 
-    expect(loadSnapshot(storage)).toEqual({ snapshot: sampleSnapshot, selectedPolicyId: null, pendingSync: false })
+    expect(loadSnapshot(storage)).toEqual({ snapshot: sampleSnapshot, selectedPolicyId: null })
   })
 
   it('returns an empty snapshot for an unrecognised future schema version', () => {
@@ -104,7 +103,6 @@ describe('localStorageSnapshot', () => {
     expect(loadSnapshot(storage)).toEqual({
       snapshot: { dateOfBirth: null, gcses: [], priorQualifications: [], hobbies: [], chosenALevels: [] },
       selectedPolicyId: null,
-      pendingSync: false,
     })
   })
 
@@ -120,7 +118,6 @@ describe('localStorageSnapshot', () => {
       schemaVersion: 2,
       savedAt: expect.any(String) as unknown,
       selectedPolicyId: 'elite',
-      pendingSync: true,
       snapshot: sampleSnapshot,
     })
   })
@@ -138,23 +135,10 @@ describe('localStorageSnapshot', () => {
     expect(loadSnapshot(storage)).toEqual({
       snapshot: { dateOfBirth: null, gcses: [], priorQualifications: [], hobbies: [], chosenALevels: [] },
       selectedPolicyId: 'elite',
-      pendingSync: true,
     })
   })
 
-  it('a mirrored server render is settled, while a client-side save is pending', () => {
-    const storage = createFakeStorage()
-
-    mirrorServerSnapshot(sampleSnapshot, 'elite', storage)
-    expect(loadSnapshot(storage).pendingSync).toBe(false)
-
-    saveSnapshot(sampleSnapshot, 'elite', storage)
-    expect(loadSnapshot(storage).pendingSync).toBe(true)
-  })
-
-  // Records written before pendingSync existed must keep working, not read as pending and trigger
-  // a spurious hydrate, and above all not be discarded by a version bump.
-  it('reads a stored record that predates pendingSync as settled', () => {
+  it('ignores a pendingSync field left over from an older stored record', () => {
     const storage = createFakeStorage()
     storage.setItem(
       'enrolmentRules.vue.snapshot.v1',
@@ -162,10 +146,11 @@ describe('localStorageSnapshot', () => {
         schemaVersion: 2,
         savedAt: new Date().toISOString(),
         selectedPolicyId: 'elite',
+        pendingSync: true,
         snapshot: sampleSnapshot,
       }),
     )
 
-    expect(loadSnapshot(storage)).toEqual({ snapshot: sampleSnapshot, selectedPolicyId: 'elite', pendingSync: false })
+    expect(loadSnapshot(storage)).toEqual({ snapshot: sampleSnapshot, selectedPolicyId: 'elite' })
   })
 })

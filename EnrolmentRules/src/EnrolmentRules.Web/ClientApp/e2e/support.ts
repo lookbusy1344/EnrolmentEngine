@@ -61,14 +61,9 @@ export async function keyGradeWheel(page: Page, gradeLabelId: string, grade: num
   await expect(track).toHaveAttribute('aria-valuenow', grade.toString())
 }
 
-/** Sets a grade on the Vue (/app) facts form. */
+/** Sets a grade on the /app facts form. */
 export async function setGcseGrade(page: Page, index: number, grade: number): Promise<void> {
   await keyGradeWheel(page, `gcse-grade-label-${index.toString()}`, grade)
-}
-
-/** Sets a grade on the server-rendered (/razor) facts form. */
-export async function setRazorGcseGrade(page: Page, index: number, grade: number): Promise<void> {
-  await keyGradeWheel(page, `Gcses_${index.toString()}__GradeLabel`, grade)
 }
 
 /** Waits until /app's localStorage write has landed (it runs on Vue's watcher tick) and mentions `expectedFact`. */

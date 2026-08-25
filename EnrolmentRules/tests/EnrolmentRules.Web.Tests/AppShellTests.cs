@@ -36,9 +36,8 @@ public sealed class AppShellTests : IClassFixture<WebAppFactory>
 	[Fact]
 	public async Task Get_app_allows_pinch_zoom_via_the_shared_layouts_viewport_meta_tag()
 	{
-		// /app and /razor share _Layout.cshtml, so one check here covers both: the standard
-		// width=device-width, initial-scale=1 viewport with no maximum-scale/user-scalable restriction,
-		// which would otherwise block pinch zoom for low-vision users.
+		// The standard width=device-width, initial-scale=1 viewport with no maximum-scale/
+		// user-scalable restriction, which would otherwise block pinch zoom for low-vision users.
 		using var client = factory.CreateClient();
 
 		using var response = await client.GetAsync(new Uri("/app", UriKind.Relative));

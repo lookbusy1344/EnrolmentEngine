@@ -106,7 +106,7 @@ Start with the [guided walk-through](walkthrough.md).
 | `src/EnrolmentRules.Engine`                         | The `EnrolmentEngine` facade and the mainline evaluation contracts (`IEnrolmentEngine`, `IEnrolmentEvaluator`, `IEnrolmentAdvisor`). Supporting bootstrap and authoring APIs live in explicit `Hosting` / `Authoring` namespaces. |
 | `src/EnrolmentRules.Extensions.DependencyInjection` | `AddEnrolmentEngineFactory` / `AddEnrolmentEngine` / `AddEnrolmentPolicies` registration helpers for `Microsoft.Extensions.DependencyInjection` hosts.                                |
 | `src/EnrolmentRules.Cli`                            | `enrolment` executable and table/JSON/batch command line modes.                                                                                                                         |
-| `src/EnrolmentRules.Web`                            | Razor Pages and Vue reference web front-ends: `localStorage`-backed anonymous facts editing, live re-explanation, no database, no server-side session. See [Web Interface](#web-interface) below. |
+| `src/EnrolmentRules.Web`                            | Vue reference web front-end: `localStorage`-backed anonymous facts editing, live re-explanation, no database, no server-side session. See [Web Interface](#web-interface) below. |
 | `src/EnrolmentRules.Benchmarks`                     | BenchmarkDotNet harness for engine throughput.                                                                                                                                          |
 | `tests/EnrolmentRules.Tests`                        | xUnit and Awesome Assertions coverage, including engine-driven rule tests, invariants, and golden files.                                                                                |
 | `tests/EnrolmentRules.TestProcessHost`              | Out-of-process fixture exercised by the CLI/process tests.                                                                                                                              |
@@ -470,39 +470,22 @@ Batch output is JSONL. Each output line includes the student id and either a suc
 
 `src/EnrolmentRules.Web` is a small ASP.NET Core web host demonstrating the "staff-facing
 website" integration path from [Designed For Integration](../README.md#designed-for-integration).
-It serves both the original Razor Pages workflow at `/razor` and a Vue 3 workflow at `/app`; `/`
-redirects to the configured default experience. It is a reference host, not a packable library
-project:
+It serves a Vue 3 workflow at `/app` (also mapped to `/`, so there is no landing redirect). It is
+a reference host, not a packable library project:
 
-- **No accounts, no database, no server-side session.** Browser `localStorage` is the one editable-
-  facts store for both UIs (key `enrolmentRules.vue.snapshot.v1`, read/written by
-  `ClientApp/src/state/localStorageSnapshot.ts`); its versioned snapshot preserves facts and choices
-  when migrating the pre-policy v1 format, then resolves the saved policy against the
+- **No accounts, no database, no server-side session.** Browser `localStorage` is the one
+  editable-facts store (key `enrolmentRules.vue.snapshot.v1`, read/written by
+  `ClientApp/src/state/localStorageSnapshot.ts`); its versioned snapshot preserves facts and
+  choices when migrating the pre-policy v1 format, then resolves the saved policy against the
   server-provided registry rather than trusting stale client data. Vue reads/writes it directly.
-  Razor cannot — its forms POST → redirect → GET per request, and a GET has no access to
-  `localStorage` server-side — so a small, self-contained `enrolment.state` cookie (the snapshot's
-  own bytes, not a server-side session key, and not DataProtection-protected, so any instance can
-  decode it with no shared key ring) carries the current snapshot across that one PRG hop.
-  `ClientApp/src/razor-sync.ts` mirrors every Razor render back into `localStorage`, and pulls the
-  other way via a client-driven `?handler=Hydrate` POST whenever `localStorage` leads the server
-  in either of two cases: a cold visit with no state cookie, or a state cookie that outlived a
-  `/app` edit. Emptiness identifies only the cold visit, so the stored record also carries
-  `pendingSync`: `saveSnapshot` sets it after a client-side edit, `mirrorServerSnapshot` clears it
-  after a server render, and `razor-sync.ts` clears it before posting the hydrate request so the
-  redirect settles instead of hydrating repeatedly. `enrolment.policy` carries the last-resolved
-  policy id through the same request cycle.
-- Razor GETs re-run `IEnrolmentPolicyRegistry.Compare` against the cookie-carried snapshot, so the
-  rendered page is always a fresh comparison, never a cached one. Vue evaluations do the same
-  through `POST /api/enrolment/evaluate`.
-- Red unchosen subjects are rendered as unavailable and the `ChooseSubject` POST handler rechecks
-  the current final rating before mutating the stored snapshot. A chosen subject still renders
-  `Remove`, even if it is now red, so a counsellor can unwind a conflicting combination.
+- Vue evaluations re-run through `POST /api/enrolment/evaluate`, so the rendered result is always a
+  fresh comparison, never a cached one.
 - Client-side vocabulary (GCSE subject keys, prior-qualification subjects/types, hobby tags) comes
   from the same catalogue/scale the engine is bound to (`GcseSubjects.Known`,
   `IEnrolmentEngine.Catalogue`) — the web layer holds no parallel copy of policy data.
-- Both routes accept `?policy=<id>` (see [Policy registry](#policy-registry)) — `standard` and
-  `elite` are registered in `Program.cs`. A chosen subject the selected policy now rates red, or
-  does not offer at all, is never dropped from the basket; it is flagged `Unavailable`/`Not offered`
+- `/app` accepts `?policy=<id>` (see [Policy registry](#policy-registry)) — `standard` and `elite`
+  are registered in `Program.cs`. A chosen subject the selected policy now rates red, or does not
+  offer at all, is never dropped from the basket; it is flagged `Unavailable`/`Not offered`
   instead, and switching policy re-evaluates the same facts and basket rather than resetting them.
 - Static assets (Bootstrap 5) are restored via [libman](https://github.com/aspnet/LibraryManager)
   on every `dotnet build` (`Microsoft.Web.LibraryManager.Build`, driven by `libman.json`) into
@@ -545,14 +528,13 @@ output, copied in by the same
 `Properties/launchSettings.json` fixes that with `ASPNETCORE_CONTENTROOT="."`: a *relative* content
 root is resolved against the app's base directory — i.e. the build output — so it holds for
 `dotnet run`, for the built executable, and for Debug and Release alike. Its `launchUrl` is `app`,
-so Rider, Visual Studio and `dotnet run` all land on the Vue interface; `/razor` remains the
-server-rendered front end.
+so Rider, Visual Studio and `dotnet run` all land on the Vue interface.
 
 **Rider:** the checked-in `.NET Project` run configuration `EnrolmentRules.Web` launches the built
 executable from `bin/Debug/net10.0` with that directory as the working directory (so the content
 root is right without any environment variable) and opens `/app` in the browser. Run or Debug it
-directly — breakpoints in C#/Razor work, and the `BuildClientApp` MSBuild target rebuilds the Vue
-bundle as part of the normal build.
+directly — breakpoints in C# work, and the `BuildClientApp` MSBuild target rebuilds the Vue bundle
+as part of the normal build.
 
 For a watching dev loop instead, build and run the executable from its output directory:
 
@@ -560,7 +542,7 @@ For a watching dev loop instead, build and run the executable from its output di
 ./scripts/run-web.sh
 ```
 
-The script runs two watchers side by side: `dotnet watch run` for the C#/Razor side, and Vite's own
+The script runs two watchers side by side: `dotnet watch run` for the C# side, and Vite's own
 watch build (`pnpm build:watch`) for the Vue side. It polls `http://localhost:5299/app` and opens the
 page once the server answers; `dotnet watch`'s own browser launcher is suppressed so a future logging
 change cannot open a duplicate tab. `ASPNETCORE_WEBROOT` points at the source `wwwroot` so
@@ -770,16 +752,16 @@ ValidatedEvaluation<PolicyComparisonResult> comparison =
 ```
 
 `Compare` never mutates the input and never drops a choice — a red or not-offered subject stays
-represented, annotated with why, so a caller with an editable basket (both web front ends) can show
+represented, annotated with why, so a caller with an editable basket (the web front end) can show
 the student exactly what changed rather than silently losing their selection. `PolicyComparisonResult`
 also carries the resolved `Descriptor`, the full `Explanation` (`ExplainedResult`), and the policy's
 effective `MinChosenALevels`/`MaxChosenALevels` for that student. The strict, single-policy APIs are
 what a final "commit this enrolment" action should call; `Compare` is for the browsing/comparison
 experience that leads up to it.
 
-### CLI, Razor and Vue selection
+### CLI and Vue selection
 
-All three shipped hosts resolve a policy id the same way — a query/argument the caller supplies,
+Both shipped hosts resolve a policy id the same way — a query/argument the caller supplies,
 falling back to the registry's own default, never a silent substitution on an *invalid* id:
 
 - **CLI**: the global `--policy <id>` option (see [Command Line Examples](#command-line-examples));
@@ -790,17 +772,14 @@ falling back to the registry's own default, never a silent substitution on an *i
   response's `selectedPolicy`/`availablePolicies` fields are the client's own source of truth for
   which ids exist — never hard-code them. The client rejects malformed or contradictory registry
   metadata rather than guessing a policy.
-- **Razor** (`/razor?policy=<id>`): `RazorModel.ResolvePolicy` tries the URL value, then the
-  `enrolment.policy` cookie's last-viewed policy, then the registry default; an invalid *URL* value
-  redirects to the canonical policy-stripped URL rather than rendering with a silent fallback. The
-  page shows the current policy's display name and a "Switch to *Other*" link next to the hero, and
-  switching re-runs `Compare` against the same cookie-carried facts and basket — nothing is cleared.
-- **Vue** (`/app?policy=<id>`): the same precedence (URL, then the policy id last saved to
-  `localStorage`, then the server default), resolved client-side by retrying
-  `GET /api/enrolment/options` down that candidate list until one is accepted — a `400` for a bad id
-  just advances to the next candidate rather than needing a dedicated pre-flight request. `App.vue`
-  mirrors Razor's switch link and basket annotation (`ChoiceStatus` rendered on `ChosenBasket.vue`
-  instead of an "ejected" notice).
+- **Vue** (`/app?policy=<id>`): the precedence is URL, then the policy id last saved to
+  `localStorage`, then the server default — resolved client-side by retrying
+  `GET /api/enrolment/options` down that candidate list until one is accepted, so a `400` for a bad
+  id just advances to the next candidate rather than needing a dedicated pre-flight request.
+  `App.vue` shows the current policy's display name and a "Switch to *Other*" link next to the
+  hero, and switching re-runs `Compare` against the same stored facts and basket — nothing is
+  cleared, and a chosen subject the new policy rates red or doesn't offer is flagged rather than
+  ejected (`ChoiceStatus` rendered on `ChosenBasket.vue`).
 
 Building a second worked example of an auxiliary policy from scratch — the workflow/catalogue/data
 shape an overlay needs, and the boundary decisions to pin before writing it — is covered in

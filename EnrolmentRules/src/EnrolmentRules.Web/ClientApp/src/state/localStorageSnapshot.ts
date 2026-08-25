@@ -8,53 +8,21 @@ export interface StoredEnrolmentSnapshot {
   readonly schemaVersion: typeof SCHEMA_VERSION
   readonly savedAt: string
   readonly selectedPolicyId: string | null
-  /**
-   * Whether this snapshot holds client-side edits /razor's server state has not seen yet. /razor
-   * carries its own facts in a plain `enrolment.state` cookie that outlives a visit to /app, so a
-   * later /razor load renders a perfectly non-empty — but stale — snapshot. Emptiness alone cannot
-   * tell that apart from an authoritative render, hence this explicit marker: /app sets it on every
-   * save, and `razor-sync.ts` clears it once it has posted the edits back.
-   *
-   * Optional on read: absent in records written by earlier builds, which read as settled (false).
-   * That keeps the version at 2 — bumping it would discard those students' stored facts outright.
-   */
-  readonly pendingSync: boolean
   readonly snapshot: EnrolmentSnapshot
 }
 
 export interface LoadedSnapshot {
   readonly snapshot: EnrolmentSnapshot
   readonly selectedPolicyId: string | null
-  readonly pendingSync: boolean
 }
 
-const emptyLoadedSnapshot: LoadedSnapshot = { snapshot: emptySnapshot, selectedPolicyId: null, pendingSync: false }
+const emptyLoadedSnapshot: LoadedSnapshot = { snapshot: emptySnapshot, selectedPolicyId: null }
 
-/** A client-side edit: marked pending, so a later /razor load posts it back instead of rendering stale cookie facts over it. */
 export function saveSnapshot(snapshot: EnrolmentSnapshot, selectedPolicyId: string | null, storage: Storage): void {
-  write(snapshot, selectedPolicyId, true, storage)
-}
-
-/** A server render mirrored back: authoritative by definition, so nothing is left to sync. */
-export function mirrorServerSnapshot(
-  snapshot: EnrolmentSnapshot,
-  selectedPolicyId: string | null,
-  storage: Storage,
-): void {
-  write(snapshot, selectedPolicyId, false, storage)
-}
-
-function write(
-  snapshot: EnrolmentSnapshot,
-  selectedPolicyId: string | null,
-  pendingSync: boolean,
-  storage: Storage,
-): void {
   const stored: StoredEnrolmentSnapshot = {
     schemaVersion: SCHEMA_VERSION,
     savedAt: new Date().toISOString(),
     selectedPolicyId,
-    pendingSync,
     snapshot,
   }
   storage.setItem(STORAGE_KEY, JSON.stringify(stored))
@@ -84,22 +52,19 @@ function parseStoredSnapshot(value: unknown): LoadedSnapshot | null {
 
   if (value.schemaVersion === 1 && typeof value.savedAt === 'string') {
     const snapshot = parseSnapshot(value.snapshot)
-    return snapshot === null ? null : { snapshot, selectedPolicyId: null, pendingSync: false }
+    return snapshot === null ? null : { snapshot, selectedPolicyId: null }
   }
 
   if (
     value.schemaVersion !== SCHEMA_VERSION ||
     typeof value.savedAt !== 'string' ||
-    (value.selectedPolicyId !== null && typeof value.selectedPolicyId !== 'string') ||
-    (value.pendingSync !== undefined && typeof value.pendingSync !== 'boolean')
+    (value.selectedPolicyId !== null && typeof value.selectedPolicyId !== 'string')
   ) {
     return null
   }
 
   const snapshot = parseSnapshot(value.snapshot)
-  return snapshot === null
-    ? null
-    : { snapshot, selectedPolicyId: value.selectedPolicyId, pendingSync: value.pendingSync === true }
+  return snapshot === null ? null : { snapshot, selectedPolicyId: value.selectedPolicyId }
 }
 
 function parseSnapshot(value: unknown): EnrolmentSnapshot | null {

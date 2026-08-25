@@ -1,8 +1,6 @@
 namespace EnrolmentRules.Web.Tests;
 
 using AwesomeAssertions;
-using Pages;
-using Services;
 
 public sealed class PublicApiSurfaceTests
 {
@@ -17,14 +15,5 @@ public sealed class PublicApiSurfaceTests
 										  .ToArray();
 
 		foreignTypes.Should().BeEmpty("the web app must not publish implementation helpers under unrelated namespaces");
-	}
-
-	[Fact]
-	public void Razor_model_exposes_type_keyed_prior_qualification_subject_groups()
-	{
-		var property = typeof(RazorModel).GetProperty(nameof(RazorModel.PriorQualificationSubjectGroups));
-
-		property.Should().NotBeNull();
-		property!.PropertyType.Should().BeAssignableTo<IReadOnlyList<SubjectOptionGroup>>();
 	}
 }

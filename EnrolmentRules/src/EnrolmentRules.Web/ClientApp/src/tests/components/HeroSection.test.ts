@@ -7,7 +7,7 @@ const standard: PolicyDescriptor = { id: 'standard', displayName: 'Standard' }
 const elite: PolicyDescriptor = { id: 'elite', displayName: 'Elite' }
 
 describe('HeroSection', () => {
-  it('renders the eyebrow, heading and lede matching the Razor hero section', () => {
+  it('renders the eyebrow, heading and lede', () => {
     const wrapper = mount(HeroSection, { props: { selectedPolicy: null, availablePolicies: [] } })
 
     expect(wrapper.find('.hero-eyebrow').text()).toContain('GCSEs in → A-Levels out')
@@ -15,17 +15,9 @@ describe('HeroSection', () => {
     expect(wrapper.find('.hero-lede').text()).toContain('enrolment engine')
   })
 
-  it('marks itself as the dynamic front-end and links to the server-rendered one with no policy selected yet', () => {
-    const wrapper = mount(HeroSection, { props: { selectedPolicy: null, availablePolicies: [] } })
-
-    expect(wrapper.get('.mode-tag').text()).toBe('Dynamic')
-    expect(wrapper.get('.mode-switch').attributes('href')).toBe('/razor')
-  })
-
-  it('carries the selected policy onto the server-rendered link and shows the current policy label', () => {
+  it('shows the current policy label', () => {
     const wrapper = mount(HeroSection, { props: { selectedPolicy: standard, availablePolicies: [standard, elite] } })
 
-    expect(wrapper.get('.mode-switch').attributes('href')).toBe('/razor?policy=standard')
     expect(wrapper.get('.policy-switch').text()).toContain('Standard')
     expect(wrapper.get('.policy-switch').text()).toContain('Switch to Elite')
   })

@@ -14,18 +14,12 @@ const emit = defineEmits<{
 const otherPolicy = computed(
   () => props.availablePolicies.find((policy) => policy.id !== props.selectedPolicy?.id) ?? null,
 )
-
-const razorHref = computed(() =>
-  props.selectedPolicy === null ? '/razor' : `/razor?policy=${encodeURIComponent(props.selectedPolicy.id)}`,
-)
 </script>
 
 <template>
   <section aria-labelledby="hero-heading" class="hero">
     <p class="hero-eyebrow">
       GCSEs in → A-Levels out
-      <span class="mode-tag pill pill--active">Dynamic</span>
-      <a :href="razorHref" class="mode-switch pill pill--link">Server-rendered version</a>
       <span v-if="selectedPolicy !== null" aria-label="Selected enrolment policy" class="policy-switch">
         <strong class="pill pill--active">{{ selectedPolicy.displayName }}</strong>
         <template v-if="otherPolicy !== null">

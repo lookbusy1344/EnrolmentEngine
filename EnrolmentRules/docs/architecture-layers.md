@@ -172,48 +172,23 @@ Thin shim: parses arguments, calls the engine, renders.
 
 ### Web — [`src/EnrolmentRules.Web`](../src/EnrolmentRules.Web)
 
-No database and no server-side session. Two UIs over the same API — a server-rendered Razor Pages
-flow and a Vue single-page app — that share one client-side store: browser `localStorage` is the
-editable-facts store for both (`enrolmentRules.vue.snapshot.v1`, read/written by
+No database and no server-side session. One Vue single-page app over a stateless JSON API: browser
+`localStorage` is the editable-facts store
+(`enrolmentRules.vue.snapshot.v1`, read/written by
 [`state/localStorageSnapshot.ts`](../src/EnrolmentRules.Web/ClientApp/src/state/localStorageSnapshot.ts)).
-Razor's POST → redirect → GET request cycle cannot read `localStorage` server-side, so a small,
-self-contained `enrolment.state` cookie (not DataProtection-protected, decodable by any instance
-with no shared key ring) carries the current snapshot across that one hop; `enrolment.policy`
-carries the last-resolved policy id the same way. See
-[Web Interface](technical-reference.md#web-interface) for the full mirroring protocol and
-[`docs/deployment.md`](deployment.md#multi-instance-scaling) for why Razor Pages' own antiforgery
-token — still DataProtection-protected, with no shared key ring configured — is the one piece that
-still requires sticky routing when scaling beyond one instance.
+See [Web Interface](technical-reference.md#web-interface) for the full persistence model and
+[`docs/deployment.md`](deployment.md#multi-instance-scaling) for why that leaves nothing pinning a
+browser to one instance when scaling beyond one.
 
-- **Host/bootstrap:** [`Program.cs`](../src/EnrolmentRules.Web/Program.cs),
-  [`Configuration/EnrolmentWebOptions.cs`](../src/EnrolmentRules.Web/Configuration/EnrolmentWebOptions.cs),
-  [`Configuration/EnrolmentWebConfigurationException.cs`](../src/EnrolmentRules.Web/Configuration/EnrolmentWebConfigurationException.cs),
-  [`Configuration/ExperienceKind.cs`](../src/EnrolmentRules.Web/Configuration/ExperienceKind.cs)
-- **Facts state — the editable snapshot, shared by both UIs:**
+- **Host/bootstrap:** [`Program.cs`](../src/EnrolmentRules.Web/Program.cs)
+- **Facts state — the editable snapshot:**
   [`Models/EnrolmentSession.cs`](../src/EnrolmentRules.Web/Models/EnrolmentSession.cs) (the snapshot
   record — despite the name, not server-side session state, just the editable-facts shape),
-  [`Services/EnrolmentStateCookieStore.cs`](../src/EnrolmentRules.Web/Services/EnrolmentStateCookieStore.cs)
-  (the `enrolment.state` PRG-transport cookie),
-  [`Services/EnrolmentPolicyCookie.cs`](../src/EnrolmentRules.Web/Services/EnrolmentPolicyCookie.cs)
-  (the `enrolment.policy` cookie),
-  [`ClientApp/src/razor-sync.ts`](../src/EnrolmentRules.Web/ClientApp/src/razor-sync.ts) (mirrors a
-  server render into `localStorage`, and pulls the other way via `?handler=Hydrate` when
-  `localStorage` leads the server — see the Web Interface section linked above for when each direction wins)
-- **Policy selection, shared by both UIs:** [`Services/EnrolmentPolicySelector.cs`](../src/EnrolmentRules.Web/Services/EnrolmentPolicySelector.cs)
-  resolves a `?policy=` value against `IEnrolmentPolicyRegistry`, no silent fallback on an unknown id.
-- **Razor Pages UI (`/razor`):** [`Pages/Index.cshtml`](../src/EnrolmentRules.Web/Pages/Index.cshtml)
-  ([`.cs`](../src/EnrolmentRules.Web/Pages/Index.cshtml.cs)),
-  [`Pages/Razor.cshtml`](../src/EnrolmentRules.Web/Pages/Razor.cshtml)
-  ([`.cs`](../src/EnrolmentRules.Web/Pages/Razor.cshtml.cs)),
-  [`Pages/Shared/_Layout.cshtml`](../src/EnrolmentRules.Web/Pages/Shared/_Layout.cshtml),
   [`Models/InputRows.cs`](../src/EnrolmentRules.Web/Models/InputRows.cs),
-  [`Models/RowBindings.cs`](../src/EnrolmentRules.Web/Models/RowBindings.cs),
-  [`Models/SaveFactsInput.cs`](../src/EnrolmentRules.Web/Models/SaveFactsInput.cs),
-  [`Models/RatingDisplay.cs`](../src/EnrolmentRules.Web/Models/RatingDisplay.cs),
-  [`Models/ResultViewModels.cs`](../src/EnrolmentRules.Web/Models/ResultViewModels.cs),
-  [`Models/TextFormatting.cs`](../src/EnrolmentRules.Web/Models/TextFormatting.cs),
   [`Services/EnrolmentFormMapper.cs`](../src/EnrolmentRules.Web/Services/EnrolmentFormMapper.cs)
-- **JSON API backing both UIs:** [`Api/EnrolmentApiEndpoints.cs`](../src/EnrolmentRules.Web/Api/EnrolmentApiEndpoints.cs),
+- **Policy selection:** [`Services/EnrolmentPolicySelector.cs`](../src/EnrolmentRules.Web/Services/EnrolmentPolicySelector.cs)
+  resolves a `?policy=` value against `IEnrolmentPolicyRegistry`, no silent fallback on an unknown id.
+- **JSON API backing the app:** [`Api/EnrolmentApiEndpoints.cs`](../src/EnrolmentRules.Web/Api/EnrolmentApiEndpoints.cs),
   [`Api/EnrolmentApiContracts.cs`](../src/EnrolmentRules.Web/Api/EnrolmentApiContracts.cs),
   [`Api/EnrolmentApiMapper.cs`](../src/EnrolmentRules.Web/Api/EnrolmentApiMapper.cs),
   [`Api/EnrolmentEvaluateResponseFactory.cs`](../src/EnrolmentRules.Web/Api/EnrolmentEvaluateResponseFactory.cs),
@@ -256,7 +231,7 @@ still requires sticky routing when scaling beyond one instance.
 - [`tests/EnrolmentRules.TestProcessHost`](../tests/EnrolmentRules.TestProcessHost) —
   out-of-process fixture the CLI/process tests drive.
 - [`tests/EnrolmentRules.Web.Tests`](../tests/EnrolmentRules.Web.Tests) — `WebApplicationFactory`
-  integration tests for both `/razor` and the API `/app` calls;
+  integration tests for the API `/app` calls;
   [`ClientApp/src/tests/`](../src/EnrolmentRules.Web/ClientApp/src/tests) covers the Vue layer with
   Vitest.
 

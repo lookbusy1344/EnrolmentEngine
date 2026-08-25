@@ -3,10 +3,9 @@ namespace EnrolmentRules.Web.Services;
 using Engine;
 
 /// <summary>
-///     Resolves the policy identifier a request names — a query parameter for the API and Vue, a query
-///     parameter or session fallback for Razor — against the shared <see cref="IEnrolmentPolicyRegistry" />.
-///     A malformed or unregistered identifier is never silently swapped for the default: callers get
-///     <c>false</c> and report a bounded error (400 for the API, a validation response for Razor).
+///     Resolves the policy identifier a request names — a query parameter — against the shared
+///     <see cref="IEnrolmentPolicyRegistry" />. A malformed or unregistered identifier is never silently
+///     swapped for the default: callers get <c>false</c> and report a bounded 400 error.
 /// </summary>
 public static class EnrolmentPolicySelector
 {

@@ -11,11 +11,10 @@ using Subject = Domain.Subject;
 public readonly record struct SubjectOptionGroup(QualificationType Type, string Label, Infrastructure.EquatableArray<string> Subjects);
 
 /// <summary>
-///     The picker/default data the Razor page and the <c>/api/enrolment/options</c> endpoint both need to
-///     render a facts form, derived from the selected <see cref="EnrolmentPolicy" />'s catalogue/validator/
-///     scale so the two front ends never drift. Constructed per request against the caller's resolved
-///     policy (never DI-scoped to a single fixed engine), so a Standard and an Elite request in flight at
-///     once never share state.
+///     The picker/default data the <c>/api/enrolment/options</c> endpoint needs to render a facts form,
+///     derived from the selected <see cref="EnrolmentPolicy" />'s catalogue/validator/scale. Constructed per
+///     request against the caller's resolved policy (never DI-scoped to a single fixed engine), so a
+///     Standard and an Elite request in flight at once never share state.
 /// </summary>
 public sealed class EnrolmentOptionsService(EnrolmentPolicy policy, TimeProvider timeProvider)
 {

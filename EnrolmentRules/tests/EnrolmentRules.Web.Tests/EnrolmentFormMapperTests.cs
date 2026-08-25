@@ -55,26 +55,4 @@ public sealed class EnrolmentFormMapperTests
 
 		student.ChosenALevels.Should().Equal(new Subject("maths"), new Subject("physics"));
 	}
-
-	[Fact]
-	public void Apply_replaces_facts_but_preserves_student_id_and_chosen_a_levels()
-	{
-		var current = EnrolmentSession.Empty("student-2") with {
-			ChosenALevels = [new("biology")],
-		};
-		var input = new SaveFactsInput(
-			new DateOnly(2010, 1, 1),
-			[new("physics", 7)],
-			[new("English", QualificationType.ALevel, "b")],
-			["swimming"]);
-
-		var updated = EnrolmentFormMapper.Apply(input, current);
-
-		updated.StudentId.Should().Be("student-2");
-		updated.ChosenALevels.Should().Equal(new Subject("biology"));
-		updated.DateOfBirth.Should().Be(new(2010, 1, 1));
-		updated.Gcses.Should().Equal(new GcseRow("physics", 7));
-		updated.PriorQualifications.Should().Equal(new PriorQualificationRow("English", QualificationType.ALevel, "b"));
-		updated.Hobbies.Should().Equal("swimming");
-	}
 }

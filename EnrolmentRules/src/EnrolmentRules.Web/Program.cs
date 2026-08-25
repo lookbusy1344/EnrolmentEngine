@@ -1,7 +1,6 @@
 namespace EnrolmentRules.Web;
 
 using Api;
-using Configuration;
 using Engine.Hosting;
 using Extensions.DependencyInjection;
 using Microsoft.AspNetCore.Mvc;
@@ -16,17 +15,11 @@ public sealed class Program
 	{
 		var builder = WebApplication.CreateBuilder(args);
 
-		// Registered as a factory, not an eagerly-computed instance: WebApplicationFactory-driven tests
-		// mutate IConfiguration via a hook that only takes effect once WebApplicationBuilder.Build()
-		// runs, so validating EnrolmentWeb:DefaultExperience here (between CreateBuilder and Build) would
-		// see stale/default configuration under test. Forcing resolution once, right after Build() below,
-		// keeps the fail-fast startup behaviour while still observing test overrides.
-		_ = builder.Services.AddSingleton(sp => EnrolmentWebOptions.LoadAndValidate(sp.GetRequiredService<IConfiguration>()));
 		_ = builder.Services.ConfigureHttpJsonOptions(options =>
 			options.SerializerOptions.TypeInfoResolverChain.Insert(0, EnrolmentApiJsonContext.Default));
-		_ = builder.Services.AddRazorPages();
+		// "/App" also serves "" ("/") so the Vue app is the sole front end with no redirect hop.
+		_ = builder.Services.AddRazorPages(options => options.Conventions.AddPageRoute("/App", ""));
 		_ = builder.Services.AddSingleton(TimeProvider.System);
-		_ = builder.Services.AddSingleton<IEnrolmentStateStore, EnrolmentStateCookieStore>();
 		_ = builder.Services.AddSingleton<IViteManifestReader, ViteManifestReader>();
 		_ = builder.Services.AddEnrolmentPolicies(options => options
 															 .UseDefault(
@@ -48,9 +41,6 @@ public sealed class Program
 															 .UseTimeProvider());
 
 		var app = builder.Build();
-
-		// Force eager resolution so a bad EnrolmentWeb:DefaultExperience fails startup, not the first request.
-		_ = app.Services.GetRequiredService<EnrolmentWebOptions>();
 
 		if (!app.Environment.IsDevelopment()) {
 			_ = app.UseExceptionHandler(exceptionApp => exceptionApp.Run(HandleUnhandledExceptionAsync));

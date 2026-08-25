@@ -32,6 +32,11 @@
     --forest: #14532b; /* legend/heading text on tinted fills — 7.8:1 on --shoot-soft */
     --lime: #c9f27e; /* the one highlighter, used once             */
 
+    /* --- Masthead ground ------------------------------------------------ */
+    --soil: #0e2116; /* the dark earth the shoot grows out of      */
+    --soil-lit: #17321f; /* top-lit face of the same band              */
+    --soil-stem: #a8c6b1; /* the stem, legible against the soil         */
+
     /* --- Status (traffic semantics, kept vivid & separate) -------------- */
     --go: #1e9e4a;
     --go-soft: #e4f4e6;
@@ -128,30 +133,115 @@ a {
    Header / brand / footer shell
    --------------------------------------------------------------------------- */
 .site-header {
+    position: relative;
+    overflow: hidden;
+    background: linear-gradient(180deg, var(--soil-lit), var(--soil));
+    color: var(--paper);
+}
+
+/* The brand mark's own leaf, repeated as a canopy over the soil. Masked to fade out before it
+   reaches the wordmark, so the lockup always sits on clean ground. */
+.masthead-canopy {
+    position: absolute;
+    inset-inline-end: 0;
+    top: 50%;
+    /* Height-driven, width auto: the leaves keep one size relative to the band at every viewport,
+       instead of being blown up by a width-driven slice on wide screens. */
+    height: 170%;
+    width: auto;
+    transform: translateY(-50%);
+    /* Mobile first: on a phone the band is barely wider than the lockup, so the canopy is held to
+       a faint sliver at the far edge and only opens up once there is room for it. 768px is
+       Bootstrap's own md breakpoint. */
+    opacity: .8;
+    mask-image: linear-gradient(90deg, transparent, #000 68%);
+}
+
+@media (min-width: 768px) {
+    .masthead-canopy {
+        opacity: 1;
+        mask-image: linear-gradient(90deg, transparent, #000 55%);
+    }
+}
+
+/* Depth is parallax: nearer leaves are drawn larger, brighter and blown further. The generator
+   (MastheadCanopy) guarantees that ordering; opacity is a custom property because the drift
+   keyframes fade each leaf in and out and must interpolate towards its own resting value. */
+.canopy-leaf {
+    fill: var(--shoot);
+    opacity: var(--leaf-opacity);
+}
+
+.canopy-leaf--far {
+    --leaf-opacity: .3;
+}
+
+.canopy-leaf--mid {
+    --leaf-opacity: .46;
+}
+
+.canopy-leaf--near {
+    --leaf-opacity: .34;
+    fill: var(--lime);
+}
+
+/* One long cycle per leaf, each on its own duration and a negative delay, so the canopy is already
+   mid-blow on the first frame. Both ends of the cycle are transparent, which is what hides the
+   jump back to the start. */
+@keyframes canopy-blow {
+    0% {
+        opacity: 0;
+        transform: none;
+    }
+
+    14%, 76% {
+        opacity: var(--leaf-opacity);
+    }
+
+    100% {
+        opacity: 0;
+        transform: translate(calc(var(--drift-x) * 1px), calc(var(--drift-y) * 1px)) rotate(var(--spin));
+    }
+}
+
+@media (prefers-reduced-motion: no-preference) {
+    .canopy-leaf {
+        transform-box: view-box;
+        transform-origin: center;
+        animation-name: canopy-blow;
+        animation-timing-function: cubic-bezier(.35, 0, .5, 1);
+        animation-iteration-count: infinite;
+    }
+}
+
+.site-header-inner {
+    position: relative;
     display: flex;
-    align-items: baseline;
+    align-items: center;
+    gap: 1rem;
     max-width: 1080px;
     margin-inline: auto;
-    padding: 1.3rem 1rem .2rem;
+    padding: 1rem 1rem;
 }
 
 .brand {
     display: inline-flex;
     align-items: center;
-    gap: .55rem;
+    gap: clamp(.5rem, 2.2vw, .8rem);
+    min-width: 0;
     text-decoration: none;
-    color: var(--ink);
+    color: inherit;
 }
 
 .brand-mark {
-    width: 30px;
-    height: 30px;
+    width: clamp(36px, 9vw, 56px);
+    height: clamp(36px, 9vw, 56px);
     flex: none;
     overflow: visible;
 }
 
 .brand-stem {
-    stroke: var(--ink);
+    stroke: var(--soil-stem);
 }
 
 .brand-leaf--left {
@@ -159,40 +249,72 @@ a {
 }
 
 .brand-leaf--right {
-    fill: var(--shoot-deep);
+    fill: var(--lime);
+}
+
+.brand-lockup {
+    display: flex;
+    flex-direction: column;
+    gap: .22rem;
+    min-width: 0;
 }
 
 .brand-name {
     font-family: var(--display);
     font-weight: 800;
-    font-size: 1.35rem;
-    letter-spacing: -.02em;
+    font-size: clamp(1.4rem, 6vw, 2.3rem);
+    line-height: 1;
+    letter-spacing: -.025em;
 }
 
 .brand-tag {
-    margin: 0;
-    font-size: .82rem;
+    font-size: clamp(.62rem, 2.3vw, .84rem);
     font-weight: 600;
-    color: var(--moss);
+    line-height: 1;
+    color: var(--lime);
     text-transform: uppercase;
-    letter-spacing: .12em;
+    letter-spacing: .16em;
+}
+
+/* The bare `a:hover` rule darkens links to --ink, which is the masthead's own ground. */
+@media (hover: hover) {
+    .brand:hover {
+        color: var(--paper);
+    }
+}
+
+/* The page-wide focus ring is a translucent green that all but vanishes against the soil band. */
+.site-header :focus-visible {
+    box-shadow: 0 0 0 3px rgba(201, 242, 126, .6);
+}
+
+/* The right-hand leaf lifts on hover, as if catching light. */
+.brand-leaf--right {
+    transform-origin: 16px 14px;
+    transition: transform .25s ease;
+}
+
+@media (hover: hover) and (prefers-reduced-motion: no-preference) {
+    .brand:hover .brand-leaf--right {
+        transform: rotate(-7deg) translateY(-1px);
+    }
 }
 
 .repo-link {
     margin-inline-start: auto;
     align-self: center;
     display: inline-flex;
-    color: var(--moss);
+    color: rgba(241, 245, 236, .6);
     transition: color .15s ease;
 }
 
 .repo-link:focus-visible {
-    color: var(--ink);
+    color: var(--paper);
 }
 
 @media (hover: hover) {
     .repo-link:hover {
-        color: var(--ink);
+        color: var(--paper);
     }
 }
 
@@ -301,8 +423,8 @@ a {
     }
 }
 
-/* Inline within .hero-eyebrow's flex row — its own gap gets the two policy pills onto the same
-   line as the mode-switch pills, sharing one row instead of a second line beneath. */
+/* Inline within .hero-eyebrow's flex row — its own gap keeps the two policy pills on one line
+   instead of wrapping to a second. */
 .policy-switch {
     display: inline-flex;
     flex-wrap: wrap;

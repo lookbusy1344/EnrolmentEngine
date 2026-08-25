@@ -43,18 +43,4 @@ public static class EnrolmentFormMapper
 			PriorQualifications = EquatableArray.CopyOf(priorQualifications.ToArray()),
 		};
 	}
-
-	/// <summary>Apply a posted "save facts" edit to the current session, preserving the student id and chosen A-levels.</summary>
-	public static EnrolmentSession Apply(SaveFactsInput input, EnrolmentSession current)
-	{
-		ArgumentNullException.ThrowIfNull(input);
-		ArgumentNullException.ThrowIfNull(current);
-
-		return current with {
-			DateOfBirth = input.DateOfBirth,
-			Gcses = input.Gcses,
-			PriorQualifications = input.PriorQualifications,
-			Hobbies = input.Hobbies,
-		};
-	}
 }

@@ -119,8 +119,7 @@ const evaluateDebounced = debounce(() => {
 //
 // Only the network call is worth coalescing. Persisting is a synchronous stringify + setItem of a
 // small blob, driven by discrete selections rather than keystrokes, so there is nothing to batch —
-// and deferring it left facts in memory alone, which the plain <a> across to /razor (a full page
-// load, not a route change) would then discard.
+// and deferring it left facts in memory alone, which a reload or tab close would then discard.
 watch(
   () => [
     snapshot.dateOfBirth,
@@ -169,8 +168,6 @@ function clearBasket(): void {
 
 function startOver(): void {
   evaluateDebounced.cancel()
-  // Saved (not merely cleared) so it counts as a pending edit: /razor's state cookie can outlive
-  // this page, and must be told the facts are gone rather than rendering them back.
   saveSnapshot(emptySnapshot, selectedPolicyId.value, window.localStorage)
   suppressSnapshotSideEffects = true
   snapshot.dateOfBirth = options.value?.defaultDateOfBirth ?? null

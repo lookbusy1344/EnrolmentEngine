@@ -152,7 +152,7 @@ describe('App', () => {
   })
 
   // Facts must be durable the moment they change. Deferring the write behind the evaluate debounce
-  // left a window where navigating to /razor (a plain <a>, so a full page load) dropped the edit.
+  // left a window where a reload or tab close dropped the edit.
   it('persists a fact edit immediately, without waiting on the evaluate debounce', async () => {
     const fetch = stubFetch()
 

@@ -1,7 +1,6 @@
 namespace EnrolmentRules.Web.Tests;
 
 using System.Collections.Immutable;
-using System.Globalization;
 using System.Net;
 using Api;
 using AwesomeAssertions;
@@ -9,8 +8,7 @@ using Domain;
 
 public sealed class EnrolmentEvaluateEndpointTests : IClassFixture<WebAppFactory>
 {
-	// examples/golden/strong-constraints.json — a known-eligible student with a stable mix of ratings
-	// (see RenderExplanationsTests, which drives the same facts through the Razor form).
+	// examples/golden/strong-constraints.json — a known-eligible student with a stable mix of ratings.
 	private static readonly ImmutableArray<EvaluateGcseRow> KnownGcses = [
 		new("maths", 8), new("english_language", 8), new("english_literature", 8), new("physics", 8), new("chemistry", 8),
 		new("biology", 8), new("french", 8), new("german", 8), new("physical_education", 8), new("computer_studies", 8),
@@ -294,52 +292,6 @@ public sealed class EnrolmentEvaluateEndpointTests : IClassFixture<WebAppFactory
 		var bodyB = await ReadBodyAsync(responseB);
 
 		bodyA.Should().Be(bodyB);
-	}
-
-	[Fact]
-	public async Task Matches_the_razor_workflow_for_the_same_facts()
-	{
-		using var razorClient = factory.CreateClient(new() {
-			AllowAutoRedirect = false,
-		});
-		using var getResponse = await razorClient.GetAsync(new Uri("/razor", UriKind.Relative));
-		var token = await ExtractAntiForgeryTokenAsync(getResponse);
-		var form = new Dictionary<string, string> {
-			["__RequestVerificationToken"] = token,
-			["DateOfBirth"] = "2009-09-01",
-			["Hobbies[0]"] = "chess_club",
-		};
-		for (var i = 0; i < KnownGcses.Length; ++i) {
-			form[$"Gcses[{i}].Subject"] = KnownGcses[i].Subject!;
-			form[$"Gcses[{i}].Grade"] = KnownGcses[i].Grade!.Value.ToString(CultureInfo.InvariantCulture);
-		}
-
-		using var content = new FormUrlEncodedContent(form);
-		using var postResponse = await razorClient.PostAsync(new Uri("/razor?handler=SaveFacts", UriKind.Relative), content);
-		using var followUp = await razorClient.GetAsync(postResponse.Headers.Location);
-		var html = await followUp.Content.ReadAsStringAsync();
-
-		using var apiClient = factory.CreateClient();
-		var apiResponse = await PostAsync(apiClient, KnownRequest());
-		var apiBody = await ReadBodyAsync(apiResponse);
-
-		foreach (var subject in new[] {
-					 "physics", "art", "further_maths",
-				 }) {
-			var explanation = apiBody.Result!.Explanations.Single(e => e.Subject.Value == subject);
-			html.Should().Contain(subject).And.Contain(explanation.Rating);
-		}
-	}
-
-	private static async Task<string> ExtractAntiForgeryTokenAsync(HttpResponseMessage response)
-	{
-		var html = await response.Content.ReadAsStringAsync();
-		const string marker = "name=\"__RequestVerificationToken\" type=\"hidden\" value=\"";
-		var start = html.IndexOf(marker, StringComparison.Ordinal);
-		start.Should().BeGreaterThan(-1, "the page must render the anti-forgery token");
-		var valueStart = start + marker.Length;
-		var valueEnd = html.IndexOf('"', valueStart);
-		return html[valueStart..valueEnd];
 	}
 
 	private static EnrolmentEvaluateRequest KnownRequest() => new(

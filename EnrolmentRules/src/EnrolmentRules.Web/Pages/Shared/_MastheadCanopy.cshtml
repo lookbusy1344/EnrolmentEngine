@@ -1,0 +1,22 @@
+@using System.Globalization
+@using EnrolmentRules.Web.Models
+@*
+	The brand mark's own leaf, blown across the soil band. Scattered afresh on every page load, so
+	no two visits get the same canopy; the stylesheet reads the per-leaf custom properties below to
+	drift each one on its own slow, offset cycle.
+*@
+@{
+	var leaves = MastheadCanopy.Generate(Random.Shared);
+	string N(double value) => value.ToString(CultureInfo.InvariantCulture);
+}
+<svg class="masthead-canopy" viewBox="0 0 @MastheadCanopy.ViewBoxWidth @MastheadCanopy.ViewBoxHeight"
+     preserveAspectRatio="xMaxYMid meet" aria-hidden="true" focusable="false">
+	@foreach (var leaf in leaves)
+	{
+		<g class="canopy-leaf canopy-leaf--@leaf.Depth.ToString().ToLowerInvariant()"
+		   style="--drift-x: @N(leaf.DriftX); --drift-y: @N(leaf.DriftY); --spin: @N(leaf.Spin)deg; animation-duration: @N(leaf.DurationSeconds)s; animation-delay: @N(leaf.DelaySeconds)s">
+			<path d="M16 18C16 12.5 10.5 9 4 10c0 5.5 5.5 9 12 8Z"
+			      transform="translate(@N(leaf.CentreX) @N(leaf.CentreY)) rotate(@N(leaf.Rotation)) scale(@N(leaf.Scale)) translate(-10 -13.5)"/>
+		</g>
+	}
+</svg>

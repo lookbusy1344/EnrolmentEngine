@@ -155,8 +155,8 @@ Standard owns the base `workflows/` and `data/` trees. Elite overrides its workf
 the shared schemas, qualification scale, and DfE transition evidence through the overlay data source.
 
 - **CLI**: pass `--policy elite` (or `--policy standard`, the default) alongside any other command.
-- **Web**: append `?policy=elite` to either front end's URL (`/razor?policy=elite`,
-  `/app?policy=elite`), or use the switch link both pages show next to the current policy's name.
+- **Web**: append `?policy=elite` to the app's URL (`/app?policy=elite`), or use the switch link
+  the page shows next to the current policy's name.
 
 A student's entered facts and chosen subjects are shared across policies — switching policy re-evaluates the same basket rather than clearing it. A
 choice the newly selected policy rates red, or does not offer at all, stays visible in the basket, clearly flagged, rather than being silently

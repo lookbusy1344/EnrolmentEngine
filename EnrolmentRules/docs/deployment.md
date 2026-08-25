@@ -11,10 +11,8 @@ container host.
 - **Listens on:** `8080` (`ASPNETCORE_HTTP_PORTS=8080`, the .NET image default). Plain HTTP —
   terminate TLS at a proxy or the platform's ingress.
 - **User:** non-root (`$APP_UID` from the runtime image).
-- **State:** anonymous facts editing lives in the browser (a self-contained cookie plus
-  `localStorage`, not server memory) — no database, no volumes, and no server-side state to lose
-  on restart or scale-out. One caveat remains: Razor Pages' antiforgery token, so read
-  [Multi-instance scaling](#multi-instance-scaling) before deploying more than one instance.
+- **State:** anonymous facts editing lives entirely in the browser (`localStorage`, not server
+  memory) — no database, no volumes, and no server-side state to lose on restart or scale-out.
 
 The `Dockerfile`, `.dockerignore`, and `compose.yaml` live in the `EnrolmentRules/` folder.
 **The build context must be that folder** — the Web project pulls in sibling projects, the
@@ -177,31 +175,15 @@ their ingress. Free tiers and UIs change — confirm current details. Overview, 
 ### Multi-instance scaling
 
 **Read this before choosing a host or a scaling policy.** Anonymous facts editing keeps no
-server-side state at all: `/razor` and `/app` both read/write the same browser `localStorage`
-entry (see `CLAUDE.md`'s "Client-side persistence" section), and `/razor`'s own per-request
-carrier across its POST → redirect → GET hop is a plain, self-contained cookie — the snapshot's
-own bytes, not a lookup key into server memory. Any instance can decode it, so **scaling out or
-to zero no longer drops a part-filled form or a chosen basket**, and no distributed cache or
-shared store is needed for that part.
+server-side state at all: `/app` reads and writes only the browser's own `localStorage` entry
+(see `CLAUDE.md`), never a server-side session, cookie, or cache. Nothing in the app ties a
+request to the instance that served a previous one, so **scaling out, scaling to zero, or a
+mid-session instance replacement never drops a part-filled form or a chosen basket** — there is
+no distributed cache or shared store to add for that, and no sticky-routing requirement either.
 
-One thing this does *not* cover: Razor Pages' built-in antiforgery token (the hidden
-`__RequestVerificationToken` field every form posts back). It is still protected by ASP.NET
-Core's default `IDataProtectionProvider`, and this app configures no shared key ring — hence the
-`Storing keys in a directory ... may not be persisted outside of the container` warning in the
-container logs. A token issued by the instance that served a GET only validates on that same
-instance; a POST landing on a different instance fails antiforgery validation. Two ways to keep
-this safe without adding infrastructure:
-
-- **Sticky routing** (`--session-affinity` on Cloud Run, best-effort; one replica elsewhere) so a
-  given browser's GET and follow-up POST keep landing on the same instance. This is what the
-  deploy script still sets — it is no longer needed for facts state, but is needed for antiforgery.
-- **A shared DataProtection key ring** (e.g. persist keys to a bucket or Redis) removes the
-  constraint entirely, letting any instance validate any other instance's tokens — real
-  infrastructure, not done here because sticky routing is free and sufficient for a demo.
-
-`--max-instances` is otherwise unconstrained: nothing in this app needs a single-instance pin
-anymore. Scale-to-zero (`--min-instances 0`, the default) is safe too — a fresh instance has no
-facts state to lose, since none of it ever lived there.
+`--max-instances` is unconstrained: nothing in this app needs a single-instance pin. Scale-to-zero
+(`--min-instances 0`, the default) is safe too — a fresh instance has no facts state to lose,
+since none of it ever lived there.
 
 | Goal | Setting | Cost |
 |---|---|---|
@@ -240,14 +222,12 @@ gcloud services enable run.googleapis.com cloudbuild.googleapis.com artifactregi
 gcloud run deploy enrolment-web \
   --source . \
   --region europe-west1 \
-  --allow-unauthenticated \
-  --session-affinity
+  --allow-unauthenticated
 ```
 
 `--source .` builds the Dockerfile with Cloud Build, pushes to Artifact Registry, and deploys.
 Cloud Run routes to `8080` by default, so no port flag is needed. The command prints the public
-HTTPS URL. `--session-affinity` is not optional decoration, even though facts state no longer
-needs it — antiforgery token validation still does, see
+HTTPS URL. No `--session-affinity` flag is needed — see
 [Multi-instance scaling](#multi-instance-scaling). `--allow-unauthenticated` makes the service
 **public to anyone with the URL**; drop it for a private service.
 

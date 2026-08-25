@@ -1,7 +1,7 @@
-// The GCSE grade wheel's behaviour, shared by both front ends (the Vue component and the /razor
-// enhancement script) so they spin, snap and key identically. On the widest screens the same
-// markup is laid out flat, as a row of every grade (site.css sets --gwheel-flat there); the drum's
-// curve and snapping then sit out, and the keyboard, clicks and selection work exactly as before. It owns scroll, drag, keyboard and
+// The GCSE grade wheel's behaviour, used by the Vue component so it spins, snaps and keys
+// consistently. On the widest screens the same markup is laid out flat, as a row of every grade
+// (site.css sets --gwheel-flat there); the drum's curve and snapping then sit out, and the
+// keyboard, clicks and selection work exactly as before. It owns scroll, drag, keyboard and
 // the per-frame curvature; it does not know what a cell *means*. Cells are laid out [unset, 1..9],
 // so a cell index equals its grade (index 0 is "Not set"), which is why the digit keys map straight
 // to an index. The host supplies the cell elements and an onSelect(index) callback that records the

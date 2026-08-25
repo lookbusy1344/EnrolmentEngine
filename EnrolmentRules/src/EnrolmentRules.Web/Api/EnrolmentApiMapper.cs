@@ -10,8 +10,8 @@ using Subject = Domain.Subject;
 /// <summary>
 ///     Maps a posted <see cref="EnrolmentEvaluateRequest" /> to the engine's <c>StudentInput</c> by building
 ///     the same web-local <see cref="EnrolmentSession" /> shape <see cref="EnrolmentFormMapper" /> already
-///     knows how to project, so the API and the Razor page share one mapping path. Implements no
-///     relationship policy of its own — a subject/qualification-type token that cannot be parsed at all
+///     knows how to project. Implements no relationship policy of its own — a subject/qualification-type
+///     token that cannot be parsed at all
 ///     fails the mapping outright (→ 400); a token that parses but fails a business rule (an out-of-range
 ///     grade, an unknown GCSE key) is left for <see cref="Domain.StudentValidator" /> to report as normal
 ///     validation feedback.

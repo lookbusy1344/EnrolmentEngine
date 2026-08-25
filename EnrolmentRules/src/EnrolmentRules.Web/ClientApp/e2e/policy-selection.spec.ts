@@ -1,5 +1,5 @@
 import { expect, test } from '@playwright/test'
-import { fillGoldenFacts, setRazorGcseGrade, skipUnlessProject } from './support.ts'
+import { fillGoldenFacts, skipUnlessProject } from './support.ts'
 
 test.describe('Policy selection across responsive layouts', () => {
   test.beforeEach(({}, testInfo) => {
@@ -86,27 +86,5 @@ test.describe('Policy selection behaviour', () => {
     await expect(basket.locator('#basket-choice-limit-error')).toContainText(
       'this policy allows at most 3, but your basket contains 4',
     )
-  })
-
-  test('Razor: defaults to Standard and the top link switches to Elite, keeping facts', async ({ page }) => {
-    await page.goto('/razor')
-    await page.fill('#DateOfBirth', '2009-09-01')
-    await page.selectOption('#Gcses_0__Subject', 'maths')
-    await setRazorGcseGrade(page, 0, 8)
-    await page.getByRole('button', { name: 'Save & see options' }).click()
-
-    await expect(page.locator('.policy-switch')).toContainText('Standard')
-
-    await page.locator('.policy-switch a', { hasText: 'Switch to Elite' }).click()
-
-    await expect(page.locator('.policy-switch')).toContainText('Elite')
-    await expect(page.locator('#DateOfBirth')).toHaveValue('2009-09-01')
-  })
-
-  test('Razor: an invalid ?policy= value redirects to the canonical URL', async ({ page }) => {
-    await page.goto('/razor?policy=nonexistent')
-
-    await expect(page).toHaveURL(/\/razor$/)
-    await expect(page.locator('.policy-switch')).toContainText('Standard')
   })
 })

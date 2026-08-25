@@ -1,15 +1,14 @@
 namespace EnrolmentRules.Web.Tests;
 
 using System.Collections.Immutable;
-using System.Globalization;
 using System.Net;
 using System.Text.Json;
 using Api;
 using AwesomeAssertions;
 
 /// <summary>
-///     Elite auxiliary policy plan, step 3.4-3.5 — <c>?policy=</c> selection on the Web API and the Razor
-///     page. The Vue client's own selection/persistence logic is covered separately (step 3.6).
+///     Elite auxiliary policy plan, step 3.4-3.5 — <c>?policy=</c> selection on the Web API. The Vue
+///     client's own selection/persistence logic is covered separately (step 3.6).
 /// </summary>
 public sealed class PolicySelectionTests : IClassFixture<WebAppFactory>
 {
@@ -111,89 +110,4 @@ public sealed class PolicySelectionTests : IClassFixture<WebAppFactory>
 		return body!;
 	}
 
-	// --- Razor ---
-
-	[Fact]
-	public async Task Default_load_selects_standard()
-	{
-		using var client = factory.CreateClient();
-
-		var html = await client.GetStringAsync(new Uri("/razor", UriKind.Relative));
-
-		html.Should().Contain("Standard");
-	}
-
-	[Fact]
-	public async Task Url_selection_loads_elite_and_marks_it_current()
-	{
-		using var client = factory.CreateClient();
-
-		var html = await client.GetStringAsync(new Uri("/razor?policy=elite", UriKind.Relative));
-
-		html.Should().Contain("Elite");
-		html.Should().Contain("Switch to Standard");
-	}
-
-	[Fact]
-	public async Task An_invalid_policy_query_value_redirects_to_the_canonical_url_rather_than_silently_falling_back()
-	{
-		using var client = factory.CreateClient(new() {
-			AllowAutoRedirect = false,
-		});
-
-		using var response = await client.GetAsync(new Uri("/razor?policy=nonexistent", UriKind.Relative));
-
-		((int)response.StatusCode).Should().BeInRange(300, 399);
-	}
-
-	[Fact]
-	public async Task Switching_policy_via_the_top_link_preserves_facts_and_the_exact_basket()
-	{
-		using var client = factory.CreateClient(new() {
-			AllowAutoRedirect = false,
-		});
-
-		using var getResponse = await client.GetAsync(new Uri("/razor", UriKind.Relative));
-		var token = await ExtractAntiForgeryTokenAsync(getResponse);
-		var form = new Dictionary<string, string> {
-			["__RequestVerificationToken"] = token,
-			["DateOfBirth"] = "2009-09-01",
-		};
-		for (var i = 0; i < EliteEligibleGcses.Length; ++i) {
-			form[$"Gcses[{i}].Subject"] = EliteEligibleGcses[i].Subject!;
-			form[$"Gcses[{i}].Grade"] = EliteEligibleGcses[i].Grade!.Value.ToString(CultureInfo.InvariantCulture);
-		}
-
-		using var saveContent = new FormUrlEncodedContent(form);
-		using var saveResponse = await client.PostAsync(new Uri("/razor?handler=SaveFacts", UriKind.Relative), saveContent);
-		using var afterSave = await client.GetAsync(saveResponse.Headers.Location);
-
-		var chooseToken = await ExtractAntiForgeryTokenAsync(afterSave);
-		using var chooseContent = new FormUrlEncodedContent(new Dictionary<string, string> {
-			["__RequestVerificationToken"] = chooseToken,
-			["subject"] = "biology",
-		});
-		using var chooseResponse = await client.PostAsync(new Uri("/razor?handler=ChooseSubject", UriKind.Relative), chooseContent);
-		using var afterChoose = await client.GetAsync(chooseResponse.Headers.Location);
-		var htmlAfterChoose = await afterChoose.Content.ReadAsStringAsync();
-		htmlAfterChoose.Should().Contain("Biology");
-
-		// Follow the top switch link to Elite: same session, same basket.
-		using var eliteResponse = await client.GetAsync(new Uri("/razor?policy=elite", UriKind.Relative));
-		var htmlUnderElite = await eliteResponse.Content.ReadAsStringAsync();
-
-		htmlUnderElite.Should().Contain("Biology");
-		htmlUnderElite.Should().Contain("value=\"2009-09-01\""); // date of birth preserved across the switch
-	}
-
-	private static async Task<string> ExtractAntiForgeryTokenAsync(HttpResponseMessage response)
-	{
-		var html = await response.Content.ReadAsStringAsync();
-		const string marker = "name=\"__RequestVerificationToken\" type=\"hidden\" value=\"";
-		var start = html.IndexOf(marker, StringComparison.Ordinal);
-		start.Should().BeGreaterThan(-1, "the page must render the anti-forgery token");
-		var valueStart = start + marker.Length;
-		var valueEnd = html.IndexOf('"', valueStart);
-		return html[valueStart..valueEnd];
-	}
 }

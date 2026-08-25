@@ -1,5 +1,5 @@
 import { expect, test, type Locator } from '@playwright/test'
-import { setGcseGrade, setRazorGcseGrade, skipUnlessProject } from './support.ts'
+import { setGcseGrade, skipUnlessProject } from './support.ts'
 
 /** The dimmest a cell two places from the lens may be painted and still read as a grade. */
 const MIN_EDGE_OPACITY = 0.6
@@ -150,7 +150,10 @@ test.describe('grade wheel', () => {
     await page.goto('/app')
     await page.selectOption('#gcse-subject-0', 'maths')
 
-    const touchAction = await page.locator('.gwheel').first().evaluate((el) => getComputedStyle(el).touchAction)
+    const touchAction = await page
+      .locator('.gwheel')
+      .first()
+      .evaluate((el) => getComputedStyle(el).touchAction)
 
     expect(touchAction).toBe('manipulation')
   })
@@ -265,21 +268,6 @@ test.describe('grade wheel', () => {
     // Remove drops under the control only where the row cannot hold the pair — no breakpoint decides
     // that, so the rule is the measurement itself.
     expect(placement.belowTheControl).toBe(!placement.roomForBoth)
-  })
-
-  // /razor upgrades its server-rendered button group into the same control, so it has to end up the
-  // same size — the group's own layout classes must not survive the upgrade and stretch it.
-  test('razor renders the same grade control as the Vue page', async ({ page }) => {
-    await page.goto('/app')
-    await page.selectOption('#gcse-subject-0', 'maths')
-    await setGcseGrade(page, 0, 5)
-    const vue = await drumSize(page.locator('.gwheel').first())
-
-    await page.goto('/razor')
-    await setRazorGcseGrade(page, 0, 5)
-    const razor = await drumSize(page.locator('.gwheel').first())
-
-    expect(razor).toEqual(vue)
   })
 
   test('clicking an off-centre grade selects it', async ({ page }, testInfo) => {
