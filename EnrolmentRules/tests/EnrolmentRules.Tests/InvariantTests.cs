@@ -57,27 +57,28 @@ public sealed partial class InvariantTests
 	}
 
 	[Fact]
-	public void catalogue_exclusion_pairs_are_symmetric_and_never_green()
+	public void shipped_catalogue_exclusions_are_symmetric_and_never_green()
 	{
-		var pairs = Catalogue.ExclusionPairs.ToArray();
+		var edges = Catalogue.Subjects
+							 .SelectMany(subject => Catalogue.Meta(subject).Exclusions.Select(exclusion => (subject, exclusion)))
+							 .ToArray();
 
-		pairs.Should().NotBeEmpty();
-		pairs.Should().OnlyContain(static pair => pair.Severity != Rating.Green);
+		edges.Should().NotBeEmpty();
+		edges.Should().OnlyContain(static edge => edge.exclusion.Severity != Rating.Green);
 
-		foreach (var pair in pairs) {
-			Catalogue.Meta(pair.A).Exclusions.Should().ContainSingle(exclusion =>
-				exclusion.Other == pair.B && exclusion.Severity == pair.Severity);
-			Catalogue.Meta(pair.B).Exclusions.Should().ContainSingle(exclusion =>
-				exclusion.Other == pair.A && exclusion.Severity == pair.Severity);
+		foreach (var (subject, exclusion) in edges) {
+			Catalogue.Meta(exclusion.Other).Exclusions.Should().ContainSingle(back =>
+				back.Other == subject && back.Severity == exclusion.Severity);
 		}
 	}
 
 	[Fact]
-	public void catalogue_exclusion_pairs_include_the_illustrative_red_clash()
+	public void shipped_catalogue_includes_the_illustrative_red_clash()
 	{
-		Catalogue.ExclusionPairs.Should().Contain(pair =>
-			pair.A == Subject.French && pair.B == Subject.German && pair.Severity == Rating.Red
-			|| pair.A == Subject.German && pair.B == Subject.French && pair.Severity == Rating.Red);
+		Catalogue.Meta(Subject.French).Exclusions.Should().Contain(exclusion =>
+			exclusion.Other == Subject.German && exclusion.Severity == Rating.Red);
+		Catalogue.Meta(Subject.German).Exclusions.Should().Contain(exclusion =>
+			exclusion.Other == Subject.French && exclusion.Severity == Rating.Red);
 	}
 
 	[Fact]

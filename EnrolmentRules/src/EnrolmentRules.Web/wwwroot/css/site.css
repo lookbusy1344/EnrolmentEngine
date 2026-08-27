@@ -206,7 +206,10 @@ a {
 
 @media (prefers-reduced-motion: no-preference) {
     .canopy-leaf {
-        transform-box: view-box;
+        /* fill-box: the origin is each leaf's own box, so rotate tumbles the leaf in place.
+           view-box would pivot every leaf on the shared viewBox centre — the canopy then swings
+           as one body, and a wide-radius leaf can sweep past the band's right edge. */
+        transform-box: fill-box;
         transform-origin: center;
         animation-name: canopy-blow;
         animation-timing-function: cubic-bezier(.35, 0, .5, 1);

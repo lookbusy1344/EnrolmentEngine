@@ -291,7 +291,7 @@ internal readonly record struct Token(TokenKind Kind, string Text);
 
 internal static class Tokenizer
 {
-	private static readonly string[] MultiCharacterOperators = ["&&", "||", ">=", "<=", "==", "!=", "=>"];
+	private static readonly IReadOnlyList<string> MultiCharacterOperators = ["&&", "||", ">=", "<=", "==", "!=", "=>"];
 
 	public static IReadOnlyList<Token> Tokenize(string expression)
 	{

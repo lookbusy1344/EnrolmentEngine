@@ -21,6 +21,10 @@ public sealed class MastheadCanopyTests
 	// getBoundingClientRect on an SVG path ignores the parent's overflow:hidden, so a leaf that
 	// bleeds past the canopy at any point of its drift reads to the browser as page overflow and
 	// fails the responsive e2e check at every breakpoint.
+	// The translate-only model is sound because site.css pivots each leaf on its own box
+	// (transform-box: fill-box): rotation about the leaf's own centre stays within the
+	// UnitCircumradius × Scale reach this placement already budgets. A shared pivot
+	// (transform-box: view-box) would let rotation carry a leaf outside these bounds.
 	[Fact]
 	public void Every_leaf_stays_inside_the_canopy_across_its_whole_drift()
 	{

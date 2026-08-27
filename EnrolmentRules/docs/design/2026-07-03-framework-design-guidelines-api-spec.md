@@ -345,7 +345,6 @@ EnrolmentRules.Domain.EnumNames
 EnrolmentRules.Domain.ChoiceStatus
 EnrolmentRules.Domain.ChosenSubjectStatus
 EnrolmentRules.Domain.EntryEquivalent
-EnrolmentRules.Domain.ExclusionPair
 EnrolmentRules.Domain.ExplainedResult
 EnrolmentRules.Domain.Explanation
 EnrolmentRules.Domain.EquatableArray

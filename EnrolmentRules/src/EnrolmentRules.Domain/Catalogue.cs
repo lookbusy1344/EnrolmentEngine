@@ -61,20 +61,16 @@ public readonly record struct EntryEquivalent(string Subject, QualificationType 
 /// <summary>A bar on re-studying the subject when the student already holds a qualifying prior qualification.</summary>
 public readonly record struct RestudyBar(EquatableArray<QualificationType> Types, Rating Severity);
 
-/// <summary>A mutual-exclusion pair in catalogue order with its downgrade severity.</summary>
-public readonly record struct ExclusionPair(Subject A, Subject B, Rating Severity);
-
 /// <summary>
 ///     The validated, immutable catalogue table loaded from <c>data/catalogue.yaml</c>: per-subject
-///     <see cref="SubjectMeta" /> plus the derived mutual-exclusion pairs. Construction enforces the two
-///     invariants the JSON schema cannot express — every <see cref="Subject" /> has exactly one entry, and
-///     every exclusion is symmetric (declared with the same severity on both sides) — so a malformed file
-///     fails loud at load rather than silently mis-rating a student downstream.
+///     <see cref="SubjectMeta" />. Construction enforces the two invariants the JSON schema cannot express —
+///     every <see cref="Subject" /> has exactly one entry, and every exclusion is symmetric (declared with
+///     the same severity on both sides) — so a malformed file fails loud at load rather than silently
+///     mis-rating a student downstream.
 /// </summary>
 public sealed class CatalogueData
 {
 	private readonly FrozenDictionary<Subject, SubjectMeta> entries;
-	private readonly FrozenDictionary<Subject, int> order;
 
 	public CatalogueData(IReadOnlyDictionary<Subject, SubjectMeta> entries)
 		: this(entries, [.. entries.Keys], QualificationScale.Default) { }
@@ -86,29 +82,14 @@ public sealed class CatalogueData
 	{
 		this.entries = entries.ToFrozenDictionary();
 		Subjects = [.. subjects];
-		order = Subjects
-				.Select(static (subject, index) => (subject, index))
-				.ToFrozenDictionary(static pair => pair.subject, static pair => pair.index);
+		var order = Subjects
+					.Select(static (subject, index) => (subject, index))
+					.ToFrozenDictionary(static pair => pair.subject, static pair => pair.index);
 		Validate(this.entries, order, scale);
-
-		// Each mutual-exclusion pair once, as an ordered tuple in catalogue declaration order so the symmetric
-		// SubjectMeta.Exclusions listing is not double-counted. Materialised once: the table is fixed for
-		// the process lifetime, so the constraint pass reads a cached array rather than re-running the
-		// cross-product.
-		ExclusionPairs = [
-			.. from subject in Subjects
-			   from exclusion in this.entries[subject].Exclusions
-			   let other = exclusion.Other
-			   where order[subject] < order[other]
-			   select new ExclusionPair(subject, other, exclusion.Severity),
-		];
 	}
 
 	/// <summary>The subjects declared by this catalogue, in file order.</summary>
 	public IReadOnlyList<Subject> Subjects { get; }
-
-	/// <summary>Each mutual-exclusion pair once, in catalogue declaration order.</summary>
-	public IReadOnlyList<ExclusionPair> ExclusionPairs { get; }
 
 	/// <summary>The metadata for <paramref name="subject" /> (guaranteed present when the bound catalogue invariant holds).</summary>
 	public SubjectMeta Meta(Subject subject) =>
@@ -280,9 +261,6 @@ public static class Catalogue
 
 	/// <summary>Every catalogue subject (the authoritative subject list, derived from the shipped data).</summary>
 	public static IReadOnlyList<Subject> Subjects => Default.Subjects;
-
-	/// <summary>Each mutual-exclusion pair once, in catalogue declaration order.</summary>
-	public static IReadOnlyList<ExclusionPair> ExclusionPairs => Default.ExclusionPairs;
 
 	/// <summary>Parse and validate a YAML catalogue document, returning the runtime table.</summary>
 	public static CatalogueData Load(string yaml) => Build(YamlConverter.ToJsonNode(yaml));

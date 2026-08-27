@@ -2,6 +2,8 @@ import { flushPromises, mount } from '@vue/test-utils'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import type { EnrolmentApiResult, EnrolmentEvaluateResponse, EnrolmentOptionsResponse } from '../api/contracts'
 import App from '../App.vue'
+import ChosenBasket from '../components/ChosenBasket.vue'
+import ResultsPanel from '../components/ResultsPanel.vue'
 import { emptySnapshot } from '../state/enrolmentState'
 import { loadSnapshot, saveSnapshot } from '../state/localStorageSnapshot'
 
@@ -131,6 +133,48 @@ describe('App', () => {
     expect(wrapper.text()).toContain('Standard')
   })
 
+  // The suppression handshake must not depend on the suppressed mutations actually firing the
+  // watcher: Start over on a pristine form (date of birth already at the default, everything else
+  // empty) changes nothing, and a flag cleared only inside the watcher would stay armed and
+  // swallow the student's next real edit — no save, no evaluation.
+  it('start over on a pristine form does not swallow the next edit', async () => {
+    vi.useFakeTimers()
+    const fetch = stubFetch()
+
+    const wrapper = mount(App)
+    await flushPromises()
+
+    await wrapper.get('button.btn-outline-secondary').trigger('click')
+    await flushPromises()
+    const evaluateCallsBefore = fetch.mock.calls.filter(([url]) =>
+      requestUrl(url).startsWith('/api/enrolment/evaluate'),
+    ).length
+
+    await wrapper.get('#date-of-birth').setValue('2009-09-01')
+    await flushPromises()
+
+    expect(loadSnapshot(localStorage).snapshot.dateOfBirth).toBe('2009-09-01')
+
+    await vi.advanceTimersByTimeAsync(400)
+    await flushPromises()
+    expect(fetch.mock.calls.filter(([url]) => requestUrl(url).startsWith('/api/enrolment/evaluate')).length).toBe(
+      evaluateCallsBefore + 1,
+    )
+  })
+
+  it('start over persists the post-reset snapshot, default date of birth included', async () => {
+    stubFetch()
+
+    const wrapper = mount(App)
+    await flushPromises()
+    await wrapper.get('#date-of-birth').setValue('2009-09-01')
+
+    await wrapper.get('button.btn-outline-secondary').trigger('click')
+    await flushPromises()
+
+    expect(loadSnapshot(localStorage).snapshot.dateOfBirth).toBe('2010-09-01')
+  })
+
   it('resolves the policy from a ?policy= URL value on initial load', async () => {
     window.history.replaceState(null, '', '/app?policy=elite')
     stubFetch()
@@ -195,6 +239,52 @@ describe('App', () => {
 
     expect(wrapper.text()).toContain('Elite')
     expect(evaluateBodies.at(-1)).toMatchObject({ chosenALevels: ['physics'] })
+  })
+
+  // Switching policy keeps the facts and basket but changes which policy rates them, so the previous
+  // policy's comparison must not show under the newly selected policy while its own evaluation is in
+  // flight — the same cross-policy invariant Start over enforces.
+  it('switching policy drops the previous policy comparison while the new evaluation is in flight', async () => {
+    const standardResult: EnrolmentApiResult = {
+      policy: standardPolicy,
+      eligible: true,
+      eligibilityReasons: [],
+      choiceLimitReason: null,
+      explanations: [],
+      choiceStatuses: [{ subject: { value: 'physics', label: 'Physics' }, status: 'Available', reason: null }],
+      minChoices: 0,
+      maxChoices: 3,
+    }
+    const evaluateResolvers: ((response: Response) => void)[] = []
+    const fetch = vi.fn((input: string | URL | Request, init?: RequestInit) => {
+      const url = requestUrl(input)
+      if (url.startsWith('/api/enrolment/options')) {
+        return Promise.resolve(jsonResponse(makeOptions(url.includes('policy=elite') ? 'elite' : 'standard')))
+      }
+
+      return new Promise<Response>((resolve, reject) => {
+        evaluateResolvers.push(resolve)
+        init?.signal?.addEventListener('abort', () => {
+          reject(new DOMException('Aborted', 'AbortError'))
+        })
+      })
+    })
+    vi.stubGlobal('fetch', fetch)
+    saveSnapshot({ ...emptySnapshot, chosenALevels: ['physics'] }, 'standard', localStorage)
+
+    const wrapper = mount(App)
+    await flushPromises()
+    evaluateResolvers[0](jsonResponse({ validationErrors: [], result: standardResult }))
+    await flushPromises()
+    expect(wrapper.getComponent(ChosenBasket).props('choiceStatuses')).toHaveLength(1)
+
+    await wrapper.get('.policy-switch a').trigger('click')
+    await flushPromises()
+
+    expect(wrapper.text()).toContain('Elite')
+    // Elite's evaluation is still pending; the standard-policy comparison must not leak into either panel.
+    expect(wrapper.getComponent(ChosenBasket).props('choiceStatuses')).toHaveLength(0)
+    expect(wrapper.getComponent(ResultsPanel).props('evaluation')).toBeNull()
   })
 
   it('recovers from a failed policy-options request when the switch is retried', async () => {
@@ -356,6 +446,49 @@ describe('App', () => {
     expect(wrapper.get('.basket-unavailable-tag').text()).toBe('- Unavailable')
     expect(wrapper.get('.basket-not-offered-tag').text()).toBe('- Not offered')
     expect(wrapper.findAll('.chosen-summary li.text-bg-danger')).toHaveLength(2)
+  })
+
+  // The keep-annotations-while-a-row-is-partial fallback must describe the current facts. After
+  // Start over the old comparison describes facts the student discarded, so it may not resurface
+  // when the next (invalid) evaluation carries no result of its own.
+  it('start over drops the last comparison, so stale statuses cannot resurface on an invalid document', async () => {
+    const unavailableResult: EnrolmentApiResult = {
+      policy: standardPolicy,
+      eligible: true,
+      eligibilityReasons: [],
+      choiceLimitReason: null,
+      explanations: [],
+      choiceStatuses: [{ subject: { value: 'physics', label: 'Physics' }, status: 'Unavailable', reason: 'barred' }],
+      minChoices: 0,
+      maxChoices: 3,
+    }
+    let evaluationCount = 0
+    const fetch = vi.fn((input: string | URL | Request) => {
+      const url = requestUrl(input)
+      if (url.startsWith('/api/enrolment/options')) {
+        return Promise.resolve(jsonResponse(makeOptions('standard')))
+      }
+
+      evaluationCount++
+      return Promise.resolve(
+        jsonResponse(
+          evaluationCount === 1
+            ? { validationErrors: [], result: unavailableResult }
+            : { validationErrors: ['date_of_birth is required'], result: null },
+        ),
+      )
+    })
+    vi.stubGlobal('fetch', fetch)
+    saveSnapshot({ ...emptySnapshot, chosenALevels: ['physics'] }, 'standard', localStorage)
+
+    const wrapper = mount(App)
+    await flushPromises()
+    expect(wrapper.getComponent(ChosenBasket).props('choiceStatuses')).toHaveLength(1)
+
+    await wrapper.get('button.btn-outline-secondary').trigger('click')
+    await flushPromises()
+
+    expect(wrapper.getComponent(ChosenBasket).props('choiceStatuses')).toHaveLength(0)
   })
 
   it('shows an error message when options fail to load', async () => {

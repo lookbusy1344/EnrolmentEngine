@@ -35,7 +35,8 @@ public sealed class EnrolmentOptionsService(EnrolmentPolicy policy, TimeProvider
 	///     a list to be a useful picker on its own. Kept here rather than in the catalogue because they are
 	///     placeholders for future policy, not existing rules.
 	/// </summary>
-	private static readonly string[] IllustrativeHobbies = ["chess_club", "plays_piano", "plays_violin", "sport_football", "reading_"];
+	private static readonly IReadOnlyList<string> IllustrativeHobbies =
+		["chess_club", "plays_piano", "plays_violin", "sport_football", "reading_"];
 
 	/// <summary>
 	///     Illustrative subjects with no catalogue backing today, keyed by <see cref="QualificationType" />
@@ -61,7 +62,7 @@ public sealed class EnrolmentOptionsService(EnrolmentPolicy policy, TimeProvider
 	///     order — English Language and Maths gate eligibility (§ Accessible tier policy), so the picker
 	///     surfaces them first rather than wherever "e" and "m" happen to sort.
 	/// </summary>
-	private static readonly string[] PinnedGcseSubjects = ["english_language", "maths"];
+	private static readonly IReadOnlyList<string> PinnedGcseSubjects = ["english_language", "maths"];
 
 	private IEnrolmentEvaluator Evaluator => policy.Engine;
 

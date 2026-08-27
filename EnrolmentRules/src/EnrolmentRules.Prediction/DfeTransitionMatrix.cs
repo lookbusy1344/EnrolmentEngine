@@ -25,7 +25,7 @@ public sealed class DfeTransitionMatrix
 
 	private static readonly Lazy<DfeTransitionMatrix> Default = new(static () => Load(FindDefaultCsvPath()));
 
-	private static readonly string[] Bands = [
+	private static readonly IReadOnlyList<string> Bands = [
 		"< 1",
 		"1 to < 2",
 		"2 to < 3",
@@ -154,8 +154,8 @@ public sealed class DfeTransitionMatrix
 			return Empty(subject, band);
 		}
 
-		var bandIndex = Array.IndexOf(Bands, band);
-		for (var distance = 1; distance < Bands.Length; ++distance) {
+		var bandIndex = IndexOfBand(band);
+		for (var distance = 1; distance < Bands.Count; ++distance) {
 			var lower = bandIndex - distance;
 			if (lower >= 0 && subjectBands.Contains(Bands[lower])) {
 				return rows[(subject, Bands[lower])] with {
@@ -164,7 +164,7 @@ public sealed class DfeTransitionMatrix
 			}
 
 			var upper = bandIndex + distance;
-			if (upper < Bands.Length && subjectBands.Contains(Bands[upper])) {
+			if (upper < Bands.Count && subjectBands.Contains(Bands[upper])) {
 				return rows[(subject, Bands[upper])] with {
 					RequestedBand = band,
 				};
@@ -172,6 +172,18 @@ public sealed class DfeTransitionMatrix
 		}
 
 		return Empty(subject, band);
+	}
+
+	// The ordinal position of a prior-attainment band, or -1 if it is not one of the canonical bands.
+	private static int IndexOfBand(string band)
+	{
+		for (var i = 0; i < Bands.Count; ++i) {
+			if (string.Equals(Bands[i], band, StringComparison.Ordinal)) {
+				return i;
+			}
+		}
+
+		return -1;
 	}
 
 	private static void ValidateHeader(string header)
@@ -194,7 +206,7 @@ public sealed class DfeTransitionMatrix
 		}
 
 		var band = fields[4];
-		if (!Bands.Contains(band, StringComparer.Ordinal)) {
+		if (IndexOfBand(band) < 0) {
 			throw new TransitionMatrixException(
 				$"DfE transition matrix row {rowNumber} has an unknown prior_attainment_band '{band}'.");
 		}

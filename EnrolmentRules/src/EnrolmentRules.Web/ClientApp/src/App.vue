@@ -1,5 +1,5 @@
 <script lang="ts" setup>
-import { computed, onMounted, reactive, ref, watch } from 'vue'
+import { computed, nextTick, onMounted, reactive, ref, watch } from 'vue'
 import type { EnrolmentApiResult, EnrolmentEvaluateResponse, EnrolmentOptionsResponse } from './api/contracts'
 import { EnrolmentApiError, EvaluationRequester, fetchOptions, OptionsRequester } from './api/enrolmentApi'
 import ChosenBasket from './components/ChosenBasket.vue'
@@ -8,7 +8,7 @@ import HeroSection from './components/HeroSection.vue'
 import ResultsPanel from './components/ResultsPanel.vue'
 import { wholeYears } from './display/formatting'
 import { debounce } from './state/debounce'
-import { emptySnapshot, type GcseRow, type PriorQualificationRow, toEvaluateRequest } from './state/enrolmentState'
+import { type GcseRow, type PriorQualificationRow, toEvaluateRequest } from './state/enrolmentState'
 import { loadSnapshot, saveSnapshot } from './state/localStorageSnapshot'
 
 const EVALUATE_DEBOUNCE_MS = 400
@@ -55,7 +55,7 @@ const age = computed(() => (snapshot.dateOfBirth === null ? null : wholeYears(sn
 // available. Never carry annotations across policies.
 const basketComparison = computed(() => {
   const current = evaluation.value?.result
-  if (current) {
+  if (current && current.policy.id === selectedPolicyId.value) {
     return current
   }
 
@@ -129,7 +129,6 @@ watch(
   ],
   () => {
     if (suppressSnapshotSideEffects) {
-      suppressSnapshotSideEffects = false
       return
     }
 
@@ -137,6 +136,19 @@ watch(
     evaluateDebounced.call()
   },
 )
+
+// Suppression covers the whole flush the mutations schedule — including follow-up mutations a
+// child component makes in the same flush (GcseRows pushing its blank trailing row) — and is
+// lifted on the next tick regardless of whether the watcher fired. Clearing the flag inside the
+// watcher instead would leave it armed whenever the suppressed mutations turn out to change
+// nothing, and the next real edit would be swallowed.
+function withSnapshotSideEffectsSuppressed(mutate: () => void): void {
+  suppressSnapshotSideEffects = true
+  mutate()
+  void nextTick(() => {
+    suppressSnapshotSideEffects = false
+  })
+}
 
 function evaluateImmediately(): void {
   evaluateDebounced.cancel()
@@ -168,14 +180,20 @@ function clearBasket(): void {
 
 function startOver(): void {
   evaluateDebounced.cancel()
-  saveSnapshot(emptySnapshot, selectedPolicyId.value, window.localStorage)
-  suppressSnapshotSideEffects = true
-  snapshot.dateOfBirth = options.value?.defaultDateOfBirth ?? null
-  snapshot.gcses = []
-  snapshot.priorQualifications = []
-  snapshot.hobbies = []
-  snapshot.chosenALevels = []
+  withSnapshotSideEffectsSuppressed(() => {
+    snapshot.dateOfBirth = options.value?.defaultDateOfBirth ?? null
+    snapshot.gcses = []
+    snapshot.priorQualifications = []
+    snapshot.hobbies = []
+    snapshot.chosenALevels = []
+  })
   evaluation.value = null
+  // The kept comparison describes the discarded facts; without this, basketComparison's fallback
+  // would resurface its stale statuses the moment a partial row makes the fresh document invalid.
+  lastValidComparison.value = null
+  // The post-reset snapshot itself (default date of birth included), not emptySnapshot — storage
+  // and the form must not disagree until the next edit.
+  saveSnapshot(snapshot, selectedPolicyId.value, window.localStorage)
   void runEvaluate()
 }
 
@@ -229,8 +247,10 @@ async function loadOptionsAndEvaluate(): Promise<void> {
   replaceUrlPolicyId(options.value.selectedPolicy.id)
 
   if (!hasEditableSnapshot()) {
-    suppressSnapshotSideEffects = true
-    snapshot.dateOfBirth = options.value.defaultDateOfBirth
+    const defaultDateOfBirth = options.value.defaultDateOfBirth
+    withSnapshotSideEffectsSuppressed(() => {
+      snapshot.dateOfBirth = defaultDateOfBirth
+    })
   }
 
   saveSnapshot(snapshot, selectedPolicyId.value, window.localStorage)
@@ -254,6 +274,11 @@ async function switchPolicy(policyId: string): Promise<void> {
 
   selectedPolicyId.value = options.value.selectedPolicy.id
   replaceUrlPolicyId(options.value.selectedPolicy.id)
+  // The old policy rated these facts; its result and kept comparison must not show under the new
+  // policy while the fresh evaluation is in flight. ResultsPanel reads `evaluation` directly, so a
+  // basketComparison guard alone would not stop it surfacing the previous policy's recommendations.
+  evaluation.value = null
+  lastValidComparison.value = null
   saveSnapshot(snapshot, selectedPolicyId.value, window.localStorage)
   await runEvaluate()
 }

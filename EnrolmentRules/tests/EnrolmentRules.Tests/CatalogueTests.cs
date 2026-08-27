@@ -43,18 +43,6 @@ public sealed class CatalogueTests
 	}
 
 	[Fact]
-	public void shipped_catalogue_exclusion_pairs_are_deduplicated_lower_enum_first()
-	{
-		var data = CatalogueStore.LoadAndValidate(DataDir);
-
-		// Lower catalogue-order value first: French < German; History < Art; Economics < Business Studies.
-		data.ExclusionPairs.Should().BeEquivalentTo([
-			new(Subject.French, Subject.German, Rating.Red), new(Subject.History, Subject.Art, Rating.Amber),
-			new ExclusionPair(Subject.Economics, Subject.BusinessStudies, Rating.Amber),
-		]);
-	}
-
-	[Fact]
 	public void mutually_excluding_subjects_may_share_priority_weights()
 	{
 		var dir = Path.Combine(Path.GetTempPath(), "enrolmentrules-tests", "catalogue-" + Guid.NewGuid().ToString("N"));
@@ -88,13 +76,6 @@ public sealed class CatalogueTests
 		act.Should().Throw<CatalogueException>()
 		   .WithMessage("*malformed-catalogue.yaml*")
 		   .Which.InnerException.Should().BeOfType<FormatException>();
-	}
-
-	[Fact]
-	public void exclusion_pairs_use_a_named_public_type()
-	{
-		typeof(CatalogueData).GetProperty(nameof(CatalogueData.ExclusionPairs))!.PropertyType.GetGenericArguments()[0]
-							 .Should().Be<ExclusionPair>();
 	}
 
 	[Fact]
