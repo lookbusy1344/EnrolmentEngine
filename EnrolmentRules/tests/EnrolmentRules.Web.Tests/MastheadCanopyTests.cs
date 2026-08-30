@@ -1,19 +1,19 @@
 namespace EnrolmentRules.Web.Tests;
 
 using AwesomeAssertions;
-using EnrolmentRules.Web.Models;
+using Models;
 
 public sealed class MastheadCanopyTests
 {
 	private const int SeedSweep = 200;
 
 	private static IEnumerable<CanopyLeaf> Sweep() =>
-		Enumerable.Range(0, SeedSweep).SelectMany(seed => MastheadCanopy.Generate(new Random(seed)));
+		Enumerable.Range(0, SeedSweep).SelectMany(seed => MastheadCanopy.Generate(new(seed)));
 
 	[Fact]
 	public void Generate_lays_out_the_declared_number_of_leaves()
 	{
-		var leaves = MastheadCanopy.Generate(new Random(1));
+		var leaves = MastheadCanopy.Generate(new(1));
 
 		leaves.Should().HaveCount(MastheadCanopy.LeafCount);
 	}
@@ -39,10 +39,7 @@ public sealed class MastheadCanopyTests
 	}
 
 	[Fact]
-	public void Leaves_drift_leftwards_into_the_mask_rather_than_out_of_the_open_edge()
-	{
-		Sweep().Should().OnlyContain(leaf => leaf.DriftX <= 0);
-	}
+	public void Leaves_drift_leftwards_into_the_mask_rather_than_out_of_the_open_edge() => Sweep().Should().OnlyContain(leaf => leaf.DriftX <= 0);
 
 	// Depth is the parallax contract the stylesheet leans on: nearer leaves are drawn larger,
 	// brighter, and are blown further than the ones behind them.
@@ -50,8 +47,8 @@ public sealed class MastheadCanopyTests
 	public void Nearer_leaves_are_larger_and_drift_further_than_the_ones_behind_them()
 	{
 		var byDepth = Sweep()
-			.GroupBy(leaf => leaf.Depth)
-			.ToDictionary(group => group.Key, group => group.ToList());
+					  .GroupBy(leaf => leaf.Depth)
+					  .ToDictionary(group => group.Key, group => group.ToList());
 
 		byDepth.Should().ContainKeys(CanopyDepth.Far, CanopyDepth.Mid, CanopyDepth.Near);
 
@@ -78,15 +75,12 @@ public sealed class MastheadCanopyTests
 	[Fact]
 	public void Successive_page_loads_get_a_different_arrangement()
 	{
-		var first = MastheadCanopy.Generate(new Random(1));
-		var second = MastheadCanopy.Generate(new Random(2));
+		var first = MastheadCanopy.Generate(new(1));
+		var second = MastheadCanopy.Generate(new(2));
 
 		second.Should().NotBeEquivalentTo(first);
 	}
 
 	[Fact]
-	public void The_same_seed_reproduces_the_same_arrangement()
-	{
-		MastheadCanopy.Generate(new Random(7)).Should().BeEquivalentTo(MastheadCanopy.Generate(new Random(7)));
-	}
+	public void The_same_seed_reproduces_the_same_arrangement() => MastheadCanopy.Generate(new(7)).Should().BeEquivalentTo(MastheadCanopy.Generate(new(7)));
 }

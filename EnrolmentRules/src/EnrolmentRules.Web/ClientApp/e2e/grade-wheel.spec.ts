@@ -1,4 +1,4 @@
-import { expect, test, type Locator } from '@playwright/test'
+import { expect, type Locator, test } from '@playwright/test'
 import { setGcseGrade, skipUnlessProject } from './support.ts'
 
 /** The dimmest a cell two places from the lens may be painted and still read as a grade. */

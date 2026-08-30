@@ -2,7 +2,7 @@
 // a pure function of numbers, and is unit-tested in curvature.test.ts.
 
 /** Tunables for the drum's curved edge — pitched so the two cells either side of the lens stay
-    readable and tappable, since five grades stand under the drum's unmasked band. */
+ readable and tappable, since five grades stand under the drum's unmasked band. */
 export const CURVE = {
   /** Degrees a cell yaws away per cell-width of distance from centre. */
   rotateDegPerCell: 22,

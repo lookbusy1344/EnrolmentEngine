@@ -109,5 +109,4 @@ public sealed class PolicySelectionTests : IClassFixture<WebAppFactory>
 		body.Should().NotBeNull();
 		return body!;
 	}
-
 }

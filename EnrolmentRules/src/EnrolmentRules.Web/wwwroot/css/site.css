@@ -963,11 +963,11 @@ legend {
     border-radius: inherit;
     mix-blend-mode: soft-light;
     background: linear-gradient(180deg,
-        rgba(18, 39, 27, .18) 0%,
-        rgba(18, 39, 27, .02) 26%,
-        rgba(255, 255, 255, .55) 50%,
-        rgba(18, 39, 27, .02) 74%,
-        rgba(18, 39, 27, .20) 100%);
+    rgba(18, 39, 27, .18) 0%,
+    rgba(18, 39, 27, .02) 26%,
+    rgba(255, 255, 255, .55) 50%,
+    rgba(18, 39, 27, .02) 74%,
+    rgba(18, 39, 27, .20) 100%);
 }
 
 .gwheel:focus-within .gwheel__lens {

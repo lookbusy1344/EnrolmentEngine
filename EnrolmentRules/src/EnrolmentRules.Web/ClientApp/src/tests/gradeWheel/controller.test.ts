@@ -14,7 +14,9 @@ class StubResizeObserver {
   constructor(callback: () => void) {
     resizeCallbacks.push(callback)
   }
+
   observe(): void {}
+
   disconnect(): void {}
 }
 

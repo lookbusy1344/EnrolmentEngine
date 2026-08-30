@@ -15,11 +15,11 @@
             <PrivateAssets>all</PrivateAssets>
             <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
         </PackageReference>
-        <PackageReference Include="FsCheck.Xunit" Version="3.4.0" />
-        <PackageReference Include="AwesomeAssertions" Version="9.6.0" />
-        <PackageReference Include="Microsoft.Extensions.DependencyInjection" Version="10.0.11" />
-        <PackageReference Include="Microsoft.NET.Test.Sdk" Version="18.9.0" />
-        <PackageReference Include="xunit" Version="2.9.3" />
+        <PackageReference Include="FsCheck.Xunit" Version="3.4.0"/>
+        <PackageReference Include="AwesomeAssertions" Version="9.6.0"/>
+        <PackageReference Include="Microsoft.Extensions.DependencyInjection" Version="10.0.11"/>
+        <PackageReference Include="Microsoft.NET.Test.Sdk" Version="18.9.0"/>
+        <PackageReference Include="xunit" Version="2.9.3"/>
         <PackageReference Include="xunit.runner.visualstudio" Version="4.0.0">
             <PrivateAssets>all</PrivateAssets>
             <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
@@ -30,26 +30,26 @@
         <!-- Architecture guards (CodeStyle_*) inspect Razor through the compiler belonging to the SDK
              selected for this build. Referencing the SDK copy keeps parsing exactly aligned with the
              build and avoids a second, independently versioned Razor parser package. -->
-        <Reference Include="Microsoft.CodeAnalysis" HintPath="$(MSBuildToolsPath)/Roslyn/bincore/Microsoft.CodeAnalysis.dll" Private="true" />
-        <Reference Include="Microsoft.CodeAnalysis.CSharp" HintPath="$(MSBuildToolsPath)/Roslyn/bincore/Microsoft.CodeAnalysis.CSharp.dll" Private="true" />
-        <Reference Include="Microsoft.CodeAnalysis.Razor.Compiler" HintPath="$(MSBuildSDKsPath)/Microsoft.NET.Sdk.Razor/source-generators/Microsoft.CodeAnalysis.Razor.Compiler.dll" Private="true" />
+        <Reference Include="Microsoft.CodeAnalysis" HintPath="$(MSBuildToolsPath)/Roslyn/bincore/Microsoft.CodeAnalysis.dll" Private="true"/>
+        <Reference Include="Microsoft.CodeAnalysis.CSharp" HintPath="$(MSBuildToolsPath)/Roslyn/bincore/Microsoft.CodeAnalysis.CSharp.dll" Private="true"/>
+        <Reference Include="Microsoft.CodeAnalysis.Razor.Compiler" HintPath="$(MSBuildSDKsPath)/Microsoft.NET.Sdk.Razor/source-generators/Microsoft.CodeAnalysis.Razor.Compiler.dll" Private="true"/>
     </ItemGroup>
 
     <ItemGroup>
-        <Using Include="Xunit" />
+        <Using Include="Xunit"/>
     </ItemGroup>
 
     <ItemGroup>
-        <ProjectReference Include="..\..\src\EnrolmentRules.Engine\EnrolmentRules.Engine.csproj" />
-        <ProjectReference Include="..\..\src\EnrolmentRules.Domain\EnrolmentRules.Domain.csproj" />
-        <ProjectReference Include="..\..\src\EnrolmentRules.Prediction\EnrolmentRules.Prediction.csproj" />
-        <ProjectReference Include="..\..\src\EnrolmentRules.Cli\EnrolmentRules.Cli.csproj" />
-        <ProjectReference Include="..\..\src\EnrolmentRules.Extensions.DependencyInjection\EnrolmentRules.Extensions.DependencyInjection.csproj" />
+        <ProjectReference Include="..\..\src\EnrolmentRules.Engine\EnrolmentRules.Engine.csproj"/>
+        <ProjectReference Include="..\..\src\EnrolmentRules.Domain\EnrolmentRules.Domain.csproj"/>
+        <ProjectReference Include="..\..\src\EnrolmentRules.Prediction\EnrolmentRules.Prediction.csproj"/>
+        <ProjectReference Include="..\..\src\EnrolmentRules.Cli\EnrolmentRules.Cli.csproj"/>
+        <ProjectReference Include="..\..\src\EnrolmentRules.Extensions.DependencyInjection\EnrolmentRules.Extensions.DependencyInjection.csproj"/>
         <!-- Not otherwise exercised by this suite; referenced so CodeStyle_StructSize's derived
              ProductionAssemblyNames (every *.csproj under src) can Assembly.Load them from the test
              output directory. -->
-        <ProjectReference Include="..\..\src\EnrolmentRules.Web\EnrolmentRules.Web.csproj" />
-        <ProjectReference Include="..\..\src\EnrolmentRules.Benchmarks\EnrolmentRules.Benchmarks.csproj" />
+        <ProjectReference Include="..\..\src\EnrolmentRules.Web\EnrolmentRules.Web.csproj"/>
+        <ProjectReference Include="..\..\src\EnrolmentRules.Benchmarks\EnrolmentRules.Benchmarks.csproj"/>
     </ItemGroup>
 
 </Project>

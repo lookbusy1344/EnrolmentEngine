@@ -201,6 +201,7 @@ export function createWheelController(
     dragStartScroll = track.scrollLeft
     track.setPointerCapture(event.pointerId)
   }
+
   function onPointermove(event: PointerEvent): void {
     if (dragging) {
       const travel = event.clientX - dragStartX
@@ -209,6 +210,7 @@ export function createWheelController(
       schedulePaint()
     }
   }
+
   // A drag snaps to whatever ended up under the lens; a tap takes the cell it landed on.
   function onPointerup(event: PointerEvent): void {
     if (dragging) {
@@ -236,6 +238,7 @@ export function createWheelController(
     clearTimeout(settleTimer)
     glideTo(currentIndex, false)
   }
+
   const resizeObserver = typeof ResizeObserver === 'undefined' ? undefined : new ResizeObserver(onResize)
   resizeObserver?.observe(track)
 

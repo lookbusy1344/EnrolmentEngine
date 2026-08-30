@@ -6,6 +6,7 @@ using AwesomeAssertions;
 using Domain;
 using Extensions.DependencyInjection;
 using Prediction;
+using Web;
 
 /// <summary>
 ///     F6 — every concrete exported <c>*Exception</c> type across the production library assemblies
@@ -18,7 +19,7 @@ public sealed class ExceptionContractTests
 	public void every_concrete_exported_exception_type_has_the_standard_public_triad()
 	{
 		var assemblies = new[] {
-			typeof(StudentInput).Assembly, typeof(GradePredictor).Assembly, typeof(IEnrolmentEngine).Assembly, typeof(ServiceCollectionExtensions).Assembly, typeof(Web.Program).Assembly,
+			typeof(StudentInput).Assembly, typeof(GradePredictor).Assembly, typeof(IEnrolmentEngine).Assembly, typeof(ServiceCollectionExtensions).Assembly, typeof(Program).Assembly,
 		};
 
 		var exceptionTypes = assemblies

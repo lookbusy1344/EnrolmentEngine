@@ -1,8 +1,8 @@
 namespace EnrolmentRules.Web.Models;
 
 /// <summary>
-/// Scatters the masthead canopy afresh on every page load: a drift of the brand mark's own leaf
-/// blowing across the soil band, in three parallax depths.
+///     Scatters the masthead canopy afresh on every page load: a drift of the brand mark's own leaf
+///     blowing across the soil band, in three parallax depths.
 /// </summary>
 public static class MastheadCanopy
 {
@@ -15,11 +15,10 @@ public static class MastheadCanopy
 	private const double VerticalBleed = 18;
 
 	// A ReadOnlySpan-returning property can't back a non-constant struct table; this is built once.
-	private static IReadOnlyList<DepthBand> Bands { get; } =
-	[
-		new(CanopyDepth.Far, MinScale: 2.4, MaxScale: 3.2, MinDrift: 10, MaxDrift: 18, Share: 10),
-		new(CanopyDepth.Mid, MinScale: 3.6, MaxScale: 4.4, MinDrift: 22, MaxDrift: 32, Share: 8),
-		new(CanopyDepth.Near, MinScale: 4.8, MaxScale: 5.6, MinDrift: 38, MaxDrift: 52, Share: 6),
+	private static IReadOnlyList<DepthBand> Bands { get; } = [
+		new(CanopyDepth.Far, 2.4, 3.2, 10, 18, 10),
+		new(CanopyDepth.Mid, 3.6, 4.4, 22, 32, 8),
+		new(CanopyDepth.Near, 4.8, 5.6, 38, 52, 6),
 	];
 
 	/// <summary>Derived from the bands, so the two can never drift apart.</summary>
@@ -43,22 +42,22 @@ public static class MastheadCanopy
 		var centreX = Between(random, reach - driftX, ViewBoxWidth - reach);
 		var duration = Between(random, MinDurationSeconds, MaxDurationSeconds);
 
-		return new CanopyLeaf(
-			CentreX: Round(centreX),
-			CentreY: Round(Between(random, -VerticalBleed, ViewBoxHeight + VerticalBleed)),
-			Rotation: Round(Between(random, -90, 90)),
-			Scale: Round(scale),
-			Depth: band.Depth,
-			DriftX: Round(driftX),
-			DriftY: Round(Between(random, 6, 22)),
-			Spin: Round(Between(random, -50, 50)),
-			DurationSeconds: Round(duration),
+		return new(
+			Round(centreX),
+			Round(Between(random, -VerticalBleed, ViewBoxHeight + VerticalBleed)),
+			Round(Between(random, -90, 90)),
+			Round(scale),
+			band.Depth,
+			Round(driftX),
+			Round(Between(random, 6, 22)),
+			Round(Between(random, -50, 50)),
+			Round(duration),
 			// A negative delay starts the cycle already under way, so the canopy is mid-blow on the
 			// first frame instead of every leaf fading up together.
-			DelaySeconds: Round(-Between(random, 0, duration)));
+			Round(-Between(random, 0, duration)));
 	}
 
-	private static double Between(Random random, double low, double high) => low + (random.NextDouble() * (high - low));
+	private static double Between(Random random, double low, double high) => low + random.NextDouble() * (high - low);
 
 	private static double Round(double value) => Math.Round(value, 2);
 

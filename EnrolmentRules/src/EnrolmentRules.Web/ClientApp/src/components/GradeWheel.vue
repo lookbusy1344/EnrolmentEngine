@@ -16,6 +16,7 @@ const grades = Array.from({ length: MAX_GCSE_GRADE - MIN_GCSE_GRADE + 1 }, (_, i
 function valueAtIndex(cellIndex: number): number | null {
   return cellIndex === 0 ? null : grades[cellIndex - 1]
 }
+
 function indexOfValue(value: number | null): number {
   return value === null ? 0 : value - MIN_GCSE_GRADE + 1
 }

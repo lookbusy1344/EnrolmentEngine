@@ -55,12 +55,17 @@ This 30 second video shows the engine in action for music enrolment at an imagin
 ![Music enrolment walkthrough](../images/Music_enrolment.gif)
 
 1. We start with 4x GCSE at grade 4, insufficient for an A-Level programme at this college.
-2. We add Music at grade 4, crossing the eligibility threshold for a basic programme (5x grade 4), but not sufficient to study music. 3 other A-levels become green but Music is red.
-3. We change the Music GCSE grade to 5, and Music A-level now becomes amber. This means borderline, the department wants music students to play an instrument in their own time.
+2. We add Music at grade 4, crossing the eligibility threshold for a basic programme (5x grade 4), but not sufficient to study music. 3 other A-levels
+   become green but Music is red.
+3. We change the Music GCSE grade to 5, and Music A-level now becomes amber. This means borderline, the department wants music students to play an
+   instrument in their own time.
 4. We add 'Plays piano' as a hobby, and Music now becomes green! The course criteria are met, and the student can proceed.
-5. With tongue in cheek, our head of music really hates the trombone. If we add a second hobby 'Plays trombone' the subject becomes red. No trombone players are allowed in his class.
+5. With tongue in cheek, our head of music really hates the trombone. If we add a second hobby 'Plays trombone' the subject becomes red. No trombone
+   players are allowed in his class.
 
-This demonstrates some of the complex rules that can be quickly configured using this decision engine, including on student attributes like age, entry subject combinations, selections for A-Level and hobbies. All rules are fully customisable. For more details see [rule-authoring.md](docs/rule-authoring.md)
+This demonstrates some of the complex rules that can be quickly configured using this decision engine, including on student attributes like age, entry
+subject combinations, selections for A-Level and hobbies. All rules are fully customisable. For more details
+see [rule-authoring.md](docs/rule-authoring.md)
 
 ## Information It Can Consider
 
@@ -118,14 +123,15 @@ Cross-subject relationships — how a course interacts with the rest of a studen
 
 ```yaml
 # data/catalogue.yaml — the same course's relationships and prediction model.
-- subject: further_maths
-  priority_weight: 56
-  regression: { slope: 1.00, intercept: -2.00 }   # predicts the A-level grade from GCSE attainment
-  prerequisites:
-    - any_of: [ maths ]        # Further Maths requires Maths...
-      requires: chosen         # ...actually chosen this year (not merely available)
-  entry_equivalents:
-    - { subject: maths, type: a_level, min_grade: d }   # ...or a prior A-level Maths at grade D+
+subjects:
+  - subject: further_maths
+    priority_weight: 56
+    regression: { slope: 1.00, intercept: -2.00 }   # predicts the A-level grade from GCSE attainment
+    prerequisites:
+      - any_of: [ maths ]        # Further Maths requires Maths...
+        requires: chosen         # ...actually chosen this year (not merely available)
+    entry_equivalents:
+      - { subject: maths, type: a_level, min_grade: d }   # ...or a prior A-level Maths at grade D+
 ```
 
 Nothing above is compiled in: an admissions lead can raise the entry bar, relax the prerequisite, or add an equivalent route by editing these two
@@ -169,8 +175,7 @@ Standard owns the base `workflows/` and `data/` trees. Elite overrides its workf
 the shared schemas, qualification scale, and DfE transition evidence through the overlay data source.
 
 - **CLI**: pass `--policy elite` (or `--policy standard`, the default) alongside any other command.
-- **Web**: append `?policy=elite` to the app's URL (`/app?policy=elite`), or use the switch link
-  the page shows next to the current policy's name.
+- **Web**: append `?policy=elite` to the app's URL (`/app?policy=elite`), or use the switch link the page shows next to the current policy's name.
 
 A student's entered facts and chosen subjects are shared across policies — switching policy re-evaluates the same basket rather than clearing it. A
 choice the newly selected policy rates red, or does not offer at all, stays visible in the basket, clearly flagged, rather than being silently
