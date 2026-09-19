@@ -25,14 +25,29 @@ If you are changing live policy, the files that matter most are:
 - `data/catalogue.yaml`
 - `data/thresholds.yaml`
 - `data/qualifications.yaml`
+- `data/gcse-subjects.yaml`
 - `workflows/eligibility.yaml`
 - `workflows/subject-ratings.yaml`
 
 An auxiliary policy owns the corresponding four policy-specific files under
-`policies/<id>/data/` and `policies/<id>/workflows/`. With `OverlayEnrolmentDataSource`, schemas,
-`qualifications.yaml`, and the DfE transition matrix fall through to the base `data/` tree. The
-shipped `policies/elite/` directory is the reference layout; see
+`policies/<id>/data/` and `policies/<id>/workflows/`, plus a `policies/<id>/policy.yaml` manifest
+carrying its `display_name`. With `OverlayEnrolmentDataSource`, schemas, `qualifications.yaml`,
+`gcse-subjects.yaml`, and the DfE transition matrix fall through to the base `data/` tree. The
+shipped `policies/elite/`
+directory is the reference layout; see
 [Authoring an auxiliary policy](rule-authoring.md#9-authoring-an-auxiliary-policy).
+
+### Adding a policy
+
+Both hosts discover their policy set from the directory layout (`PolicyDirectoryLayout.Discover`),
+so a new policy is a directory to drop in, not code to edit:
+
+1. Create `policies/<id>/` with its `workflows/` and `data/` overrides.
+2. Add `policies/<id>/policy.yaml` with `display_name: <label>` (validated against
+   `data/policy.schema.json`). A folder without a manifest fails loudly at startup.
+3. The folder is picked up by the `policies/**` asset glob and becomes selectable in the CLI
+   (`--policy <id>`) and the web front end. `<id>` must be lowercase snake/kebab; the base policy is
+   always `standard`, listed first.
 
 ## Runtime Policy Files
 
@@ -293,6 +308,38 @@ How to read that example:
 - a `btec_diploma` `distinction` is treated as equivalent to `5.0` A-level points for uplift and threshold checks,
 - the meaning of `distinction` itself comes from this file, not from `catalogue.yaml`.
 
+### `data/gcse-subjects.yaml`
+
+The recognised GCSE subject keys. This is the input vocabulary `StudentValidator` checks an
+incoming document's `student.gcses` keys against, the workflow linter's GCSE-key vocabulary, and
+the canonical probe student's fully-populated GCSE set. It is shared base data (not duplicated per
+policy — an auxiliary policy falls through to the base file via `OverlayEnrolmentDataSource`).
+
+Top-level shape:
+
+| Field | Type | Required | Meaning |
+| --- | --- | --- | --- |
+| `subjects` | non-empty array of strings | yes | The complete set of recognised GCSE subject keys. Each must be unique and non-blank; array order has no evaluation meaning. |
+
+Notes:
+
+- This is a distinct vocabulary from `data/catalogue.yaml`'s A-level subjects: it carries
+  `english_language` (a GCSE with no A-level of its own that gates eligibility and the English
+  subject entry rules) and omits `further_maths` (an A-level with no GCSE of its own). A catalogue
+  is not required to offer an A-level for every GCSE key here, or vice versa.
+- Adding a GCSE subject here is a data-only change — no code or schema-vocabulary edit is needed.
+  Pair it with a `catalogue.yaml` entry and `subject-ratings.yaml` rules if the new GCSE should
+  also unlock an A-level of the same name.
+
+Example:
+
+```yaml
+subjects:
+  - maths
+  - english_language
+  - spanish
+```
+
 ### `workflows/eligibility.yaml`
 
 The whole-student gate. If any gate condition fails, the student is ineligible and every subject is
@@ -479,6 +526,16 @@ Defines:
 
 Coverage and duplicate-grade/ordinal checks happen in code after schema validation.
 
+### `data/gcse-subjects.schema.json`
+
+Defines:
+
+- the top-level `subjects` array,
+- allowed subject-key pattern (matching the catalogue's subject-id pattern),
+- uniqueness of keys within the array.
+
+Duplicate and blank-key checks are re-enforced in code after schema validation.
+
 ### `workflows/workflow.schema.json`
 
 Defines the generic RulesEngine workflow document shape shared by `eligibility.yaml` and
@@ -621,6 +678,7 @@ Examples of data-only changes:
 - retuning a threshold in `data/thresholds.yaml`,
 - changing subject clashes or prerequisites in `data/catalogue.yaml`,
 - adding a grade to an existing qualification type in `data/qualifications.yaml`,
+- adding or removing a GCSE subject key in `data/gcse-subjects.yaml`,
 - changing a subject's workflow expression in `workflows/subject-ratings.yaml`,
 - adding a new A-level subject by updating both `data/catalogue.yaml` and `workflows/subject-ratings.yaml`.
 - authoring an auxiliary policy tree under `policies/<id>/` using existing rule and relationship
@@ -630,7 +688,6 @@ Examples that are not data-only:
 
 - adding a brand-new qualification type,
 - adding a brand-new relationship type beyond the existing prerequisite/exclusion/own-time/veto/restudy shapes,
-- changing the GCSE input vocabulary in compiled code,
 - changing evaluation semantics in the constraint pass or aggregation.
 
 ## Safe Editing Checklist

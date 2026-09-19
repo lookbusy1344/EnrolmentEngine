@@ -159,14 +159,13 @@ public sealed class TransitionMatrixTests
 	{
 		// The student's band ("1 to < 2" at avg 1.5) has no row, so the nearest populated band supplies the
 		// probabilities. That substitution must be observable: PriorAttainmentBand still names the source of
-		// the probabilities, RequestedBand names the student's own band, and Imputed flags the mismatch.
+		// the probabilities, RequestedBand names the student's own band (non-null flags the mismatch).
 		var matrix = DfeTransitionMatrix.Load(new StringReader(
 			Header + "\n" +
 			ValidRow("5 to < 6", "1.0", "0.0", "0.0", "0.0", "0.0", "0.0", "0.0")));
 
 		var evidence = matrix.EvidenceFor(1.5, SingleSubjectCatalogue(Subject.Maths)).Single();
 
-		evidence.Imputed.Should().BeTrue();
 		evidence.PriorAttainmentBand.Should().Be("5 to < 6");
 		evidence.RequestedBand.Should().Be("1 to < 2");
 	}
@@ -180,7 +179,6 @@ public sealed class TransitionMatrixTests
 
 		var evidence = matrix.EvidenceFor(1.5, SingleSubjectCatalogue(Subject.Maths)).Single();
 
-		evidence.Imputed.Should().BeFalse();
 		evidence.RequestedBand.Should().BeNull();
 	}
 
@@ -194,7 +192,6 @@ public sealed class TransitionMatrixTests
 
 		var evidence = matrix.EvidenceFor(5.5, SingleSubjectCatalogue(Subject.Physics)).Single();
 
-		evidence.Imputed.Should().BeFalse();
 		evidence.RequestedBand.Should().BeNull();
 	}
 
@@ -430,6 +427,8 @@ public sealed class TransitionMatrixTests
 		byte[] catalogueSchema,
 		byte[] qualifications,
 		byte[] qualificationsSchema,
+		byte[] gcseSubjects,
+		byte[] gcseSubjectsSchema,
 		byte[] thresholds,
 		byte[] thresholdsSchema,
 		byte[] transitionMatrix) : IEnrolmentDataSource
@@ -446,6 +445,10 @@ public sealed class TransitionMatrixTests
 		public Stream OpenQualifications() => new MemoryStream(qualifications, false);
 
 		public Stream OpenQualificationsSchema() => new MemoryStream(qualificationsSchema, false);
+
+		public Stream OpenGcseSubjects() => new MemoryStream(gcseSubjects, false);
+
+		public Stream OpenGcseSubjectsSchema() => new MemoryStream(gcseSubjectsSchema, false);
 
 		public Stream OpenThresholds() => new MemoryStream(thresholds, false);
 
@@ -470,6 +473,8 @@ public sealed class TransitionMatrixTests
 				File.ReadAllBytes(Path.Combine(Harness.DataDir, CatalogueStore.SchemaFileName)),
 				File.ReadAllBytes(Path.Combine(Harness.DataDir, QualificationScaleStore.QualificationsFileName)),
 				File.ReadAllBytes(Path.Combine(Harness.DataDir, QualificationScaleStore.SchemaFileName)),
+				File.ReadAllBytes(Path.Combine(Harness.DataDir, GcseSubjectsStore.GcseSubjectsFileName)),
+				File.ReadAllBytes(Path.Combine(Harness.DataDir, GcseSubjectsStore.SchemaFileName)),
 				File.ReadAllBytes(Path.Combine(Harness.DataDir, PolicyThresholdsStore.ThresholdsFileName)),
 				File.ReadAllBytes(Path.Combine(Harness.DataDir, PolicyThresholdsStore.SchemaFileName)),
 				transitionMatrix);

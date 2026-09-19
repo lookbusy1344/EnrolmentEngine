@@ -54,10 +54,6 @@ public sealed class DfeTransitionMatrix
 	/// <summary>Load the project-local DfE transition-matrix extract (the zero-wiring fallback path).</summary>
 	public static DfeTransitionMatrix LoadDefault() => Default.Value;
 
-	/// <summary>Load the matrix from the CSV under an explicit <c>data/</c> directory, mirroring the catalogue and thresholds loaders.</summary>
-	public static DfeTransitionMatrix LoadFromDataDirectory(string dataDirectory) =>
-		Load(Path.Combine(dataDirectory, DataDirectoryRelativePath));
-
 	/// <summary>Load a normalized DfE transition-matrix CSV.</summary>
 	public static DfeTransitionMatrix Load(string path)
 	{
@@ -281,27 +277,7 @@ public sealed class DfeTransitionMatrix
 		_ => ">=9",
 	};
 
-	private static string FindDefaultCsvPath()
-	{
-		var bundled = Path.Combine(AppContext.BaseDirectory, DefaultRelativePath);
-		if (File.Exists(bundled)) {
-			return bundled;
-		}
-
-		var starts = new[] {
-			Directory.GetCurrentDirectory(), AppContext.BaseDirectory,
-		};
-		foreach (var start in starts) {
-			for (var dir = new DirectoryInfo(start); dir is not null; dir = dir.Parent) {
-				var candidate = Path.Combine(dir.FullName, DefaultRelativePath);
-				if (File.Exists(candidate)) {
-					return candidate;
-				}
-			}
-		}
-
-		throw new FileNotFoundException($"Could not locate '{DefaultRelativePath}'.");
-	}
+	private static string FindDefaultCsvPath() => ShippedLayout.Locate(DefaultRelativePath);
 }
 
 /// <summary>

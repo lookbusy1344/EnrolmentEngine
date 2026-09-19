@@ -315,30 +315,5 @@ public static class Catalogue
 		return new(entries, subjects, scale);
 	}
 
-	/// <summary>The metadata for <paramref name="subject" /> in the shipped catalogue.</summary>
-	public static SubjectMeta Meta(Subject subject) => Default.Meta(subject);
-
-	// Resolve the shipped catalogue file: prefer the copy beside the executable (publish output), else walk
-	// up from the working directory / base directory to the repository root. Mirrors DfeTransitionMatrix.
-	private static string FindDefaultPath()
-	{
-		var bundled = Path.Combine(AppContext.BaseDirectory, DefaultRelativePath);
-		if (File.Exists(bundled)) {
-			return bundled;
-		}
-
-		var starts = new[] {
-			Directory.GetCurrentDirectory(), AppContext.BaseDirectory,
-		};
-		foreach (var start in starts) {
-			for (var dir = new DirectoryInfo(start); dir is not null; dir = dir.Parent) {
-				var candidate = Path.Combine(dir.FullName, DefaultRelativePath);
-				if (File.Exists(candidate)) {
-					return candidate;
-				}
-			}
-		}
-
-		throw new FileNotFoundException($"Could not locate '{DefaultRelativePath}'.");
-	}
+	private static string FindDefaultPath() => ShippedLayout.Locate(DefaultRelativePath);
 }

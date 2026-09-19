@@ -1,13 +1,10 @@
 namespace EnrolmentRules.Engine.Authoring;
 
-using System.Collections.Concurrent;
-using System.Security.Cryptography;
 using System.Text;
 using System.Text.Json;
 using System.Text.Json.Nodes;
 using System.Text.Json.Serialization;
 using Domain;
-using Json.Schema;
 using Prediction;
 using RulesEngine;
 using RulesEngine.Interfaces;
@@ -28,14 +25,6 @@ internal static class WorkflowStore
 			new JsonStringEnumConverter(),
 		},
 	};
-
-	// JsonSchema.FromFile registers the schema's $id in a process-global registry; loading the same
-	// schema content twice throws. Cache the compiled schema per schema text so repeated startups/tests
-	// reuse one instance even when the workflow files are loaded from both the source tree and a
-	// published output tree.
-	// The value is Lazy so the factory runs exactly once per path even under concurrent (parallel-test)
-	// access — ConcurrentDictionary.GetOrAdd alone does not guarantee a single factory invocation.
-	private static readonly ConcurrentDictionary<string, Lazy<JsonSchema>> SchemaCache = new();
 
 	/// <summary>
 	///     Read every workflow file (<c>*.json</c>, <c>*.yaml</c> or <c>*.yml</c>) in
@@ -76,21 +65,14 @@ internal static class WorkflowStore
 		TextReader schemaReader)
 	{
 		var schemaText = schemaReader.ReadToEnd();
-		var schema = SchemaCache.GetOrAdd(
-			SchemaCacheKey(schemaText),
-			_ => new(() => JsonSchema.FromText(schemaText))).Value;
 
 		var workflows = new List<Workflow>(files.Count);
 		foreach (var (file, content) in files) {
 			var json = NormalizeWorkflowDocument(file, content.ReadToEnd());
-			using var doc = JsonDocument.Parse(json);
-
-			var results = schema.Evaluate(doc.RootElement, new() {
-				OutputFormat = OutputFormat.List,
-			});
-			if (!results.IsValid) {
-				throw new WorkflowSchemaException(file, DescribeErrors(results));
-			}
+			var document = JsonNode.Parse(json)
+						   ?? throw new WorkflowSchemaException(file, "workflow document must be an object, not null");
+			SchemaValidator.Validate(
+				document, schemaText, errors => new WorkflowSchemaException(file, errors));
 
 			var workflow = JsonSerializer.Deserialize<Workflow>(json, WorkflowSerializerOptions)
 						   ?? throw new WorkflowSchemaException(file, "workflow deserialized to null");
@@ -121,9 +103,6 @@ internal static class WorkflowStore
 		}
 	}
 
-	private static string SchemaCacheKey(string schemaText) =>
-		Convert.ToHexString(SHA256.HashData(Encoding.UTF8.GetBytes(schemaText)));
-
 	internal static string NormalizeWorkflowDocument(string file, string content) =>
 		Path.GetExtension(file) switch {
 			".json" => content,
@@ -149,44 +128,6 @@ internal static class WorkflowStore
 		new(LoadAndValidate(directory, schemaPath));
 
 	/// <summary>
-	///     The production startup path with an explicit catalogue: load, schema-validate, build the
-	///     reusable engine, then probe-compile every workflow against a canonical fully-populated input.
-	///     The probe thresholds are inferred from the workflows' sibling <c>data/</c> directory; callers that
-	///     already hold the thresholds (and may keep data in a non-sibling location) should pass them via the
-	///     <see cref="LoadValidateBuildAndProbe(string, CatalogueData, PolicyThresholds, DfeTransitionMatrix?, QualificationScale?, string?)" />
-	///     overload so the probe and the engine agree on one source.
-	/// </summary>
-	internal static (IRulesEngine Engine, IReadOnlyList<Workflow> Workflows) LoadValidateBuildAndProbe(
-		string directory,
-		CatalogueData catalogue,
-		string? schemaPath = null)
-		=> LoadValidateBuildAndProbe(directory, catalogue, LoadDefaultThresholds(directory), null, null, schemaPath);
-
-	/// <summary>
-	///     The production startup path with explicit catalogue, thresholds and (optionally) transition matrix:
-	///     load, schema-validate, build the reusable engine, then probe-compile every workflow against a
-	///     canonical fully-populated input built from the supplied policy. Threading the caller's data keeps the
-	///     probe and the engine bound to one source even when the workflows and data directories are not
-	///     siblings. The matrix only feeds the probe's transition evidence (irrelevant to lambda compilation),
-	///     so it defaults to the shipped extract.
-	/// </summary>
-	internal static (IRulesEngine Engine, IReadOnlyList<Workflow> Workflows) LoadValidateBuildAndProbe(
-		string directory,
-		CatalogueData catalogue,
-		PolicyThresholds thresholds,
-		DfeTransitionMatrix? matrix = null,
-		QualificationScale? scale = null,
-		string? schemaPath = null)
-	{
-		var workflows = LoadAndValidate(directory, schemaPath);
-		ThrowOnLintErrors(workflows, catalogue);
-		var engine = BuildEngine(workflows);
-		ProbeCompile(engine, workflows,
-			CanonicalProbe(thresholds, catalogue, matrix ?? DfeTransitionMatrix.LoadDefault(), scale ?? QualificationScale.Default));
-		return new(engine, workflows);
-	}
-
-	/// <summary>
 	///     The production startup path when the workflow files are already open as streams: load, schema-validate,
 	///     build the reusable engine, then probe-compile every workflow against a canonical fully-populated input
 	///     built from the supplied policy and scale.
@@ -197,13 +138,15 @@ internal static class WorkflowStore
 		CatalogueData catalogue,
 		PolicyThresholds thresholds,
 		DfeTransitionMatrix? matrix = null,
-		QualificationScale? scale = null)
+		QualificationScale? scale = null,
+		GcseVocabulary? gcses = null)
 	{
+		var vocabulary = gcses ?? GcseVocabulary.Default;
 		var workflows = LoadAndValidate(files, schemaStream);
-		ThrowOnLintErrors(workflows, catalogue);
+		ThrowOnLintErrors(workflows, catalogue, vocabulary);
 		var engine = BuildEngine(workflows);
 		ProbeCompile(engine, workflows,
-			CanonicalProbe(thresholds, catalogue, matrix ?? DfeTransitionMatrix.LoadDefault(), scale ?? QualificationScale.Default));
+			CanonicalProbe(thresholds, catalogue, matrix ?? DfeTransitionMatrix.LoadDefault(), scale ?? QualificationScale.Default, vocabulary));
 		return new(engine, workflows);
 	}
 
@@ -268,9 +211,9 @@ internal static class WorkflowStore
 		!string.Equals(Path.GetFileName(file), SchemaFileName, StringComparison.OrdinalIgnoreCase)
 		&& Path.GetExtension(file) is ".json" or ".yaml" or ".yml";
 
-	private static void ThrowOnLintErrors(IReadOnlyList<Workflow> workflows, CatalogueData catalogue)
+	private static void ThrowOnLintErrors(IReadOnlyList<Workflow> workflows, CatalogueData catalogue, GcseVocabulary gcses)
 	{
-		var findings = WorkflowLinter.Lint(workflows, catalogue)
+		var findings = WorkflowLinter.Lint(workflows, catalogue, gcses)
 									 .Where(static finding => finding.Severity == LintSeverity.Error)
 									 .ToArray();
 		if (findings.Length > 0) {
@@ -325,22 +268,14 @@ internal static class WorkflowStore
 		}
 	}
 
-	private static string DescribeErrors(EvaluationResults results)
-	{
-		var messages = (results.Details ?? [])
-					   .Where(d => d.Errors is { Count: > 0 })
-					   .SelectMany(d => d.Errors!.Select(e => $"{d.InstanceLocation}: {e.Value}"));
-		var joined = string.Join("; ", messages);
-		return joined.Length > 0 ? joined : "schema validation failed (no detailed errors reported)";
-	}
-
 	private static RuleParameter[] CanonicalProbe(
 		PolicyThresholds thresholds,
 		CatalogueData catalogue,
 		DfeTransitionMatrix matrix,
-		QualificationScale scale)
+		QualificationScale scale,
+		GcseVocabulary vocabulary)
 	{
-		var student = CanonicalProbeStudent(thresholds);
+		var student = CanonicalProbeStudent(thresholds, vocabulary);
 		var gcses = student.ToGcseResults();
 		var lookup = new GcseFacts(gcses);
 		var profile = GradePredictor.Predict(student, gcses, default, catalogue, matrix, scale);
@@ -352,21 +287,13 @@ internal static class WorkflowStore
 	}
 
 	// The canonical probe student: every recognised GCSE subject populated at the top entry grade, derived
-	// from GcseSubjects.Known so it stays fully populated as the GCSE vocabulary changes rather than tracking
-	// a hand-maintained literal list. The grades only need to be present (the probe forces lambda compilation,
-	// not a particular verdict), so a uniform passing grade suffices.
-	internal static StudentInput CanonicalProbeStudent(PolicyThresholds thresholds) =>
+	// from the loaded GCSE vocabulary so it stays fully populated as the vocabulary changes rather than
+	// tracking a hand-maintained literal list. The grades only need to be present (the probe forces lambda
+	// compilation, not a particular verdict), so a uniform passing grade suffices.
+	internal static StudentInput CanonicalProbeStudent(PolicyThresholds thresholds, GcseVocabulary? gcses = null) =>
 		new(
 			"probe",
-			EquatableDictionaryFactory.CopyOf(GcseSubjects.Known.ToDictionary(static subject => subject, _ => thresholds.TopEntry,
+			EquatableDictionaryFactory.CopyOf((gcses ?? GcseVocabulary.Default).Known.ToDictionary(static subject => subject, _ => thresholds.TopEntry,
 				StringComparer.Ordinal)),
 			[]);
-
-	private static PolicyThresholds LoadDefaultThresholds(string workflowsDirectory)
-	{
-		var root = Directory.GetParent(Path.GetFullPath(workflowsDirectory))?.FullName
-				   ?? throw new DirectoryNotFoundException($"Could not resolve repository root from '{workflowsDirectory}'.");
-
-		return PolicyThresholdsStore.LoadAndValidate(Path.Combine(root, "data"));
-	}
 }

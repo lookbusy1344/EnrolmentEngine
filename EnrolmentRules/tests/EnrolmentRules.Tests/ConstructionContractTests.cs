@@ -63,6 +63,8 @@ public sealed class ConstructionContractTests
 	[InlineData(nameof(IEnrolmentDataSource.OpenCatalogueSchema))]
 	[InlineData(nameof(IEnrolmentDataSource.OpenQualifications))]
 	[InlineData(nameof(IEnrolmentDataSource.OpenQualificationsSchema))]
+	[InlineData(nameof(IEnrolmentDataSource.OpenGcseSubjects))]
+	[InlineData(nameof(IEnrolmentDataSource.OpenGcseSubjectsSchema))]
 	[InlineData(nameof(IEnrolmentDataSource.OpenThresholds))]
 	[InlineData(nameof(IEnrolmentDataSource.OpenThresholdsSchema))]
 	[InlineData(nameof(IEnrolmentDataSource.OpenTransitionMatrix))]
@@ -215,6 +217,12 @@ public sealed class ConstructionContractTests
 		public Stream OpenQualificationsSchema() =>
 			nullStreamMember == nameof(IEnrolmentDataSource.OpenQualificationsSchema) ? null! : inner.OpenQualificationsSchema();
 
+		public Stream OpenGcseSubjects() =>
+			nullStreamMember == nameof(IEnrolmentDataSource.OpenGcseSubjects) ? null! : inner.OpenGcseSubjects();
+
+		public Stream OpenGcseSubjectsSchema() =>
+			nullStreamMember == nameof(IEnrolmentDataSource.OpenGcseSubjectsSchema) ? null! : inner.OpenGcseSubjectsSchema();
+
 		public Stream OpenThresholds() => nullStreamMember == nameof(IEnrolmentDataSource.OpenThresholds) ? null! : inner.OpenThresholds();
 
 		public Stream OpenThresholdsSchema() =>
@@ -239,6 +247,10 @@ public sealed class ConstructionContractTests
 		public Stream OpenQualifications() => Open<Stream>();
 
 		public Stream OpenQualificationsSchema() => Open<Stream>();
+
+		public Stream OpenGcseSubjects() => Open<Stream>();
+
+		public Stream OpenGcseSubjectsSchema() => Open<Stream>();
 
 		public Stream OpenThresholds() => Open<Stream>();
 

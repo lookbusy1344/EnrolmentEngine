@@ -35,16 +35,6 @@ public static class ExpressionNarrator
 													 || property.PropertyType == typeof(int?) || property.PropertyType == typeof(double?))
 			.ToFrozenDictionary(static property => property.Name, StringComparer.Ordinal);
 
-	private static readonly FrozenDictionary<double, string> ALevelGrades = new Dictionary<double, string> {
-		[ALevelGrade.AStar] = "A*",
-		[ALevelGrade.A] = "A",
-		[ALevelGrade.B] = "B",
-		[ALevelGrade.C] = "C",
-		[ALevelGrade.D] = "D",
-		[ALevelGrade.E] = "E",
-		[ALevelGrade.U] = "U",
-	}.ToFrozenDictionary();
-
 	private static readonly IReadOnlyDictionary<string, string> EmptyLocals =
 		new Dictionary<string, string>(StringComparer.Ordinal);
 
@@ -190,7 +180,7 @@ public static class ExpressionNarrator
 	private static string Grade(Node node, NarrationContext context)
 	{
 		var points = Value(node, context);
-		return ALevelGrades.TryGetValue(points, out var grade)
+		return ALevelGrade.TryName(points, out var grade)
 			? grade
 			: throw new CriteriaNarrationException(
 				$"{points.ToString("0.##", CultureInfo.InvariantCulture)} is not a point on the A-level grade scale.");

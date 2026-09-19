@@ -235,6 +235,18 @@ HTTPS URL. No `--session-affinity` flag is needed — see
 `Dockerfile`'s `${TARGETARCH:-amd64}` default resolves the R2R RID to `linux-x64` there, which
 is correct for Cloud Build — no buildx-specific setup needed.
 
+The in-process API rate limiter partitions by the direct connection address by default and ignores
+`X-Forwarded-For`; merely running on Cloud Run does not make that header a trusted boundary. If the
+service is placed behind a Google Cloud external Application Load Balancer **and direct ingress is
+disabled**, opt into its documented appended-address contract with:
+
+```text
+EnrolmentRules__RateLimitClientAddressSource=GoogleCloudExternalLoadBalancer
+```
+
+Do not set that value while the public `run.app` route remains directly reachable. The checked-in
+deploy script uses the direct default.
+
 #### Use the deploy script, or the footer reads `0.1.0+unknown`
 
 **Prefer `scripts/deploy-cloudrun.sh` over calling `gcloud run deploy --source .` by hand.** It

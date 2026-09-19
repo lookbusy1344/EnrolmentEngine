@@ -69,7 +69,7 @@ public sealed class AggregationTests
 			DateOfBirth = new(2009, 9, 1),
 		};
 
-	private static int Weight(Subject subject) => Catalogue.Meta(subject).PriorityWeight;
+	private static int Weight(Subject subject) => Harness.Catalogue.Meta(subject).PriorityWeight;
 
 	[Fact]
 	public void programme_priority_score_is_full_weight_for_greens_plus_half_for_ambers()

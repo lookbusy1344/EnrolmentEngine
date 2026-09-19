@@ -31,6 +31,19 @@ public sealed class EnrolmentPolicyOptions
 	public EnrolmentPolicyOptions Add(string id, string displayName, IEnrolmentDataSource source) =>
 		Add(new EnrolmentPolicyId(id), displayName, source);
 
+	/// <summary>
+	///     Register a pre-built definition set (typically from
+	///     <see cref="Engine.Hosting.PolicyDirectoryLayout.Discover" />) and mark <paramref name="defaultId" />
+	///     the default. Adding a policy is then a directory to drop in, not a call to add here.
+	/// </summary>
+	public EnrolmentPolicyOptions AddDiscovered(IEnumerable<EnrolmentPolicyDefinition> discovered, EnrolmentPolicyId defaultId)
+	{
+		ArgumentNullException.ThrowIfNull(discovered);
+		definitions.AddRange(discovered);
+		DefaultPolicyId = defaultId;
+		return this;
+	}
+
 	private EnrolmentPolicyOptions Add(EnrolmentPolicyId id, string displayName, IEnrolmentDataSource source)
 	{
 		ArgumentException.ThrowIfNullOrWhiteSpace(displayName);

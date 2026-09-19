@@ -146,7 +146,7 @@ internal sealed class CriteriaExplainer(
 		string.Concat(char.ToUpperInvariant(text[0]).ToString(), text[1..]);
 
 	private static string GradeName(string grade) =>
-		string.Equals(grade, "a_star", StringComparison.Ordinal) ? "A*" : Naming.Display(grade);
+		string.Equals(grade, "a_star", StringComparison.Ordinal) ? ALevelGrade.AStarLabel : Naming.Display(grade);
 
 	/// <summary>Join alternatives as a reader would say them: "A", "A or B", "A, B or C".</summary>
 	private static string Lists(IEnumerable<string> items, string conjunction)

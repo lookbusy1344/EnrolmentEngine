@@ -1,11 +1,7 @@
 namespace EnrolmentRules.Engine.Authoring;
 
-using System.Collections.Concurrent;
-using System.Security.Cryptography;
 using System.Text;
-using System.Text.Json;
 using Domain;
-using Json.Schema;
 
 /// <summary>
 ///     The startup loader for the subject catalogue (the cross-subject constraint policy, §1.5–1.6): reads
@@ -20,10 +16,6 @@ public static class CatalogueStore
 {
 	public const string CatalogueFileName = "catalogue.yaml";
 	public const string SchemaFileName = "catalogue.schema.json";
-
-	// Cache the compiled schema per schema text (Lazy so the factory runs once under parallel access),
-	// mirroring WorkflowStore — repeated startups/tests reuse one instance.
-	private static readonly ConcurrentDictionary<string, Lazy<JsonSchema>> SchemaCache = new();
 
 	/// <summary>
 	///     Read, schema-validate and build the catalogue from <paramref name="directory" /> (defaults to the
@@ -80,37 +72,14 @@ public static class CatalogueStore
 	{
 		try {
 			var node = YamlConverter.ToJsonNode(catalogueReader.ReadToEnd());
-			var schemaText = schemaReader.ReadToEnd();
-			var schema = SchemaCache.GetOrAdd(
-				SchemaCacheKey(schemaText),
-				_ => new(() => JsonSchema.FromText(schemaText))).Value;
-
-			using var doc = JsonDocument.Parse(node.ToJsonString());
-			var results = schema.Evaluate(doc.RootElement, new() {
-				OutputFormat = OutputFormat.List,
-			});
-			if (!results.IsValid) {
-				throw new CatalogueException(
-					$"Catalogue file '{cataloguePath ?? CatalogueFileName}' failed schema validation: {DescribeErrors(results)}");
-			}
+			SchemaValidator.Validate(node, schemaReader.ReadToEnd(), errors => new CatalogueException(
+				$"Catalogue file '{cataloguePath ?? CatalogueFileName}' failed schema validation: {errors}"));
 
 			return Catalogue.Build(node, scale ?? QualificationScale.Default);
 		}
 		catch (Exception ex) when (ex is InvalidDataException or FormatException) {
 			throw new CatalogueException($"Catalogue file '{cataloguePath ?? CatalogueFileName}' is invalid: {ex.Message}", ex);
 		}
-	}
-
-	private static string SchemaCacheKey(string schemaText) =>
-		Convert.ToHexString(SHA256.HashData(Encoding.UTF8.GetBytes(schemaText)));
-
-	private static string DescribeErrors(EvaluationResults results)
-	{
-		var messages = (results.Details ?? [])
-					   .Where(d => d.Errors is { Count: > 0 })
-					   .SelectMany(d => d.Errors!.Select(e => $"{d.InstanceLocation}: {e.Value}"));
-		var joined = string.Join("; ", messages);
-		return joined.Length > 0 ? joined : "schema validation failed (no detailed errors reported)";
 	}
 }
 

@@ -655,14 +655,15 @@ matrix. In practice that means:
 - `policies/<id>/data/catalogue.yaml`, `thresholds.yaml` — the policy's own subject relationships
   and tuning knobs, validated against the shared `data/catalogue.schema.json` /
   `data/thresholds.schema.json`.
-- Everything else (`data/qualifications.yaml`, the DfE matrix, every JSON schema) comes from the
-  base policy's `data/` tree — do not duplicate it under `policies/<id>/data/`.
+- Everything else (`data/qualifications.yaml`, `data/gcse-subjects.yaml`, the DfE matrix, every
+  JSON schema) comes from the base policy's `data/` tree — do not duplicate it under
+  `policies/<id>/data/`.
 
 **Decisions to pin before writing any YAML** (get these wrong and every rule built on top of them
 needs rewriting):
 
 1. **Which subjects does it offer?** The policy's catalogue is the *only* thing that determines
-   this — `data/catalogue.yaml`'s `GcseSubjects.Known` vocabulary is shared and does not itself
+   this — `data/gcse-subjects.yaml`'s GCSE vocabulary is shared and does not itself
    imply an A-level is offered. A subject absent from the auxiliary catalogue is `NotOffered` under
    [`Compare`](technical-reference.md#non-destructive-comparison), not an error.
 2. **What is the eligibility gate?** A Standard-shaped policy keeps `EnglishLanguagePass` +

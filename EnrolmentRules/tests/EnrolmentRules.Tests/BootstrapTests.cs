@@ -190,6 +190,8 @@ public sealed class BootstrapTests
 	{
 		private readonly byte[] catalogue;
 		private readonly byte[] catalogueSchema;
+		private readonly byte[] gcseSubjects;
+		private readonly byte[] gcseSubjectsSchema;
 		private readonly byte[] qualifications;
 		private readonly byte[] qualificationsSchema;
 		private readonly byte[] thresholds;
@@ -205,6 +207,8 @@ public sealed class BootstrapTests
 			byte[] catalogueSchema,
 			byte[] qualifications,
 			byte[] qualificationsSchema,
+			byte[] gcseSubjects,
+			byte[] gcseSubjectsSchema,
 			byte[] thresholds,
 			byte[] thresholdsSchema,
 			byte[] transitionMatrix)
@@ -215,6 +219,8 @@ public sealed class BootstrapTests
 			this.catalogueSchema = catalogueSchema;
 			this.qualifications = qualifications;
 			this.qualificationsSchema = qualificationsSchema;
+			this.gcseSubjects = gcseSubjects;
+			this.gcseSubjectsSchema = gcseSubjectsSchema;
 			this.thresholds = thresholds;
 			this.thresholdsSchema = thresholdsSchema;
 			this.transitionMatrix = transitionMatrix;
@@ -232,6 +238,10 @@ public sealed class BootstrapTests
 		public Stream OpenQualifications() => new MemoryStream(qualifications, false);
 
 		public Stream OpenQualificationsSchema() => new MemoryStream(qualificationsSchema, false);
+
+		public Stream OpenGcseSubjects() => new MemoryStream(gcseSubjects, false);
+
+		public Stream OpenGcseSubjectsSchema() => new MemoryStream(gcseSubjectsSchema, false);
 
 		public Stream OpenThresholds() => new MemoryStream(thresholds, false);
 
@@ -257,6 +267,8 @@ public sealed class BootstrapTests
 				File.ReadAllBytes(Path.Combine(dataDirectory, CatalogueStore.SchemaFileName)),
 				File.ReadAllBytes(Path.Combine(dataDirectory, QualificationScaleStore.QualificationsFileName)),
 				File.ReadAllBytes(Path.Combine(dataDirectory, QualificationScaleStore.SchemaFileName)),
+				File.ReadAllBytes(Path.Combine(dataDirectory, GcseSubjectsStore.GcseSubjectsFileName)),
+				File.ReadAllBytes(Path.Combine(dataDirectory, GcseSubjectsStore.SchemaFileName)),
 				File.ReadAllBytes(Path.Combine(dataDirectory, PolicyThresholdsStore.ThresholdsFileName)),
 				File.ReadAllBytes(Path.Combine(dataDirectory, PolicyThresholdsStore.SchemaFileName)),
 				transitionMatrix ?? File.ReadAllBytes(Path.Combine(dataDirectory, DfeTransitionMatrix.DataDirectoryRelativePath)));

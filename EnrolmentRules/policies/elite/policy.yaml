@@ -1,0 +1,3 @@
+# Manifest for the Elite auxiliary policy. Its workflows/catalogue/thresholds sit beside this file;
+# schemas, qualifications and the transition matrix fall through to the shared base data.
+display_name: Elite

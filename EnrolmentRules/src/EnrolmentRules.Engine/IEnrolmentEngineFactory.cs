@@ -7,7 +7,15 @@ namespace EnrolmentRules.Engine;
 /// </summary>
 public interface IEnrolmentEngineFactory
 {
-	/// <summary>The engine instance callers should evaluate against right now.</summary>
+	/// <summary>
+	///     The engine instance callers should evaluate against right now. Resolve this once per unit of work
+	///     (e.g. once per request) and reuse that reference — a caller that re-reads <see cref="Current" />
+	///     between two related calls (say, validating against <c>Catalogue</c> and then calling
+	///     <c>EvaluateValidated</c>) can straddle a <see cref="Reload" /> and see two different engines. A
+	///     host that needs cross-call consistency resolves <see cref="IEnrolmentEngineFactory" /> itself and
+	///     holds the snapshot, rather than going through a proxy that re-resolves per call (as
+	///     <c>ReloadingEnrolmentEngineProxy</c> does).
+	/// </summary>
 	IEnrolmentEngine Current { get; }
 
 	/// <summary>

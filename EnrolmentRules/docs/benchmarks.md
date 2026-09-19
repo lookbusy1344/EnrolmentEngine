@@ -73,7 +73,10 @@ BenchmarkDotNet v0.15.8, .NET 10.0.11 and Concurrent Workstation GC:
 - **`Advise` is a different weight class.** Counterfactual advice re-runs the full
   predict → engine → constraint pipeline per node of its grade search; the worst-case middling
   student here costs ~631 ms and allocates ~1.67 GB (with real Gen2 traffic) for a single call —
-  roughly 48,000× a single evaluation.
+  roughly 48,000× a single evaluation. The shipped Standard policy caps the search at
+  `advice_max_pipeline_evaluations: 180000` (`data/thresholds.yaml`) so a wider or less promising
+  search space than this benchmark's cannot grow unbounded; this particular worst case stays under
+  that cap, so the number above is unchanged by the cap, not reduced by it.
 - **The bounded Elite gate near-miss is tractable.** Its five-rule, best-eight/top-seven gate takes
   ~2.3 ms and 5.77 MB when the held GCSE set already satisfies the aggregate bars and only English
   and Maths need one grade step each. This does not replace the worst-case benchmark: wider or less

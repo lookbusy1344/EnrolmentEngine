@@ -18,6 +18,10 @@ public interface IEnrolmentDataSource
 
 	Stream OpenQualificationsSchema();
 
+	Stream OpenGcseSubjects();
+
+	Stream OpenGcseSubjectsSchema();
+
 	Stream OpenThresholds();
 
 	Stream OpenThresholdsSchema();

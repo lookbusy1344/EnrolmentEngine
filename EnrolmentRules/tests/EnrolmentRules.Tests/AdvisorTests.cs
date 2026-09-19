@@ -255,6 +255,29 @@ public sealed class AdvisorTests
 	}
 
 	[Fact]
+	public void restudy_blocked_reason_is_selected_by_kind_not_reason_text()
+	{
+		// A restudy override whose reason does not start with the prefix. Selection must be by
+		// AdjustmentKind, so this reason is returned unchanged.
+		const string reworded = "Biology: already holds a level-3 qualification, so a restudy is barred.";
+		var explanation = new Explanation(
+			Subject.Biology, Rating.Red, reworded, Rating.Green, "rule", "base reason", 6.0,
+			[new(Subject.Biology, Rating.Green, Rating.Red, AdjustmentKind.RestudyBar, reworded)]);
+
+		CounterfactualAdvisor.RestudyBlockedReason(explanation).Should().Be(reworded);
+	}
+
+	[Fact]
+	public void restudy_blocked_reason_is_null_without_a_restudy_override()
+	{
+		var explanation = new Explanation(
+			Subject.Biology, Rating.Red, "capped", Rating.Green, "rule", "base reason", 6.0,
+			[new(Subject.Biology, Rating.Green, Rating.Red, AdjustmentKind.ChosenSubjectCap, "capped")]);
+
+		CounterfactualAdvisor.RestudyBlockedReason(explanation).Should().BeNull();
+	}
+
+	[Fact]
 	public void advisor_preserves_prior_qualifications_when_replaying_reported_changes()
 	{
 		var engine = Harness.ShippedEngine();

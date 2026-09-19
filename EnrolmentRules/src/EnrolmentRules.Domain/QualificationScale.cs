@@ -194,27 +194,7 @@ public sealed class QualificationScale
 			$"Unknown qualification {EnumNames.NameOf(type)} grade '{grade}'.");
 	}
 
-	private static string FindDefaultPath()
-	{
-		var bundled = Path.Combine(AppContext.BaseDirectory, DefaultRelativePath);
-		if (File.Exists(bundled)) {
-			return bundled;
-		}
-
-		var starts = new[] {
-			Directory.GetCurrentDirectory(), AppContext.BaseDirectory,
-		};
-		foreach (var start in starts) {
-			for (var dir = new DirectoryInfo(start); dir is not null; dir = dir.Parent) {
-				var candidate = Path.Combine(dir.FullName, DefaultRelativePath);
-				if (File.Exists(candidate)) {
-					return candidate;
-				}
-			}
-		}
-
-		throw new FileNotFoundException($"Could not locate '{DefaultRelativePath}'.");
-	}
+	private static string FindDefaultPath() => ShippedLayout.Locate(DefaultRelativePath);
 }
 
 internal sealed record QualificationScaleFile(EquatableArray<QualificationTypeEntry> Qualifications)

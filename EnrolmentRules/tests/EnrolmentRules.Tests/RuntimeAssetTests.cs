@@ -41,6 +41,10 @@ public sealed class RuntimeAssetTests
 		File.Exists(Path.Combine(publishDir, "data", "dfe-transition-matrices", "gce-a-level-2019-transition-probabilities.csv")).Should().BeTrue();
 		File.Exists(Path.Combine(publishDir, "data", "catalogue.yaml")).Should().BeTrue();
 		File.Exists(Path.Combine(publishDir, "data", "catalogue.schema.json")).Should().BeTrue();
+		File.Exists(Path.Combine(publishDir, "data", "gcse-subjects.yaml")).Should().BeTrue();
+		File.Exists(Path.Combine(publishDir, "data", "gcse-subjects.schema.json")).Should().BeTrue();
+		File.Exists(Path.Combine(publishDir, "data", "policy.schema.json")).Should().BeTrue();
+		File.Exists(Path.Combine(publishDir, "policies", "elite", "policy.yaml")).Should().BeTrue();
 
 		// The Elite auxiliary policy: only its own workflows/catalogue/thresholds — no copied schemas,
 		// qualifications or transition matrix (those stay single-copy above, under the shared data/ tree
@@ -100,7 +104,11 @@ public sealed class RuntimeAssetTests
 		File.Exists(Path.Combine(publishDir, "data", "catalogue.yaml")).Should().BeTrue();
 		File.Exists(Path.Combine(publishDir, "data", "catalogue.schema.json")).Should().BeTrue();
 		File.Exists(Path.Combine(publishDir, "data", "qualifications.yaml")).Should().BeTrue();
+		File.Exists(Path.Combine(publishDir, "data", "gcse-subjects.yaml")).Should().BeTrue();
+		File.Exists(Path.Combine(publishDir, "data", "gcse-subjects.schema.json")).Should().BeTrue();
 		File.Exists(Path.Combine(publishDir, "data", "thresholds.yaml")).Should().BeTrue();
+		File.Exists(Path.Combine(publishDir, "data", "policy.schema.json")).Should().BeTrue();
+		File.Exists(Path.Combine(publishDir, "policies", "elite", "policy.yaml")).Should().BeTrue();
 
 		File.Exists(Path.Combine(publishDir, "policies", "elite", "workflows", "eligibility.yaml")).Should().BeTrue();
 		File.Exists(Path.Combine(publishDir, "policies", "elite", "workflows", "subject-ratings.yaml")).Should().BeTrue();

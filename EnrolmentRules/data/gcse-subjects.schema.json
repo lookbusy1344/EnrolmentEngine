@@ -1,0 +1,22 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://enrolmentrules/gcse-subjects.schema.json",
+  "title": "GCSE vocabulary",
+  "description": "Structural validation for the recognised GCSE subject key list. Blank and duplicate checks are enforced in code.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "subjects"
+  ],
+  "properties": {
+    "subjects": {
+      "type": "array",
+      "minItems": 1,
+      "uniqueItems": true,
+      "items": {
+        "type": "string",
+        "pattern": "^[a-z]+(?:_[a-z]+)*$"
+      }
+    }
+  }
+}

@@ -53,7 +53,7 @@ public sealed class PriorQualificationTests
 		var profile = Harness.Predict(student);
 		var biology = profile.PredictedGrades.Single(p => p.Subject == Subject.Biology).PredictedPoints;
 
-		biology.Should().BeApproximately(Catalogue.Meta(Subject.Biology).Regression.Predict(profile.AverageGcseScore), 1e-9);
+		biology.Should().BeApproximately(Harness.Catalogue.Meta(Subject.Biology).Regression.Predict(profile.AverageGcseScore), 1e-9);
 	}
 
 	[Fact]
@@ -69,7 +69,7 @@ public sealed class PriorQualificationTests
 		var profile = Harness.Predict(student);
 		var biology = profile.PredictedGrades.Single(p => p.Subject == Subject.Biology).PredictedPoints;
 
-		biology.Should().BeApproximately(Catalogue.Meta(Subject.Biology).Regression.Predict(profile.AverageGcseScore), 1e-9);
+		biology.Should().BeApproximately(Harness.Catalogue.Meta(Subject.Biology).Regression.Predict(profile.AverageGcseScore), 1e-9);
 		biology.Should().BeGreaterThan(ALevelGrade.A);
 	}
 

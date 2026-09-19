@@ -129,9 +129,6 @@ public sealed record TransitionEvidence(
 	[JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
 	public string? RequestedBand { get; init; }
 
-	/// <summary>Whether the probabilities were imputed from a neighbouring band rather than the student's own.</summary>
-	public bool Imputed => RequestedBand is not null;
-
 	/// <summary>Probability of achieving at least <paramref name="minimumGrade" /> on the A-level points scale.</summary>
 	public double ProbabilityAtOrAbove(double minimumGrade) => minimumGrade switch {
 		<= ALevelGrade.U => ProbabilityU + ProbabilityE + ProbabilityD + ProbabilityC + ProbabilityB + ProbabilityA + ProbabilityAStar,

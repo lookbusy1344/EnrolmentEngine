@@ -4,9 +4,7 @@ using System.Text.Json.Serialization;
 
 /// <summary>
 ///     Source-generated (reflection-free) <see cref="System.Text.Json" /> contract for
-///     <c>/api/enrolment/*</c> request/response bodies. Deliberately separate from
-///     <see cref="Models.WebJsonContext" />: that context serialises the snake_case session snapshot, while
-///     this one is the camelCase wire shape the Vue client consumes.
+///     <c>/api/enrolment/*</c> request/response bodies — the camelCase wire shape the Vue client consumes.
 /// </summary>
 [JsonSourceGenerationOptions(PropertyNamingPolicy = JsonKnownNamingPolicy.CamelCase)]
 [JsonSerializable(typeof(OptionItem))]

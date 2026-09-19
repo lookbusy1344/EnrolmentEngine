@@ -6,8 +6,9 @@ using Domain;
 ///     Boundary/resource limits for the posted <c>/api/enrolment/evaluate</c> snapshot, checked before
 ///     <see cref="EnrolmentApiMapper" /> so an oversized document is rejected cheaply rather than mapped
 ///     and evaluated. These are transport-level resource limits sized from the actual vocabulary
-///     (<see cref="GcseSubjects" />, the catalogue), not compiled policy — a structurally valid grade or
-///     subject key within these bounds is still checked by <see cref="StudentValidator" /> once mapped.
+///     (the selected policy's <see cref="GcseVocabulary" />, the catalogue), not compiled policy — a
+///     structurally valid grade or subject key within these bounds is still checked by
+///     <see cref="StudentValidator" /> once mapped.
 /// </summary>
 public static class EnrolmentApiBoundaryValidator
 {
@@ -21,13 +22,14 @@ public static class EnrolmentApiBoundaryValidator
 	private const int MaxHobbies = 50;
 
 	/// <summary>Every problem found, in document order; empty means the snapshot is within bounds.</summary>
-	public static IReadOnlyList<string> Validate(EnrolmentEvaluateRequest request, CatalogueData catalogue)
+	public static IReadOnlyList<string> Validate(EnrolmentEvaluateRequest request, CatalogueData catalogue, GcseVocabulary gcses)
 	{
 		ArgumentNullException.ThrowIfNull(request);
 		ArgumentNullException.ThrowIfNull(catalogue);
+		ArgumentNullException.ThrowIfNull(gcses);
 
 		return [
-			.. CountLimit(request.Gcses.Count, GcseSubjects.Known.Count, "gcses"),
+			.. CountLimit(request.Gcses.Count, gcses.Known.Count, "gcses"),
 			.. request.Gcses.SelectMany(static (row, index) => TokenLimit(row.Subject, $"gcses[{index}].subject")),
 			.. CountLimit(request.ChosenALevels.Count, catalogue.Subjects.Count, "chosen_a_levels"),
 			.. request.ChosenALevels.SelectMany(static (value, index) => TokenLimit(value, $"chosen_a_levels[{index}]")),

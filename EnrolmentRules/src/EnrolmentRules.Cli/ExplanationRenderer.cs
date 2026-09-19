@@ -9,16 +9,6 @@ using Domain;
 /// </summary>
 public static class ExplanationRenderer
 {
-	private static readonly (double Points, string Grade)[] ALevelBands = [
-		(ALevelGrade.AStar, "A*"),
-		(ALevelGrade.A, "A"),
-		(ALevelGrade.B, "B"),
-		(ALevelGrade.C, "C"),
-		(ALevelGrade.D, "D"),
-		(ALevelGrade.E, "E"),
-		(ALevelGrade.U, "U"),
-	];
-
 	public static void Render(ExplainedResult result, TextWriter writer)
 	{
 		writer.WriteLine(result.Eligible ? "# Eligible" : "# Ineligible");
@@ -45,9 +35,9 @@ public static class ExplanationRenderer
 		writer.WriteLine($"## {Escape(EnumNames.NameOf(explanation.Subject))}");
 		writer.WriteLine($"Final rating: {EnumNames.NameOf(explanation.Rating)}. {Escape(explanation.Reason)}");
 
-		var predictedGrade = BandFor(explanation.PredictedPoints);
+		var predictedGrade = ALevelGrade.NearestBand(explanation.PredictedPoints);
 		writer.WriteLine(
-			$"The engine rated this **{Escape(EnumNames.NameOf(explanation.BaseRating))}** because: {Escape(explanation.BaseReason)} (predicted {Escape(predictedGrade.Grade)}, ~{explanation.PredictedPoints.ToString("0.##", CultureInfo.InvariantCulture)}).");
+			$"The engine rated this **{Escape(EnumNames.NameOf(explanation.BaseRating))}** because: {Escape(explanation.BaseReason)} (predicted {Escape(predictedGrade.Name)}, ~{explanation.PredictedPoints.ToString("0.##", CultureInfo.InvariantCulture)}).");
 
 		if (explanation.EntryEquivalentReason is string entryEquivalentReason) {
 			writer.WriteLine(Escape(entryEquivalentReason));
@@ -63,9 +53,6 @@ public static class ExplanationRenderer
 			writer.WriteLine($"- {EnumNames.NameOf(override_.From)} → {EnumNames.NameOf(override_.To)}: {Escape(override_.Reason)}");
 		}
 	}
-
-	private static (double Points, string Grade) BandFor(double points) =>
-		ALevelBands.MinBy(band => Math.Abs(band.Points - points));
 
 	private static string Escape(string text) =>
 		text

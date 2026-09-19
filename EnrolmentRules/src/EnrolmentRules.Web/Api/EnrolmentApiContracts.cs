@@ -1,6 +1,6 @@
 namespace EnrolmentRules.Web.Api;
 
-using Infrastructure;
+using Domain;
 
 /// <summary>A single picker option: the value posted back to <c>/api/enrolment/evaluate</c>, and its display label.</summary>
 public sealed record OptionItem(string Value, string Label);

@@ -34,6 +34,48 @@ public sealed class DomainTests
 	public void rating_serialises_to_lowercase(Rating rating, string expected) =>
 		JsonSerializer.Serialize(rating).Should().Be(expected);
 
+	[Fact]
+	public void a_level_grade_names_an_exact_point() => ALevelGrade.Name(ALevelGrade.A).Should().Be("A");
+
+	[Fact]
+	public void a_level_grade_name_throws_off_grid()
+	{
+		var act = () => ALevelGrade.Name(4.5);
+
+		act.Should().Throw<ArgumentOutOfRangeException>();
+	}
+
+	[Theory]
+	[InlineData(4.9, "A")]
+	[InlineData(4.2, "B")]
+	[InlineData(4.5, "A")] // tie broken towards the higher grade
+	public void a_level_grade_rounds_a_continuous_prediction_to_the_nearest_band(double points, string expected) =>
+		ALevelGrade.NearestBand(points).Name.Should().Be(expected);
+
+	[Fact]
+	public void shipped_layout_finds_a_file_beside_the_base_directory()
+	{
+		var name = $"shipped-layout-{Guid.NewGuid():N}.marker";
+		var path = Path.Combine(AppContext.BaseDirectory, name);
+		File.WriteAllText(path, "x");
+		try {
+			ShippedLayout.Locate(name).Should().Be(path);
+		}
+		finally {
+			File.Delete(path);
+		}
+	}
+
+	[Fact]
+	public void shipped_layout_throws_when_the_path_is_absent()
+	{
+		// A marker no directory carries pins the walk to nothing, so nothing is found. (The successful marker
+		// walk is exercised by every CLI test, which resolves workflows/data/policies through it.)
+		var act = () => ShippedLayout.Locate($"missing-{Guid.NewGuid():N}.yaml", $"no-such-marker-{Guid.NewGuid():N}");
+
+		act.Should().Throw<FileNotFoundException>();
+	}
+
 	[Theory]
 	[MemberData(nameof(SerialisedSubjects))]
 	public void subject_serialises_to_snake_case(string subjectName, string expected)
@@ -77,13 +119,4 @@ public sealed class DomainTests
 	public void default_subject_stringifies_to_empty_not_null() =>
 		// FDG §8: ToString must never return null; the strongly-typed-string zero state is the empty string.
 		default(Subject).ToString().Should().BeEmpty();
-
-	[Fact]
-	public void most_severe_returns_the_worse_rating()
-	{
-		Rating.Green.MostSevere(Rating.Amber).Should().Be(Rating.Amber);
-		Rating.Amber.MostSevere(Rating.Red).Should().Be(Rating.Red);
-		Rating.Red.MostSevere(Rating.Green).Should().Be(Rating.Red);
-		Rating.Green.MostSevere(Rating.Green).Should().Be(Rating.Green);
-	}
 }

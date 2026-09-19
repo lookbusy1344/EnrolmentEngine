@@ -44,6 +44,12 @@ public sealed class OverlayEnrolmentDataSource : IEnrolmentDataSource
 	/// <summary>The shared base qualification scale JSON schema.</summary>
 	public Stream OpenQualificationsSchema() => @base.OpenQualificationsSchema();
 
+	/// <summary>The shared base GCSE vocabulary — not duplicated per policy.</summary>
+	public Stream OpenGcseSubjects() => @base.OpenGcseSubjects();
+
+	/// <summary>The shared base GCSE vocabulary JSON schema.</summary>
+	public Stream OpenGcseSubjectsSchema() => @base.OpenGcseSubjectsSchema();
+
 	/// <summary>The auxiliary policy's own thresholds.</summary>
 	public Stream OpenThresholds() => auxiliary.OpenThresholds();
 

@@ -83,6 +83,12 @@ public sealed class EnrolmentEngine : IEnrolmentEngine
 	/// <summary>The policy knobs (choice caps, entry bands, etc.) this engine evaluates against.</summary>
 	public PolicyThresholds Thresholds => evaluator.Thresholds;
 
+	/// <summary>The recognised GCSE subject keys this engine validates student input against.</summary>
+	public GcseVocabulary Gcses => evaluator.Gcses;
+
+	/// <inheritdoc />
+	public DateOnly Today() => asOf();
+
 	/// <inheritdoc />
 	/// <remarks>
 	///     Narrated from the same workflow graph this engine evaluates, so the criteria a student is shown
@@ -323,6 +329,7 @@ public sealed class EnrolmentEngine : IEnrolmentEngine
 	/// </summary>
 	/// <exception cref="WorkflowException">A workflow file failed schema validation or probe compilation.</exception>
 	/// <exception cref="CatalogueException">The catalogue failed schema validation or load-time invariant checks.</exception>
+	/// <exception cref="GcseSubjectsException">The GCSE vocabulary failed schema validation or load-time invariant checks.</exception>
 	/// <exception cref="PolicyThresholdsException">The thresholds file failed schema validation or load-time invariant checks.</exception>
 	public static EnrolmentEngine Create(
 		string workflowsDirectory,
@@ -352,6 +359,7 @@ public sealed class EnrolmentEngine : IEnrolmentEngine
 	/// <exception cref="InvalidOperationException"><paramref name="source" /> returned null from a stream- or workflow-opening member.</exception>
 	/// <exception cref="WorkflowException">A workflow file failed schema validation or probe compilation.</exception>
 	/// <exception cref="CatalogueException">The catalogue failed schema validation or load-time invariant checks.</exception>
+	/// <exception cref="GcseSubjectsException">The GCSE vocabulary failed schema validation or load-time invariant checks.</exception>
 	/// <exception cref="PolicyThresholdsException">The thresholds file failed schema validation or load-time invariant checks.</exception>
 	public static EnrolmentEngine Create(
 		IEnrolmentDataSource source,
@@ -382,6 +390,11 @@ public sealed class EnrolmentEngine : IEnrolmentEngine
 			RequireStream(source.OpenQualificationsSchema(), nameof(IEnrolmentDataSource.OpenQualificationsSchema));
 		var scale = QualificationScaleStore.LoadAndValidate(qualificationsStream, qualificationsSchemaStream);
 		cancellationToken.ThrowIfCancellationRequested();
+		using var gcseSubjectsStream = RequireStream(source.OpenGcseSubjects(), nameof(IEnrolmentDataSource.OpenGcseSubjects));
+		using var gcseSubjectsSchemaStream =
+			RequireStream(source.OpenGcseSubjectsSchema(), nameof(IEnrolmentDataSource.OpenGcseSubjectsSchema));
+		var gcses = GcseSubjectsStore.LoadAndValidate(gcseSubjectsStream, gcseSubjectsSchemaStream);
+		cancellationToken.ThrowIfCancellationRequested();
 		using var catalogueStream = RequireStream(source.OpenCatalogue(), nameof(IEnrolmentDataSource.OpenCatalogue));
 		using var catalogueSchemaStream = RequireStream(source.OpenCatalogueSchema(), nameof(IEnrolmentDataSource.OpenCatalogueSchema));
 		var catalogue = CatalogueStore.LoadAndValidate(catalogueStream, catalogueSchemaStream, scale);
@@ -393,9 +406,9 @@ public sealed class EnrolmentEngine : IEnrolmentEngine
 		var workflowFiles = RequireWorkflows(source.OpenWorkflows());
 		try {
 			using var workflowSchemaStream = RequireStream(source.OpenWorkflowSchema(), nameof(IEnrolmentDataSource.OpenWorkflowSchema));
-			var built = WorkflowStore.LoadValidateBuildAndProbe(workflowFiles, workflowSchemaStream, catalogue, thresholds, matrix, scale);
+			var built = WorkflowStore.LoadValidateBuildAndProbe(workflowFiles, workflowSchemaStream, catalogue, thresholds, matrix, scale, gcses);
 			cancellationToken.ThrowIfCancellationRequested();
-			return new(new(built.Engine, thresholds, catalogue, scale), catalogue, asOf, matrix, built.Workflows);
+			return new(new(built.Engine, thresholds, catalogue, scale, gcses), catalogue, asOf, matrix, built.Workflows);
 		}
 		finally {
 			foreach (var workflow in workflowFiles) {
@@ -509,7 +522,7 @@ public sealed class EnrolmentEngine : IEnrolmentEngine
 	];
 
 	private ValidationOutcome ValidateInput(StudentInput student) =>
-		new([.. StudentValidator.Validate(student, Catalogue, Scale)]);
+		new([.. StudentValidator.Validate(student, Catalogue, Scale, Gcses)]);
 
 	private EnrolmentResult ToResult(Evaluation e) =>
 		new(

@@ -22,7 +22,7 @@ public sealed partial class InvariantTests
 	// subject is green — each contributing its full priority weight, with no amber discount. That sum is the
 	// upper bound any real student's score must stay within.
 	private static readonly double MaxProgrammePriorityScore =
-		Catalogue.Subjects.Sum(static subject => Catalogue.Meta(subject).PriorityWeight);
+		Catalogue.Subjects.Sum(static subject => Harness.Catalogue.Meta(subject).PriorityWeight);
 
 	private static readonly Qualification BiologyPriorALevel =
 		new(Subject.Biology.Value, QualificationType.ALevel, "e");
@@ -60,14 +60,14 @@ public sealed partial class InvariantTests
 	public void shipped_catalogue_exclusions_are_symmetric_and_never_green()
 	{
 		var edges = Catalogue.Subjects
-							 .SelectMany(subject => Catalogue.Meta(subject).Exclusions.Select(exclusion => (subject, exclusion)))
+							 .SelectMany(subject => Harness.Catalogue.Meta(subject).Exclusions.Select(exclusion => (subject, exclusion)))
 							 .ToArray();
 
 		edges.Should().NotBeEmpty();
 		edges.Should().OnlyContain(static edge => edge.exclusion.Severity != Rating.Green);
 
 		foreach (var (subject, exclusion) in edges) {
-			Catalogue.Meta(exclusion.Other).Exclusions.Should().ContainSingle(back =>
+			Harness.Catalogue.Meta(exclusion.Other).Exclusions.Should().ContainSingle(back =>
 				back.Other == subject && back.Severity == exclusion.Severity);
 		}
 	}
@@ -75,9 +75,9 @@ public sealed partial class InvariantTests
 	[Fact]
 	public void shipped_catalogue_includes_the_illustrative_red_clash()
 	{
-		Catalogue.Meta(Subject.French).Exclusions.Should().Contain(exclusion =>
+		Harness.Catalogue.Meta(Subject.French).Exclusions.Should().Contain(exclusion =>
 			exclusion.Other == Subject.German && exclusion.Severity == Rating.Red);
-		Catalogue.Meta(Subject.German).Exclusions.Should().Contain(exclusion =>
+		Harness.Catalogue.Meta(Subject.German).Exclusions.Should().Contain(exclusion =>
 			exclusion.Other == Subject.French && exclusion.Severity == Rating.Red);
 	}
 
@@ -230,10 +230,10 @@ public sealed partial class InvariantTests
 			Catalogue.Subjects.ToDictionary(
 				static subject => subject,
 				subject_ => subject_ == subject
-					? Catalogue.Meta(subject_) with {
+					? Harness.Catalogue.Meta(subject_) with {
 						RestudyBar = new([QualificationType.ALevel], severity),
 					}
-					: Catalogue.Meta(subject_)),
+					: Harness.Catalogue.Meta(subject_)),
 			Catalogue.Subjects);
 
 	public static class StudentArbitraries

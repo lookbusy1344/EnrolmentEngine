@@ -29,7 +29,8 @@ internal sealed class RatingEvaluator(
 	IRulesEngine engine,
 	PolicyThresholds thresholds,
 	CatalogueData? catalogue = null,
-	QualificationScale? scale = null)
+	QualificationScale? scale = null,
+	GcseVocabulary? gcses = null)
 {
 	public const string EligibilityWorkflow = "eligibility";
 	public const string SubjectRatingsWorkflow = "subject-ratings";
@@ -60,6 +61,9 @@ internal sealed class RatingEvaluator(
 
 	/// <summary>The qualification scale this evaluator binds into prediction and entry-equivalent checks.</summary>
 	public QualificationScale Scale { get; } = scale ?? QualificationScale.Default;
+
+	/// <summary>The GCSE vocabulary this evaluator binds into the probe student, the linter and host validation.</summary>
+	public GcseVocabulary Gcses { get; } = gcses ?? GcseVocabulary.Default;
 
 	/// <summary>
 	///     Shape one student's GCSEs into the two engine inputs the eligibility workflow binds to: the

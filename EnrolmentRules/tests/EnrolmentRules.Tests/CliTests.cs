@@ -1,6 +1,7 @@
 namespace EnrolmentRules.Tests;
 
 using System.Globalization;
+using System.Text;
 using System.Text.Json;
 using AwesomeAssertions;
 using Cli;
@@ -438,6 +439,40 @@ public sealed class CliTests
 										.Should().Equal(Enumerable.Range(0, lineCount).Select(static index => index.ToString(CultureInfo.InvariantCulture)));
 	}
 
+	[Fact]
+	public void evaluate_batch_isolates_a_throwing_evaluation_to_that_line()
+	{
+		// A per-line evaluation that throws must land on that line's outcome, leaving the others intact —
+		// "one bad student never aborts the run". Before the fix the exception escaped as an AggregateException.
+		using var reader = new StringReader("a\nb\nc\n");
+		using var stdout = new StringWriter();
+
+		CliRunner.EvaluateBatch(
+			reader,
+			stdout,
+			static line => line == "b" ? throw new InvalidOperationException("boom") : new BatchOutcome(line, null, null),
+			1);
+
+		var outcomes = ParseOutcomes(stdout.ToString());
+		outcomes.Select(o => o.Id).Should().Equal("a", "?", "c");
+		outcomes[1].Error.Should().Contain("boom");
+	}
+
+	[Fact]
+	public void batch_returns_an_input_error_when_the_output_stream_closes_mid_run()
+	{
+		// stdout piped to `head` closes after one line; the next WriteLine throws IOException inside a worker,
+		// surfacing as an AggregateException. RunBatch must report an input error, not crash with a stack trace.
+		var path = WriteTemp(string.Join('\n', EligibleLine("S-A"), EligibleLine("S-B"), EligibleLine("S-C")), ".jsonl");
+		using var stdout = new ThrowingAfterFirstLineWriter();
+		using var stderr = new StringWriter();
+
+		var exit = CliRunner.Run(["--batch", path], stdout, stderr);
+
+		exit.Should().Be(CliRunner.ExitInput);
+		stderr.ToString().Should().Contain("could not write batch output");
+	}
+
 	// ---- YAML input (single-student modes) ---------------------------------------------------
 
 	// The same eligible student as EligibleLine, authored as YAML rather than JSON.
@@ -532,6 +567,74 @@ public sealed class CliTests
 		}
 	}
 
+	[Fact]
+	public void cli_reports_malformed_gcse_vocabulary_as_an_input_error_for_evaluation_modes()
+	{
+		var fixture = WriteDataFixture();
+		try {
+			File.WriteAllText(Path.Combine(fixture.DataDir, GcseSubjectsStore.GcseSubjectsFileName), "subjects: [");
+			var path = WriteTemp(EligibleLine("S-OK"), ".json");
+			using var stdout = new StringWriter();
+			using var stderr = new StringWriter();
+
+			var exit = CliRunner.Run(["--json", path], stdout, stderr, () => fixture.WorkflowsDir, () => fixture.DataDir);
+
+			exit.Should().Be(CliRunner.ExitInput);
+			stdout.ToString().Should().BeEmpty();
+			stderr.ToString().Should().Contain("could not load enrolment rules").And.Contain("gcse-subjects.yaml");
+		}
+		finally {
+			Directory.Delete(fixture.Root, true);
+		}
+	}
+
+	[Fact]
+	public void cli_reports_invalid_policy_discovery_as_an_input_error()
+	{
+		var fixture = WriteDataFixture();
+		var policiesDir = Path.Combine(fixture.Root, "policies");
+		Directory.CreateDirectory(Path.Combine(policiesDir, "broken"));
+		try {
+			var path = WriteTemp(EligibleLine("S-OK"), ".json");
+			using var stdout = new StringWriter();
+			using var stderr = new StringWriter();
+
+			var exit = CliRunner.Run(
+				["--json", path], stdout, stderr,
+				() => fixture.WorkflowsDir, () => fixture.DataDir, () => policiesDir);
+
+			exit.Should().Be(CliRunner.ExitInput);
+			stdout.ToString().Should().BeEmpty();
+			stderr.ToString().Should().Contain("could not load enrolment policies").And.Contain("broken");
+		}
+		finally {
+			Directory.Delete(fixture.Root, true);
+		}
+	}
+
+	[Fact]
+	public void cli_profile_validates_against_the_selected_data_sources_gcse_vocabulary()
+	{
+		const string policyOnlySubject = "astronomy";
+		var fixture = WriteDataFixture();
+		try {
+			var vocabularyPath = Path.Combine(fixture.DataDir, GcseSubjectsStore.GcseSubjectsFileName);
+			File.AppendAllText(vocabularyPath, $"\n  - {policyOnlySubject}\n");
+			var path = WriteTemp(StudentLine("S-PROFILE", $$"""{"{{policyOnlySubject}}":7}"""), ".json");
+			using var stdout = new StringWriter();
+			using var stderr = new StringWriter();
+
+			var exit = CliRunner.Run([path], stdout, stderr, () => fixture.WorkflowsDir, () => fixture.DataDir);
+
+			exit.Should().Be(CliRunner.ExitOk);
+			stdout.ToString().Should().Contain("S-PROFILE");
+			stderr.ToString().Should().BeEmpty();
+		}
+		finally {
+			Directory.Delete(fixture.Root, true);
+		}
+	}
+
 	[Theory]
 	[InlineData("--version")]
 	[InlineData("-v")]
@@ -614,16 +717,23 @@ public sealed class CliTests
 
 	private static (string Root, string DataDir, string WorkflowsDir) WriteMalformedDataFixture()
 	{
-		var dir = Path.Combine(Path.GetTempPath(), "enrolmentrules-tests", Guid.NewGuid().ToString("N"));
-		var dataDir = Path.Combine(dir, "data");
-		var workflowsDir = Path.Combine(dir, "workflows");
+		var fixture = WriteDataFixture();
+
+		File.WriteAllText(Path.Combine(fixture.DataDir, CatalogueStore.CatalogueFileName), "subjects: [");
+
+		return fixture;
+	}
+
+	private static (string Root, string DataDir, string WorkflowsDir) WriteDataFixture()
+	{
+		var root = Path.Combine(Path.GetTempPath(), "enrolmentrules-tests", Guid.NewGuid().ToString("N"));
+		var dataDir = Path.Combine(root, "data");
+		var workflowsDir = Path.Combine(root, "workflows");
 
 		CopyTree(Harness.DataDir, dataDir);
 		CopyTree(Harness.WorkflowsDir, workflowsDir);
 
-		File.WriteAllText(Path.Combine(dataDir, CatalogueStore.CatalogueFileName), "subjects: [");
-
-		return (dir, dataDir, workflowsDir);
+		return (root, dataDir, workflowsDir);
 	}
 
 	private static (string Root, string DataDir, string WorkflowsDir) WriteScaleAlignedLintFixture()
@@ -742,6 +852,22 @@ public sealed class CliTests
 		{
 			using (sync.EnterScope()) {
 				return base.ToString();
+			}
+		}
+	}
+
+	// Models stdout piped to `head`: the first line writes, every WriteLine after it throws IOException.
+	// EmitInOrder serialises writes under its own lock, so no internal synchronisation is needed here.
+	private sealed class ThrowingAfterFirstLineWriter : TextWriter
+	{
+		private int lineCount;
+
+		public override Encoding Encoding => Encoding.UTF8;
+
+		public override void WriteLine(string? value)
+		{
+			if (lineCount++ >= 1) {
+				throw new IOException("broken pipe");
 			}
 		}
 	}

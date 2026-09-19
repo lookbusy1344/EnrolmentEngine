@@ -8,15 +8,16 @@ using Subject = Domain.Subject;
 ///     One labelled section of a grouped subject picker, keyed by the exact <see cref="QualificationType" />
 ///     it represents — the client infers Type from whichever group a chosen subject belongs to.
 /// </summary>
-public readonly record struct SubjectOptionGroup(QualificationType Type, string Label, Infrastructure.EquatableArray<string> Subjects);
+public readonly record struct SubjectOptionGroup(QualificationType Type, string Label, EquatableArray<string> Subjects);
 
 /// <summary>
 ///     The picker/default data the <c>/api/enrolment/options</c> endpoint needs to render a facts form,
-///     derived from the selected <see cref="EnrolmentPolicy" />'s catalogue/validator/scale. Constructed per
-///     request against the caller's resolved policy (never DI-scoped to a single fixed engine), so a
-///     Standard and an Elite request in flight at once never share state.
+///     derived from the selected <see cref="EnrolmentPolicy" />'s catalogue/validator/scale. Every property
+///     but <see cref="Today" />/<see cref="DefaultDateOfBirth" />/<see cref="DefaultAge" /> is a pure
+///     function of the immutable policy, so one instance is built per policy and reused for the process
+///     lifetime (<c>EnrolmentApiEndpoints</c>'s cache) rather than rebuilt per request.
 /// </summary>
-public sealed class EnrolmentOptionsService(EnrolmentPolicy policy, TimeProvider timeProvider)
+public sealed class EnrolmentOptionsService(EnrolmentPolicy policy)
 {
 	/// <summary>
 	///     Age assumed for a student who hasn't entered a date of birth yet, used only to pre-fill the date
@@ -77,7 +78,7 @@ public sealed class EnrolmentOptionsService(EnrolmentPolicy policy, TimeProvider
 	///     <see cref="PinnedGcseSubjects" /> first and the remainder alphabetical.
 	/// </summary>
 	public IReadOnlyList<string> GcseSubjectOptions { get; } =
-		[.. PinnedGcseSubjects, .. GcseSubjects.Known.Except(PinnedGcseSubjects).Order(StringComparer.Ordinal)];
+		[.. PinnedGcseSubjects, .. policy.Engine.Gcses.Known.Except(PinnedGcseSubjects).Order(StringComparer.Ordinal)];
 
 	public IReadOnlyList<QualificationType> QualificationTypeOptions => CachedQualificationTypeOptions;
 
@@ -85,10 +86,10 @@ public sealed class EnrolmentOptionsService(EnrolmentPolicy policy, TimeProvider
 	///     Every grade token defined for each <see cref="QualificationType" />, weakest to strongest — the
 	///     dependent Grade dropdown's options, keyed by the same type each front end already posts.
 	/// </summary>
-	public IReadOnlyDictionary<QualificationType, IReadOnlyList<string>> QualificationGradeOptions =>
+	public IReadOnlyDictionary<QualificationType, IReadOnlyList<string>> QualificationGradeOptions { get; } =
 		CachedQualificationTypeOptions.ToDictionary(
 			static type => type,
-			type => Evaluator.Scale.GradesInOrder(type));
+			type => ((IEnrolmentEvaluator)policy.Engine).Scale.GradesInOrder(type));
 
 	/// <summary>
 	///     Subject names a prior qualification can usefully name, one group per exact
@@ -98,12 +99,13 @@ public sealed class EnrolmentOptionsService(EnrolmentPolicy policy, TimeProvider
 	///     <c>BtecDiploma</c>) plus its illustrative examples, if any. The client infers Type from whichever
 	///     group the chosen subject belongs to, so the student never picks Type directly.
 	/// </summary>
-	public IReadOnlyList<SubjectOptionGroup> PriorQualificationSubjectGroups =>
-		[.. CachedQualificationTypeOptions.Select(type => BuildSubjectGroup(type, Evaluator.Catalogue))];
+	public IReadOnlyList<SubjectOptionGroup> PriorQualificationSubjectGroups { get; } =
+		[.. CachedQualificationTypeOptions.Select(type => BuildSubjectGroup(type, ((IEnrolmentEvaluator)policy.Engine).Catalogue))];
 
 	/// <summary>Every own-time/veto activity tag referenced anywhere in the catalogue, plus a few illustrative examples.</summary>
-	public IReadOnlyList<string> HobbyOptions => [
-		.. BuildHobbyOptions(Evaluator.Catalogue).Concat(IllustrativeHobbies).Distinct(StringComparer.Ordinal).Order(StringComparer.Ordinal),
+	public IReadOnlyList<string> HobbyOptions { get; } = [
+		.. BuildHobbyOptions(((IEnrolmentEvaluator)policy.Engine).Catalogue)
+		   .Concat(IllustrativeHobbies).Distinct(StringComparer.Ordinal).Order(StringComparer.Ordinal),
 	];
 
 	/// <summary>The base selected-A-level cap (<see cref="PolicyThresholds.MaxChosenALevels" />); the high-attainment cap is evaluation-specific.</summary>
@@ -116,7 +118,12 @@ public sealed class EnrolmentOptionsService(EnrolmentPolicy policy, TimeProvider
 
 	public int DefaultAge() => AgeCalculator.WholeYears(DefaultDateOfBirth(), Today());
 
-	public DateOnly Today() => DateOnly.FromDateTime(timeProvider.GetUtcNow().UtcDateTime);
+	/// <summary>
+	///     The same reference date the policy's engine evaluates against (<see cref="IEnrolmentEvaluator.Today" />)
+	///     — reading it here rather than from a separately-injected clock keeps the options defaults and the
+	///     engine's own eligibility gate from ever disagreeing about "today" (F13).
+	/// </summary>
+	public DateOnly Today() => Evaluator.Today();
 
 	private static SubjectOptionGroup BuildSubjectGroup(QualificationType type, CatalogueData catalogue)
 	{

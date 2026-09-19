@@ -188,6 +188,7 @@ Required types:
 - `EnrolmentRules.Engine.Hosting.WorkflowContent`
 - `EnrolmentRules.Engine.Hosting.DirectoryDataSource`
 - `EnrolmentRules.Engine.Hosting.OverlayEnrolmentDataSource`
+- `EnrolmentRules.Engine.Hosting.PolicyDirectoryLayout`
 - `EnrolmentRules.Engine.EnrolmentEngine`
 - `EnrolmentRules.Engine.Hosting.EnrolmentEngineFactory`
 
@@ -258,6 +259,7 @@ Required types:
 - `EnrolmentRules.Domain.Authoring.QualificationScaleException`
 - `EnrolmentRules.Domain.Authoring.PolicyThresholdsStore`
 - `EnrolmentRules.Domain.Authoring.PolicyThresholdsException`
+- `EnrolmentRules.Domain.Authoring.SchemaValidator`
 - `EnrolmentRules.Domain.LintFinding`
 - `EnrolmentRules.Domain.LintSeverity`
 
@@ -282,7 +284,8 @@ needs to import them.
 - **Schema-backed stores and their load/validation exceptions**, isolated in
   `EnrolmentRules.Domain.Authoring` (mirroring `EnrolmentRules.Engine.Authoring` one layer down):
   `PolicyThresholdsStore`, `PolicyThresholdsException`, `QualificationScaleStore`,
-  `QualificationScaleException`. `CatalogueDataException` stays in mainline
+  `QualificationScaleException`, and `SchemaValidator` (the shared JSON-Schema validation the stores
+  delegate to). `CatalogueDataException` stays in mainline
   `EnrolmentRules.Domain` — it is a runtime invariant of the already-built `CatalogueData` snapshot,
   raised by `Catalogue.Load*`, not a YAML/schema load-time failure from a separate store type.
 - **Diagnostics**, isolated in `EnrolmentRules.Domain.Diagnostics`: `BuildInfo`, read by the
@@ -349,13 +352,17 @@ EnrolmentRules.Domain.ExplainedResult
 EnrolmentRules.Domain.Explanation
 EnrolmentRules.Domain.EquatableArray
 EnrolmentRules.Domain.EquatableArray`1
+EnrolmentRules.Domain.EquatableArrayJsonConverter`1
+EnrolmentRules.Domain.EquatableArrayJsonConverterFactory
 EnrolmentRules.Domain.EquatableDictionary`2
 EnrolmentRules.Domain.EquatableDictionaryFactory
+EnrolmentRules.Domain.EquatableDictionaryJsonConverter`2
+EnrolmentRules.Domain.EquatableDictionaryJsonConverterFactory
 EnrolmentRules.Domain.FinalProgramme
 EnrolmentRules.Domain.GateAdvice
 EnrolmentRules.Domain.GcseResult
-EnrolmentRules.Domain.GcseScoreboard
 EnrolmentRules.Domain.GcseSubjects
+EnrolmentRules.Domain.GcseVocabulary
 EnrolmentRules.Domain.GradeChange
 EnrolmentRules.Domain.LintFinding
 EnrolmentRules.Domain.LintSeverity
@@ -370,11 +377,11 @@ EnrolmentRules.Domain.QualificationScale
 EnrolmentRules.Domain.QualificationScaleEntry
 EnrolmentRules.Domain.QualificationType
 EnrolmentRules.Domain.Rating
-EnrolmentRules.Domain.RatingExtensions
 EnrolmentRules.Domain.RatingMeaning
 EnrolmentRules.Domain.SubjectCriteria
 EnrolmentRules.Domain.Recommendation
 EnrolmentRules.Domain.RestudyBar
+EnrolmentRules.Domain.ShippedLayout
 EnrolmentRules.Domain.StudentDocument
 EnrolmentRules.Domain.StudentInput
 EnrolmentRules.Domain.StudentProfile
@@ -392,10 +399,13 @@ EnrolmentRules.Domain.Serialization.BatchJsonContext
 EnrolmentRules.Domain.Serialization.EnrolmentJsonContext
 EnrolmentRules.Domain.Serialization.SubjectJsonConverter
 EnrolmentRules.Domain.Serialization.YamlConverter
+EnrolmentRules.Domain.Authoring.GcseSubjectsException
+EnrolmentRules.Domain.Authoring.GcseSubjectsStore
 EnrolmentRules.Domain.Authoring.PolicyThresholdsException
 EnrolmentRules.Domain.Authoring.PolicyThresholdsStore
 EnrolmentRules.Domain.Authoring.QualificationScaleException
 EnrolmentRules.Domain.Authoring.QualificationScaleStore
+EnrolmentRules.Domain.Authoring.SchemaValidator
 EnrolmentRules.Domain.RuntimeBinding.PolicyFacts
 EnrolmentRules.Domain.Diagnostics.BuildInfo
 EnrolmentRules.Domain.CodeStyle.LargeStructAttribute
@@ -429,6 +439,7 @@ EnrolmentRules.Engine.Hosting.EnrolmentEngineFactory
 EnrolmentRules.Engine.Hosting.IEnrolmentDataSource
 EnrolmentRules.Engine.Hosting.WorkflowContent
 EnrolmentRules.Engine.Hosting.OverlayEnrolmentDataSource
+EnrolmentRules.Engine.Hosting.PolicyDirectoryLayout
 EnrolmentRules.Engine.EnrolmentPolicy
 EnrolmentRules.Engine.EnrolmentPolicyBuildException
 EnrolmentRules.Engine.EnrolmentPolicyConfigurationException

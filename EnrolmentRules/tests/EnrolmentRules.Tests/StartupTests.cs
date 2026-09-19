@@ -22,14 +22,6 @@ public sealed class StartupTests
 	}
 
 	[Fact]
-	public void shipped_engine_construction_probe_compiles_at_startup()
-	{
-		var engine = WorkflowStore.LoadValidateBuildAndProbe(Harness.WorkflowsDir, Harness.Catalogue, Harness.SchemaPath);
-
-		engine.Should().NotBeNull();
-	}
-
-	[Fact]
 	public void canonical_probe_student_populates_every_known_gcse_subject()
 	{
 		// The probe must cover every recognised GCSE subject so it forces compilation of all subject rules.
@@ -65,6 +57,17 @@ public sealed class StartupTests
 
 		act.Should().Throw<WorkflowSchemaException>()
 		   .WithMessage("*broken.yaml*");
+	}
+
+	[Fact]
+	public void null_json_workflow_is_rejected_as_a_schema_error()
+	{
+		var dir = Harness.WriteFixtureWorkflow("null.json", "null");
+
+		var act = () => WorkflowStore.LoadAndValidate(dir, Harness.SchemaPath);
+
+		act.Should().Throw<WorkflowSchemaException>()
+		   .WithMessage("*null.json*");
 	}
 
 	[Fact]

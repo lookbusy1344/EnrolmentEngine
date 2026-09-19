@@ -20,15 +20,6 @@ public static class TextFormatting
 		return string.Join(' ', words.Select(static word => char.ToUpperInvariant(word[0]) + word[1..]));
 	}
 
-	/// <summary>A friendly label for a <see cref="QualificationType" />, e.g. <c>BtecDiploma</c> → "BTEC Diploma".</summary>
-	public static string Label(QualificationType type) => type switch {
-		QualificationType.ALevel => "A Level",
-		QualificationType.BtecExtendedCertificate => "BTEC Extended Certificate",
-		QualificationType.BtecDiploma => "BTEC Diploma",
-		QualificationType.Nvq => "NVQ",
-		_ => throw new ArgumentOutOfRangeException(nameof(type), type, "Unknown qualification type."),
-	};
-
 	/// <summary>
 	///     A friendly label for one grade token within <paramref name="type" />'s scale, e.g.
 	///     <c>(ALevel, "a_star")</c> → "A*", <c>(BtecDiploma, "distinction_star")</c> → "Distinction*",
@@ -39,7 +30,7 @@ public static class TextFormatting
 		ArgumentNullException.ThrowIfNull(grade);
 		const string StarSuffix = "_star";
 		return type switch {
-			QualificationType.ALevel => grade == "a_star" ? "A*" : grade.ToUpperInvariant(),
+			QualificationType.ALevel => grade == "a_star" ? ALevelGrade.AStarLabel : grade.ToUpperInvariant(),
 			QualificationType.BtecExtendedCertificate or QualificationType.BtecDiploma => grade.EndsWith(StarSuffix, StringComparison.Ordinal)
 				? Prettify(grade[..^StarSuffix.Length]) + "*"
 				: Prettify(grade),

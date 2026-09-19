@@ -1,10 +1,6 @@
 namespace EnrolmentRules.Domain.Authoring;
 
-using System.Collections.Concurrent;
-using System.Security.Cryptography;
 using System.Text;
-using System.Text.Json;
-using Json.Schema;
 using Serialization;
 
 /// <summary>
@@ -16,8 +12,6 @@ public static class QualificationScaleStore
 {
 	public const string QualificationsFileName = "qualifications.yaml";
 	public const string SchemaFileName = "qualifications.schema.json";
-
-	private static readonly ConcurrentDictionary<string, Lazy<JsonSchema>> SchemaCache = new();
 
 	public static QualificationScale LoadAndValidate(string directory, string? qualificationsPath = null, string? schemaPath = null)
 	{
@@ -40,19 +34,8 @@ public static class QualificationScaleStore
 	{
 		try {
 			var node = YamlConverter.ToJsonNode(qualificationsReader.ReadToEnd());
-			var schemaText = schemaReader.ReadToEnd();
-			var schema = SchemaCache.GetOrAdd(
-				SchemaCacheKey(schemaText),
-				_ => new(() => JsonSchema.FromText(schemaText))).Value;
-
-			using var doc = JsonDocument.Parse(node.ToJsonString());
-			var results = schema.Evaluate(doc.RootElement, new() {
-				OutputFormat = OutputFormat.List,
-			});
-			if (!results.IsValid) {
-				throw new QualificationScaleException(
-					$"qualification scale file '{qualificationsPath ?? QualificationsFileName}' failed schema validation: {DescribeErrors(results)}");
-			}
+			SchemaValidator.Validate(node, schemaReader.ReadToEnd(), errors => new QualificationScaleException(
+				$"qualification scale file '{qualificationsPath ?? QualificationsFileName}' failed schema validation: {errors}"));
 
 			return QualificationScale.RequireCompleteCoverage(QualificationScale.Build(node));
 		}
@@ -60,18 +43,6 @@ public static class QualificationScaleStore
 			throw new QualificationScaleException(
 				$"qualification scale file '{qualificationsPath ?? QualificationsFileName}' is invalid: {ex.Message}", ex);
 		}
-	}
-
-	private static string SchemaCacheKey(string schemaText) =>
-		Convert.ToHexString(SHA256.HashData(Encoding.UTF8.GetBytes(schemaText)));
-
-	private static string DescribeErrors(EvaluationResults results)
-	{
-		var messages = (results.Details ?? [])
-					   .Where(d => d.Errors is { Count: > 0 })
-					   .SelectMany(d => d.Errors!.Select(e => $"{d.InstanceLocation}: {e.Value}"));
-		var joined = string.Join("; ", messages);
-		return joined.Length > 0 ? joined : "schema validation failed (no detailed errors reported)";
 	}
 }
 

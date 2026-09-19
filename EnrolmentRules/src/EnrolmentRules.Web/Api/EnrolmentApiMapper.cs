@@ -2,19 +2,15 @@ namespace EnrolmentRules.Web.Api;
 
 using System.Diagnostics.CodeAnalysis;
 using Domain;
-using Models;
-using Services;
-using EquatableArray = Infrastructure.EquatableArray;
 using Subject = Domain.Subject;
 
 /// <summary>
-///     Maps a posted <see cref="EnrolmentEvaluateRequest" /> to the engine's <c>StudentInput</c> by building
-///     the same web-local <see cref="EnrolmentSession" /> shape <see cref="EnrolmentFormMapper" /> already
-///     knows how to project. Implements no relationship policy of its own — a subject/qualification-type
-///     token that cannot be parsed at all
-///     fails the mapping outright (→ 400); a token that parses but fails a business rule (an out-of-range
-///     grade, an unknown GCSE key) is left for <see cref="Domain.StudentValidator" /> to report as normal
-///     validation feedback.
+///     Maps a posted <see cref="EnrolmentEvaluateRequest" /> straight to the engine's <c>StudentInput</c>.
+///     Implements no relationship policy of its own: a blank row is dropped, a non-blank row with a missing
+///     piece is carried through at its boundary value (grade <c>0</c>, blank grade token) so
+///     <see cref="Domain.StudentValidator" /> reports it, and a subject/qualification-type token that cannot
+///     be parsed at all fails the mapping outright (→ 400). A token that parses but breaks a business rule
+///     (an out-of-range grade, an unknown GCSE key) is left for validation to report.
 /// </summary>
 public static class EnrolmentApiMapper
 {
@@ -24,19 +20,18 @@ public static class EnrolmentApiMapper
 	{
 		ArgumentNullException.ThrowIfNull(request);
 
-		var priorQualificationRows = new List<PriorQualificationRow>();
-		foreach (var row in request.PriorQualifications) {
-			if (string.IsNullOrWhiteSpace(row.Type)) {
-				priorQualificationRows.Add(new(row.Subject, null, row.Grade));
+		var gcses = new Dictionary<string, int>();
+		foreach (var row in request.Gcses) {
+			if (string.IsNullOrWhiteSpace(row.Subject) && row.Grade is null) {
 				continue;
 			}
 
-			if (!Enum.TryParse<QualificationType>(row.Type, true, out var type) || !Enum.IsDefined(type)) {
-				input = null;
-				return false;
-			}
+			gcses[row.Subject ?? string.Empty] = row.Grade ?? 0;
+		}
 
-			priorQualificationRows.Add(new(row.Subject, type, row.Grade));
+		if (!TryMapPriorQualifications(request.PriorQualifications, out var priorQualifications)) {
+			input = null;
+			return false;
 		}
 
 		var chosenALevels = new List<Subject>();
@@ -49,15 +44,37 @@ public static class EnrolmentApiMapper
 			chosenALevels.Add(subject);
 		}
 
-		var session = EnrolmentSession.Empty(ApiStudentId) with {
-			DateOfBirth = request.DateOfBirth,
-			Gcses = EquatableArray.CopyOf(request.Gcses.Select(static row => new GcseRow(row.Subject, row.Grade))),
-			PriorQualifications = EquatableArray.CopyOf(priorQualificationRows),
-			Hobbies = request.Hobbies,
-			ChosenALevels = EquatableArray.CopyOf(chosenALevels),
-		};
+		var hobbies = request.Hobbies.Where(static hobby => !string.IsNullOrWhiteSpace(hobby)).ToArray();
 
-		input = EnrolmentFormMapper.ToStudentInput(session);
+		input = new(ApiStudentId, gcses, hobbies) {
+			DateOfBirth = request.DateOfBirth,
+			ChosenALevels = EquatableArray.CopyOf(chosenALevels),
+			PriorQualifications = EquatableArray.CopyOf(priorQualifications),
+		};
+		return true;
+	}
+
+	private static bool TryMapPriorQualifications(
+		IReadOnlyList<EvaluatePriorQualificationRow> rows, out List<Qualification> mapped)
+	{
+		mapped = [];
+		foreach (var row in rows) {
+			QualificationType? type = null;
+			if (!string.IsNullOrWhiteSpace(row.Type)) {
+				if (!Enum.TryParse<QualificationType>(row.Type, true, out var parsed) || !Enum.IsDefined(parsed)) {
+					return false;
+				}
+
+				type = parsed;
+			}
+
+			if (string.IsNullOrWhiteSpace(row.Subject) && type is null && string.IsNullOrWhiteSpace(row.Grade)) {
+				continue;
+			}
+
+			mapped.Add(new(row.Subject ?? string.Empty, type ?? default, row.Grade ?? string.Empty));
+		}
+
 		return true;
 	}
 }

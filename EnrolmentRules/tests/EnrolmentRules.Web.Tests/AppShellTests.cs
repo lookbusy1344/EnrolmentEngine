@@ -47,4 +47,20 @@ public sealed class AppShellTests : IClassFixture<WebAppFactory>
 		html.Should().NotContain("maximum-scale");
 		html.Should().NotContain("user-scalable");
 	}
+
+	/// <summary>F15: baseline hardening headers on every response, not just the API.</summary>
+	[Fact]
+	public async Task Get_app_carries_the_baseline_security_headers()
+	{
+		using var client = factory.CreateClient();
+
+		using var response = await client.GetAsync(new Uri("/app", UriKind.Relative));
+
+		response.Headers.GetValues("X-Content-Type-Options").Should().ContainSingle().Which.Should().Be("nosniff");
+		response.Headers.GetValues("Referrer-Policy").Should().ContainSingle().Which.Should().Be("strict-origin-when-cross-origin");
+		var csp = response.Headers.GetValues("Content-Security-Policy").Should().ContainSingle().Which;
+		csp.Should().Contain("default-src 'self'");
+		csp.Should().Contain("fonts.googleapis.com");
+		csp.Should().Contain("fonts.gstatic.com");
+	}
 }

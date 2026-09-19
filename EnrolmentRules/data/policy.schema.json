@@ -1,0 +1,18 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://enrolmentrules/policy.schema.json",
+  "title": "Policy manifest",
+  "description": "Per-policy manifest under policies/<id>/policy.yaml: the display label for one auxiliary policy.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "display_name"
+  ],
+  "properties": {
+    "display_name": {
+      "type": "string",
+      "minLength": 1,
+      "description": "The human-readable label front ends render for this policy."
+    }
+  }
+}

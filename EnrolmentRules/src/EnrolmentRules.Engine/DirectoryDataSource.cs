@@ -36,6 +36,10 @@ public sealed class DirectoryDataSource : IEnrolmentDataSource
 
 	public Stream OpenQualificationsSchema() => File.OpenRead(Path.Combine(dataDirectory, QualificationScaleStore.SchemaFileName));
 
+	public Stream OpenGcseSubjects() => File.OpenRead(Path.Combine(dataDirectory, GcseSubjectsStore.GcseSubjectsFileName));
+
+	public Stream OpenGcseSubjectsSchema() => File.OpenRead(Path.Combine(dataDirectory, GcseSubjectsStore.SchemaFileName));
+
 	public Stream OpenThresholds() => File.OpenRead(Path.Combine(dataDirectory, PolicyThresholdsStore.ThresholdsFileName));
 
 	public Stream OpenThresholdsSchema() => File.OpenRead(Path.Combine(dataDirectory, PolicyThresholdsStore.SchemaFileName));

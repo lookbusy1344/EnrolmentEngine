@@ -1,11 +1,13 @@
 # Subject catalogue — the single source of truth for the cross-subject constraint pass and aggregation
 # (§1.5–1.6). Host code loads and schema-validates this file at startup (see CatalogueStore); editing it,
 # not the constraint-pass code, is how cross-subject policy changes. Per subject:
-#   priority_weight       — policy priority used by the programme priority score, same-rating ordering, mutual-
-#                           exclusion resolution, and the optional green cap. It is not a UCAS tariff.
-#                           Exclusion pairs require distinct weights so their loser is unambiguous.
+#   priority_weight       — policy priority used by the programme priority score, same-rating ordering, and
+#                           the optional green cap's demotion order. It is not a UCAS tariff and does not
+#                           resolve exclusions.
 #   exclusions           — symmetric timetable-clash edges to other subjects, each with a downgrade
-#                          severity (amber or red). Must be declared on both sides.
+#                          severity (amber or red). An edge fires only when one side is a committed
+#                          `chosen_a_levels` choice (a chosen-subject exclusion) — there is no both-green
+#                          clash. Must be declared on both sides.
 #   required_activities  — own-time activity-tag prefixes the subject requires (absence ⇒ amber).
 #   blocking_activities  — activity-tag prefixes that bar the subject outright (presence ⇒ red veto).
 #   prerequisites        — dependency groups; each group lists alternatives under `any_of` and an optional

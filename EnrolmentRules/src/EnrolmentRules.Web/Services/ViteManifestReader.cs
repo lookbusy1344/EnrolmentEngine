@@ -2,7 +2,7 @@ namespace EnrolmentRules.Web.Services;
 
 using System.Text.Json;
 using System.Text.Json.Serialization;
-using Infrastructure;
+using Domain;
 
 /// <summary>One resolved Vite build entry: the hashed script the shell must load, and any hashed stylesheets it pulled in.</summary>
 public sealed record ViteAssetPaths(string ScriptPath, EquatableArray<string> StylesheetPaths);

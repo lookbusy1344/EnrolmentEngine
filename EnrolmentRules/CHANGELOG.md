@@ -1,5 +1,31 @@
 # Changelog
 
+## 1.4.0 — 2026-09-19
+
+- GCSE subject vocabulary moves from a hardcoded C# array to `data/gcse-subjects.yaml`, closing the
+  last vocabulary source that required a code change and release; adds the missing `spanish` GCSE
+  key alongside the existing A-level Spanish subject.
+- The policy set is discovered from `policies/<id>/policy.yaml` manifests instead of being
+  hard-coded in each host; adding a policy is now a directory to drop in, not a code change in the
+  CLI and web hosts.
+- `/api/enrolment/*` rate-limits by a trusted client-address partition (1000 requests/10s, 429 with
+  `Retry-After`; direct connection by default, explicit opt-in for Google Cloud's external load
+  balancer), and responses now carry `X-Content-Type-Options`, `Referrer-Policy`, and a CSP scoped
+  to the app's own origins.
+- The Standard policy's advisor pipeline budget is capped instead of running unbounded, bounding a
+  best-first search over the shared engine against pathological input.
+- `--batch` no longer aborts the whole run on one bad line — a per-line evaluation failure is
+  isolated to that line's outcome instead of surfacing as an unhandled exception.
+- The advisor's restudy-bar detection matches on the adjustment kind instead of parsing reason
+  text.
+- Web: fixed a family of policy-switch and reset bugs where a previous policy's basket comparison
+  could leak into the newly-selected policy or a freshly started session.
+- Web: the masthead canopy leaves pivot on their own bounding box, fixing an intermittent overflow
+  past the band's edge.
+- Web: options responses (grades, subjects, hobbies) are cached per policy and read the engine's
+  own reference date, instead of rebuilding on every request off a separately-injected clock.
+- Dependency updates (NuGet and npm), pnpm pin bump.
+
 ## 1.3.0 — 2026-08-25
 
 - The masthead is now a full-bleed soil band: a deep-evergreen ground with the brand mark and

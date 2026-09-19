@@ -205,9 +205,10 @@ from the catalogue. Adding a new A-level subject means:
 The engine, prediction stage, constraint pass, aggregation, and workflow linter all operate on the
 loaded catalogue snapshot, so a custom subject flows end-to-end without changing C#.
 
-One boundary remains compiled: the **GCSE input vocabulary**. `GcseSubjects.Known` is still the
-fixed list the input validator accepts, so adding an A-level subject that also needs a brand-new
-GCSE key is outside this phase.
+If a new A-level subject also needs a brand-new GCSE key, add it to `data/gcse-subjects.yaml` — the
+GCSE input vocabulary is data too, not compiled. See
+[`data/gcse-subjects.yaml`](configuration-reference.md#data-gcse-subjectsyaml) in the
+configuration reference.
 
 The **qualification-type vocabulary** is also compiled as `QualificationType` and repeated in the
 qualification and catalogue schemas. `data/qualifications.yaml` controls the grades, ordering, and
@@ -481,7 +482,7 @@ a reference host, not a packable library project:
 - Vue evaluations re-run through `POST /api/enrolment/evaluate`, so the rendered result is always a
   fresh comparison, never a cached one.
 - Client-side vocabulary (GCSE subject keys, prior-qualification subjects/types, hobby tags) comes
-  from the same catalogue/scale the engine is bound to (`GcseSubjects.Known`,
+  from the same catalogue/scale/vocabulary the engine is bound to (`IEnrolmentEngine.Gcses`,
   `IEnrolmentEngine.Catalogue`) — the web layer holds no parallel copy of policy data.
 - `/app` accepts `?policy=<id>` (see [Policy registry](#policy-registry)) — `standard` and `elite`
   are registered in `Program.cs`. A chosen subject the selected policy now rates red, or does not

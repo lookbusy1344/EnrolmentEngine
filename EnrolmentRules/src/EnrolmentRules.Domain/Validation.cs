@@ -1,25 +1,19 @@
 namespace EnrolmentRules.Domain;
 
-using System.Collections.Frozen;
 using System.Globalization;
 
 /// <summary>
-///     The recognised GCSE subject keys (§1.1). This is the GCSE-side vocabulary, distinct from the
-///     A-level <see cref="Subject" /> type: it carries <c>english_language</c> (a GCSE that gates
-///     eligibility and the English subject entry rules) and omits
-///     <c>further_maths</c> (an A-level with no GCSE of its own). It is the single source of truth the
-///     input validator checks an incoming document's GCSE keys against, so an unknown key is rejected at
-///     the boundary rather than silently treated as "not taken".
+///     A thin lazy-default facade over <see cref="GcseVocabulary.Default" /> for zero-wiring callers.
+///     Production code paths thread an explicit <see cref="GcseVocabulary" /> loaded from
+///     <c>data/gcse-subjects.yaml</c> instead of reading this.
 /// </summary>
 public static class GcseSubjects
 {
-	/// <summary>The recognised GCSE subject keys (snake_case, matching the document and workflow lambdas).</summary>
-	public static IReadOnlySet<string> Known { get; } = new[] {
-		"maths", "english_language", "english_literature", "physics", "chemistry", "biology", "french", "german", "physical_education", "computer_studies", "history", "music", "art", "psychology", "sociology", "geography", "politics",
-	}.ToFrozenSet(StringComparer.Ordinal);
+	/// <summary>The shipped GCSE vocabulary's recognised subject keys.</summary>
+	public static IReadOnlySet<string> Known => GcseVocabulary.Default.Known;
 
-	/// <summary>Whether <paramref name="subject" /> is a recognised GCSE subject key.</summary>
-	public static bool IsKnown(string subject) => Known.Contains(subject);
+	/// <summary>Whether <paramref name="subject" /> is a recognised GCSE subject key in the shipped vocabulary.</summary>
+	public static bool IsKnown(string subject) => GcseVocabulary.Default.IsKnown(subject);
 }
 
 /// <summary>
@@ -35,26 +29,19 @@ public static class StudentValidator
 	/// <summary>
 	///     Validate one student document. Each required object member must be present, each GCSE grade must
 	///     be an integer on the [<see cref="Thresholds.MinGcseGrade" />, <see cref="Thresholds.MaxGcseGrade" />]
-	///     scale, each GCSE subject key must be <see cref="GcseSubjects.Known">recognised</see>, the date of
-	///     birth must be present, and every hobby tag must be non-blank. Returns one message per problem, in
+	///     scale, each GCSE subject key must be recognised by <paramref name="gcses" />, the date of birth
+	///     must be present, and every hobby tag must be non-blank. Returns one message per problem, in
 	///     document order; an empty list means valid.
 	/// </summary>
-	public static IReadOnlyList<string> Validate(StudentInput? student, CatalogueData catalogue, QualificationScale scale)
+	public static IReadOnlyList<string> Validate(
+		StudentInput? student, CatalogueData catalogue, QualificationScale scale, GcseVocabulary? gcses = null)
 	{
 		if (student is null) {
 			return ["student is required"];
 		}
 
 		return [
-			.. RequiredText(student.Id, "student id"),
-			.. student.Gcses is EquatableDictionary<string, int> gcses ? gcses.SelectMany(ValidateGcse) : ["gcses is required"],
-			.. student.Hobbies is EquatableArray<string> hobbies
-				? hobbies
-				  .Index()
-				  .Where(static h => string.IsNullOrWhiteSpace(h.Item))
-				  .Select(static h => $"hobby tag at position {h.Index} is blank")
-				: ["hobbies is required"],
-			.. ValidateDateOfBirth(student.DateOfBirth),
+			.. LeadingFacts(student, gcses ?? GcseVocabulary.Default),
 			.. ValidateChosenALevels(student.ChosenALevels, catalogue),
 			.. ValidatePriorQualifications(student.PriorQualifications, scale),
 		];
@@ -68,26 +55,34 @@ public static class StudentValidator
 	///     otherwise collide with this same "invalid" message. Duplicate chosen entries remain a structural
 	///     error regardless of catalogue membership; see <see cref="ValidateChosenALevelsDuplicates" />.
 	/// </summary>
-	public static IReadOnlyList<string> ValidateFacts(StudentInput? student, QualificationScale scale)
+	public static IReadOnlyList<string> ValidateFacts(StudentInput? student, QualificationScale scale, GcseVocabulary? gcses = null)
 	{
 		if (student is null) {
 			return ["student is required"];
 		}
 
 		return [
-			.. RequiredText(student.Id, "student id"),
-			.. student.Gcses is EquatableDictionary<string, int> gcses ? gcses.SelectMany(ValidateGcse) : ["gcses is required"],
-			.. student.Hobbies is EquatableArray<string> hobbies
-				? hobbies
-				  .Index()
-				  .Where(static h => string.IsNullOrWhiteSpace(h.Item))
-				  .Select(static h => $"hobby tag at position {h.Index} is blank")
-				: ["hobbies is required"],
-			.. ValidateDateOfBirth(student.DateOfBirth),
+			.. LeadingFacts(student, gcses ?? GcseVocabulary.Default),
 			.. ValidateChosenALevelsDuplicates(student.ChosenALevels),
 			.. ValidatePriorQualifications(student.PriorQualifications, scale),
 		];
 	}
+
+	// The clauses both entry points share, in document order, ahead of the chosen-A-level clause that
+	// distinguishes them: Validate checks catalogue membership, ValidateFacts only duplicates.
+	private static IEnumerable<string> LeadingFacts(StudentInput student, GcseVocabulary gcses) => [
+		.. RequiredText(student.Id, "student id"),
+		.. student.Gcses is EquatableDictionary<string, int> studentGcses
+			? studentGcses.SelectMany(gcse => ValidateGcse(gcse, gcses))
+			: ["gcses is required"],
+		.. student.Hobbies is EquatableArray<string> hobbies
+			? hobbies
+			  .Index()
+			  .Where(static h => string.IsNullOrWhiteSpace(h.Item))
+			  .Select(static h => $"hobby tag at position {h.Index} is blank")
+			: ["hobbies is required"],
+		.. ValidateDateOfBirth(student.DateOfBirth),
+	];
 
 	/// <summary>
 	///     Duplicate <c>chosen_a_levels</c> entries only, independent of catalogue membership — the
@@ -120,11 +115,11 @@ public static class StudentValidator
 		}
 	}
 
-	private static IEnumerable<string> ValidateGcse(KeyValuePair<string, int> gcse)
+	private static IEnumerable<string> ValidateGcse(KeyValuePair<string, int> gcse, GcseVocabulary gcses)
 	{
 		if (string.IsNullOrWhiteSpace(gcse.Key)) {
 			yield return "Empty GCSE subject";
-		} else if (!GcseSubjects.IsKnown(gcse.Key)) {
+		} else if (!gcses.IsKnown(gcse.Key)) {
 			yield return $"unknown GCSE subject '{gcse.Key}'";
 		}
 

@@ -1,10 +1,7 @@
 namespace EnrolmentRules.Domain.Authoring;
 
-using System.Collections.Concurrent;
-using System.Security.Cryptography;
 using System.Text;
 using System.Text.Json;
-using Json.Schema;
 using Serialization;
 
 /// <summary>
@@ -16,8 +13,6 @@ public static class PolicyThresholdsStore
 {
 	public const string ThresholdsFileName = "thresholds.yaml";
 	public const string SchemaFileName = "thresholds.schema.json";
-
-	private static readonly ConcurrentDictionary<string, Lazy<JsonSchema>> SchemaCache = new();
 
 	public static PolicyThresholds LoadAndValidate(string directory, string? thresholdsPath = null, string? schemaPath = null)
 	{
@@ -40,19 +35,8 @@ public static class PolicyThresholdsStore
 	{
 		try {
 			var node = YamlConverter.ToJsonNode(thresholdsReader.ReadToEnd());
-			var schemaText = schemaReader.ReadToEnd();
-			var schema = SchemaCache.GetOrAdd(
-				SchemaCacheKey(schemaText),
-				_ => new(() => JsonSchema.FromText(schemaText))).Value;
-
-			using var doc = JsonDocument.Parse(node.ToJsonString());
-			var results = schema.Evaluate(doc.RootElement, new() {
-				OutputFormat = OutputFormat.List,
-			});
-			if (!results.IsValid) {
-				throw new PolicyThresholdsException(
-					$"Thresholds file '{thresholdsPath ?? ThresholdsFileName}' failed schema validation: {DescribeErrors(results)}");
-			}
+			SchemaValidator.Validate(node, schemaReader.ReadToEnd(), errors => new PolicyThresholdsException(
+				$"Thresholds file '{thresholdsPath ?? ThresholdsFileName}' failed schema validation: {errors}"));
 
 			var thresholds = node.Deserialize(EnrolmentJsonContext.Default.PolicyThresholds)
 							 ?? throw new FormatException("Thresholds deserialized to null.");
@@ -63,9 +47,6 @@ public static class PolicyThresholdsStore
 			throw new PolicyThresholdsException($"Thresholds file '{thresholdsPath ?? ThresholdsFileName}' is invalid: {ex.Message}", ex);
 		}
 	}
-
-	private static string SchemaCacheKey(string schemaText) =>
-		Convert.ToHexString(SHA256.HashData(Encoding.UTF8.GetBytes(schemaText)));
 
 	private static void Validate(PolicyThresholds thresholds)
 	{
@@ -194,15 +175,6 @@ public static class PolicyThresholdsStore
 			throw new InvalidDataException(
 				$"min_best_gcse_points {minBestGcsePoints} must be a reachable total for best_gcse_count {bestGcseCount} GCSEs (1–{reachableMaximum}).");
 		}
-	}
-
-	private static string DescribeErrors(EvaluationResults results)
-	{
-		var messages = (results.Details ?? [])
-					   .Where(d => d.Errors is { Count: > 0 })
-					   .SelectMany(d => d.Errors!.Select(e => $"{d.InstanceLocation}: {e.Value}"));
-		var joined = string.Join("; ", messages);
-		return joined.Length > 0 ? joined : "schema validation failed (no detailed errors reported)";
 	}
 }
 

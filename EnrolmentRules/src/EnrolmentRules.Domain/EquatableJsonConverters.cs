@@ -11,7 +11,7 @@ using System.Text.Json.Serialization.Metadata;
 ///     <see cref="Serialization.EnrolmentJsonContext" /> — so the wrapper stays reflection-free: it adds no metadata of
 ///     its own, it just borrows the element's generated <see cref="JsonTypeInfo{T}" />.
 /// </summary>
-internal sealed class EquatableArrayJsonConverterFactory : JsonConverterFactory
+public sealed class EquatableArrayJsonConverterFactory : JsonConverterFactory
 {
 	public override bool CanConvert(Type typeToConvert) =>
 		typeToConvert.IsGenericType && typeToConvert.GetGenericTypeDefinition() == typeof(EquatableArray<>);
@@ -21,7 +21,7 @@ internal sealed class EquatableArrayJsonConverterFactory : JsonConverterFactory
 			typeof(EquatableArrayJsonConverter<>).MakeGenericType(typeToConvert.GetGenericArguments()))!;
 }
 
-internal sealed class EquatableArrayJsonConverter<T> : JsonConverter<EquatableArray<T>>
+public sealed class EquatableArrayJsonConverter<T> : JsonConverter<EquatableArray<T>>
 {
 	public override EquatableArray<T> Read(ref Utf8JsonReader reader, Type typeToConvert, JsonSerializerOptions options)
 	{
@@ -55,7 +55,7 @@ internal sealed class EquatableArrayJsonConverter<T> : JsonConverter<EquatableAr
 ///     the source-generated <see cref="Dictionary{TKey, TValue}" /> contract, so the wrapper inherits the
 ///     context's key-naming policy unchanged.
 /// </summary>
-internal sealed class EquatableDictionaryJsonConverterFactory : JsonConverterFactory
+public sealed class EquatableDictionaryJsonConverterFactory : JsonConverterFactory
 {
 	public override bool CanConvert(Type typeToConvert) =>
 		typeToConvert.IsGenericType && typeToConvert.GetGenericTypeDefinition() == typeof(EquatableDictionary<,>);
@@ -65,7 +65,7 @@ internal sealed class EquatableDictionaryJsonConverterFactory : JsonConverterFac
 			typeof(EquatableDictionaryJsonConverter<,>).MakeGenericType(typeToConvert.GetGenericArguments()))!;
 }
 
-internal sealed class EquatableDictionaryJsonConverter<TKey, TValue> : JsonConverter<EquatableDictionary<TKey, TValue>>
+public sealed class EquatableDictionaryJsonConverter<TKey, TValue> : JsonConverter<EquatableDictionary<TKey, TValue>>
 	where TKey : notnull
 {
 	public override EquatableDictionary<TKey, TValue> Read(ref Utf8JsonReader reader, Type typeToConvert, JsonSerializerOptions options)

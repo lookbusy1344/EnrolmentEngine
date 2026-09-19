@@ -13,6 +13,29 @@ public sealed class GcseVocabularyTests
 	private static string ExamplesDir => Path.Combine(Harness.RepoRoot, "examples");
 
 	[Fact]
+	public void gcse_subjects_store_loads_a_vocabulary_from_yaml_and_it_is_actually_threaded()
+	{
+		var vocabulary = GcseSubjectsStore.LoadAndValidate(
+			new StringReader("subjects: [maths, english_language]"),
+			new StringReader(File.ReadAllText(Path.Combine(Harness.RepoRoot, "data", "gcse-subjects.schema.json"))));
+
+		vocabulary.IsKnown("maths").Should().BeTrue();
+		vocabulary.IsKnown("art").Should().BeFalse();
+
+		var errors = StudentValidator.Validate(
+			new("S", new Dictionary<string, int> {
+				["art"] = 7,
+			}, []) {
+				DateOfBirth = new(2009, 9, 1),
+			},
+			Harness.Catalogue,
+			Harness.Scale,
+			vocabulary);
+
+		errors.Should().Contain("unknown GCSE subject 'art'");
+	}
+
+	[Fact]
 	public void shipped_catalogue_happens_to_cover_every_gcse_vocabulary_key()
 	{
 		// Not an enforced invariant (Elite auxiliary policy plan step 1.4 decouples the two vocabularies —

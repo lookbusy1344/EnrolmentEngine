@@ -447,6 +447,10 @@ public sealed class DependencyInjectionTests
 
 		public PolicyThresholds Thresholds => Harness.Thresholds;
 
+		public GcseVocabulary Gcses => GcseVocabulary.Default;
+
+		public DateOnly Today() => default;
+
 		public EnrolmentResult Evaluate(StudentInput student, CancellationToken cancellationToken = default) =>
 			Evaluate(student, default, CancellationToken.None);
 

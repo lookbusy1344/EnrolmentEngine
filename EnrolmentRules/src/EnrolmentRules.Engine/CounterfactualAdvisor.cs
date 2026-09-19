@@ -44,7 +44,7 @@ internal static class CounterfactualAdvisor
 		// considerUnsatGcses diagnostic knob reverts to the old, heavier search over every known GCSE; the
 		// gate-clearing search above always considers every GCSE regardless of this knob, because there is
 		// no grade-bump-only way to open the gate when the student simply lacks enough passes.
-		var candidates = considerUnsatGcses ? AdvisorCandidates.AllSubjects : HeldSubjects(student);
+		var candidates = considerUnsatGcses ? AllSubjects(engine) : HeldSubjects(student);
 		var advice = new List<SubjectAdvice>();
 		string? truncation = null;
 
@@ -148,11 +148,7 @@ internal static class CounterfactualAdvisor
 		CancellationToken cancellationToken)
 	{
 		cancellationToken.ThrowIfCancellationRequested();
-		var restudyReason = explanation.Overrides
-									   .FirstOrDefault(static override_ =>
-										   override_.Reason.StartsWith(ConstraintPass.RestudyBarReasonPrefix, StringComparison.Ordinal))
-									   ?.Reason;
-		if (restudyReason is not null) {
+		if (RestudyBlockedReason(explanation) is string restudyReason) {
 			return restudyReason;
 		}
 
@@ -165,6 +161,14 @@ internal static class CounterfactualAdvisor
 			? BudgetExhaustedReason
 			: recommendation.Reason;
 	}
+
+	// The reason of a restudy-bar override on this subject, if one fired. Selected by AdjustmentKind, not by
+	// reason text: display wording is decoupled from control flow, so rewording the restudy reason cannot
+	// silently reclassify the block.
+	internal static string? RestudyBlockedReason(Explanation explanation) =>
+		explanation.Overrides
+				   .FirstOrDefault(static override_ => override_.Kind == AdjustmentKind.RestudyBar)
+				   ?.Reason;
 
 	// Ratings ascend in severity (green < amber < red), so "at least as good as target" is <=.
 	private static bool IsAtLeastAsGoodAs(Rating actual, Rating target) => actual <= target;
@@ -259,7 +263,7 @@ internal static class CounterfactualAdvisor
 		SearchResult search;
 		try {
 			search = Search(
-				engine, student, AdvisorCandidates.AllSubjects, evaluations, thresholds, pipelineBudget,
+				engine, student, AllSubjects(engine), evaluations, thresholds, pipelineBudget,
 				static result => result.Eligible, asOf, cancellationToken);
 		}
 		catch (PipelineEvaluationBudgetExhaustedException) {
@@ -324,6 +328,11 @@ internal static class CounterfactualAdvisor
 	private static IReadOnlyList<string> HeldSubjects(StudentInput student) =>
 		[.. GradeMap(student).Keys.OrderBy(static subject => subject, StringComparer.Ordinal)];
 
+	// Every GCSE the engine's loaded vocabulary recognises, in a stable order — the candidate set the
+	// gate-clearing search always uses, and the per-subject search uses when considerUnsatGcses is set.
+	private static IReadOnlyList<string> AllSubjects(EnrolmentEngine engine) =>
+		[.. engine.Gcses.Known.OrderBy(static subject => subject, StringComparer.Ordinal)];
+
 	private sealed class SearchState(
 		Dictionary<string, int> grades,
 		Dictionary<string, int> originalGrades,
@@ -346,12 +355,6 @@ internal static class CounterfactualAdvisor
 	}
 
 	private readonly record struct SearchResult(bool Reachable, EquatableArray<GradeChange> Changes);
-
-	private static class AdvisorCandidates
-	{
-		public static IReadOnlyList<string> AllSubjects { get; } =
-			[.. GcseSubjects.Known.OrderBy(static subject => subject, StringComparer.Ordinal)];
-	}
 }
 
 internal sealed class PipelineEvaluationBudgetExhaustedException : Exception

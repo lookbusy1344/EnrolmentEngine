@@ -45,6 +45,14 @@ public sealed class PolicyThresholdValidationTests
 		Harness.Thresholds.MinChosenALevels.Should().Be(0);
 	}
 
+	/// <summary>
+	///     An unbounded best-first search over a shared engine is not a safe default for a library host
+	///     (F11) — the shipped Standard policy used to leave the cap commented out, and the benchmark
+	///     recorded a single-student Advise at 631 ms / 1.67 GB allocated.
+	/// </summary>
+	[Fact]
+	public void shipped_standard_thresholds_cap_the_advisor_pipeline_budget() => Harness.Thresholds.AdviceMaxPipelineEvaluations.Should().NotBeNull().And.BePositive();
+
 	[Fact]
 	public void all_four_top_n_knobs_together_load_and_validate()
 	{

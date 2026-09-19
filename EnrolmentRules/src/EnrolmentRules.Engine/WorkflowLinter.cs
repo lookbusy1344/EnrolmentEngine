@@ -37,12 +37,13 @@ public static partial class WorkflowLinter
 	private static readonly string GreenDfeFloor = nameof(RatingFacts.MinDfeGreenProbabilityAtOrAbove);
 	private static readonly string AmberDfeFloor = nameof(RatingFacts.MinDfeAmberProbabilityAtOrAbove);
 
-	/// <summary>Lint loaded workflows against an explicit catalogue snapshot.</summary>
-	internal static IReadOnlyList<LintFinding> Lint(IReadOnlyList<Workflow> workflows, CatalogueData catalogue)
+	/// <summary>Lint loaded workflows against an explicit catalogue snapshot and GCSE vocabulary.</summary>
+	internal static IReadOnlyList<LintFinding> Lint(IReadOnlyList<Workflow> workflows, CatalogueData catalogue, GcseVocabulary? gcses = null)
 	{
+		var vocabulary = gcses ?? GcseVocabulary.Default;
 		var findings = new List<LintFinding>();
 		foreach (var workflow in workflows) {
-			findings.AddRange(LintWorkflow(workflow, catalogue));
+			findings.AddRange(LintWorkflow(workflow, catalogue, vocabulary));
 		}
 
 		return findings;
@@ -50,27 +51,28 @@ public static partial class WorkflowLinter
 
 	/// <summary>
 	///     Load and schema-validate the workflow files in <paramref name="directory" />, then lint them against
-	///     <paramref name="catalogue" />. Keeps the untyped RulesEngine workflow type inside the engine boundary so
-	///     lint callers deal only in <see cref="LintFinding" />.
+	///     <paramref name="catalogue" /> and <paramref name="gcses" />. Keeps the untyped RulesEngine workflow type
+	///     inside the engine boundary so lint callers deal only in <see cref="LintFinding" />.
 	/// </summary>
-	public static IReadOnlyList<LintFinding> Lint(string directory, CatalogueData catalogue, string? schemaPath = null)
-		=> Lint(WorkflowStore.LoadAndValidate(directory, schemaPath), catalogue);
+	public static IReadOnlyList<LintFinding> Lint(string directory, CatalogueData catalogue, string? schemaPath = null, GcseVocabulary? gcses = null)
+		=> Lint(WorkflowStore.LoadAndValidate(directory, schemaPath), catalogue, gcses);
 
 	/// <summary>
 	///     Load and schema-validate the stream-backed workflow <paramref name="files" /> against
-	///     <paramref name="schemaStream" />, then lint them against <paramref name="catalogue" />. The caller retains
-	///     ownership of the streams and disposes them.
+	///     <paramref name="schemaStream" />, then lint them against <paramref name="catalogue" /> and
+	///     <paramref name="gcses" />. The caller retains ownership of the streams and disposes them.
 	/// </summary>
 	public static IReadOnlyList<LintFinding> Lint(
 		IReadOnlyList<WorkflowContent> files,
 		Stream schemaStream,
-		CatalogueData catalogue)
-		=> Lint(WorkflowStore.LoadAndValidate(files, schemaStream), catalogue);
+		CatalogueData catalogue,
+		GcseVocabulary? gcses = null)
+		=> Lint(WorkflowStore.LoadAndValidate(files, schemaStream), catalogue, gcses);
 
-	private static IEnumerable<LintFinding> LintWorkflow(Workflow workflow, CatalogueData catalogue)
+	private static IEnumerable<LintFinding> LintWorkflow(Workflow workflow, CatalogueData catalogue, GcseVocabulary gcses)
 	{
 		var rules = Flatten(workflow.Rules).ToArray();
-		foreach (var finding in LintExpressions(workflow.WorkflowName, rules, catalogue)) {
+		foreach (var finding in LintExpressions(workflow.WorkflowName, rules, catalogue, gcses)) {
 			yield return finding;
 		}
 
@@ -319,18 +321,18 @@ public static partial class WorkflowLinter
 	private static string RemoveWhitespace(string expression) =>
 		string.Concat(expression.Where(static character => !char.IsWhiteSpace(character)));
 
-	private static IEnumerable<LintFinding> LintExpressions(string workflowName, IReadOnlyList<Rule> rules, CatalogueData catalogue)
+	private static IEnumerable<LintFinding> LintExpressions(string workflowName, IReadOnlyList<Rule> rules, CatalogueData catalogue, GcseVocabulary gcses)
 	{
 		foreach (var rule in rules) {
 			foreach (var expression in Expressions(rule)) {
-				foreach (var finding in LintExpression(workflowName, rule.RuleName, expression, catalogue)) {
+				foreach (var finding in LintExpression(workflowName, rule.RuleName, expression, catalogue, gcses)) {
 					yield return finding;
 				}
 			}
 		}
 	}
 
-	private static IEnumerable<LintFinding> LintExpression(string workflowName, string? ruleName, string expression, CatalogueData catalogue)
+	private static IEnumerable<LintFinding> LintExpression(string workflowName, string? ruleName, string expression, CatalogueData catalogue, GcseVocabulary gcses)
 	{
 		foreach (Match match in MemberAccessRegex().Matches(expression)) {
 			if (!MemberOwners.TryGetValue(match.Groups["owner"].Value, out var ownerType)) {
@@ -357,7 +359,7 @@ public static partial class WorkflowLinter
 
 			var key = match.Groups["key"].Value;
 			var known = vocabulary switch {
-				KeyVocabulary.Gcse => GcseSubjects.IsKnown(key),
+				KeyVocabulary.Gcse => gcses.IsKnown(key),
 				KeyVocabulary.Subject => Subject.TryParse(key, out var subject) && catalogue.Subjects.Contains(subject),
 				_ => true,
 			};
@@ -433,7 +435,7 @@ public static partial class WorkflowLinter
 
 	private enum KeyVocabulary
 	{
-		/// <summary>A GCSE subject key, validated against <see cref="GcseSubjects.Known" />.</summary>
+		/// <summary>A GCSE subject key, validated against the loaded <see cref="GcseVocabulary" />.</summary>
 		Gcse,
 
 		/// <summary>An A-level <see cref="Subject" /> name, validated against the type.</summary>

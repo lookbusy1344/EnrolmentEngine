@@ -1,6 +1,8 @@
 namespace EnrolmentRules.Tests;
 
+using System.Text;
 using AwesomeAssertions;
+using Domain;
 
 /// <summary>
 ///     Elite auxiliary policy plan, step 2.1 — <see cref="EnrolmentPolicyId" /> and
@@ -189,5 +191,54 @@ public sealed class EnrolmentPolicyRegistryTests
 		standard.Engine.Should().NotBeSameAs(elite.Engine);
 		standard.Descriptor.DisplayName.Should().Be("Standard");
 		elite.Descriptor.DisplayName.Should().Be("Elite");
+	}
+
+	[Fact]
+	public void comparison_validates_against_the_selected_policys_gcse_vocabulary()
+	{
+		const string policyOnlySubject = "astronomy";
+		var source = new GcseOverrideDataSource(
+			StandardSource(),
+			File.ReadAllText(Path.Combine(Harness.DataDir, GcseSubjectsStore.GcseSubjectsFileName))
+			+ $"\n  - {policyOnlySubject}\n");
+		var registry = new EnrolmentPolicyRegistry(
+			[new(new("standard"), "Standard", source)],
+			new("standard"),
+			static () => Harness.AsOf);
+		var student = new StudentInput("S", new Dictionary<string, int> {
+			[policyOnlySubject] = 7,
+		}, []) {
+			DateOfBirth = new(2009, 9, 1),
+		};
+
+		var result = registry.Compare(new("standard"), student);
+
+		result.Validation.IsValid.Should().BeTrue();
+		result.Value.Should().NotBeNull();
+	}
+
+	private sealed class GcseOverrideDataSource(IEnrolmentDataSource inner, string gcseSubjects) : IEnrolmentDataSource
+	{
+		public IReadOnlyList<WorkflowContent> OpenWorkflows() => inner.OpenWorkflows();
+
+		public Stream OpenWorkflowSchema() => inner.OpenWorkflowSchema();
+
+		public Stream OpenCatalogue() => inner.OpenCatalogue();
+
+		public Stream OpenCatalogueSchema() => inner.OpenCatalogueSchema();
+
+		public Stream OpenQualifications() => inner.OpenQualifications();
+
+		public Stream OpenQualificationsSchema() => inner.OpenQualificationsSchema();
+
+		public Stream OpenGcseSubjects() => new MemoryStream(Encoding.UTF8.GetBytes(gcseSubjects), false);
+
+		public Stream OpenGcseSubjectsSchema() => inner.OpenGcseSubjectsSchema();
+
+		public Stream OpenThresholds() => inner.OpenThresholds();
+
+		public Stream OpenThresholdsSchema() => inner.OpenThresholdsSchema();
+
+		public Stream OpenTransitionMatrix() => inner.OpenTransitionMatrix();
 	}
 }

@@ -11,6 +11,15 @@ public interface IEnrolmentEvaluator
 
 	PolicyThresholds Thresholds { get; }
 
+	GcseVocabulary Gcses { get; }
+
+	/// <summary>
+	///     The reference date the parameterless overloads evaluate against — the single clock a host should
+	///     read whenever it needs "today" for this policy (e.g. to default a date field), so it never drifts
+	///     from the date the engine itself evaluates against.
+	/// </summary>
+	DateOnly Today();
+
 	/// <summary>The whole-student verdict, as of the host's bound reference date.</summary>
 	/// <exception cref="ArgumentNullException"><paramref name="student" /> is null.</exception>
 	EnrolmentResult Evaluate(StudentInput student, CancellationToken cancellationToken = default);

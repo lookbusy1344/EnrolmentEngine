@@ -2,7 +2,7 @@
 
     <!--
         The single authoritative declaration of the shipped policy-asset item set: base workflows +
-        schema, catalogue/qualification/threshold data + their schemas, the DfE transition matrix, and
+        schema, catalogue/qualification/GCSE-vocabulary/threshold data + their schemas, the DfE transition matrix, and
         every auxiliary policy under policies/** (currently just policies/elite/, whose own
         workflows/catalogue/thresholds are all it contains — schemas, qualifications and the matrix
         stay single-copy, via OverlayEnrolmentDataSource falling through to the base tree).
@@ -31,8 +31,11 @@
             $(EnrolmentRulesRepoRoot)data\catalogue.schema.json;
             $(EnrolmentRulesRepoRoot)data\qualifications.yaml;
             $(EnrolmentRulesRepoRoot)data\qualifications.schema.json;
+            $(EnrolmentRulesRepoRoot)data\gcse-subjects.yaml;
+            $(EnrolmentRulesRepoRoot)data\gcse-subjects.schema.json;
             $(EnrolmentRulesRepoRoot)data\thresholds.yaml;
-            $(EnrolmentRulesRepoRoot)data\thresholds.schema.json">
+            $(EnrolmentRulesRepoRoot)data\thresholds.schema.json;
+            $(EnrolmentRulesRepoRoot)data\policy.schema.json">
             <PolicyRelativePath>data/%(Filename)%(Extension)</PolicyRelativePath>
         </EnrolmentPolicyAsset>
 

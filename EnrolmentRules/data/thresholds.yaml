@@ -31,4 +31,10 @@ amber_score_factor: 0.5
 advice_considers_unsat_gcses: false
 advice_max_grade_cost: 12
 advice_max_subjects_changed: 3
-# advice_max_pipeline_evaluations:  # optional hard cap on full pipeline runs per advise call; omit for unlimited
+# advice_max_pipeline_evaluations bounds worst-case Advise runtime: an unbounded best-first search over
+# a shared engine is not a safe default for a library — every host exposing IEnrolmentAdvisor inherits
+# whatever this is set to. 180000 sits with headroom above every AdvisorTests/EliteAdviceTests case's
+# evaluation count (the tightest, gate_clearing_advice_can_propose_brand_new_gcses_..., needs more than
+# 80000 but fewer than 150000), so no shipped scenario truncates. See docs/benchmarks.md's Advise
+# entry for the worst-case middling student's measured cost under this cap.
+advice_max_pipeline_evaluations: 180000

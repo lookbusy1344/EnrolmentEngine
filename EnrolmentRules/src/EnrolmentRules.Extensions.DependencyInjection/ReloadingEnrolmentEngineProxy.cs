@@ -20,6 +20,10 @@ internal sealed class ReloadingEnrolmentEngineProxy(IEnrolmentEngineFactory fact
 
 	public PolicyThresholds Thresholds => Evaluator.Thresholds;
 
+	public GcseVocabulary Gcses => Evaluator.Gcses;
+
+	public DateOnly Today() => Evaluator.Today();
+
 	public EnrolmentResult Evaluate(StudentInput student, CancellationToken cancellationToken = default) =>
 		Evaluator.Evaluate(student, cancellationToken);
 

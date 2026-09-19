@@ -69,7 +69,7 @@ public sealed class EnrolmentPolicyRegistry : IEnrolmentPolicyRegistry
 		var policy = GetPolicy(id);
 
 		IEnrolmentEvaluator evaluator = policy.Engine;
-		var factsErrors = StudentValidator.ValidateFacts(student, evaluator.Scale);
+		var factsErrors = StudentValidator.ValidateFacts(student, evaluator.Scale, evaluator.Gcses);
 		if (factsErrors.Count > 0) {
 			return new(new([.. factsErrors]), null);
 		}

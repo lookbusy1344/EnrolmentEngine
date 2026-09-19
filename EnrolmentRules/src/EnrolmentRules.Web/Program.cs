@@ -9,6 +9,8 @@ using Services;
 /// <summary>Entry point, exposed as a named class so <c>WebApplicationFactory&lt;Program&gt;</c> can host this app for integration tests.</summary>
 public sealed class Program
 {
+	internal const string RateLimitClientAddressSourceConfigurationKey = "EnrolmentRules:RateLimitClientAddressSource";
+
 	private Program() { }
 
 	public static void Main(string[] args)
@@ -21,23 +23,16 @@ public sealed class Program
 		_ = builder.Services.AddRazorPages(options => options.Conventions.AddPageRoute("/App", ""));
 		_ = builder.Services.AddSingleton(TimeProvider.System);
 		_ = builder.Services.AddSingleton<IViteManifestReader, ViteManifestReader>();
+		_ = builder.Services.AddSingleton<EnrolmentOptionsServiceCache>();
+		_ = builder.Services.AddEnrolmentApiRateLimiting(ResolveRateLimitClientAddressSource(builder.Configuration));
+		var root = builder.Environment.ContentRootPath;
 		_ = builder.Services.AddEnrolmentPolicies(options => options
-															 .UseDefault(
-																 "standard",
-																 "Standard",
-																 new DirectoryDataSource(
-																	 Path.Combine(builder.Environment.ContentRootPath, "workflows"),
-																	 Path.Combine(builder.Environment.ContentRootPath, "data")))
-															 .Add(
-																 "elite",
-																 "Elite",
-																 new OverlayEnrolmentDataSource(
-																	 new DirectoryDataSource(
-																		 Path.Combine(builder.Environment.ContentRootPath, "policies", "elite", "workflows"),
-																		 Path.Combine(builder.Environment.ContentRootPath, "policies", "elite", "data")),
-																	 new DirectoryDataSource(
-																		 Path.Combine(builder.Environment.ContentRootPath, "workflows"),
-																		 Path.Combine(builder.Environment.ContentRootPath, "data"))))
+															 .AddDiscovered(
+																 PolicyDirectoryLayout.Discover(
+																	 Path.Combine(root, "workflows"),
+																	 Path.Combine(root, "data"),
+																	 Path.Combine(root, "policies")),
+																 new(PolicyDirectoryLayout.StandardPolicyId))
 															 .UseTimeProvider());
 
 		var app = builder.Build();
@@ -46,13 +41,29 @@ public sealed class Program
 			_ = app.UseExceptionHandler(exceptionApp => exceptionApp.Run(HandleUnhandledExceptionAsync));
 		}
 
+		_ = app.UseSecurityHeaders();
 		_ = app.UseStaticFiles();
 		_ = app.UseRouting();
+		_ = app.UseRateLimiter();
 		_ = app.UseEnrolmentEvaluateRequestSizeLimit();
 		_ = app.MapRazorPages();
 		_ = app.MapEnrolmentApi();
 
 		app.Run();
+	}
+
+	internal static RateLimitClientAddressSource ResolveRateLimitClientAddressSource(IConfiguration configuration)
+	{
+		ArgumentNullException.ThrowIfNull(configuration);
+		var configured = configuration[RateLimitClientAddressSourceConfigurationKey];
+		if (string.IsNullOrWhiteSpace(configured)) {
+			return RateLimitClientAddressSource.Direct;
+		}
+
+		return Enum.TryParse<RateLimitClientAddressSource>(configured, true, out var source) && Enum.IsDefined(source)
+			? source
+			: throw new InvalidOperationException(
+				$"Configuration '{RateLimitClientAddressSourceConfigurationKey}' has unsupported value '{configured}'.");
 	}
 
 	// One error contract for both page and API requests: a stable 500 with no exception detail leaked

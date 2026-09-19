@@ -355,6 +355,8 @@ public sealed class EngineFactoryTests
 		private readonly byte[] catalogue;
 		private readonly byte[] catalogueSchema;
 		private readonly ManualResetEventSlim firstReloadBlockedSignal = new(false);
+		private readonly byte[] gcseSubjects;
+		private readonly byte[] gcseSubjectsSchema;
 		private readonly byte[] qualifications;
 		private readonly byte[] qualificationsSchema;
 		private readonly ManualResetEventSlim releaseFirstReloadSignal = new(false);
@@ -374,6 +376,8 @@ public sealed class EngineFactoryTests
 			byte[] catalogueSchema,
 			byte[] qualifications,
 			byte[] qualificationsSchema,
+			byte[] gcseSubjects,
+			byte[] gcseSubjectsSchema,
 			byte[] shippedThresholds,
 			Queue<byte[]> reloadThresholds,
 			byte[] thresholdsSchema,
@@ -386,6 +390,8 @@ public sealed class EngineFactoryTests
 			this.catalogueSchema = catalogueSchema;
 			this.qualifications = qualifications;
 			this.qualificationsSchema = qualificationsSchema;
+			this.gcseSubjects = gcseSubjects;
+			this.gcseSubjectsSchema = gcseSubjectsSchema;
 			this.shippedThresholds = shippedThresholds;
 			this.reloadThresholds = reloadThresholds;
 			this.thresholdsSchema = thresholdsSchema;
@@ -415,6 +421,10 @@ public sealed class EngineFactoryTests
 		public Stream OpenQualifications() => new MemoryStream(qualifications, false);
 
 		public Stream OpenQualificationsSchema() => new MemoryStream(qualificationsSchema, false);
+
+		public Stream OpenGcseSubjects() => new MemoryStream(gcseSubjects, false);
+
+		public Stream OpenGcseSubjectsSchema() => new MemoryStream(gcseSubjectsSchema, false);
 
 		public Stream OpenThresholds()
 		{
@@ -468,6 +478,8 @@ public sealed class EngineFactoryTests
 				File.ReadAllBytes(Path.Combine(dataDirectory, CatalogueStore.SchemaFileName)),
 				File.ReadAllBytes(Path.Combine(dataDirectory, QualificationScaleStore.QualificationsFileName)),
 				File.ReadAllBytes(Path.Combine(dataDirectory, QualificationScaleStore.SchemaFileName)),
+				File.ReadAllBytes(Path.Combine(dataDirectory, GcseSubjectsStore.GcseSubjectsFileName)),
+				File.ReadAllBytes(Path.Combine(dataDirectory, GcseSubjectsStore.SchemaFileName)),
 				File.ReadAllBytes(Path.Combine(dataDirectory, PolicyThresholdsStore.ThresholdsFileName)),
 				new(reloadThresholds),
 				File.ReadAllBytes(Path.Combine(dataDirectory, PolicyThresholdsStore.SchemaFileName)),

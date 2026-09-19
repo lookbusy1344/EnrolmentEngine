@@ -111,7 +111,7 @@ RulesEngine itself cannot express (a rule can't read sibling results).
   — evaluates `subject-ratings.yaml`/`eligibility.yaml` per subject, one pure function of one
   student's facts
 - **Cross-subject constraint pass (host code, downstream):** [`ConstraintPass.cs`](../src/EnrolmentRules.Engine/ConstraintPass.cs)
-  — prerequisites, mutual exclusions, chosen-A-level exclusions, own-time requirements,
+  — prerequisites, chosen-A-level exclusions, own-time requirements,
   per-subject vetoes; downgrades only, most-severe-wins
 - **Aggregation:** [`Aggregator.cs`](../src/EnrolmentRules.Engine/Aggregator.cs) — final score and
   the optional green cap (off by default)
