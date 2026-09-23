@@ -1,5 +1,6 @@
 namespace EnrolmentRules.Engine.Authoring;
 
+using System.Collections.Frozen;
 using System.Reflection;
 using System.Text.RegularExpressions;
 using Domain;
@@ -12,25 +13,25 @@ using RulesEngine.Models;
 [CLSCompliant(false)]
 public static partial class WorkflowLinter
 {
-	private static readonly Dictionary<string, Type> MemberOwners = new(StringComparer.Ordinal) {
+	private static readonly FrozenDictionary<string, Type> MemberOwners = new Dictionary<string, Type>(StringComparer.Ordinal) {
 		["facts"] = typeof(RatingFacts),
 		["lookup"] = typeof(GcseFacts),
 		["policy"] = typeof(PolicyFacts),
 		["Thresholds"] = typeof(Thresholds),
 		["ALevelGrade"] = typeof(ALevelGrade),
-	};
+	}.ToFrozenDictionary(StringComparer.Ordinal);
 
 	// The subject-keyed accessors whose first string-literal argument is a subject key. RulesEngine
 	// lambdas are untyped (Reservation 1), so a typo'd key here compiles, binds and silently returns the
 	// not-taken sentinel (grade 0 / U) — a permanent wrong red. The schema and member checks never see
 	// inside the string, so the key is validated here against the right vocabulary. The two vocabularies
 	// deliberately differ: GcseSubjects carries english_language (no A-level) and omits further_maths.
-	private static readonly Dictionary<(string Owner, string Method), KeyVocabulary> KeyedAccessors = new() {
+	private static readonly FrozenDictionary<(string Owner, string Method), KeyVocabulary> KeyedAccessors = new Dictionary<(string Owner, string Method), KeyVocabulary> {
 		[("facts", "Gcse")] = KeyVocabulary.Gcse,
 		[("lookup", "Grade")] = KeyVocabulary.Gcse,
 		[("facts", "Predicted")] = KeyVocabulary.Subject,
 		[("facts", "DfeProbabilityAtOrAbove")] = KeyVocabulary.Subject,
-	};
+	}.ToFrozenDictionary();
 
 	// The DfE confidence floors the two tiers read. Sourced by nameof so a rename of the RatingFacts member
 	// carries the linter with it rather than drifting from a hard-coded string.

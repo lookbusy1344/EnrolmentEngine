@@ -141,6 +141,7 @@ public sealed class CliPolicySelectionTests
 
 		var exit = CliRunner.Run(["--policy", "elite", "--lint-workflows"], stdout, stderr);
 
+		// ReSharper disable once RedundantToStringCall
 		exit.Should().Be(CliRunner.ExitOk, stdout.ToString() + stderr.ToString());
 	}
 

@@ -1,5 +1,6 @@
 namespace EnrolmentRules.Tests;
 
+using System.Collections.Frozen;
 using AwesomeAssertions;
 using Microsoft.CodeAnalysis;
 using Microsoft.CodeAnalysis.CSharp;
@@ -193,7 +194,7 @@ internal static class SynchronousTestSuiteGuard
 {
 	private const string ApprovedInfrastructureNamespace = "EnrolmentRules.Tests.TestInfrastructure";
 
-	private static readonly HashSet<string> ForbiddenIdentifiers = [
+	private static readonly FrozenSet<string> ForbiddenIdentifiers = FrozenSet.ToFrozenSet([
 		"Task",
 		"IAsyncLifetime",
 		"ReadAllTextAsync",
@@ -203,12 +204,12 @@ internal static class SynchronousTestSuiteGuard
 		"WaitAsync",
 		"ForEachAsync",
 		"ThrowAsync",
-	];
+	]);
 
-	private static readonly HashSet<string> ApprovedInfrastructureTypes = [
+	private static readonly FrozenSet<string> ApprovedInfrastructureTypes = FrozenSet.ToFrozenSet([
 		"TestProcessRunner",
 		"TestProcessHost",
-	];
+	]);
 
 	// A narrow, named exception distinct from the process-I/O infrastructure escape hatch above: a
 	// private helper whose only role is forcing the compiler to emit a genuine async state-machine
@@ -216,25 +217,25 @@ internal static class SynchronousTestSuiteGuard
 	// the size scan against real compiler output, not a hand-rolled stand-in). It is never awaited or
 	// run — IsApprovedAsyncTestMethod's TestProcessRunner/TestProcessHost requirement assumes genuine
 	// process I/O, which this syntax-only fixture has none of.
-	private static readonly HashSet<(string File, string Method)> ApprovedAsyncFixtureMethods = [
+	private static readonly FrozenSet<(string File, string Method)> ApprovedAsyncFixtureMethods = FrozenSet.ToFrozenSet([
 		("CodeStyle_StructSize.cs", "AsyncMethodWithManyLocalsAsync"),
-	];
+	]);
 
-	private static readonly IReadOnlyDictionary<string, IReadOnlyDictionary<string, HashSet<string>>> AllowedExternalMembers =
-		new Dictionary<string, IReadOnlyDictionary<string, HashSet<string>>>(StringComparer.Ordinal) {
+	private static readonly IReadOnlyDictionary<string, IReadOnlyDictionary<string, FrozenSet<string>>> AllowedExternalMembers =
+		new Dictionary<string, IReadOnlyDictionary<string, FrozenSet<string>>>(StringComparer.Ordinal) {
 			["EligibilityShortCircuitTests.cs"] =
-				new Dictionary<string, HashSet<string>>(StringComparer.Ordinal) {
-					["ValueTask"] = ["ExecuteAllRulesAsync", "ExecuteActionWorkflowAsync"],
-					["ExecuteAllRulesAsync"] = ["ExecuteAllRulesAsync"],
-					["ExecuteActionWorkflowAsync"] = ["ExecuteActionWorkflowAsync"],
+				new Dictionary<string, FrozenSet<string>>(StringComparer.Ordinal) {
+					["ValueTask"] = FrozenSet.ToFrozenSet(["ExecuteAllRulesAsync", "ExecuteActionWorkflowAsync"]),
+					["ExecuteAllRulesAsync"] = FrozenSet.ToFrozenSet(["ExecuteAllRulesAsync"]),
+					["ExecuteActionWorkflowAsync"] = FrozenSet.ToFrozenSet(["ExecuteActionWorkflowAsync"]),
 				},
-			["RatingEvaluatorTests.cs"] = new Dictionary<string, HashSet<string>>(StringComparer.Ordinal) {
-				["ValueTask"] = ["ExecuteAllRulesAsync", "ExecuteActionWorkflowAsync"],
-				["ExecuteAllRulesAsync"] = ["ExecuteAllRulesAsync"],
-				["ExecuteActionWorkflowAsync"] = ["ExecuteActionWorkflowAsync"],
+			["RatingEvaluatorTests.cs"] = new Dictionary<string, FrozenSet<string>>(StringComparer.Ordinal) {
+				["ValueTask"] = FrozenSet.ToFrozenSet(["ExecuteAllRulesAsync", "ExecuteActionWorkflowAsync"]),
+				["ExecuteAllRulesAsync"] = FrozenSet.ToFrozenSet(["ExecuteAllRulesAsync"]),
+				["ExecuteActionWorkflowAsync"] = FrozenSet.ToFrozenSet(["ExecuteActionWorkflowAsync"]),
 			},
-			["StartupTests.cs"] = new Dictionary<string, HashSet<string>>(StringComparer.Ordinal) {
-				["ExecuteAllRulesAsync"] = ["ExecuteAllRules"],
+			["StartupTests.cs"] = new Dictionary<string, FrozenSet<string>>(StringComparer.Ordinal) {
+				["ExecuteAllRulesAsync"] = FrozenSet.ToFrozenSet(["ExecuteAllRules"]),
 			},
 		};
 
@@ -273,7 +274,7 @@ internal static class SynchronousTestSuiteGuard
 		SimpleNameSyntax identifier,
 		string name,
 		GuardContext context,
-		IReadOnlyDictionary<string, HashSet<string>>? allowed)
+		IReadOnlyDictionary<string, FrozenSet<string>>? allowed)
 	{
 		if (context.IsInfrastructure) {
 			return false;
@@ -319,7 +320,7 @@ internal static class SynchronousTestSuiteGuard
 	private static bool IsAllowedAsyncIdentifier(
 		SimpleNameSyntax identifier,
 		GuardContext context,
-		IReadOnlyDictionary<string, HashSet<string>>? allowed)
+		IReadOnlyDictionary<string, FrozenSet<string>>? allowed)
 	{
 		if (IsAllowedExternalMember(identifier, identifier.Identifier.ValueText, allowed)) {
 			return true;
@@ -365,7 +366,7 @@ internal static class SynchronousTestSuiteGuard
 
 	private static bool IsAllowedMethodDeclaration(
 		string name,
-		IReadOnlyDictionary<string, HashSet<string>>? allowed) =>
+		IReadOnlyDictionary<string, FrozenSet<string>>? allowed) =>
 		allowed is not null
 		&& allowed.TryGetValue(name, out var allowedMethods)
 		&& allowedMethods.Contains(name);
@@ -373,7 +374,7 @@ internal static class SynchronousTestSuiteGuard
 	private static bool IsAllowedExternalMember(
 		SimpleNameSyntax identifier,
 		string name,
-		IReadOnlyDictionary<string, HashSet<string>>? allowed)
+		IReadOnlyDictionary<string, FrozenSet<string>>? allowed)
 	{
 		if (allowed is null || !allowed.TryGetValue(name, out var allowedMethods)) {
 			return false;

@@ -1,5 +1,6 @@
 namespace EnrolmentRules.Web.Services;
 
+using System.Collections.Frozen;
 using Domain;
 using Engine;
 using Subject = Domain.Subject;
@@ -46,17 +47,17 @@ public sealed class EnrolmentOptionsService(EnrolmentPolicy policy)
 	///     nothing to offer. Kept here rather than in the catalogue for the same reason as
 	///     <see cref="IllustrativeHobbies" />: placeholders for future policy, not existing rules.
 	/// </summary>
-	private static readonly Dictionary<QualificationType, string[]> IllustrativeSubjectsByType = new() {
+	private static readonly FrozenDictionary<QualificationType, string[]> IllustrativeSubjectsByType = new Dictionary<QualificationType, string[]> {
 		[QualificationType.BtecExtendedCertificate] = ["business", "health_and_social_care", "information_technology"],
 		[QualificationType.Nvq] = ["construction", "business_administration", "hospitality_and_catering"],
-	};
+	}.ToFrozenDictionary();
 
-	private static readonly Dictionary<QualificationType, string> SubjectGroupLabels = new() {
+	private static readonly FrozenDictionary<QualificationType, string> SubjectGroupLabels = new Dictionary<QualificationType, string> {
 		[QualificationType.ALevel] = "A-Level subjects",
 		[QualificationType.BtecExtendedCertificate] = "BTEC Extended Certificate examples",
 		[QualificationType.BtecDiploma] = "BTEC Diploma examples",
 		[QualificationType.Nvq] = "NVQ examples",
-	};
+	}.ToFrozenDictionary();
 
 	/// <summary>
 	///     The GCSE keys that lead <see cref="GcseSubjectOptions" /> ahead of the alphabet, in display

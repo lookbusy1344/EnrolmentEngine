@@ -1,5 +1,6 @@
 namespace EnrolmentRules.Tests;
 
+using System.Collections.Frozen;
 using AwesomeAssertions;
 using Domain;
 
@@ -13,8 +14,8 @@ public sealed class SubjectRatingTests
 {
 	// The accessible tier, deliberately rated green at a 4.0 average so a borderline-eligible student has a
 	// programme to enrol on. Every other subject stays red there.
-	private static readonly HashSet<Subject> AccessibleSubjects =
-		[Subject.Psychology, Subject.Sociology, Subject.MediaStudies];
+	private static readonly FrozenSet<Subject> AccessibleSubjects =
+		FrozenSet.ToFrozenSet([Subject.Psychology, Subject.Sociology, Subject.MediaStudies]);
 
 	private static IReadOnlyList<SubjectRating> Rate(params (string Subject, int Grade)[] gcses)
 	{
