@@ -23,13 +23,21 @@ function isDrumProject(testInfo: { project: { use: { viewport?: { width: number 
 
 /**
  * The drum glides to a keyed grade; it has settled once that grade is painted at full opacity. A
- * flat row paints no inline opacity at all, so there is nothing to wait for there.
+ * flat row paints no inline opacity at all, so there is nothing to wait for there — but on the
+ * drum itself the cell is briefly unstyled between renders too, before the spin sets its opacity,
+ * so an unset style is only proof of settling in flat-row mode, never on the drum.
  */
-async function waitForSettled(wheel: Locator, grade: number): Promise<void> {
+async function waitForSettled(
+  wheel: Locator,
+  grade: number,
+  testInfo: { project: { use: { viewport?: { width: number } | null } } },
+): Promise<void> {
   const chosen = wheel.locator(`label[for="gcse-grade-0-${grade.toString()}"]`)
-  await expect
-    .poll(async () => chosen.evaluate((el) => el.style.opacity === '' || Number(el.style.opacity) > 0.99))
-    .toBe(true)
+  if (isDrumProject(testInfo)) {
+    await expect.poll(async () => chosen.evaluate((el) => Number(el.style.opacity) > 0.99)).toBe(true)
+  } else {
+    await expect.poll(async () => chosen.evaluate((el) => el.style.opacity === '')).toBe(true)
+  }
 }
 
 /** The drum's width and the width of one of its cells, in layout pixels. */
@@ -63,7 +71,7 @@ test.describe('grade wheel', () => {
     await setGcseGrade(page, 0, 5)
 
     const wheel = page.locator('.gwheel').first()
-    await waitForSettled(wheel, 5)
+    await waitForSettled(wheel, 5, testInfo)
     const { width, cellWidth } = await drumSize(wheel)
 
     expect(cellWidth * 5).toBeLessThanOrEqual(width + 1)
@@ -100,7 +108,7 @@ test.describe('grade wheel', () => {
 
     const wheel = page.locator('.gwheel').first()
     const chosen = wheel.locator('label[for="gcse-grade-0-5"]')
-    await waitForSettled(wheel, 5)
+    await waitForSettled(wheel, 5, testInfo)
 
     // 1920 crosses into the button row, where there is no lens to sit under — the grade stays
     // marked either way, and stays centred wherever the drum still spins.
