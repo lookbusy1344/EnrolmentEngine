@@ -13,7 +13,7 @@ using Serialization;
 ///     <em>bar</em> the subject outright (<see cref="BlockingActivities" /> — the per-subject veto: an
 ///     incompatible hobby forces red regardless of entry/tier), and the subjects this one depends on
 ///     (<see cref="Prerequisites" /> — a set of dependency groups, each satisfied by any one of its
-///     subjects qualifying this run or being a committed A-level choice; an unmet group downgrades to its
+///     subjects qualifying this run, with a commitment also required in chosen mode; an unmet group downgrades to its
 ///     own severity, e.g. Further Maths hard-requires Maths).
 /// </summary>
 public sealed record SubjectMeta(
@@ -44,8 +44,8 @@ public readonly record struct SubjectExclusion(Subject Other, Rating Severity);
 
 /// <summary>
 ///     A prerequisite group: the dependent subject requires <em>any one</em> of <see cref="AnyOf" /> to be
-///     satisfied. <see cref="Requires" /> selects how — by qualifying-or-committed (the default) or by a
-///     committed choice only. An unmet group downgrades the dependent subject to <see cref="Severity" /> —
+///     satisfied. <see cref="Requires" /> selects how — by qualifying (the default) or by a
+///     qualifying committed choice. An unmet group downgrades the dependent subject to <see cref="Severity" /> —
 ///     <see cref="Rating.Red" /> for a hard requirement, <see cref="Rating.Amber" /> for an advisory one.
 ///     Multiple groups on one subject are AND-ed (each must be satisfied independently); the unmet ones
 ///     compose by most-severe-wins like every other adjustment.

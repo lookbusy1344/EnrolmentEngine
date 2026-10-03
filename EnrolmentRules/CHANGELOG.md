@@ -1,5 +1,24 @@
 # Changelog
 
+## 1.4.1 — 2026-10-03
+
+- A workflow expression that throws for a particular student's facts now fails the evaluation with
+  `WorkflowEvaluationException`, including on the validated paths. Previously RulesEngine recorded
+  the error on the result tree and the rule read as unmatched, so the student received an ordinary
+  rating. The CLI `--batch` mode reports the failure on that line's outcome.
+- A prerequisite is met only by a subject rated green or amber after its constraints; `chosen` mode
+  also requires it in the basket. A committed choice rated red no longer supports a dependent subject,
+  so pruning `StaleChoices` once and re-evaluating leaves no further red choices.
+- Startup and `--lint-workflows` reject a policy with no `eligibility` or `subject-ratings` workflow,
+  or with two workflows of the same name.
+- `/api/enrolment/evaluate` reports null GCSE or prior-qualification rows, duplicate GCSE subjects,
+  and graded GCSE rows with no subject as indexed validation errors. Duplicate subjects previously
+  kept whichever grade came last.
+- The constant-table style guard covers static readonly mutable collections (`List`, `Dictionary`,
+  `HashSet` and others), not only arrays.
+- e2e: `waitForSettled` no longer treats unstyled drum cells as settled.
+- Dependency updates (NuGet and npm), pnpm pin bump to 12.6.0.
+
 ## 1.4.0 — 2026-09-19
 
 - GCSE subject vocabulary moves from a hardcoded C# array to `data/gcse-subjects.yaml`, closing the

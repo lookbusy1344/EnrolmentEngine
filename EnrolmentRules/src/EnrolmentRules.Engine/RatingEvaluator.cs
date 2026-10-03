@@ -215,8 +215,12 @@ internal sealed class RatingEvaluator(
 		var execution = engine.ExecuteAllRulesAsync(workflow, facts);
 		if (execution.IsCompleted) {
 #pragma warning disable VSTHRD002 // The completion guard above guarantees this ValueTask has already finished.
-			return execution.GetAwaiter().GetResult();
+			var results = execution.GetAwaiter().GetResult();
 #pragma warning restore VSTHRD002
+			var errors = WorkflowResultErrors.Find(results).ToArray();
+			return errors.Length == 0
+				? results
+				: throw new WorkflowEvaluationException(workflow, string.Join("; ", errors));
 		}
 
 		throw new InvalidOperationException(

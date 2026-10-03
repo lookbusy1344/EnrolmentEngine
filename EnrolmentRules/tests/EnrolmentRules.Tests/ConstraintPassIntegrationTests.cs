@@ -54,15 +54,26 @@ public sealed class ConstraintPassIntegrationTests
 	}
 
 	[Fact]
-	public void further_maths_prerequisite_is_met_by_a_committed_maths_choice()
+	public void further_maths_prerequisite_is_unmet_by_a_red_committed_maths_choice()
 	{
-		// Maths is red in this run's ratings, but the student has already committed to Maths as an
-		// A-level — a committed prerequisite is at least as strong as a qualifying one, so Further Maths
-		// keeps the green its own entry table earned.
 		var profile = Profile() with {
 			ChosenALevels = [Subject.Maths],
 		};
 		var adjustments = ConstraintPass.Evaluate(Ratings((Subject.FurtherMaths, Rating.Green)), profile, Harness.Catalogue);
+
+		adjustments.Should().ContainSingle(a => a.Subject == Subject.FurtherMaths).Which.To.Should().Be(Rating.Red);
+	}
+
+	[Theory]
+	[InlineData(Rating.Green)]
+	[InlineData(Rating.Amber)]
+	public void further_maths_prerequisite_is_met_by_an_available_committed_maths_choice(Rating mathsRating)
+	{
+		var profile = Profile() with {
+			ChosenALevels = [Subject.Maths],
+		};
+		var adjustments = ConstraintPass.Evaluate(
+			Ratings((Subject.Maths, mathsRating), (Subject.FurtherMaths, Rating.Green)), profile, Harness.Catalogue);
 
 		adjustments.Should().NotContain(a => a.Subject == Subject.FurtherMaths);
 	}
@@ -170,13 +181,15 @@ public sealed class ConstraintPassIntegrationTests
 	}
 
 	[Theory]
-	// qualifying mode: a green/amber rating OR a committed choice satisfies.
+	// Every prerequisite needs an available subject; chosen mode also needs a commitment.
 	[InlineData(PrerequisiteSatisfaction.Qualifying, true, false, true)]
-	[InlineData(PrerequisiteSatisfaction.Qualifying, false, true, true)]
+	[InlineData(PrerequisiteSatisfaction.Qualifying, true, true, true)]
+	[InlineData(PrerequisiteSatisfaction.Qualifying, false, true, false)]
 	[InlineData(PrerequisiteSatisfaction.Qualifying, false, false, false)]
-	// chosen mode: only a committed choice satisfies — a merely-qualifying subject does not.
 	[InlineData(PrerequisiteSatisfaction.Chosen, true, false, false)]
-	[InlineData(PrerequisiteSatisfaction.Chosen, false, true, true)]
+	[InlineData(PrerequisiteSatisfaction.Chosen, true, true, true)]
+	[InlineData(PrerequisiteSatisfaction.Chosen, false, true, false)]
+	[InlineData(PrerequisiteSatisfaction.Chosen, false, false, false)]
 	public void prerequisite_availability_respects_the_satisfaction_mode(
 		PrerequisiteSatisfaction requires, bool qualifies, bool chosen, bool expected)
 	{

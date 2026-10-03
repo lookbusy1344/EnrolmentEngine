@@ -3,6 +3,10 @@ namespace EnrolmentRules.Engine;
 using Domain;
 
 /// <summary>Evaluate and explain student verdicts without the counterfactual advisor surface.</summary>
+/// <remarks>
+///     Workflow expression failures throw <see cref="WorkflowEvaluationException" />, including on validated
+///     paths. Input validation reports student facts; an expression failure is a policy execution error.
+/// </remarks>
 public interface IEnrolmentEvaluator
 {
 	CatalogueData Catalogue { get; }

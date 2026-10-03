@@ -169,8 +169,8 @@ input; it is a post-run check reported as input validation.
 
 A single-policy caller holding a mutable basket can avoid surfacing that rejection to the student by
 calling `IEnrolmentEvaluator.StaleChoices(student)`, dropping exactly those subjects, and
-re-evaluating. One pass always suffices: dropping choices only ever removes downgrades, so nothing
-left in the basket can newly turn red. The shipped web front ends instead preserve one basket across
+re-evaluating. Red choices already fail prerequisite checks, so removing them cannot invalidate a
+surviving dependency. One prune and re-evaluation suffice. The shipped web front ends preserve one basket across
 multiple policies and call `IEnrolmentPolicyRegistry.Compare`; a red or not-offered choice remains
 visible with an `Unavailable` or `NotOffered` status.
 
@@ -421,7 +421,8 @@ why a subject is reachable or unreachable. The same default can be flipped persi
 dotnet run --project src/EnrolmentRules.Cli -- --advise --all-gcses examples/student.json
 ```
 
-Statically lint the shipped workflows for structural faults (missing/duplicate tiers, tier
+Statically lint the shipped workflows for structural faults (missing required workflows, duplicate
+workflow names, missing/duplicate tiers, tier
 ordering, off-vocabulary field references, eligibility shape) — input-independent, so it catches a
 typo before any student exercises it. The same lint runs inside `Create`/`Reload`, so a
 misordered or off-vocabulary workflow fails startup; `--lint-workflows` is the cheaper authoring

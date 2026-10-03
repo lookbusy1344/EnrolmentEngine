@@ -186,14 +186,14 @@ public sealed class EnrolmentEngine : IEnrolmentEngine
 	///     The committed choices the student may no longer hold: every <c>chosen_a_levels</c> entry the
 	///     pipeline now rates red. A choice is only ever made against a green or amber subject, so a red one
 	///     means the facts moved underneath it after it was committed — the <c>*Validated</c> calls refuse any
-	///     document that still names one, and a caller holding a mutable basket (both web front ends) prunes
-	///     against this list and re-evaluates rather than presenting the refusal to the student.
+	///     document that still names one. A single-policy caller can prune against this list and re-evaluate;
+	///     policy comparisons preserve the basket and annotate unavailable choices.
 	/// </summary>
 	/// <remarks>
 	///     Returns empty for a student with no choices, and for one whose facts do not validate — there is no
 	///     trustworthy rating to prune against, and the caller will surface the facts' own validation errors
-	///     from a <c>*Validated</c> call anyway. One pass suffices: dropping choices only removes downgrades, so no
-	///     surviving choice can newly turn red.
+	///     from a <c>*Validated</c> call anyway. One pass suffices: red choices already fail prerequisites,
+	///     so dropping them cannot invalidate a surviving dependency and only removes exclusion triggers.
 	/// </remarks>
 	/// <exception cref="ArgumentNullException"><paramref name="student" /> is null.</exception>
 	public IReadOnlyList<Subject> StaleChoices(StudentInput student, CancellationToken cancellationToken = default)
@@ -501,9 +501,8 @@ public sealed class EnrolmentEngine : IEnrolmentEngine
 	///     This cannot live in <see cref="StudentValidator" /> alongside the other <c>chosen_a_levels</c>
 	///     checks: a rating exists only after prediction, the engine and the constraint pass have run, and the
 	///     constraint pass reads <c>ChosenALevels</c> as an input. So it is a post-run check that reports
-	///     <em>as</em> input validation. Pruning terminates in one pass: dropping choices only ever removes
-	///     downgrades (the pass is monotone), so ratings can only improve and no surviving choice can newly
-	///     turn red.
+	///     <em>as</em> input validation. Pruning red choices terminates in one pass: dependency resolution
+	///     already rejects red prerequisites, so removing them cannot invalidate a surviving dependency.
 	/// </remarks>
 	private static IReadOnlyList<SubjectRating> StaleChoiceRatings(Evaluation evaluation)
 	{

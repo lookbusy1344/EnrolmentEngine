@@ -13,8 +13,8 @@
 #   prerequisites        — dependency groups; each group lists alternatives under `any_of` and an optional
 #                          `severity` (defaults to red — a hard requirement; amber is advisory) and an
 #                          optional `requires` (how a group is satisfied: `qualifying` (default) — any
-#                          alternative rating green/amber this run OR being a committed A-level; `chosen` —
-#                          only a committed `chosen_a_levels` entry counts). Multiple groups are all
+#                          alternative rating green/amber after its constraints; `chosen` —
+#                          that alternative must also be a committed `chosen_a_levels` entry). Multiple groups are all
 #                          required (AND).
 #   entry_equivalents    — typed prior qualifications that satisfy or strengthen subject entry. A
 #                          `chosen`-mode prerequisite naming a subject S also accepts a held prior

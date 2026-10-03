@@ -47,8 +47,8 @@ public sealed record EvaluatePriorQualificationRow(string? Subject, string? Type
 /// <summary>The full stateless snapshot <c>POST /api/enrolment/evaluate</c> accepts — every editable fact, every call.</summary>
 public sealed record EnrolmentEvaluateRequest(
 	DateOnly? DateOfBirth,
-	EquatableArray<EvaluateGcseRow> Gcses,
-	EquatableArray<EvaluatePriorQualificationRow> PriorQualifications,
+	EquatableArray<EvaluateGcseRow?> Gcses,
+	EquatableArray<EvaluatePriorQualificationRow?> PriorQualifications,
 	EquatableArray<string> Hobbies,
 	EquatableArray<string> ChosenALevels);
 

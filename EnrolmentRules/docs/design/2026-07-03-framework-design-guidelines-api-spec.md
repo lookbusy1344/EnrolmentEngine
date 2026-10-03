@@ -428,6 +428,7 @@ EnrolmentRules.Engine.Authoring.WorkflowException
 EnrolmentRules.Engine.Authoring.WorkflowLintException
 EnrolmentRules.Engine.Authoring.WorkflowLinter
 EnrolmentRules.Engine.Authoring.WorkflowProbeException
+EnrolmentRules.Engine.WorkflowEvaluationException
 EnrolmentRules.Engine.Authoring.WorkflowSchemaException
 EnrolmentRules.Engine.EnrolmentEngine
 EnrolmentRules.Engine.IEnrolmentAdvisor

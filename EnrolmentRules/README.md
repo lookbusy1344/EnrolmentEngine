@@ -129,7 +129,7 @@ subjects:
     regression: { slope: 1.00, intercept: -2.00 }   # predicts the A-level grade from GCSE attainment
     prerequisites:
       - any_of: [ maths ]        # Further Maths requires Maths...
-        requires: chosen         # ...actually chosen this year (not merely available)
+        requires: chosen         # ...chosen this year and still rated green or amber
     entry_equivalents:
       - { subject: maths, type: a_level, min_grade: d }   # ...or a prior A-level Maths at grade D+
 ```

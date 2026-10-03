@@ -153,7 +153,7 @@ public static class EnrolmentApiEndpoints
 			return TypedResults.Problem(
 				statusCode: StatusCodes.Status400BadRequest,
 				title: "Invalid enrolment snapshot.",
-				detail: "Could not map the posted snapshot: an unrecognised prior-qualification type or chosen A-level subject value.");
+				detail: "Could not map the posted snapshot: a null row, duplicate GCSE subject, or unrecognised prior-qualification type or chosen A-level subject value.");
 		}
 
 		var comparison = registry.Compare(selected.Descriptor.Id, input, cancellationToken);

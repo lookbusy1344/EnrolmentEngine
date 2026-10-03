@@ -11,6 +11,7 @@ using Subject = Domain.Subject;
 ///     <see cref="Domain.StudentValidator" /> reports it, and a subject/qualification-type token that cannot
 ///     be parsed at all fails the mapping outright (→ 400). A token that parses but breaks a business rule
 ///     (an out-of-range grade, an unknown GCSE key) is left for validation to report.
+///     Null rows and duplicate GCSE subjects fail mapping without returning partial facts.
 /// </summary>
 public static class EnrolmentApiMapper
 {
@@ -20,16 +21,8 @@ public static class EnrolmentApiMapper
 	{
 		ArgumentNullException.ThrowIfNull(request);
 
-		var gcses = new Dictionary<string, int>();
-		foreach (var row in request.Gcses) {
-			if (string.IsNullOrWhiteSpace(row.Subject) && row.Grade is null) {
-				continue;
-			}
-
-			gcses[row.Subject ?? string.Empty] = row.Grade ?? 0;
-		}
-
-		if (!TryMapPriorQualifications(request.PriorQualifications, out var priorQualifications)) {
+		if (!TryMapGcses(request.Gcses, out var gcses)
+			|| !TryMapPriorQualifications(request.PriorQualifications, out var priorQualifications)) {
 			input = null;
 			return false;
 		}
@@ -54,11 +47,35 @@ public static class EnrolmentApiMapper
 		return true;
 	}
 
-	private static bool TryMapPriorQualifications(
-		IReadOnlyList<EvaluatePriorQualificationRow> rows, out List<Qualification> mapped)
+	private static bool TryMapGcses(IReadOnlyList<EvaluateGcseRow?> rows, out Dictionary<string, int> mapped)
 	{
 		mapped = [];
 		foreach (var row in rows) {
+			if (row is null) {
+				return false;
+			}
+
+			if (string.IsNullOrWhiteSpace(row.Subject) && row.Grade is null) {
+				continue;
+			}
+
+			if (!mapped.TryAdd(row.Subject ?? string.Empty, row.Grade ?? 0)) {
+				return false;
+			}
+		}
+
+		return true;
+	}
+
+	private static bool TryMapPriorQualifications(
+		IReadOnlyList<EvaluatePriorQualificationRow?> rows, out List<Qualification> mapped)
+	{
+		mapped = [];
+		foreach (var row in rows) {
+			if (row is null) {
+				return false;
+			}
+
 			QualificationType? type = null;
 			if (!string.IsNullOrWhiteSpace(row.Type)) {
 				if (!Enum.TryParse<QualificationType>(row.Type, true, out var parsed) || !Enum.IsDefined(parsed)) {

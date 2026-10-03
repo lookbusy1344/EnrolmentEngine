@@ -93,8 +93,8 @@ internal static class ConstraintPass
 		ratings.TryGetValue(subject, out var rating) && rating != Rating.Red;
 
 	// Prerequisite (→ amber or red): for each qualifying subject, every dependency group must be satisfied —
-	// a group is met when any one of its alternatives qualifies in this run, is a committed A-level (a
-	// committed choice is at least as strong as a qualifying rating), or is already held as a prior
+	// a group is met when any one of its alternatives has an available rating (and is committed when
+	// the group requires a chosen subject), or is already held as a prior
 	// qualification matching one of the dependent subject's entry_equivalents (e.g. a held A-level Maths at
 	// grade D+ satisfies Further Maths's Maths prerequisite without choosing Maths again this run).
 	// Availability reads `resolved`, seeded from the phase-one adjusted ratings and threaded through in
@@ -185,17 +185,15 @@ internal static class ConstraintPass
 
 	/// <summary>
 	///     Whether <paramref name="required" /> satisfies a group with the given <paramref name="requires" />
-	///     mode: <see cref="PrerequisiteSatisfaction.Chosen" /> counts only a committed choice, while
-	///     <see cref="PrerequisiteSatisfaction.Qualifying" /> also accepts a green/amber rating this run.
+	///     mode: both modes require a resolved green/amber rating; <see cref="PrerequisiteSatisfaction.Chosen" />
+	///     also requires a committed choice.
 	/// </summary>
 	internal static bool IsPrerequisiteAvailable(
 		Subject required,
 		PrerequisiteSatisfaction requires,
 		Func<Subject, bool> qualifies,
 		IReadOnlyList<Subject> chosenALevels) =>
-		requires == PrerequisiteSatisfaction.Chosen
-			? chosenALevels.Contains(required)
-			: qualifies(required) || chosenALevels.Contains(required);
+		qualifies(required) && (requires != PrerequisiteSatisfaction.Chosen || chosenALevels.Contains(required));
 
 	/// <summary>
 	///     The pure core of the prerequisite rule, independent of the catalogue and the rating map: one

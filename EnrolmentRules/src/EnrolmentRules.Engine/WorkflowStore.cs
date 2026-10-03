@@ -170,11 +170,7 @@ internal static class WorkflowStore
 				throw new WorkflowProbeException(workflow.WorkflowName, ex.Message, ex);
 			}
 
-			var failures = results
-						   .SelectMany(Flatten)
-						   .Where(r => !string.IsNullOrWhiteSpace(r.ExceptionMessage))
-						   .Select(r => $"{r.Rule.RuleName}: {r.ExceptionMessage}")
-						   .ToList();
+			var failures = WorkflowResultErrors.Find(results).ToList();
 
 			if (failures.Count > 0) {
 				throw new WorkflowProbeException(workflow.WorkflowName, string.Join("; ", failures));
@@ -195,25 +191,13 @@ internal static class WorkflowStore
 			$"RulesEngine workflow '{workflow}' did not complete synchronously during startup probe compilation.");
 	}
 
-	private static IEnumerable<RuleResultTree> Flatten(RuleResultTree result)
-	{
-		yield return result;
-		if (result.ChildResults is null) {
-			yield break;
-		}
-
-		foreach (var child in result.ChildResults.SelectMany(Flatten)) {
-			yield return child;
-		}
-	}
-
 	private static bool IsWorkflowFile(string file) =>
 		!string.Equals(Path.GetFileName(file), SchemaFileName, StringComparison.OrdinalIgnoreCase)
 		&& Path.GetExtension(file) is ".json" or ".yaml" or ".yml";
 
 	private static void ThrowOnLintErrors(IReadOnlyList<Workflow> workflows, CatalogueData catalogue, GcseVocabulary gcses)
 	{
-		var findings = WorkflowLinter.Lint(workflows, catalogue, gcses)
+		var findings = WorkflowLinter.LintComplete(workflows, catalogue, gcses)
 									 .Where(static finding => finding.Severity == LintSeverity.Error)
 									 .ToArray();
 		if (findings.Length > 0) {

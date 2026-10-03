@@ -13,6 +13,7 @@ using RulesEngine.Models;
 [CLSCompliant(false)]
 public static partial class WorkflowLinter
 {
+
 	private static readonly FrozenDictionary<string, Type> MemberOwners = new Dictionary<string, Type>(StringComparer.Ordinal) {
 		["facts"] = typeof(RatingFacts),
 		["lookup"] = typeof(GcseFacts),
@@ -37,6 +38,7 @@ public static partial class WorkflowLinter
 	// carries the linter with it rather than drifting from a hard-coded string.
 	private static readonly string GreenDfeFloor = nameof(RatingFacts.MinDfeGreenProbabilityAtOrAbove);
 	private static readonly string AmberDfeFloor = nameof(RatingFacts.MinDfeAmberProbabilityAtOrAbove);
+	private static IReadOnlyList<string> RequiredWorkflows { get; } = [RatingEvaluator.EligibilityWorkflow, RatingEvaluator.SubjectRatingsWorkflow];
 
 	/// <summary>Lint loaded workflows against an explicit catalogue snapshot and GCSE vocabulary.</summary>
 	internal static IReadOnlyList<LintFinding> Lint(IReadOnlyList<Workflow> workflows, CatalogueData catalogue, GcseVocabulary? gcses = null)
@@ -50,13 +52,35 @@ public static partial class WorkflowLinter
 		return findings;
 	}
 
+	/// <summary>Lint a complete policy, including workflow presence and unique names.</summary>
+	internal static IReadOnlyList<LintFinding> LintComplete(
+		IReadOnlyList<Workflow> workflows, CatalogueData catalogue, GcseVocabulary? gcses = null) =>
+		[.. LintWorkflowSet(workflows), .. Lint(workflows, catalogue, gcses)];
+
+	private static List<LintFinding> LintWorkflowSet(IReadOnlyList<Workflow> workflows)
+	{
+		var byName = workflows.ToLookup(static workflow => workflow.WorkflowName, StringComparer.Ordinal);
+		var findings = new List<LintFinding>();
+		foreach (var required in RequiredWorkflows) {
+			if (!byName.Contains(required)) {
+				findings.Add(new(required, null, LintSeverity.Error, $"required workflow '{required}' is missing"));
+			}
+		}
+
+		foreach (var group in byName.Where(static group => group.Count() > 1).OrderBy(static group => group.Key, StringComparer.Ordinal)) {
+			findings.Add(new(group.Key, null, LintSeverity.Error, $"duplicate workflow name '{group.Key}'"));
+		}
+
+		return findings;
+	}
+
 	/// <summary>
 	///     Load and schema-validate the workflow files in <paramref name="directory" />, then lint them against
 	///     <paramref name="catalogue" /> and <paramref name="gcses" />. Keeps the untyped RulesEngine workflow type
 	///     inside the engine boundary so lint callers deal only in <see cref="LintFinding" />.
 	/// </summary>
 	public static IReadOnlyList<LintFinding> Lint(string directory, CatalogueData catalogue, string? schemaPath = null, GcseVocabulary? gcses = null)
-		=> Lint(WorkflowStore.LoadAndValidate(directory, schemaPath), catalogue, gcses);
+		=> LintComplete(WorkflowStore.LoadAndValidate(directory, schemaPath), catalogue, gcses);
 
 	/// <summary>
 	///     Load and schema-validate the stream-backed workflow <paramref name="files" /> against
@@ -68,7 +92,7 @@ public static partial class WorkflowLinter
 		Stream schemaStream,
 		CatalogueData catalogue,
 		GcseVocabulary? gcses = null)
-		=> Lint(WorkflowStore.LoadAndValidate(files, schemaStream), catalogue, gcses);
+		=> LintComplete(WorkflowStore.LoadAndValidate(files, schemaStream), catalogue, gcses);
 
 	private static IEnumerable<LintFinding> LintWorkflow(Workflow workflow, CatalogueData catalogue, GcseVocabulary gcses)
 	{

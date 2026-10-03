@@ -2,7 +2,7 @@ namespace EnrolmentRules.Engine.Authoring;
 
 using Domain;
 
-/// <summary>Base type for workflow problems detected at startup (fail loud, never silent — Reservation 1).</summary>
+/// <summary>Base type for workflow loading, compilation and evaluation failures.</summary>
 public abstract class WorkflowException : Exception
 {
 	protected WorkflowException() { }

@@ -14,8 +14,12 @@ using Microsoft.CodeAnalysis.CSharp.Syntax;
 ///     mutable collection nested inside an otherwise-readonly wrapper (e.g.
 ///     <c>IReadOnlyDictionary&lt;string, HashSet&lt;string&gt;&gt;</c>) — the outer interface stops
 ///     callers reassigning the field, not mutating the inner set. Prefer <c>FrozenSet&lt;T&gt;</c>/
-///     <c>FrozenDictionary&lt;TKey, TValue&gt;</c> for membership, <c>static ReadOnlySpan&lt;T&gt; X =&gt;
-///     [...]</c> for an ordered constant, or <c>IReadOnlyList&lt;T&gt;</c> only where an EF expression
+///     <c>FrozenDictionary&lt;TKey, TValue&gt;</c> for membership,
+///     <c>
+///         static ReadOnlySpan&lt;T&gt; X =&gt;
+///         [...]
+///     </c>
+///     for an ordered constant, or <c>IReadOnlyList&lt;T&gt;</c> only where an EF expression
 ///     tree must capture it. Scans the tracked <c>.cs</c> sources under <c>src</c> and <c>tests</c> so
 ///     the pattern cannot creep back in.
 /// </summary>
