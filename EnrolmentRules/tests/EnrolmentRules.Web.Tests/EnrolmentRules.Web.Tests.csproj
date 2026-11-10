@@ -10,6 +10,10 @@
         <NoWarn>$(NoWarn);CA1707;IDE0058</NoWarn>
         <!-- Quiets ASP.NET Core's own console logger in this test host; see the file's own comment. -->
         <RunSettingsFilePath>$(MSBuildThisFileDirectory)web-test-hosts.runsettings</RunSettingsFilePath>
+        <!-- SDK 11 adds a Debug-only Hot Reload JS module to every Web SDK project. This test host
+             also inherits the referenced web app's copy, and the duplicate fails static-web-asset
+             endpoint resolution. A test host needs no Hot Reload. -->
+        <EnableHotReloadInRuntimeConfigDevFile>false</EnableHotReloadInRuntimeConfigDevFile>
     </PropertyGroup>
 
     <ItemGroup>
@@ -18,7 +22,7 @@
             <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
         </PackageReference>
         <PackageReference Include="AwesomeAssertions" Version="9.6.0"/>
-        <PackageReference Include="Microsoft.AspNetCore.Mvc.Testing" Version="10.0.14"/>
+        <PackageReference Include="Microsoft.AspNetCore.Mvc.Testing" Version="11.0.0"/>
         <PackageReference Include="Microsoft.NET.Test.Sdk" Version="18.11.0"/>
         <PackageReference Include="xunit" Version="2.9.3"/>
         <PackageReference Include="xunit.runner.visualstudio" Version="4.0.1">

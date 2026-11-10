@@ -23,6 +23,6 @@ internal static class TestProcessHost
 			"EnrolmentRules.TestProcessHost",
 			"bin",
 			"Debug",
-			"net10.0",
+			"net11.0",
 			"EnrolmentRules.TestProcessHost.dll");
 }

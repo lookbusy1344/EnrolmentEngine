@@ -17,7 +17,7 @@ These ship inside the deployed application, and so form part of the
 
 | Component | Version | License | AGPLv3 compatibility |
 | --- | --- | --- | --- |
-| Bootstrap | 5.3.3 | MIT | Compatible |
+| Bootstrap | 5.3.8 | MIT | Compatible |
 
 Bootstrap: Copyright (c) 2011-2025 The Bootstrap Authors. Licensed under MIT
 (<https://github.com/twbs/bootstrap/blob/main/LICENSE>).
@@ -81,8 +81,8 @@ Frontend toolchain (`ClientApp/` devDependencies):
 | jiti | 2.7.0 | MIT |
 | prettier | 3.9.6 | MIT |
 | typescript | 6.0.3 | Apache-2.0 |
-| typescript-eslint | 8.66.0 | MIT |
-| vite | 8.2.1 | MIT |
+| typescript-eslint | 8.72.0 | MIT |
+| vite | 8.3.5 | MIT |
 | vue-tsc | 3.3.9 | MIT |
 
 ## Test-time only
@@ -93,7 +93,7 @@ Not redistributed.
 | --- | --- | --- |
 | AwesomeAssertions | 9.5.0 | Apache-2.0 |
 | coverlet.collector | 10.0.1 | MIT |
-| FsCheck.Xunit | 3.3.4 | BSD-3-Clause |
+| FsCheck.Xunit | 3.6.0 | BSD-3-Clause |
 | Microsoft.AspNetCore.Mvc.Testing | 10.0.10 | MIT |
 | Microsoft.CodeAnalysis.CSharp | 5.6.0 | MIT |
 | Microsoft.Extensions.DependencyInjection | 10.0.10 | MIT |

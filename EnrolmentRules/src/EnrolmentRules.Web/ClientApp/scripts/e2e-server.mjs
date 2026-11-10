@@ -12,7 +12,7 @@ const scriptsDir = path.dirname(fileURLToPath(import.meta.url))
 const repoRoot = path.resolve(scriptsDir, '../../../..')
 const webProjectDir = path.join(repoRoot, 'src', 'EnrolmentRules.Web')
 const webProject = path.join(webProjectDir, 'EnrolmentRules.Web.csproj')
-const webBinDir = path.join(webProjectDir, 'bin', 'Debug', 'net10.0')
+const webBinDir = path.join(webProjectDir, 'bin', 'Debug', 'net11.0')
 
 // Launched through the same `dotnet` command that just built it, rather than the generated native
 // apphost directly: the apphost only searches registered runtime install locations and misses a

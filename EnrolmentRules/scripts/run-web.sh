@@ -12,7 +12,7 @@
 #   fixes it without launching the compiled executable directly (which can't be watched).
 #
 #   ASPNETCORE_WEBROOT — with the content root in bin/, the web root would default to
-#   bin/Debug/net10.0/wwwroot, which only refreshes on a full build. Pointing it back at the
+#   bin/Debug/net11.0/wwwroot, which only refreshes on a full build. Pointing it back at the
 #   source wwwroot lets the app serve vite build --watch's output the instant it lands.
 #   ViteManifestReader re-reads manifest.json per request, so a Vue edit needs no dotnet
 #   restart — just a browser refresh.
@@ -21,7 +21,7 @@ set -euo pipefail
 here="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 repo="$(cd "$here/.." && pwd)"
 project="$repo/src/EnrolmentRules.Web/EnrolmentRules.Web.csproj"
-out="$repo/src/EnrolmentRules.Web/bin/Debug/net10.0"
+out="$repo/src/EnrolmentRules.Web/bin/Debug/net11.0"
 client="$repo/src/EnrolmentRules.Web/ClientApp"
 webroot="$repo/src/EnrolmentRules.Web/wwwroot"
 readonly port=5299

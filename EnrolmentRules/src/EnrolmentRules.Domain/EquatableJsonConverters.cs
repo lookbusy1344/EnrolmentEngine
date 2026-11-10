@@ -29,7 +29,7 @@ public sealed class EquatableArrayJsonConverter<T> : JsonConverter<EquatableArra
 			throw new JsonException($"Expected start of array for {typeToConvert}.");
 		}
 
-		var elementInfo = (JsonTypeInfo<T>)options.GetTypeInfo(typeof(T));
+		var elementInfo = options.GetTypeInfo<T>();
 		var builder = ImmutableArray.CreateBuilder<T>();
 		while (reader.Read() && reader.TokenType != JsonTokenType.EndArray) {
 			builder.Add(JsonSerializer.Deserialize(ref reader, elementInfo)!);
@@ -40,7 +40,7 @@ public sealed class EquatableArrayJsonConverter<T> : JsonConverter<EquatableArra
 
 	public override void Write(Utf8JsonWriter writer, EquatableArray<T> value, JsonSerializerOptions options)
 	{
-		var elementInfo = (JsonTypeInfo<T>)options.GetTypeInfo(typeof(T));
+		var elementInfo = options.GetTypeInfo<T>();
 		writer.WriteStartArray();
 		foreach (var item in value) {
 			JsonSerializer.Serialize(writer, item, elementInfo);
@@ -70,7 +70,7 @@ public sealed class EquatableDictionaryJsonConverter<TKey, TValue> : JsonConvert
 {
 	public override EquatableDictionary<TKey, TValue> Read(ref Utf8JsonReader reader, Type typeToConvert, JsonSerializerOptions options)
 	{
-		var info = (JsonTypeInfo<Dictionary<TKey, TValue>>)options.GetTypeInfo(typeof(Dictionary<TKey, TValue>));
+		var info = options.GetTypeInfo<Dictionary<TKey, TValue>>();
 		// The deserialized dictionary is freshly allocated and unaliased, so hand it straight to the
 		// ownership constructor rather than copying it again through the public CopyOf factory.
 		var entries = JsonSerializer.Deserialize(ref reader, info)
@@ -80,7 +80,7 @@ public sealed class EquatableDictionaryJsonConverter<TKey, TValue> : JsonConvert
 
 	public override void Write(Utf8JsonWriter writer, EquatableDictionary<TKey, TValue> value, JsonSerializerOptions options)
 	{
-		var info = (JsonTypeInfo<Dictionary<TKey, TValue>>)options.GetTypeInfo(typeof(Dictionary<TKey, TValue>));
+		var info = options.GetTypeInfo<Dictionary<TKey, TValue>>();
 		JsonSerializer.Serialize(writer, new(value), info);
 	}
 }

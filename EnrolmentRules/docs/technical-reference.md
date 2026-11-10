@@ -4,7 +4,7 @@ This is a recreation of a proprietary project I developed a few years ago, to as
 consistently followed. The real system was also capable of writing the complete enrolment package into the management information system, and printing
 forms for signature.
 
-Here we show the core ideas in an open-source (AGPLv3 licence) project using modern idiomatic .NET 10. The code is designed as a library, so can be
+Here we show the core ideas in an open-source (AGPLv3 licence) project using modern idiomatic .NET 11. The code is designed as a library, so can be
 connected to ASP.NET, a language-agnostic REST API, MVC, or just used from the command line (as demonstrated here).
 
 The system is a simple monotonic expert system using [Microsoft RulesEngine](https://microsoft.github.io/RulesEngine). It evaluates one student at a
@@ -20,7 +20,7 @@ time through a stateless pipeline:
 
 Requirements to build:
 
-- .NET 10 SDK (Windows, Mac, Linux)
+- .NET 11 SDK (Windows, Mac, Linux)
 
 The solution file is `EnrolmentRules.slnx`.
 
@@ -533,7 +533,7 @@ root is resolved against the app's base directory — i.e. the build output — 
 so Rider, Visual Studio and `dotnet run` all land on the Vue interface.
 
 **Rider:** the checked-in `.NET Project` run configuration `EnrolmentRules.Web` launches the built
-executable from `bin/Debug/net10.0` with that directory as the working directory (so the content
+executable from `bin/Debug/net11.0` with that directory as the working directory (so the content
 root is right without any environment variable) and opens `/app` in the browser. Run or Debug it
 directly — breakpoints in C# work, and the `BuildClientApp` MSBuild target rebuilds the Vue bundle
 as part of the normal build.
@@ -556,7 +556,7 @@ Without the watchers, it is equivalent to:
 
 ```bash
 dotnet build src/EnrolmentRules.Web/EnrolmentRules.Web.csproj
-cd src/EnrolmentRules.Web/bin/Debug/net10.0
+cd src/EnrolmentRules.Web/bin/Debug/net11.0
 ASPNETCORE_URLS="http://localhost:5299" ASPNETCORE_ENVIRONMENT=Development ./EnrolmentRules.Web
 ```
 
