@@ -13,7 +13,7 @@
 # See docs/deployment.md for hosting and OrbStack instructions.
 
 # ---- build stage -----------------------------------------------------------
-# The runtime stage is Ubuntu 24.04 "Noble" chiseled (distroless-style: no shell, no
+# The runtime stage is Ubuntu 26.04 "Resolute" chiseled (distroless-style: no shell, no
 # package manager, non-root by default). To change it, swap the runtime FROM tag — the
 # SDK tag here can stay put, as the publish is RID-targeted rather than tied to the OS.
 # See docs/deployment.md "Base image / OS".
@@ -80,7 +80,7 @@ RUN dotnet publish src/EnrolmentRules.Web/EnrolmentRules.Web.csproj \
 # It ships no ICU and so defaults to DOTNET_SYSTEM_GLOBALIZATION_INVARIANT=true — fine
 # here, as the app formats and compares with InvariantCulture and ordinal rules throughout
 # and does no timezone or localization work. Code needing ICU must move to -chiseled-extra.
-FROM mcr.microsoft.com/dotnet/aspnet:11.0-noble-chiseled AS runtime
+FROM mcr.microsoft.com/dotnet/aspnet:11.0-resolute-chiseled AS runtime
 WORKDIR /app
 
 COPY --from=build /app ./

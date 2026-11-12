@@ -6,7 +6,7 @@ OCI/Docker container. That is the key to "free .NET 11 hosting": containerise, t
 container host.
 
 - **Image:** framework-dependent, ReadyToRun publish on
-  `mcr.microsoft.com/dotnet/aspnet:11.0-noble-chiseled` (~141 MB — see
+  `mcr.microsoft.com/dotnet/aspnet:11.0-resolute-chiseled` (~147 MB — see
   [Base image / OS](#base-image--os)).
 - **Listens on:** `8080` (`ASPNETCORE_HTTP_PORTS=8080`, the .NET image default). Plain HTTP —
   terminate TLS at a proxy or the platform's ingress.
@@ -25,16 +25,16 @@ shared `Directory.Build.props`, and the `workflows/` + `data/` trees, all under
 
 ### Base image / OS
 
-The runtime stage is **Ubuntu 24.04 "Noble" chiseled**
-(`mcr.microsoft.com/dotnet/aspnet:11.0-noble-chiseled`): a distroless-style image with no
+The runtime stage is **Ubuntu 26.04 "Resolute" chiseled**
+(`mcr.microsoft.com/dotnet/aspnet:11.0-resolute-chiseled`): a distroless-style image with no
 shell and no package manager, non-root by default. The build stage stays on the default-OS
 SDK tag (`mcr.microsoft.com/dotnet/sdk:11.0`) — the publish is RID-targeted, so the two
 stages need not share a distro. The architecture matches wherever you build —
 `linux/arm64` on Apple silicon, `linux/amd64` on a typical x86-64 server.
 
-The image is chosen for size and cold start. Measured on this app (5 runs, `docker run` →
-first HTTP 200 on `/`; the ~150 ms of container-create overhead is included and is
-irreducible):
+The image is chosen for size and cold start. Measured on this app under .NET 10, on the
+equivalent Noble tags (5 runs, `docker run` → first HTTP 200 on `/`; the ~150 ms of
+container-create overhead is included and is irreducible):
 
 | Variant | Cold start | Image |
 |---|---|---|
