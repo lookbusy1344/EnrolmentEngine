@@ -30,7 +30,7 @@ public sealed class EnrolmentEvaluateEndpointTests : IClassFixture<WebAppFactory
 		var body = await ReadBodyAsync(response);
 		body.ValidationErrors.Should().BeEmpty();
 		body.Result.Should().NotBeNull();
-		body.Result!.Eligible.Should().BeTrue();
+		body.Result.Eligible.Should().BeTrue();
 		body.Result.Explanations.Should().NotBeEmpty();
 	}
 
@@ -79,7 +79,7 @@ public sealed class EnrolmentEvaluateEndpointTests : IClassFixture<WebAppFactory
 
 		body.ValidationErrors.Should().BeEmpty();
 		body.Result.Should().NotBeNull();
-		var status = body.Result!.ChoiceStatuses.Should().ContainSingle().Which;
+		var status = body.Result.ChoiceStatuses.Should().ContainSingle().Which;
 		status.Subject.Value.Should().Be("further_maths");
 		status.Status.Should().Be("Unavailable");
 		status.Reason.Should().NotBeNull();
@@ -95,7 +95,7 @@ public sealed class EnrolmentEvaluateEndpointTests : IClassFixture<WebAppFactory
 		};
 		var accepted = await ReadBodyAsync(await PostAsync(client, chosen));
 		accepted.Result.Should().NotBeNull();
-		accepted.Result!.ChoiceStatuses.Should().ContainSingle(s => s.Subject.Value == "french" && s.Status == "Available");
+		accepted.Result.ChoiceStatuses.Should().ContainSingle(s => s.Subject.Value == "french" && s.Status == "Available");
 
 		// The same choice, with every grade collapsed to a 1.
 		var lowered = chosen with {
@@ -108,7 +108,7 @@ public sealed class EnrolmentEvaluateEndpointTests : IClassFixture<WebAppFactory
 		var body = await ReadBodyAsync(await PostAsync(client, lowered));
 
 		body.Result.Should().NotBeNull();
-		body.Result!.ChoiceStatuses.Should().ContainSingle(s => s.Subject.Value == "french" && s.Status == "Unavailable");
+		body.Result.ChoiceStatuses.Should().ContainSingle(s => s.Subject.Value == "french" && s.Status == "Unavailable");
 	}
 
 	[Fact]
@@ -144,7 +144,7 @@ public sealed class EnrolmentEvaluateEndpointTests : IClassFixture<WebAppFactory
 
 		body.ValidationErrors.Should().BeEmpty();
 		body.Result.Should().NotBeNull();
-		body.Result!.ChoiceStatuses.Should().ContainSingle(s => s.Subject.Value == "not_a_real_subject_key" && s.Status == "NotOffered");
+		body.Result.ChoiceStatuses.Should().ContainSingle(s => s.Subject.Value == "not_a_real_subject_key" && s.Status == "NotOffered");
 	}
 
 	[Fact]
@@ -179,7 +179,7 @@ public sealed class EnrolmentEvaluateEndpointTests : IClassFixture<WebAppFactory
 		var body = await ReadBodyAsync(response);
 
 		body.Result.Should().NotBeNull();
-		body.Result!.ChoiceStatuses.Should().Contain(s => s.Subject.Value == "politics" && s.Status == "Unavailable");
+		body.Result.ChoiceStatuses.Should().Contain(s => s.Subject.Value == "politics" && s.Status == "Unavailable");
 		body.Result.ChoiceStatuses.Should().Contain(s => s.Subject.Value == "not_a_real_subject_key" && s.Status == "NotOffered");
 		body.Result.ChoiceLimitReason.Should().BeNull();
 	}
@@ -308,6 +308,6 @@ public sealed class EnrolmentEvaluateEndpointTests : IClassFixture<WebAppFactory
 	{
 		var body = await response.Content.ReadFromJsonAsync(EnrolmentApiJsonContext.Default.EnrolmentEvaluateResponse);
 		body.Should().NotBeNull();
-		return body!;
+		return body;
 	}
 }

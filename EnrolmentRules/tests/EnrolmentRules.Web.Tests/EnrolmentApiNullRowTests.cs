@@ -25,7 +25,7 @@ public sealed class EnrolmentApiNullRowTests : IClassFixture<WebAppFactory>
 		response.StatusCode.Should().Be(HttpStatusCode.OK);
 		var body = await response.Content.ReadFromJsonAsync(EnrolmentApiJsonContext.Default.EnrolmentEvaluateResponse);
 		body.Should().NotBeNull();
-		body!.Result.Should().BeNull();
+		body.Result.Should().BeNull();
 		body.ValidationErrors.Should().ContainSingle().Which.Should().Contain("[0]").And.Contain("required");
 	}
 

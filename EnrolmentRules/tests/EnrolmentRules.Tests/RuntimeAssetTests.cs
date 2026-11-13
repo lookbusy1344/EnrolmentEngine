@@ -74,7 +74,7 @@ public sealed class RuntimeAssetTests
 		run.Stderr.Should().BeEmpty();
 		var result = JsonSerializer.Deserialize(run.Stdout, EnrolmentJsonContext.Default.EnrolmentResult);
 		result.Should().NotBeNull();
-		result!.Eligible.Should().BeTrue();
+		result.Eligible.Should().BeTrue();
 	}
 
 	/// <summary>

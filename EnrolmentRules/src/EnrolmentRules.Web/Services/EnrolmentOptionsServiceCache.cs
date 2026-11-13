@@ -11,7 +11,7 @@ using Engine;
 internal sealed class EnrolmentOptionsServiceCache
 {
 	private readonly ConcurrentDictionary<EnrolmentPolicy, EnrolmentOptionsService> services =
-		new(ReferenceEqualityComparer.Instance);
+		[with(ReferenceEqualityComparer.Instance)];
 
 	public EnrolmentOptionsService Get(EnrolmentPolicy policy)
 	{

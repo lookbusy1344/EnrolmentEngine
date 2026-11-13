@@ -29,7 +29,7 @@ internal static class CounterfactualAdvisor
 		// vectors, and a full EnrolmentResult is a pure function of the fixed non-GCSE student facts plus
 		// the grade vector, so a vector evaluated once is reused by the rest. The searches run
 		// sequentially, so a plain dictionary suffices.
-		var evaluations = new Dictionary<string, EnrolmentResult>(StringComparer.Ordinal);
+		Dictionary<string, EnrolmentResult> evaluations = [with(StringComparer.Ordinal)];
 		var pipelineBudget = new PipelineEvaluationBudget(thresholds.AdviceMaxPipelineEvaluations, onPipelineEvaluation);
 
 		if (!explained.Eligible) {
@@ -186,7 +186,7 @@ internal static class CounterfactualAdvisor
 	{
 		var original = GradeMap(student);
 		var queue = new PriorityQueue<SearchState, (int Cost, int TouchedSubjects, int Sequence)>();
-		var visited = new HashSet<string>(StringComparer.Ordinal);
+		HashSet<string> visited = [with(StringComparer.Ordinal)];
 		var sequence = 0;
 
 		var start = new SearchState(original, original, [], 0);
@@ -217,7 +217,7 @@ internal static class CounterfactualAdvisor
 				var nextGrades = new Dictionary<string, int>(state.Grades, StringComparer.OrdinalIgnoreCase) {
 					[subject] = nextValue,
 				};
-				var nextChanged = new HashSet<string>(state.ChangedSubjects, StringComparer.OrdinalIgnoreCase);
+				HashSet<string> nextChanged = [with(StringComparer.OrdinalIgnoreCase), .. state.ChangedSubjects];
 				if (originalGrade != nextValue) {
 					_ = nextChanged.Add(subject);
 				}

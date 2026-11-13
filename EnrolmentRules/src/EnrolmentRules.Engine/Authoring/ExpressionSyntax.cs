@@ -213,6 +213,8 @@ internal static class Parser
 			case TokenKind.Identifier:
 				return ParseIdentifier(tokens, ref position, token);
 
+			case TokenKind.Operator:
+			case TokenKind.Punctuation:
 			default:
 				throw new CriteriaNarrationException($"unexpected '{token.Text}' in expression");
 		}

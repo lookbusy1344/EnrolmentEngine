@@ -206,7 +206,7 @@ public sealed class AdvisorTests
 
 		advice.Eligible.Should().BeFalse();
 		advice.Gate.Should().NotBeNull();
-		advice.Gate!.Changes.Should().NotBeEmpty();
+		advice.Gate.Changes.Should().NotBeEmpty();
 		advice.Gate.Changes.Select(change => change.GcseSubject)
 			  .Should().Contain(subject => subject != "english_language" && subject != "maths");
 	}
@@ -359,7 +359,7 @@ public sealed class AdvisorTests
 		advice.Advice.Should().BeEmpty();
 		advice.Gate.Should().NotBeNull();
 
-		var improved = ApplyChanges(student, advice.Gate!.Changes);
+		var improved = ApplyChanges(student, advice.Gate.Changes);
 		var explained = engine.Explain(improved);
 		explained.Eligible.Should().BeTrue();
 	}
@@ -387,7 +387,7 @@ public sealed class AdvisorTests
 
 		advice.Eligible.Should().BeFalse();
 		advice.Gate.Should().NotBeNull();
-		advice.Gate!.Changes.Should().NotBeEmpty();
+		advice.Gate.Changes.Should().NotBeEmpty();
 
 		var improved = ApplyChanges(student, advice.Gate.Changes);
 		engine.Explain(improved).Eligible.Should().BeTrue();
@@ -415,7 +415,7 @@ public sealed class AdvisorTests
 		var furtherMaths = advice.Advice.Single(a => a.Subject == Subject.FurtherMaths);
 		furtherMaths.Reachable.Should().BeFalse();
 		furtherMaths.BlockedReason.Should().NotBeNull();
-		furtherMaths.BlockedReason!.Contains("budget", StringComparison.OrdinalIgnoreCase).Should().BeTrue();
+		furtherMaths.BlockedReason.Contains("budget", StringComparison.OrdinalIgnoreCase).Should().BeTrue();
 	}
 
 	[Fact]
@@ -438,7 +438,7 @@ public sealed class AdvisorTests
 
 		var parsed = JsonSerializer.Deserialize(stdout.ToString(), EnrolmentJsonContext.Default.AdviceResult);
 		parsed.Should().NotBeNull();
-		parsed!.Advice.Should().NotBeEmpty();
+		parsed.Advice.Should().NotBeEmpty();
 
 		// Hand-checked invariants beside the byte-match.
 		parsed.Eligible.Should().BeTrue();

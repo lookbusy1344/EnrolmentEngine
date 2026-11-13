@@ -264,7 +264,7 @@ public sealed class QualificationScaleResolutionTests
 
 		var roundTripped = JsonSerializer.Deserialize(json, EnrolmentJsonContext.Default.StudentDocument);
 		roundTripped.Should().NotBeNull();
-		roundTripped!.Student.PriorQualifications.Should().ContainSingle().Which.Should()
+		roundTripped.Student.PriorQualifications.Should().ContainSingle().Which.Should()
 					 .Be(new Qualification("biology", QualificationType.BtecDiploma, "distinction"));
 	}
 
@@ -287,7 +287,7 @@ public sealed class QualificationScaleResolutionTests
 		var document = JsonSerializer.Deserialize(json, EnrolmentJsonContext.Default.StudentDocument);
 
 		document.Should().NotBeNull();
-		document!.Student.PriorQualifications.Should().ContainSingle();
+		document.Student.PriorQualifications.Should().ContainSingle();
 		document.Student.PriorQualifications[0].Grade.Should().BeNull();
 	}
 
@@ -575,7 +575,7 @@ public static class MalformedStudentArbitraries
 		from subject in OptionalText
 		from type in Gen.Elements([.. Enum.GetValues<QualificationType>()])
 		from grade in OptionalText
-		select new Qualification(subject!, type, grade!);
+		select new Qualification(subject, type, grade);
 
 	private static readonly Gen<string> Hobby =
 		Gen.Elements<string>(null!, string.Empty, " ", "plays_piano", "gaming");
@@ -591,7 +591,7 @@ public static class MalformedStudentArbitraries
 			from priorQualifications in Qualification.ListOf()
 			from includeBirthDate in Gen.Elements(true, false)
 			select new StudentInput(
-				id!,
+				id,
 				includeGcses
 					? new Dictionary<string, int>(StringComparer.OrdinalIgnoreCase) {
 						["maths"] = 6,

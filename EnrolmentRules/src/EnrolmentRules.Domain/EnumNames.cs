@@ -34,7 +34,7 @@ public static class EnumNames
 
 		private static Dictionary<string, TEnum> Build()
 		{
-			var map = new Dictionary<string, TEnum>(StringComparer.Ordinal);
+			Dictionary<string, TEnum> map = [with(StringComparer.Ordinal)];
 			foreach (var value in Enum.GetValues<TEnum>()) {
 				var field = typeof(TEnum).GetField(value.ToString())!;
 				var name = field.GetCustomAttribute<JsonStringEnumMemberNameAttribute>()?.Name ?? value.ToString();

@@ -229,7 +229,7 @@ public sealed class CliTests
 		exit.Should().Be(CliRunner.ExitIneligible);
 		var result = JsonSerializer.Deserialize(stdout.ToString(), EnrolmentJsonContext.Default.EnrolmentResult);
 		result.Should().NotBeNull();
-		result!.Eligible.Should().BeFalse();
+		result.Eligible.Should().BeFalse();
 	}
 
 	[Fact]
@@ -501,7 +501,7 @@ public sealed class CliTests
 		exit.Should().Be(CliRunner.ExitOk);
 		var result = JsonSerializer.Deserialize(stdout.ToString(), EnrolmentJsonContext.Default.EnrolmentResult);
 		result.Should().NotBeNull();
-		result!.Eligible.Should().BeTrue();
+		result.Eligible.Should().BeTrue();
 	}
 
 	[Fact]

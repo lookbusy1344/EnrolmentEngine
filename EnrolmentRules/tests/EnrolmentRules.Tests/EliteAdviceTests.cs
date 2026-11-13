@@ -37,7 +37,7 @@ public sealed class EliteAdviceTests
 
 		advice.Eligible.Should().BeFalse();
 		advice.Gate.Should().NotBeNull();
-		advice.Gate!.Reachable.Should().BeTrue();
+		advice.Gate.Reachable.Should().BeTrue();
 
 		var improved = ApplyChanges(student, advice.Gate.Changes);
 		engine.Explain(improved).Eligible.Should().BeTrue();

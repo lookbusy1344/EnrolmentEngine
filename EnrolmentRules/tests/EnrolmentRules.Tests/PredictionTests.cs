@@ -374,7 +374,7 @@ public sealed class PredictionTests
 
 		var profile = JsonSerializer.Deserialize(stdout.ToString(), EnrolmentJsonContext.Default.StudentProfile);
 		profile.Should().NotBeNull();
-		profile!.Id.Should().Be("S-1001");
+		profile.Id.Should().Be("S-1001");
 		profile.AverageGcseScore.Should().BeApproximately((9 + 7 + 7 + 7 + 6 + 6 + 5 + 6 + 8) / 9.0, Tolerance);
 		profile.PredictedGrades.Should().HaveCount(Catalogue.Subjects.Count);
 		profile.ChosenALevels.Should().Equal(Subject.History);

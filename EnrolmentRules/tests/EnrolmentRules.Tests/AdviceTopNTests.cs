@@ -85,7 +85,7 @@ public sealed class AdviceTopNTests
 
 		advice.Eligible.Should().BeFalse();
 		advice.Gate.Should().NotBeNull();
-		advice.Gate!.Reachable.Should().BeTrue();
+		advice.Gate.Reachable.Should().BeTrue();
 		advice.Gate.Changes.Should().NotBeEmpty();
 
 		var improved = ApplyChanges(student, advice.Gate.Changes);
@@ -113,7 +113,7 @@ public sealed class AdviceTopNTests
 
 		advice.Eligible.Should().BeFalse();
 		advice.Gate.Should().NotBeNull();
-		advice.Gate!.Reachable.Should().BeFalse();
+		advice.Gate.Reachable.Should().BeFalse();
 		advice.Gate.Changes.Should().BeEmpty();
 	}
 

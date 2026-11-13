@@ -88,7 +88,7 @@ public sealed class PublicApiSurfaceTests
 			var missing = expectedSorted.Except(actual, StringComparer.Ordinal).ToArray();
 			var extra = actual.Except(expectedSorted, StringComparer.Ordinal).ToArray();
 
-			var parts = new List<string>(2);
+			List<string> parts = [];
 			if (missing.Length > 0) {
 				parts.Add($"Missing:{Environment.NewLine}{string.Join(Environment.NewLine, missing)}");
 			}
@@ -141,12 +141,12 @@ internal static class ApiSpecInventory
 		IReadOnlyList<string> DuplicateTypes,
 		IReadOnlyList<string> UnknownLabels) Parse(IReadOnlyList<string> lines)
 	{
-		var knownLabels = new HashSet<string>(StringComparer.Ordinal) {
-			"EnrolmentRules.Domain", "EnrolmentRules.Prediction", "EnrolmentRules.Engine", "EnrolmentRules.Extensions.DependencyInjection",
-		};
+		HashSet<string> knownLabels = [
+			with(StringComparer.Ordinal), "EnrolmentRules.Domain", "EnrolmentRules.Prediction", "EnrolmentRules.Engine", "EnrolmentRules.Extensions.DependencyInjection",
+		];
 
-		var typesByLabel = new Dictionary<string, IReadOnlyList<string>>(StringComparer.Ordinal);
-		var seenTypes = new HashSet<string>(StringComparer.Ordinal);
+		Dictionary<string, IReadOnlyList<string>> typesByLabel = [with(StringComparer.Ordinal)];
+		HashSet<string> seenTypes = [with(StringComparer.Ordinal)];
 		var duplicateTypes = new List<string>();
 		var unknownLabels = new List<string>();
 

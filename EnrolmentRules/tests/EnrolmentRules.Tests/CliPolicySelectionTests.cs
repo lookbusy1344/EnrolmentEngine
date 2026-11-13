@@ -59,7 +59,7 @@ public sealed class CliPolicySelectionTests
 		exit.Should().Be(CliRunner.ExitOk, stderr.ToString());
 		var result = JsonSerializer.Deserialize(stdout.ToString(), EnrolmentJsonContext.Default.EnrolmentResult);
 		result.Should().NotBeNull();
-		result!.Eligible.Should().BeTrue();
+		result.Eligible.Should().BeTrue();
 		result.Recommendations.Select(r => r.Subject).Should().NotContain(Subject.Art);
 		result.Recommendations.Select(r => r.Subject).Should().Contain(Subject.Biology);
 	}

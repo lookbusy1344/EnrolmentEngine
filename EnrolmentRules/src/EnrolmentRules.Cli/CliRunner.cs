@@ -1,6 +1,7 @@
 namespace EnrolmentRules.Cli;
 
 using System.Collections.Concurrent;
+using System.Diagnostics;
 using System.Runtime.ExceptionServices;
 using System.Text.Json;
 using Domain;
@@ -124,7 +125,7 @@ public static class CliRunner
 		IReadOnlyList<string> args, Lazy<IReadOnlyList<EnrolmentPolicyDefinition>> policies)
 	{
 		string? requested = null;
-		var remaining = new List<string>(args.Count);
+		List<string> remaining = [with(args.Count)];
 		for (var i = 0; i < args.Count; ++i) {
 			if (args[i] != "--policy") {
 				remaining.Add(args[i]);
@@ -372,6 +373,11 @@ public static class CliRunner
 				case Output.ExplainText:
 					ExplanationRenderer.Render(outcome.Value!, stdout);
 					break;
+				case Output.Table:
+				case Output.Json:
+				case Output.Advise:
+				default:
+					throw new UnreachableException($"Output {output} is not an explanation format.");
 			}
 
 			return outcome.Value!.Eligible ? ExitOk : ExitIneligible;
@@ -407,6 +413,10 @@ public static class CliRunner
 			default:
 				TableRenderer.Render(result, stdout);
 				break;
+			case Output.Explain:
+			case Output.ExplainText:
+			case Output.Advise:
+				throw new UnreachableException($"Output {output} returns before evaluation.");
 		}
 
 		return result.Eligible ? ExitOk : ExitIneligible;

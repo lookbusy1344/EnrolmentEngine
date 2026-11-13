@@ -176,7 +176,7 @@ public sealed class ExplanationTests
 
 		var explained = JsonSerializer.Deserialize(stdout.ToString(), EnrolmentJsonContext.Default.ExplainedResult);
 		explained.Should().NotBeNull();
-		explained!.Explanations.Select(e => e.Subject).Should().BeEquivalentTo(Catalogue.Subjects);
+		explained.Explanations.Select(e => e.Subject).Should().BeEquivalentTo(Catalogue.Subjects);
 		explained.Explanations.Should().OnlyContain(e => !string.IsNullOrWhiteSpace(e.Rule));
 	}
 
@@ -192,6 +192,6 @@ public sealed class ExplanationTests
 		exit.Should().Be(CliRunner.ExitOk);
 		var result = JsonSerializer.Deserialize(stdout.ToString(), EnrolmentJsonContext.Default.EnrolmentResult);
 		result.Should().NotBeNull();
-		result!.Recommendations.Should().HaveCount(Catalogue.Subjects.Count);
+		result.Recommendations.Should().HaveCount(Catalogue.Subjects.Count);
 	}
 }

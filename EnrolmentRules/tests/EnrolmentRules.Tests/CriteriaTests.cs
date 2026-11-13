@@ -129,12 +129,12 @@ public sealed class ExpressionNarratorTests
 
 				var locals = (rule.LocalParams ?? [])
 							 .Where(static param => !string.IsNullOrWhiteSpace(param.Expression))
-							 .ToDictionary(static param => param.Name, static param => param.Expression!, StringComparer.Ordinal);
+							 .ToDictionary(static param => param.Name, static param => param.Expression, StringComparer.Ordinal);
 
-				var narrate = () => ExpressionNarrator.Narrate(rule.Expression!, Harness.Thresholds, locals);
+				var narrate = () => ExpressionNarrator.Narrate(rule.Expression, Harness.Thresholds, locals);
 
 				narrate.Should().NotThrow($"rule '{rule.RuleName}' in '{workflow.WorkflowName}' must be explainable to a student");
-				ExpressionNarrator.Narrate(rule.Expression!, Harness.Thresholds, locals).Should().NotBeEmpty();
+				ExpressionNarrator.Narrate(rule.Expression, Harness.Thresholds, locals).Should().NotBeEmpty();
 			}
 		}
 	}

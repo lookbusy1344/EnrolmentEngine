@@ -110,7 +110,7 @@ public sealed class StartupTests
 		exception.Message.Should().Contain("missing-workflow");
 		exception.Message.Should().NotContain("completed asynchronously");
 		exception.InnerException.Should().NotBeNull();
-		exception.InnerException!.Message.Should().Contain("missing-workflow");
+		exception.InnerException.Message.Should().Contain("missing-workflow");
 	}
 
 	[Theory]

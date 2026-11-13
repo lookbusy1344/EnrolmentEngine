@@ -222,6 +222,14 @@ public sealed partial class InvariantTests
 				}
 
 				break;
+			case JsonValueKind.Undefined:
+			case JsonValueKind.String:
+			case JsonValueKind.Number:
+			case JsonValueKind.True:
+			case JsonValueKind.False:
+			case JsonValueKind.Null:
+			default:
+				break;
 		}
 	}
 

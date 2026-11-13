@@ -26,7 +26,7 @@ public sealed class GcseVocabulary
 
 	public GcseVocabulary(IEnumerable<string> subjects)
 	{
-		var known = new HashSet<string>(StringComparer.Ordinal);
+		HashSet<string> known = [with(StringComparer.Ordinal)];
 		foreach (var subject in subjects) {
 			if (string.IsNullOrWhiteSpace(subject)) {
 				throw new InvalidDataException("GCSE vocabulary has a blank subject key.");

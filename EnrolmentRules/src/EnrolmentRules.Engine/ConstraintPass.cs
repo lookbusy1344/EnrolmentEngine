@@ -143,7 +143,7 @@ internal static class ConstraintPass
 	private static List<Subject> PrerequisiteOrder(CatalogueData catalogue)
 	{
 		var visited = new HashSet<Subject>();
-		var order = new List<Subject>(catalogue.Subjects.Count);
+		List<Subject> order = [with(catalogue.Subjects.Count)];
 
 		void Visit(Subject subject)
 		{

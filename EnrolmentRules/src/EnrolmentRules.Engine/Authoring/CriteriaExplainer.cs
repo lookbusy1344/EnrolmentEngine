@@ -71,7 +71,7 @@ internal sealed class CriteriaExplainer(
 	{
 		var locals = (rule.LocalParams ?? [])
 					 .Where(static param => !string.IsNullOrWhiteSpace(param.Expression))
-					 .ToDictionary(static param => param.Name, static param => param.Expression!, StringComparer.Ordinal);
+					 .ToDictionary(static param => param.Name, static param => param.Expression, StringComparer.Ordinal);
 
 		return ExpressionNarrator.Narrate(rule.Expression ?? string.Empty, thresholds, locals);
 	}

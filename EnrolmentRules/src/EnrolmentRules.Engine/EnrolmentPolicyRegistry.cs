@@ -137,7 +137,7 @@ public sealed class EnrolmentPolicyRegistry : IEnrolmentPolicyRegistry
 		}
 
 		var ids = new HashSet<EnrolmentPolicyId>();
-		var names = new HashSet<string>(StringComparer.Ordinal);
+		HashSet<string> names = [with(StringComparer.Ordinal)];
 		foreach (var definition in definitions) {
 			if (definition is null) {
 				throw new EnrolmentPolicyConfigurationException("Policy definitions must not contain a null entry.");

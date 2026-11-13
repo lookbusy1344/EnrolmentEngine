@@ -32,7 +32,7 @@ public sealed class ProgrammeSelectionTests
 
 		result.Validation.IsValid.Should().BeTrue();
 		result.Value.Should().NotBeNull();
-		result.Value!.Subjects.Should().BeEmpty();
+		result.Value.Subjects.Should().BeEmpty();
 		result.Value.MinRequired.Should().Be(0);
 	}
 

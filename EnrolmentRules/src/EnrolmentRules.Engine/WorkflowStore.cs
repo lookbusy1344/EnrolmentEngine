@@ -42,7 +42,7 @@ internal static class WorkflowStore
 							 .ToList();
 
 		using var schemaReader = File.OpenText(schemaPath);
-		var readers = new List<(string FileName, TextReader Content)>(files.Count);
+		List<(string FileName, TextReader Content)> readers = [with(files.Count)];
 		try {
 			foreach (var file in files) {
 				readers.Add((file, File.OpenText(file)));
@@ -66,7 +66,7 @@ internal static class WorkflowStore
 	{
 		var schemaText = schemaReader.ReadToEnd();
 
-		var workflows = new List<Workflow>(files.Count);
+		List<Workflow> workflows = [with(files.Count)];
 		foreach (var (file, content) in files) {
 			var json = NormalizeWorkflowDocument(file, content.ReadToEnd());
 			var document = JsonNode.Parse(json)

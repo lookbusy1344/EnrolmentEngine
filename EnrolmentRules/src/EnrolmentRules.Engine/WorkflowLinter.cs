@@ -435,13 +435,13 @@ public static partial class WorkflowLinter
 	private static IEnumerable<string> Expressions(Rule rule)
 	{
 		if (!string.IsNullOrWhiteSpace(rule.Expression)) {
-			yield return rule.Expression!;
+			yield return rule.Expression;
 		}
 
 		if (rule.LocalParams is not null) {
 			foreach (var param in rule.LocalParams) {
 				if (!string.IsNullOrWhiteSpace(param.Expression)) {
-					yield return param.Expression!;
+					yield return param.Expression;
 				}
 			}
 		}

@@ -25,7 +25,7 @@ public sealed class EnrolmentApiDuplicateGcseTests : IClassFixture<WebAppFactory
 		response.StatusCode.Should().Be(HttpStatusCode.OK);
 		var body = await response.Content.ReadFromJsonAsync(EnrolmentApiJsonContext.Default.EnrolmentEvaluateResponse);
 		body.Should().NotBeNull();
-		body!.Result.Should().BeNull();
+		body.Result.Should().BeNull();
 		body.ValidationErrors.Should().ContainSingle().Which.Should().Contain("gcses[1]").And.Contain("duplicates 'maths'");
 	}
 
@@ -79,7 +79,7 @@ public sealed class EnrolmentApiDuplicateGcseTests : IClassFixture<WebAppFactory
 		response.StatusCode.Should().Be(HttpStatusCode.OK);
 		var body = await response.Content.ReadFromJsonAsync(EnrolmentApiJsonContext.Default.EnrolmentEvaluateResponse);
 		body.Should().NotBeNull();
-		body!.Result.Should().BeNull();
+		body.Result.Should().BeNull();
 		body.ValidationErrors.Should().Equal("gcses[1].subject is required", "gcses[2].subject is required");
 	}
 

@@ -49,7 +49,7 @@ public static class EnrolmentApiBoundaryValidator
 			yield break;
 		}
 
-		var subjects = new HashSet<string>(StringComparer.Ordinal);
+		HashSet<string> subjects = [with(StringComparer.Ordinal)];
 		foreach (var (index, row) in rows.Index()) {
 			foreach (var error in GcseTokenLimits(row, index)) {
 				yield return error;

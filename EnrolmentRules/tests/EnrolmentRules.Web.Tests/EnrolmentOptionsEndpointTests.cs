@@ -39,7 +39,7 @@ public sealed class EnrolmentOptionsEndpointTests : IClassFixture<WebAppFactory>
 		var body = await client.GetFromJsonAsync("/api/enrolment/options", EnrolmentApiJsonContext.Default.EnrolmentOptionsResponse);
 
 		body.Should().NotBeNull();
-		body!.ALevelSubjects.Should().NotBeEmpty();
+		body.ALevelSubjects.Should().NotBeEmpty();
 		body.ALevelSubjects.Select(s => s.Value).Should().OnlyHaveUniqueItems();
 	}
 
@@ -51,7 +51,7 @@ public sealed class EnrolmentOptionsEndpointTests : IClassFixture<WebAppFactory>
 		var body = await client.GetFromJsonAsync("/api/enrolment/options", EnrolmentApiJsonContext.Default.EnrolmentOptionsResponse);
 
 		body.Should().NotBeNull();
-		body!.PriorQualificationSubjects.Should().NotBeEmpty();
+		body.PriorQualificationSubjects.Should().NotBeEmpty();
 		body.Hobbies.Should().NotBeEmpty();
 		body.ChoiceLimit.Should().BeGreaterThan(0);
 	}
@@ -70,7 +70,7 @@ public sealed class EnrolmentOptionsEndpointTests : IClassFixture<WebAppFactory>
 		var body = await client.GetFromJsonAsync("/api/enrolment/options", EnrolmentApiJsonContext.Default.EnrolmentOptionsResponse);
 
 		body.Should().NotBeNull();
-		var groups = body!.PriorQualificationSubjects.ToDictionary(group => group.Type, group => group.Subjects.Select(o => o.Value).ToArray());
+		var groups = body.PriorQualificationSubjects.ToDictionary(group => group.Type, group => group.Subjects.Select(o => o.Value).ToArray());
 
 		groups.Keys.Should().BeEquivalentTo("ALevel", "BtecExtendedCertificate", "BtecDiploma", "Nvq");
 
@@ -99,7 +99,7 @@ public sealed class EnrolmentOptionsEndpointTests : IClassFixture<WebAppFactory>
 		var body = await client.GetFromJsonAsync("/api/enrolment/options", EnrolmentApiJsonContext.Default.EnrolmentOptionsResponse);
 
 		body.Should().NotBeNull();
-		body!.Hobbies.Select(o => o.Value).Should().NotContain("plays_");
+		body.Hobbies.Select(o => o.Value).Should().NotContain("plays_");
 	}
 
 	/// <summary>
@@ -114,7 +114,7 @@ public sealed class EnrolmentOptionsEndpointTests : IClassFixture<WebAppFactory>
 		var body = await client.GetFromJsonAsync("/api/enrolment/options", EnrolmentApiJsonContext.Default.EnrolmentOptionsResponse);
 
 		body.Should().NotBeNull();
-		var subjects = body!.GcseSubjects.Select(o => o.Value).ToArray();
+		var subjects = body.GcseSubjects.Select(o => o.Value).ToArray();
 
 		subjects.Take(2).Should().Equal("english_language", "maths");
 		subjects.Skip(2).Should().BeInAscendingOrder(StringComparer.Ordinal);

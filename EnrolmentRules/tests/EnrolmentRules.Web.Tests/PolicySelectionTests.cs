@@ -31,7 +31,7 @@ public sealed class PolicySelectionTests : IClassFixture<WebAppFactory>
 		var body = await client.GetFromJsonAsync("/api/enrolment/options", EnrolmentApiJsonContext.Default.EnrolmentOptionsResponse);
 
 		body.Should().NotBeNull();
-		body!.SelectedPolicy.Id.Should().Be("standard");
+		body.SelectedPolicy.Id.Should().Be("standard");
 		body.AvailablePolicies.Select(p => p.Id).Should().Contain(["standard", "elite"]);
 	}
 
@@ -44,7 +44,7 @@ public sealed class PolicySelectionTests : IClassFixture<WebAppFactory>
 			"/api/enrolment/options?policy=elite", EnrolmentApiJsonContext.Default.EnrolmentOptionsResponse);
 
 		body.Should().NotBeNull();
-		body!.SelectedPolicy.Id.Should().Be("elite");
+		body.SelectedPolicy.Id.Should().Be("elite");
 		body.ALevelSubjects.Select(s => s.Value).Should().Contain(["biology", "further_maths", "psychology"]);
 		body.ALevelSubjects.Select(s => s.Value).Should().NotContain(["art", "music"]);
 	}
@@ -76,10 +76,10 @@ public sealed class PolicySelectionTests : IClassFixture<WebAppFactory>
 		var underElite = await PostAsync(client, request, "elite");
 
 		underStandard.Result.Should().NotBeNull();
-		underStandard.Result!.ChoiceStatuses.Should().ContainSingle(s => s.Subject.Value == "art" && s.Status == "Available");
+		underStandard.Result.ChoiceStatuses.Should().ContainSingle(s => s.Subject.Value == "art" && s.Status == "Available");
 
 		underElite.Result.Should().NotBeNull();
-		underElite.Result!.ChoiceStatuses.Should().ContainSingle(s => s.Subject.Value == "art" && s.Status == "NotOffered");
+		underElite.Result.ChoiceStatuses.Should().ContainSingle(s => s.Subject.Value == "art" && s.Status == "NotOffered");
 
 		// The posted request itself is never mutated by either call — re-reading its own array proves it.
 		request.ChosenALevels.Should().Equal("art");
@@ -107,6 +107,6 @@ public sealed class PolicySelectionTests : IClassFixture<WebAppFactory>
 			$"/api/enrolment/evaluate?policy={policy}", request, EnrolmentApiJsonContext.Default.EnrolmentEvaluateRequest);
 		var body = await response.Content.ReadFromJsonAsync(EnrolmentApiJsonContext.Default.EnrolmentEvaluateResponse);
 		body.Should().NotBeNull();
-		return body!;
+		return body;
 	}
 }

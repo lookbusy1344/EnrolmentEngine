@@ -392,7 +392,7 @@ internal sealed class RatingFacts(
 
 	private static HashSet<string> BuildEntryEquivalentSubjects(StudentProfile profile, CatalogueData catalogue, QualificationScale scale)
 	{
-		var subjects = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+		HashSet<string> subjects = [with(StringComparer.OrdinalIgnoreCase)];
 
 		foreach (var subject in catalogue.Subjects) {
 			if (catalogue.Meta(subject).EntryEquivalents.Any(entryEquivalent =>

@@ -34,7 +34,7 @@ public sealed class PolicyIsolationTests
 
 		validated.Validation.IsValid.Should().BeTrue();
 		validated.Value.Should().NotBeNull();
-		validated.Value!.Eligible.Should().BeFalse();
+		validated.Value.Eligible.Should().BeFalse();
 		validated.Value.EligibilityReasons.Should().Equal(
 			$"GCSE English Language below the pass grade ({Harness.Thresholds.PassGrade})",
 			$"Fewer than the required number of GCSE passes ({Harness.Thresholds.MinPasses} at grade {Harness.Thresholds.PassGrade} or above)");

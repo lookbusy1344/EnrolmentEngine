@@ -169,7 +169,7 @@ public sealed class GoldenFileTests
 			DateOfBirth = new DateOnly(2007, 9, 1),
 		};
 		var younger = adult with {
-			DateOfBirth = adult.DateOfBirth!.Value.AddDays(1),
+			DateOfBirth = adult.DateOfBirth.Value.AddDays(1),
 		};
 
 		var adultExplanation = engine.Explain(adult);
