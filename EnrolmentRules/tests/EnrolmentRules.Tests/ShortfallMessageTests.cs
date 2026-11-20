@@ -43,8 +43,10 @@ public sealed class ShortfallMessageTests
 		var explanation = Explain(Student(gcses), Subject.ComputerStudies);
 
 		explanation.Rating.Should().Be(Rating.Amber);
+		// The message opens with the computer_studies:amber SuccessEvent: why the subject is amber, not red.
 		explanation.Message.Should().Be(
-			"Green needs at least 60% of similar students nationally to reach grade D or better (yours: 59%). "
+			"Entry met (Computer Studies at standard entry); predicted A-level grade at or above the amber threshold. "
+			+ "Green needs at least 60% of similar students nationally to reach grade D or better (yours: 59%). "
 			+ "A GCSE average of 5.0 would get green (yours: 4.1).");
 	}
 

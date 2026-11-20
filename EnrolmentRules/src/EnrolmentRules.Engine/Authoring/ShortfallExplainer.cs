@@ -7,8 +7,8 @@ using Prediction;
 using RulesEngine.Models;
 
 /// <summary>
-///     Builds <see cref="Explanation.Message" />: for an amber or red engine verdict, the clauses of the next
-///     rating's rule that the student fails, each with the student's own value, plus the lowest GCSE average
+///     Builds <see cref="Explanation.Message" />: for an amber engine verdict, the amber rule's reason (why it is
+///     not red); then, for an amber or red verdict, the clauses of the next rating's rule that the student fails, each with the student's own value, plus the lowest GCSE average
 ///     that would pass that rule when raising the average alone can do it. Clauses are evaluated by
 ///     <see cref="RuleInterpreter" />; every message is checked against the engine's verdict, and a
 ///     disagreement throws. A rule outside the interpreter's grammar keeps the deciding reason as its message.
@@ -197,7 +197,9 @@ internal sealed class ShortfallExplainer
 				throw Disagreement(@base.Subject, target, "fails");
 			}
 
-			var needs = $"{Title(target)} needs {string.Join("; ", failed.Select(clause => Phrase(clause, current)))}.";
+			// An amber line opens with the amber rule's own reason: why the subject is amber, not red.
+			var met = @base.Rating == Rating.Amber ? $"{@base.Reason}. " : string.Empty;
+			var needs = $"{met}{Title(target)} needs {string.Join("; ", failed.Select(clause => Phrase(clause, current)))}.";
 			var average = failed.All(IsAverageComparison) || !failed.All(clause => AverageCanFix(clause, current))
 				? null
 				: LowestAverage(rule);
