@@ -1,5 +1,6 @@
 import { mount } from '@vue/test-utils'
 import { describe, expect, it } from 'vitest'
+import { reactive } from 'vue'
 import type { OptionItem } from '../../api/contracts'
 import GcseRows from '../../components/GcseRows.vue'
 import type { GcseRow } from '../../state/enrolmentState'
@@ -18,7 +19,7 @@ describe('GcseRows', () => {
   })
 
   it('adding a subject to the blank row appends a new blank row', async () => {
-    const rows: GcseRow[] = []
+    const rows = reactive<GcseRow[]>([])
     const wrapper = mount(GcseRows, { props: { rows, subjectOptions, 'onUpdate:rows': () => undefined } })
 
     await wrapper.get('select').setValue('maths')

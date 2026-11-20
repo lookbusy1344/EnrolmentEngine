@@ -17,7 +17,7 @@ These ship inside the deployed application, and so form part of the
 
 | Component | Version | License | AGPLv3 compatibility |
 | --- | --- | --- | --- |
-| Bootstrap | 5.3.8 | MIT | Compatible |
+| Bootstrap | 5.3.9 | MIT | Compatible |
 
 Bootstrap: Copyright (c) 2011-2025 The Bootstrap Authors. Licensed under MIT
 (<https://github.com/twbs/bootstrap/blob/main/LICENSE>).
@@ -26,7 +26,7 @@ Bootstrap: Copyright (c) 2011-2025 The Bootstrap Authors. Licensed under MIT
 
 | Package | Version | License |
 | --- | --- | --- |
-| JsonSchema.Net | 9.4.0 | MIT |
+| JsonSchema.Net | 9.7.0 | MIT |
 | Microsoft.Extensions.DependencyInjection.Abstractions | 10.0.10 | MIT |
 | RulesEngine | 6.0.1 | MIT |
 | Spectre.Console | 0.57.2 | MIT |
@@ -73,16 +73,16 @@ Frontend toolchain (`ClientApp/` devDependencies):
 | --- | --- | --- |
 | @eslint/js | 10.0.1 | MIT |
 | @types/node | 26.2.0 | MIT |
-| @vitejs/plugin-vue | 6.0.8 | MIT |
+| @vitejs/plugin-vue | 6.0.11 | MIT |
 | @vue/tsconfig | 0.9.1 | MIT |
-| eslint | 10.8.1 | MIT |
-| eslint-plugin-vue | 10.10.0 | MIT |
+| eslint | 10.15.0 | MIT |
+| eslint-plugin-vue | 10.12.1 | MIT |
 | globals | 17.9.0 | MIT |
 | jiti | 2.7.0 | MIT |
-| prettier | 3.9.6 | MIT |
+| prettier | 3.10.1 | MIT |
 | typescript | 6.0.3 | Apache-2.0 |
-| typescript-eslint | 8.72.0 | MIT |
-| vite | 8.3.5 | MIT |
+| typescript-eslint | 8.73.0 | MIT |
+| vite | 8.3.8 | MIT |
 | vue-tsc | 3.3.9 | MIT |
 
 ## Test-time only
@@ -92,12 +92,12 @@ Not redistributed.
 | Package | Version | License |
 | --- | --- | --- |
 | AwesomeAssertions | 9.5.0 | Apache-2.0 |
-| coverlet.collector | 10.0.1 | MIT |
+| coverlet.collector | 10.1.1 | MIT |
 | FsCheck.Xunit | 3.6.0 | BSD-3-Clause |
 | Microsoft.AspNetCore.Mvc.Testing | 10.0.10 | MIT |
 | Microsoft.CodeAnalysis.CSharp | 5.6.0 | MIT |
 | Microsoft.Extensions.DependencyInjection | 10.0.10 | MIT |
-| Microsoft.NET.Test.Sdk | 18.8.1 | MIT |
+| Microsoft.NET.Test.Sdk | 18.12.0 | MIT |
 | xunit | 2.9.3 | Apache-2.0 |
 | xunit.runner.visualstudio | 3.1.5 | Apache-2.0 |
 

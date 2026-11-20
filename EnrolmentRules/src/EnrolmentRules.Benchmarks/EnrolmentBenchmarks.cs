@@ -100,6 +100,9 @@ public class EnrolmentBenchmarks
 	public EnrolmentResult[] EvaluateBatch() => [.. batch.Select(student => engine.Evaluate(student))];
 
 	[Benchmark]
+	public ExplainedResult ExplainMiddling() => engine.Explain(adviseStudent);
+
+	[Benchmark]
 	public AdviceResult Advise() => engine.Advise(adviseStudent);
 
 	[Benchmark]

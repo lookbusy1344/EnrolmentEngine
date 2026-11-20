@@ -631,8 +631,8 @@ downgrade — constraint pass and (when enabled) cap alike.
 ```
 
 `--explain` produces a richer `ExplainedResult` that additionally names, per subject, the
-deciding engine rule, the base rating it gave, the predicted points the tier matched on, and
-every host-code override. `--explain-text` renders the same object as plain Markdown prose for
+deciding engine rule, the base rating it gave, the predicted points the tier matched on,
+every host-code override, and a one-line `message` naming what the next rating up needs. `--explain-text` renders the same object as plain Markdown prose for
 advisors who want something readable in a terminal or pipe. Both views are pure projections of
 a *single* evaluation — nothing is re-run.
 

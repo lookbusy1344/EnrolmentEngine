@@ -3,7 +3,6 @@
 // WebApplicationFactory tests, so this stays a shape check (right fields, right primitive types),
 // not a full business-rule revalidation.
 import type {
-  AdjustmentResponse,
   ChoiceStatus,
   ChoiceStatusKind,
   EnrolmentApiResult,
@@ -177,47 +176,16 @@ function parseExplanation(value: unknown): ExplanationResponse | null {
   }
 
   const subject = parseOptionItem(value.subject)
-  const overrides = parseArray(value.overrides, parseAdjustment)
   if (
     subject === null ||
-    overrides === null ||
     typeof value.rating !== 'string' ||
     typeof value.ratingCssClass !== 'string' ||
-    typeof value.reason !== 'string' ||
-    typeof value.baseRating !== 'string' ||
-    typeof value.baseReason !== 'string' ||
-    typeof value.rule !== 'string' ||
-    typeof value.predictedPoints !== 'number' ||
-    (value.entryEquivalentReason !== null && typeof value.entryEquivalentReason !== 'string')
+    typeof value.message !== 'string'
   ) {
     return null
   }
 
-  return {
-    subject,
-    rating: value.rating,
-    ratingCssClass: value.ratingCssClass,
-    reason: value.reason,
-    baseRating: value.baseRating,
-    baseReason: value.baseReason,
-    rule: value.rule,
-    predictedPoints: value.predictedPoints,
-    entryEquivalentReason: value.entryEquivalentReason,
-    overrides,
-  }
-}
-
-function parseAdjustment(value: unknown): AdjustmentResponse | null {
-  if (!isRecord(value)) {
-    return null
-  }
-
-  const { subject, from, to, reason } = value
-  if (typeof subject !== 'string' || typeof from !== 'string' || typeof to !== 'string' || typeof reason !== 'string') {
-    return null
-  }
-
-  return { subject, from, to, reason }
+  return { subject, rating: value.rating, ratingCssClass: value.ratingCssClass, message: value.message }
 }
 
 function parseOptionItem(value: unknown): OptionItem | null {

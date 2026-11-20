@@ -48,14 +48,5 @@ public static class EnrolmentEvaluateResponseFactory
 		new(explanation.Subject.Value, TextFormatting.Prettify(explanation.Subject.Value)),
 		explanation.Rating.ToString(),
 		RatingDisplay.CssClass(explanation.Rating),
-		explanation.Reason,
-		explanation.BaseRating.ToString(),
-		explanation.BaseReason,
-		explanation.Rule,
-		explanation.PredictedPoints,
-		explanation.EntryEquivalentReason,
-		[.. explanation.Overrides.Select(ToAdjustmentResponse)]);
-
-	private static AdjustmentResponse ToAdjustmentResponse(Adjustment adjustment) =>
-		new(adjustment.Subject.Value, adjustment.From.ToString(), adjustment.To.ToString(), adjustment.Reason);
+		explanation.Message);
 }

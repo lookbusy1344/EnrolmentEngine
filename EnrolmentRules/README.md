@@ -86,7 +86,8 @@ the reference web UI.
 ## What It Delivers
 
 - **Consistent decisions** - the same published policy is applied to every student.
-- **Clear recommendations** - subjects are rated green, amber, or red, with reasons staff can review.
+- **Clear recommendations** - subjects are rated green, amber, or red. An amber or red subject names what the student needs to reach the
+  next rating, such as a GCSE grade or a GCSE average.
 - **Faster enrolment** - straightforward choices can be identified immediately; exceptions are directed to an authorised colleague.
 - **Transparent decisions** - explanations show how student information and policy led to the outcome.
 - **Better policy control** - routine policy changes can be reviewed and tested independently of the surrounding application.

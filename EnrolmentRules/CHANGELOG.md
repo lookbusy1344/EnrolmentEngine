@@ -1,5 +1,30 @@
 # Changelog
 
+## 1.5.0 — 2026-11-20
+
+- Each explanation carries a one-line `message`. For an amber or red subject it names the parts of the
+  next rating's rule the student fails, with their own values, and the lowest GCSE average that would
+  pass that rule when raising the average alone can do it: "Green needs at least 60% of similar
+  students nationally to reach grade D or better (yours: 59%). A GCSE average of 5.0 would get green
+  (yours: 4.1)." A green subject reads "All requirements met."; a subject downgraded by a
+  cross-subject relationship, or an ineligible student, shows that reason. Student values are floored,
+  so a shown value never appears to meet the bar it fails.
+- `RuleInterpreter` reads the rating rules in host code to find the failed parts. Every explanation
+  checks that reading against RulesEngine's verdict and throws on disagreement. A rule outside the
+  supported grammar still rates correctly; its message falls back to the rule's `SuccessEvent`.
+  See [rule authoring §3.6](docs/rule-authoring.md#36-keep-rating-rules-within-the-message-grammar).
+- The web subject card shows the rating and the message only; the Details block is gone. The
+  `/api/enrolment/evaluate` explanation is now `subject`, `rating`, `ratingCssClass` and `message`
+  (`reason`, `baseRating`, `baseReason`, `rule`, `predictedPoints`, `entryEquivalentReason` and
+  `overrides` are removed). The CLI `--explain` JSON keeps its full provenance and adds `message`.
+- `GradePredictor.Predict` has an overload that takes an explicit GCSE average.
+- New `ExplainMiddling` benchmark.
+- Targets .NET 11 (`net11.0`); the container uses the `aspnet:11.0-resolute-chiseled` runtime image.
+- Pre-commit and pre-push hooks run the commit gate for agent sessions.
+- Stricter analyzer rules (.NET 11 rules, modern C# idioms, exhaustive enum switches), with fixes applied.
+- pnpm overrides pin patched versions of vulnerable transitive client dev dependencies.
+- Dependency updates (NuGet, npm, Bootstrap 5.3.9), pnpm pin bump to 12.21.0.
+
 ## 1.4.1 — 2026-10-03
 
 - A workflow expression that throws for a particular student's facts now fails the evaluation with

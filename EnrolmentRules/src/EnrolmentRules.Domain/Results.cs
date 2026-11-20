@@ -62,6 +62,13 @@ public sealed record Explanation(
 {
 	/// <summary>Optional note describing the prior qualification that satisfied entry.</summary>
 	public string? EntryEquivalentReason { get; init; }
+
+	/// <summary>
+	///     One student-facing line: for an amber or red engine verdict, the requirements of the next rating up
+	///     that the student misses, with their own values; otherwise the deciding reason. Equals
+	///     <see cref="Reason" /> when the engine was built without its workflow graph.
+	/// </summary>
+	public string Message { get; init; } = string.Empty;
 }
 
 /// <summary>

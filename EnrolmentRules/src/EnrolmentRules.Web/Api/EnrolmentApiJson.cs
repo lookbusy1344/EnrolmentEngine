@@ -19,7 +19,6 @@ using System.Text.Json.Serialization;
 [JsonSerializable(typeof(EvaluateGcseRow))]
 [JsonSerializable(typeof(EvaluatePriorQualificationRow))]
 [JsonSerializable(typeof(ExplanationResponse))]
-[JsonSerializable(typeof(AdjustmentResponse))]
 [JsonSerializable(typeof(ChoiceStatusResponse))]
 [JsonSerializable(typeof(string))]
 public sealed partial class EnrolmentApiJsonContext : JsonSerializerContext;

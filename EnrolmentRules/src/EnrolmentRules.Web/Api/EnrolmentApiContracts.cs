@@ -52,21 +52,8 @@ public sealed record EnrolmentEvaluateRequest(
 	EquatableArray<string> Hobbies,
 	EquatableArray<string> ChosenALevels);
 
-/// <summary>One override applied to a subject's base rating (restudy bar, exclusion, own-time veto, choice cap, etc.).</summary>
-public sealed record AdjustmentResponse(string Subject, string From, string To, string Reason);
-
-/// <summary>The client-friendly mirror of <c>Explanation</c>: display labels and CSS classes alongside the engine's verdict.</summary>
-public sealed record ExplanationResponse(
-	OptionItem Subject,
-	string Rating,
-	string RatingCssClass,
-	string Reason,
-	string BaseRating,
-	string BaseReason,
-	string Rule,
-	double PredictedPoints,
-	string? EntryEquivalentReason,
-	EquatableArray<AdjustmentResponse> Overrides);
+/// <summary>One subject card: the display label, the rating and its CSS class, and the student-facing message.</summary>
+public sealed record ExplanationResponse(OptionItem Subject, string Rating, string RatingCssClass, string Message);
 
 /// <summary>
 ///     One <c>chosenALevels</c> entry's non-destructive comparison status under the selected policy:

@@ -35,6 +35,21 @@ public sealed class EnrolmentEvaluateEndpointTests : IClassFixture<WebAppFactory
 	}
 
 	[Fact]
+	public async Task Each_explanation_carries_its_shortfall_message()
+	{
+		using var client = factory.CreateClient();
+		var request = KnownRequest() with {
+			Gcses = [new("maths", 8), new("english_language", 8), new("english_literature", 8), new("physics", 8), new("chemistry", 8)],
+		};
+
+		var body = await ReadBodyAsync(await PostAsync(client, request));
+
+		var messages = body.Result!.Explanations.ToDictionary(static e => e.Subject.Value, static e => e.Message);
+		messages["computer_studies"].Should().Be("Amber needs GCSE Computer Studies at grade 5 or above (not taken).");
+		messages["physics"].Should().Be("All requirements met.");
+	}
+
+	[Fact]
 	public async Task Out_of_range_grade_returns_200_with_validation_errors()
 	{
 		using var client = factory.CreateClient();

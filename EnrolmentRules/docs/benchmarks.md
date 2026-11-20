@@ -34,6 +34,7 @@ benchmarks isolate the phases:
 | `ConstructEngine` | The one-time reusable RulesEngine build (the startup cost you pay once). |
 | `EvaluateSingle` | The warm per-student path — the hot loop an API hits per request. |
 | `EvaluateBatch` | Three students over **one shared engine**, to confirm linear scaling and zero reuse overhead. |
+| `ExplainMiddling` | `Explain` for the middling `Advise` student: the evaluation plus one shortfall message per subject, including the GCSE-average search. |
 | `Advise` | Counterfactual advice for a worst-case middling student (the search-heavy path). |
 | `AdviseEliteGateNearMiss` | Elite's real top-eight eligibility search for eight GCSEs where English and Maths must each rise from 6 to 7. |
 

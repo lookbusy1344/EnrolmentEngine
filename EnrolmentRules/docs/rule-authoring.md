@@ -324,6 +324,19 @@ the wrong meaning. **Run `--lint-workflows` after every edit** to catch both mem
 mistakes before startup or student evaluation (see
 [validating your changes](#5-validating-your-changes)).
 
+### 3.6 Keep rating rules within the message grammar
+
+Each explanation carries a one-line `message`: for an amber or red subject, the clauses of the next
+rating's rule the student fails, with their own values, and the lowest GCSE average that would pass
+that rule when raising the average alone can do it. `RuleInterpreter` evaluates those clauses in host
+code; every explanation checks its reading against RulesEngine's verdict and throws on disagreement.
+The grammar is the rating-rule subset `ExpressionNarrator` reads: `&&`, `||`, comparisons on
+`facts.Gcse`, `facts.Predicted`, `facts.DfeProbabilityAtOrAbove`, `facts.Average` and `facts.Age`,
+`facts.HasEntryEquivalent`, policy members, `ALevelGrade` constants and conditional bounds. A rule
+outside it still rates correctly, but its subject's message falls back to the rule's `SuccessEvent`.
+`ShortfallMessageTests.every_shipped_rating_rule_is_interpretable` fails when a shipped rule leaves
+the grammar.
+
 ---
 
 ## 4. Changing policy data (no code)

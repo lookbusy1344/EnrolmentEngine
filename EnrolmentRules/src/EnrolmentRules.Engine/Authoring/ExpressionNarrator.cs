@@ -161,7 +161,7 @@ public static class ExpressionNarrator
 			_ => throw Unexplainable(node),
 		};
 
-	private static string Bound(string @operator) =>
+	internal static string Bound(string @operator) =>
 		@operator switch {
 			">=" => "or above",
 			">" => "or above (higher than this)",
@@ -198,7 +198,7 @@ public static class ExpressionNarrator
 			_ => throw Unexplainable(node),
 		};
 
-	private static double Constant(Type owner, string name) =>
+	internal static double Constant(Type owner, string name) =>
 		owner.GetField(name, BindingFlags.Public | BindingFlags.Static)?.GetRawConstantValue() is object value
 			? Convert.ToDouble(value, CultureInfo.InvariantCulture)
 			: throw new CriteriaNarrationException($"'{owner.Name}.{name}' is not a known constant.");

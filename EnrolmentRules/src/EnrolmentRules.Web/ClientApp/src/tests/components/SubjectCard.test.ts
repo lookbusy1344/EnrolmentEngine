@@ -7,13 +7,7 @@ const baseExplanation: ExplanationResponse = {
   subject: { value: 'further_maths', label: 'Further Maths' },
   rating: 'Red',
   ratingCssClass: 'text-bg-danger',
-  reason: 'Restudy bar applies.',
-  baseRating: 'Green',
-  baseReason: 'Base table reason',
-  rule: 'further_maths.entry',
-  predictedPoints: 3.5,
-  entryEquivalentReason: null,
-  overrides: [],
+  message: 'Amber needs GCSE Maths at grade 7 or above (yours: 6).',
 }
 
 describe('SubjectCard', () => {
@@ -24,6 +18,20 @@ describe('SubjectCard', () => {
     expect(unavailable.text()).toContain('Unavailable')
     expect(unavailable.attributes('disabled')).toBeDefined()
     expect(wrapper.text()).toContain('Red')
+  })
+
+  it('shows the message as the only explanation', () => {
+    const wrapper = mount(SubjectCard, { props: { explanation: baseExplanation, chosen: false } })
+
+    expect(wrapper.get('.card-text').text()).toBe('Amber needs GCSE Maths at grade 7 or above (yours: 6).')
+    expect(wrapper.find('details').exists()).toBe(false)
+  })
+
+  it('describes the unavailable button by the message', () => {
+    const wrapper = mount(SubjectCard, { props: { explanation: baseExplanation, chosen: false } })
+
+    const describedBy = wrapper.get('button').attributes('aria-describedby')
+    expect(wrapper.get(`#${describedBy ?? ''}`).text()).toBe('Amber needs GCSE Maths at grade 7 or above (yours: 6).')
   })
 
   it('emits choose for a green subject not yet chosen', async () => {

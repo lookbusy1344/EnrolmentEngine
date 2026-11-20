@@ -62,24 +62,11 @@ export interface EnrolmentEvaluateRequest {
   readonly chosenALevels: readonly string[]
 }
 
-export interface AdjustmentResponse {
-  readonly subject: string
-  readonly from: string
-  readonly to: string
-  readonly reason: string
-}
-
 export interface ExplanationResponse {
   readonly subject: OptionItem
   readonly rating: string
   readonly ratingCssClass: string
-  readonly reason: string
-  readonly baseRating: string
-  readonly baseReason: string
-  readonly rule: string
-  readonly predictedPoints: number
-  readonly entryEquivalentReason: string | null
-  readonly overrides: readonly AdjustmentResponse[]
+  readonly message: string
 }
 
 /**

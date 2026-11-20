@@ -364,6 +364,19 @@ Print an explained JSON result with rule provenance and host-code overrides:
 dotnet run --project src/EnrolmentRules.Cli -- --explain examples/student.json
 ```
 
+Each explanation carries a `message`, the line the web front end shows on a subject card:
+
+| Final verdict | Message |
+| --- | --- |
+| Green | `All requirements met.` |
+| Amber or red from the rating rules | The failed clauses of the next rating's rule, with the student's values, and the lowest GCSE average that would pass it when raising the average alone can do it — e.g. `Green needs at least 60% of similar students nationally to reach grade D or better (yours: 59%). A GCSE average of 5.0 would get green (yours: 4.1).` |
+| Downgraded by a cross-subject relationship | That adjustment's reason |
+| Ineligible | The first eligibility reason |
+
+Student values are floored (59.2% shows as 59%, an average of 4.125 as 4.1), so a shown value never
+appears to meet the bar it fails. See [rule authoring §3.6](rule-authoring.md#36-keep-rating-rules-within-the-message-grammar)
+for the expression grammar the message reads.
+
 Print the same explanation as Markdown prose:
 
 ```bash

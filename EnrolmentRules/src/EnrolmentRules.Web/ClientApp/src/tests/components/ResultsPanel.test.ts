@@ -8,13 +8,7 @@ function explanation(value: string, label: string, rating: string): ExplanationR
     subject: { value, label },
     rating,
     ratingCssClass: '',
-    reason: '',
-    baseRating: rating,
-    baseReason: '',
-    rule: '',
-    predictedPoints: 0,
-    entryEquivalentReason: null,
-    overrides: [],
+    message: '',
   }
 }
 

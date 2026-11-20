@@ -26,8 +26,16 @@ public static class GradePredictor
 	public static StudentProfile Predict(
 		StudentInput student, IReadOnlyList<GcseResult> gcses, DateOnly asOf, CatalogueData catalogue, DfeTransitionMatrix matrix,
 		QualificationScale scale)
+		=> Predict(student, gcses, AverageGcseScore(gcses), asOf, catalogue, matrix, scale);
+
+	/// <summary>
+	///     Predict as if the student's GCSE average were <paramref name="average" />, holding every individual
+	///     grade fixed. Drives the "what average would clear this" search behind a shortfall message.
+	/// </summary>
+	public static StudentProfile Predict(
+		StudentInput student, IReadOnlyList<GcseResult> gcses, double average, DateOnly asOf, CatalogueData catalogue,
+		DfeTransitionMatrix matrix, QualificationScale scale)
 	{
-		var average = AverageGcseScore(gcses);
 		var age = student.DateOfBirth.HasValue ? AgeCalculator.WholeYears(student.DateOfBirth.Value, asOf) : 0;
 		var gcseByKey = gcses.ToDictionary(static g => g.Subject, static g => g.Grade, StringComparer.Ordinal);
 

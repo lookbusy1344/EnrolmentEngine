@@ -16,6 +16,7 @@ public sealed class EnrolmentEngine : IEnrolmentEngine
 	private readonly CriteriaExplainer? criteria;
 	private readonly RatingEvaluator evaluator;
 	private readonly DfeTransitionMatrix matrix;
+	private readonly ShortfallExplainer? shortfalls;
 
 	/// <summary>Bind a fixed reference date: the parameterless overloads always evaluate as of <paramref name="asOf" />.</summary>
 	internal EnrolmentEngine(
@@ -48,6 +49,7 @@ public sealed class EnrolmentEngine : IEnrolmentEngine
 		}
 
 		this.matrix = matrix ?? DfeTransitionMatrix.LoadDefault();
+		shortfalls = workflows is null ? null : new(workflows, evaluator.Thresholds, Catalogue, evaluator.Scale, this.matrix);
 		this.asOf = asOf;
 	}
 
@@ -460,7 +462,11 @@ public sealed class EnrolmentEngine : IEnrolmentEngine
 
 		EquatableArray<Adjustment> adjustments = [.. constraintAdjustments, .. chosenSubjectCapAdjustments, .. greenCapAdjustments];
 		return new(profile, gate, [.. baseRatings], [.. finalRatings], adjustments,
-			Aggregator.Summarise(finalRatings, Catalogue, evaluator.Thresholds));
+			Aggregator.Summarise(finalRatings, Catalogue, evaluator.Thresholds)) {
+			Student = student,
+			Gcses = [.. gcses],
+			AsOf = asOf,
+		};
 	}
 
 	/// <summary>
@@ -536,6 +542,7 @@ public sealed class EnrolmentEngine : IEnrolmentEngine
 		var baseBySubject = e.BaseRatings.ToDictionary(static r => r.Subject);
 		var overridesBySubject = e.Adjustments.ToLookup(static a => a.Subject);
 		var predicted = e.Profile.PredictedGrades.ToDictionary(static p => p.Subject, static p => p.PredictedPoints);
+		var messages = shortfalls?.Messages(e);
 
 		// An ineligible student's reds come from the gate short-circuit, not a fired subject rule, so the
 		// provenance names the eligibility workflow rather than a fabricated "{subject}:red" rule.
@@ -554,6 +561,7 @@ public sealed class EnrolmentEngine : IEnrolmentEngine
 						predicted.GetValueOrDefault(r.Subject, ALevelGrade.Min),
 						[.. overridesBySubject[r.Subject]]) {
 						EntryEquivalentReason = EntryEquivalentReason(e.Profile, r.Subject, Catalogue),
+						Message = messages is null ? r.Reason : messages[r.Subject],
 					};
 				}),
 			],
@@ -592,4 +600,14 @@ internal sealed record Evaluation(
 	EquatableArray<SubjectRating> BaseRatings,
 	EquatableArray<SubjectRating> FinalRatings,
 	EquatableArray<Adjustment> Adjustments,
-	EnrolmentSummary Summary);
+	EnrolmentSummary Summary)
+{
+	/// <summary>The student document this run evaluated.</summary>
+	public required StudentInput Student { get; init; }
+
+	/// <summary>The student's GCSEs as the engine read them.</summary>
+	public required EquatableArray<GcseResult> Gcses { get; init; }
+
+	/// <summary>The reference date the run evaluated as of.</summary>
+	public required DateOnly AsOf { get; init; }
+}
